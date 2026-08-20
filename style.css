@@ -15,6 +15,49 @@ body {
     line-height: 1.55;
 }
 
+/* INDICE LATERALE */
+
+.indice {
+    position: fixed;
+    left: 2rem;
+    top: 50%;
+    transform: translateY(-50%);
+
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+
+    z-index: 10;
+}
+
+.indice a {
+    color: #171717;
+    text-decoration: none;
+    font-weight: bold;
+    font-size: 1rem;
+
+    width: 2.4rem;
+    height: 2.4rem;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border: 1px solid transparent;
+    border-radius: 50%;
+
+    transition:
+        border-color 0.2s ease,
+        transform 0.2s ease;
+}
+
+.indice a:hover {
+    border-color: #171717;
+    transform: scale(1.08);
+}
+
+/* POESIA */
+
 .poesia {
     width: min(900px, 100%);
     margin: 0 auto;
@@ -24,12 +67,19 @@ body {
 .canto {
     min-height: 100vh;
     padding: 4vh 0 15vh;
+
+    scroll-margin-top: 4vh;
 }
 
+/* TITOLI I / II / III / IV */
+
 .numero {
-    font-family: Georgia, "Times New Roman", serif;
-    font-size: 1.1rem;
-    margin-bottom: 7vh;
+    text-align: center;
+    font-weight: bold;
+    font-size: 2rem;
+    letter-spacing: 0.08em;
+
+    margin-bottom: 8vh;
 }
 
 .canto p {
@@ -72,10 +122,9 @@ body {
     font-size: 1.35rem;
 }
 
+/* MOBILE */
 
-/* Schermi piccoli */
-
-@media (max-width: 700px) {
+@media (max-width: 800px) {
 
     body {
         font-size: 17px;
@@ -92,7 +141,8 @@ body {
     }
 
     .numero {
-        margin-bottom: 5vh;
+        font-size: 1.65rem;
+        margin-bottom: 6vh;
     }
 
     .rientro {
@@ -107,17 +157,27 @@ body {
         margin-bottom: 1.8rem;
     }
 
-    .isolato {
-        margin-top: 3rem !important;
-        margin-bottom: 3rem !important;
+    /* Su schermi piccoli l'indice diventa una barra in basso */
+
+    .indice {
+        left: 50%;
+        top: auto;
+        bottom: 1rem;
+
+        transform: translateX(-50%);
+
+        flex-direction: row;
+        gap: 0.5rem;
+
+        background: rgba(244, 241, 232, 0.94);
+        padding: 0.35rem 0.6rem;
+
+        border-radius: 999px;
     }
 
-    .figura {
-        margin-top: 4rem !important;
-        margin-bottom: 4rem !important;
-    }
-
-    .finale {
-        margin-top: 6rem !important;
+    .indice a {
+        width: 2.2rem;
+        height: 2.2rem;
+        font-size: 0.9rem;
     }
 }
