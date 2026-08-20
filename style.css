@@ -1,31 +1,123 @@
+* {
+    box-sizing: border-box;
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
 body {
     margin: 0;
-    background: #f2f0e8;
+    background: #f4f1e8;
     color: #171717;
-    font-family: Georgia, serif;
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 18px;
+    line-height: 1.55;
 }
 
-header {
-    padding: 60px 10%;
-    border-bottom: 1px solid #aaa;
+.poesia {
+    width: min(900px, 100%);
+    margin: 0 auto;
+    padding: 8vh 7vw 15vh;
 }
 
-h1 {
-    font-size: 48px;
-    font-weight: normal;
+.canto {
+    min-height: 100vh;
+    padding: 4vh 0 15vh;
 }
 
-main {
-    max-width: 800px;
-    margin: 80px auto;
-    padding: 0 30px;
+.numero {
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 1.1rem;
+    margin-bottom: 7vh;
 }
 
-section {
-    margin-bottom: 100px;
+.canto p {
+    margin: 0 0 2.2rem 0;
 }
 
-p {
-    font-size: 20px;
-    line-height: 1.8;
+.rientro {
+    display: inline-block;
+    margin-left: 5rem;
+}
+
+.rientro-profondo {
+    display: inline-block;
+    margin-left: 9rem;
+}
+
+.isolato {
+    margin-top: 4rem !important;
+    margin-bottom: 4rem !important;
+}
+
+.figura {
+    margin-top: 5rem !important;
+    margin-bottom: 5rem !important;
+}
+
+.parole {
+    margin-top: 4rem !important;
+    margin-bottom: 4rem !important;
+    letter-spacing: 0.03em;
+}
+
+.chi {
+    margin-top: 6rem !important;
+    font-size: 1.25rem;
+}
+
+.finale {
+    margin-top: 8rem !important;
+    font-size: 1.35rem;
+}
+
+
+/* Schermi piccoli */
+
+@media (max-width: 700px) {
+
+    body {
+        font-size: 17px;
+        line-height: 1.5;
+    }
+
+    .poesia {
+        padding: 5vh 7vw 12vh;
+    }
+
+    .canto {
+        padding-top: 3vh;
+        padding-bottom: 12vh;
+    }
+
+    .numero {
+        margin-bottom: 5vh;
+    }
+
+    .rientro {
+        margin-left: 2rem;
+    }
+
+    .rientro-profondo {
+        margin-left: 3.5rem;
+    }
+
+    .canto p {
+        margin-bottom: 1.8rem;
+    }
+
+    .isolato {
+        margin-top: 3rem !important;
+        margin-bottom: 3rem !important;
+    }
+
+    .figura {
+        margin-top: 4rem !important;
+        margin-bottom: 4rem !important;
+    }
+
+    .finale {
+        margin-top: 6rem !important;
+    }
 }
