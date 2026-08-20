@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="it">
+
+<head>
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <meta name="description"
+          content="L'autore del progetto poetico dedicato a Marcon">
+
+    <title>L’autore — nnMrcn</title>
+
+    <link rel="stylesheet" href="style.css">
+</head>
+
+
+<body class="pagina-autore">
+
+
+    <!-- =========================
+         MENU PRINCIPALE
+         ========================= -->
+
+    <button
+        class="menu-button"
+        id="menuButton"
+        aria-label="Apri il menu"
+        aria-expanded="false"
+        aria-controls="menuPrincipale"
+    >
+        MENU
+    </button>
+
+
+    <div
+        class="menu-overlay"
+        id="menuOverlay"
+    ></div>
+
+
+    <nav
+        class="menu-principale"
+        id="menuPrincipale"
+        aria-label="Menu principale"
+    >
+
+        <button
+            class="menu-close"
+            id="menuClose"
+            aria-label="Chiudi il menu"
+        >
+            ×
+        </button>
+
+
+        <div class="menu-contenuto">
+
+            <a href="index.html">
+                La poesia
+            </a>
+
+            <a href="autore.html" class="voce-attiva">
+                L’autore
+            </a>
+
+            <a href="mappa.html">
+                Mappa interattiva
+            </a>
+
+            <a href="progetto.html">
+                Il progetto
+            </a>
+
+            <a href="donazioni.html">
+                Le donazioni
+            </a>
+
+        </div>
+
+    </nav>
+
+
+
+    <!-- =========================
+         CONTENUTO
+         ========================= -->
+
+    <main class="autore">
+
+        <h1 class="titolo-pagina">
+            L’autore
+        </h1>
+
+
+        <div class="autore-logo">
+
+            <img
+                src="images/logo.png"
+                alt="Logo di nnMrcn"
+            >
+
+        </div>
+
+
+        <article class="autore-testo">
+
+            <p>
+                Sono un ragazzo nato e vissuto a Marcon
+                che ha deciso di iniziare a fare qualcosa
+                per la propria città.
+            </p>
+
+            <p>
+                Ho deciso di farlo tramite la cosa che
+                mi entusiasma di più: creare arte.
+            </p>
+
+            <p>
+                La mia speranza, tramite il mio lavoro,
+                è quella di unire la comunità di Marcon
+                in un modo nuovo ed inaspettato, ed allo
+                stesso tempo di trasmettere messaggi in
+                un modo non convenzionale rispetto ai
+                tempi in cui viviamo.
+            </p>
+
+
+            <p class="firma">
+                -nnMrcn-
+            </p>
+
+        </article>
+
+    </main>
+
+
+
+    <!-- =========================
+         SCRIPT MENU
+         ========================= -->
+
+    <script>
+
+        const menuButton =
+            document.getElementById("menuButton");
+
+        const menuClose =
+            document.getElementById("menuClose");
+
+        const menuPrincipale =
+            document.getElementById("menuPrincipale");
+
+        const menuOverlay =
+            document.getElementById("menuOverlay");
+
+
+        function apriMenu() {
+
+            menuPrincipale.classList.add("aperto");
+            menuOverlay.classList.add("aperto");
+
+            menuButton.setAttribute(
+                "aria-expanded",
+                "true"
+            );
+
+            document.body.classList.add(
+                "menu-aperto"
+            );
+        }
+
+
+        function chiudiMenu() {
+
+            menuPrincipale.classList.remove("aperto");
+            menuOverlay.classList.remove("aperto");
+
+            menuButton.setAttribute(
+                "aria-expanded",
+                "false"
+            );
+
+            document.body.classList.remove(
+                "menu-aperto"
+            );
+        }
+
+
+        menuButton.addEventListener(
+            "click",
+            apriMenu
+        );
+
+
+        menuClose.addEventListener(
+            "click",
+            chiudiMenu
+        );
+
+
+        menuOverlay.addEventListener(
+            "click",
+            chiudiMenu
+        );
+
+
+        document.addEventListener(
+            "keydown",
+            function(event) {
+
+                if (event.key === "Escape") {
+                    chiudiMenu();
+                }
+
+            }
+        );
+
+    </script>
+
+</body>
+
+</html>
