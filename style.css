@@ -755,3 +755,78 @@ body.menu-aperto {
         transition: none;
     }
 }
+/* ==================================================
+   MAPPA DEL PROGETTO
+   ================================================== */
+
+.sezione-mappa {
+    width: min(1100px, calc(100% - 4rem));
+
+    margin: 10rem auto 0;
+}
+
+
+.sezione-mappa h2 {
+    margin: 0 0 1rem;
+
+    text-align: center;
+
+    font-size: clamp(2rem, 5vw, 3.5rem);
+}
+
+
+.introduzione-mappa {
+    margin: 0 0 3rem;
+
+    text-align: center;
+
+    opacity: 0.65;
+}
+
+
+#map {
+    width: 100%;
+    height: 70vh;
+
+    min-height: 500px;
+
+    border: 1px solid rgba(23, 23, 23, 0.3);
+}
+
+
+/* Popup */
+
+.popup-luogo {
+    font-family: Georgia, "Times New Roman", serif;
+
+    font-size: 0.95rem;
+    line-height: 1.45;
+}
+
+
+.popup-luogo strong {
+    font-size: 1.05rem;
+}
+
+
+.popup-luogo p {
+    margin: 0.5rem 0 0;
+}
+
+
+@media (max-width: 700px) {
+
+    .sezione-mappa {
+        width: calc(100% - 2rem);
+
+        margin-top: 6rem;
+    }
+
+
+    #map {
+        height: 65vh;
+
+        min-height: 430px;
+    }
+
+}
