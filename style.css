@@ -414,6 +414,105 @@ body.menu-aperto {
 }
 
 /* =========================
+   PAGINA AUTORE
+   ========================= */
+
+
+.pagina-autore {
+    min-height: 100vh;
+}
+
+
+/* Contenitore principale */
+
+.autore {
+    width: min(720px, calc(100% - 4rem));
+
+    margin: 0 auto;
+
+    padding-top: 8vh;
+    padding-bottom: 15vh;
+}
+
+
+/* Titolo */
+
+.titolo-pagina {
+    margin: 0 0 8vh;
+
+    text-align: center;
+
+    font-size: clamp(2rem, 4vw, 3rem);
+    font-weight: 700;
+
+    letter-spacing: 0.04em;
+}
+
+
+/* =========================
+   LOGO
+   ========================= */
+
+.autore-logo {
+    width: 100%;
+
+    display: flex;
+    justify-content: center;
+
+    margin-bottom: 7vh;
+}
+
+
+.autore-logo img {
+    display: block;
+
+    width: min(440px, 90%);
+    height: auto;
+
+    object-fit: contain;
+}
+
+
+/* =========================
+   TESTO
+   ========================= */
+
+.autore-testo {
+    width: min(600px, 100%);
+
+    margin: 0 auto;
+
+    font-size: 1.1rem;
+    line-height: 1.75;
+}
+
+
+.autore-testo p {
+    margin: 0 0 2rem;
+}
+
+
+/* Firma */
+
+.firma {
+    margin-top: 4rem !important;
+
+    text-align: right;
+
+    font-size: 1.15rem;
+    font-weight: 700;
+
+    letter-spacing: 0.08em;
+}
+
+
+/* Pagina corrente nel menu */
+
+.menu-contenuto a.voce-attiva {
+    opacity: 0.45;
+}
+
+/* =========================
    TABLET
    ========================= */
 
@@ -458,6 +557,45 @@ body.menu-aperto {
 
 @media (max-width: 700px) {
 
+/* PAGINA AUTORE */
+
+.autore {
+    width: 100%;
+
+    padding-left: 7vw;
+    padding-right: 7vw;
+
+    padding-top: 6vh;
+}
+
+
+.titolo-pagina {
+    margin-bottom: 6vh;
+
+    font-size: 2rem;
+}
+
+
+.autore-logo {
+    margin-bottom: 5vh;
+}
+
+
+.autore-logo img {
+    width: min(360px, 100%);
+}
+
+
+.autore-testo {
+    font-size: 1rem;
+    line-height: 1.7;
+}
+
+
+.firma {
+    margin-top: 3rem !important;
+}
+   
    .menu-button {
     top: 1rem;
     right: 1rem;
