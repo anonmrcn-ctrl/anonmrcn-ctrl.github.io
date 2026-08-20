@@ -16,6 +16,58 @@
 
 <body>
 
+    <!-- MENU PRINCIPALE -->
+
+<button
+    class="menu-button"
+    id="menuButton"
+    aria-label="Apri il menu"
+    aria-expanded="false"
+    aria-controls="menuPrincipale"
+>
+    MENU
+</button>
+
+
+<div class="menu-overlay" id="menuOverlay"></div>
+
+
+<nav
+    class="menu-principale"
+    id="menuPrincipale"
+    aria-label="Menu principale"
+>
+
+    <button
+        class="menu-close"
+        id="menuClose"
+        aria-label="Chiudi il menu"
+    >
+        ×
+    </button>
+
+    <div class="menu-contenuto">
+
+        <a href="autore.html">
+            L’autore
+        </a>
+
+        <a href="mappa.html">
+            Mappa interattiva
+        </a>
+
+        <a href="progetto.html">
+            Il progetto
+        </a>
+
+        <a href="donazioni.html">
+            Le donazioni
+        </a>
+
+    </div>
+
+</nav>
+    
     <!-- INDICE -->
     <nav class="indice" aria-label="Indice della poesia">
         <a href="#I" aria-label="Vai alla sezione I">I</a>
@@ -365,5 +417,40 @@
 
     </main>
 
+<script>
+    const menuButton = document.getElementById("menuButton");
+    const menuClose = document.getElementById("menuClose");
+    const menuPrincipale = document.getElementById("menuPrincipale");
+    const menuOverlay = document.getElementById("menuOverlay");
+
+    function apriMenu() {
+        menuPrincipale.classList.add("aperto");
+        menuOverlay.classList.add("aperto");
+
+        menuButton.setAttribute("aria-expanded", "true");
+
+        document.body.classList.add("menu-aperto");
+    }
+
+    function chiudiMenu() {
+        menuPrincipale.classList.remove("aperto");
+        menuOverlay.classList.remove("aperto");
+
+        menuButton.setAttribute("aria-expanded", "false");
+
+        document.body.classList.remove("menu-aperto");
+    }
+
+    menuButton.addEventListener("click", apriMenu);
+    menuClose.addEventListener("click", chiudiMenu);
+    menuOverlay.addEventListener("click", chiudiMenu);
+
+    document.addEventListener("keydown", function(event) {
+        if (event.key === "Escape") {
+            chiudiMenu();
+        }
+    });
+</script>
+    
 </body>
 </html>
