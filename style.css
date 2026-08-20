@@ -1,0 +1,31 @@
+body {
+    margin: 0;
+    background: #f2f0e8;
+    color: #171717;
+    font-family: Georgia, serif;
+}
+
+header {
+    padding: 60px 10%;
+    border-bottom: 1px solid #aaa;
+}
+
+h1 {
+    font-size: 48px;
+    font-weight: normal;
+}
+
+main {
+    max-width: 800px;
+    margin: 80px auto;
+    padding: 0 30px;
+}
+
+section {
+    margin-bottom: 100px;
+}
+
+p {
+    font-size: 20px;
+    line-height: 1.8;
+}
