@@ -1,0 +1,818 @@
+const PBKDF2_ITERATIONS = 150000;
+const SESSION_TTL_MS = 12 * 60 * 60 * 1000;
+const MESSAGE_LIMIT_PER_HOUR = 5;
+const MAX_MESSAGE_LENGTH = 1500;
+
+export default {
+    async fetch(request, env) {
+        try {
+            if (request.method === "OPTIONS") {
+                return new Response(null, {
+                    status: 204,
+                    headers: corsHeaders(request, env)
+                });
+            }
+
+            const url = new URL(request.url);
+            const path = url.pathname;
+
+            if (request.method === "POST" && path === "/api/login") {
+                return login(request, env);
+            }
+
+            if (request.method === "GET" && path === "/api/session") {
+                return sessionInfo(request, env);
+            }
+
+            if (request.method === "POST" && path === "/api/logout") {
+                return logout(request, env);
+            }
+
+            if (request.method === "GET" && path === "/api/locations") {
+                return listLocations(request, env);
+            }
+
+            if (request.method === "GET" && path.startsWith("/api/poems/")) {
+                const id = Number(path.split("/").pop());
+                return getPoem(request, env, id);
+            }
+
+            if (request.method === "GET" && path === "/api/messages") {
+                return listMessages(request, env);
+            }
+
+            if (request.method === "POST" && path === "/api/messages") {
+                return createMessage(request, env);
+            }
+
+            if (request.method === "PATCH" && /^\/api\/messages\/\d+$/.test(path)) {
+                const id = Number(path.split("/").pop());
+                return markMessage(request, env, id);
+            }
+
+            if (request.method === "GET" && path === "/api/admin/messages") {
+                return adminListMessages(request, env, url);
+            }
+
+            if (request.method === "PATCH" && /^\/api\/admin\/messages\/\d+$/.test(path)) {
+                const id = Number(path.split("/").pop());
+                return adminUpdateMessage(request, env, id);
+            }
+
+            if (request.method === "GET" && path === "/api/health") {
+                return json(request, env, {
+                    ok: true,
+                    service: "nnmrcn-rete"
+                });
+            }
+
+            return json(request, env, {
+                error: "Not found."
+            }, 404);
+        } catch (error) {
+            console.error(error);
+
+            return json(request, env, {
+                error: "Errore interno."
+            }, 500);
+        }
+    }
+};
+
+async function login(request, env) {
+    const body = await readJson(request);
+    const password = normalizePassword(body?.password);
+
+    if (!password) {
+        return json(request, env, {
+            error: "Password non valida."
+        }, 400);
+    }
+
+    if (!env.PASSWORD_PEPPER) {
+        throw new Error("PASSWORD_PEPPER secret missing.");
+    }
+
+    const lookup = await hmacHex(env.PASSWORD_PEPPER, password);
+
+    const location = await env.DB.prepare(`
+        SELECT
+            id,
+            address,
+            password_salt,
+            password_hash
+        FROM locations
+        WHERE password_lookup = ?
+        LIMIT 1
+    `).bind(lookup).first();
+
+    if (!location) {
+        return json(request, env, {
+            error: "Password non riconosciuta."
+        }, 401);
+    }
+
+    const valid = await verifyPassword(
+        password,
+        location.password_salt,
+        location.password_hash
+    );
+
+    if (!valid) {
+        return json(request, env, {
+            error: "Password non riconosciuta."
+        }, 401);
+    }
+
+    const now = Date.now();
+    const expiresAt = now + SESSION_TTL_MS;
+    const token = randomToken(32);
+    const sessionHash = await sha256Hex(token);
+
+    await env.DB.prepare(`
+        DELETE FROM sessions
+        WHERE expires_at <= ?
+    `).bind(now).run();
+
+    await env.DB.prepare(`
+        INSERT INTO sessions (
+            session_hash,
+            location_id,
+            created_at,
+            expires_at
+        )
+        VALUES (?, ?, ?, ?)
+    `).bind(
+        sessionHash,
+        location.id,
+        now,
+        expiresAt
+    ).run();
+
+    return json(request, env, {
+        token,
+        expiresAt,
+        location: {
+            id: location.id,
+            address: location.address
+        }
+    });
+}
+
+async function sessionInfo(request, env) {
+    const session = await requireSession(request, env);
+
+    if (!session) {
+        return json(request, env, {
+            error: "Sessione non valida."
+        }, 401);
+    }
+
+    return json(request, env, {
+        location: {
+            id: session.location_id,
+            address: session.address
+        },
+        expiresAt: session.expires_at
+    });
+}
+
+async function logout(request, env) {
+    const token = bearerToken(request);
+
+    if (token) {
+        const sessionHash = await sha256Hex(token);
+
+        await env.DB.prepare(`
+            DELETE FROM sessions
+            WHERE session_hash = ?
+        `).bind(sessionHash).run();
+    }
+
+    return json(request, env, {
+        ok: true
+    });
+}
+
+async function listLocations(request, env) {
+    const session = await requireSession(request, env);
+
+    if (!session) {
+        return json(request, env, {
+            error: "Non autorizzato."
+        }, 401);
+    }
+
+    const result = await env.DB.prepare(`
+        SELECT
+            l.id,
+            l.address,
+            l.lat,
+            l.lon,
+            CASE
+                WHEN p.location_id IS NULL THEN 0
+                ELSE 1
+            END AS has_poem
+        FROM locations l
+        LEFT JOIN poems p
+            ON p.location_id = l.id
+        ORDER BY l.id
+    `).all();
+
+    return json(request, env, {
+        locations: (result.results || []).map((row) => ({
+            id: row.id,
+            address: row.address,
+            lat: row.lat,
+            lon: row.lon,
+            hasPoem: Boolean(row.has_poem)
+        }))
+    });
+}
+
+async function getPoem(request, env, locationId) {
+    const session = await requireSession(request, env);
+
+    if (!session) {
+        return json(request, env, {
+            error: "Non autorizzato."
+        }, 401);
+    }
+
+    if (!Number.isInteger(locationId) || locationId <= 0) {
+        return json(request, env, {
+            error: "Location non valida."
+        }, 400);
+    }
+
+    const poem = await env.DB.prepare(`
+        SELECT html
+        FROM poems
+        WHERE location_id = ?
+        LIMIT 1
+    `).bind(locationId).first();
+
+    if (!poem) {
+        return json(request, env, {
+            error: "Poesia non disponibile."
+        }, 404);
+    }
+
+    return json(request, env, {
+        html: poem.html
+    });
+}
+
+async function listMessages(request, env) {
+    const session = await requireSession(request, env);
+
+    if (!session) {
+        return json(request, env, {
+            error: "Non autorizzato."
+        }, 401);
+    }
+
+    const result = await env.DB.prepare(`
+        SELECT
+            m.id,
+            m.text,
+            m.reveal_sender,
+            m.created_at,
+            m.status,
+            CASE
+                WHEN m.reveal_sender = 1 THEN sender.address
+                ELSE NULL
+            END AS sender_address
+        FROM messages m
+        JOIN locations sender
+            ON sender.id = m.sender_location_id
+        WHERE
+            m.recipient_location_id = ?
+            AND m.delivery_type = 'online'
+            AND m.status IN ('approved', 'read')
+        ORDER BY m.created_at DESC
+        LIMIT 100
+    `).bind(session.location_id).all();
+
+    return json(request, env, {
+        messages: (result.results || []).map((row) => ({
+            id: row.id,
+            text: row.text,
+            senderAddress: row.sender_address,
+            createdAt: row.created_at,
+            status: row.status
+        }))
+    });
+}
+
+async function createMessage(request, env) {
+    const session = await requireSession(request, env);
+
+    if (!session) {
+        return json(request, env, {
+            error: "Non autorizzato."
+        }, 401);
+    }
+
+    const body = await readJson(request);
+    const recipientId = Number(body?.recipientId);
+    const text = String(body?.text || "").trim();
+    const revealSender = body?.revealSender === true;
+    const deliveryType =
+        body?.deliveryType === "physical"
+            ? "physical"
+            : "online";
+
+    if (!Number.isInteger(recipientId) || recipientId <= 0) {
+        return json(request, env, {
+            error: "Destinatario non valido."
+        }, 400);
+    }
+
+    if (recipientId === Number(session.location_id)) {
+        return json(request, env, {
+            error: "Non puoi inviare un messaggio alla tua stessa location."
+        }, 400);
+    }
+
+    if (!text || text.length > MAX_MESSAGE_LENGTH) {
+        return json(request, env, {
+            error: `Il messaggio deve contenere da 1 a ${MAX_MESSAGE_LENGTH} caratteri.`
+        }, 400);
+    }
+
+    const recipient = await env.DB.prepare(`
+        SELECT id
+        FROM locations
+        WHERE id = ?
+        LIMIT 1
+    `).bind(recipientId).first();
+
+    if (!recipient) {
+        return json(request, env, {
+            error: "Destinatario non trovato."
+        }, 404);
+    }
+
+    const oneHourAgo = Date.now() - 60 * 60 * 1000;
+
+    const countRow = await env.DB.prepare(`
+        SELECT COUNT(*) AS count
+        FROM messages
+        WHERE
+            sender_location_id = ?
+            AND created_at >= ?
+    `).bind(
+        session.location_id,
+        oneHourAgo
+    ).first();
+
+    if (Number(countRow?.count || 0) >= MESSAGE_LIMIT_PER_HOUR) {
+        return json(request, env, {
+            error: "Limite temporaneo di invio raggiunto."
+        }, 429);
+    }
+
+    const now = Date.now();
+    const status =
+        deliveryType === "physical"
+            ? "pending_delivery"
+            : "pending";
+
+    const result = await env.DB.prepare(`
+        INSERT INTO messages (
+            sender_location_id,
+            recipient_location_id,
+            text,
+            reveal_sender,
+            delivery_type,
+            status,
+            created_at,
+            updated_at
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `).bind(
+        session.location_id,
+        recipientId,
+        text,
+        revealSender ? 1 : 0,
+        deliveryType,
+        status,
+        now,
+        now
+    ).run();
+
+    return json(request, env, {
+        ok: true,
+        id: result.meta?.last_row_id ?? null,
+        status
+    }, 201);
+}
+
+async function markMessage(request, env, messageId) {
+    const session = await requireSession(request, env);
+
+    if (!session) {
+        return json(request, env, {
+            error: "Non autorizzato."
+        }, 401);
+    }
+
+    const body = await readJson(request);
+
+    if (body?.action !== "read") {
+        return json(request, env, {
+            error: "Azione non valida."
+        }, 400);
+    }
+
+    await env.DB.prepare(`
+        UPDATE messages
+        SET
+            status = 'read',
+            updated_at = ?
+        WHERE
+            id = ?
+            AND recipient_location_id = ?
+            AND delivery_type = 'online'
+            AND status = 'approved'
+    `).bind(
+        Date.now(),
+        messageId,
+        session.location_id
+    ).run();
+
+    return json(request, env, {
+        ok: true
+    });
+}
+
+async function adminListMessages(request, env, url) {
+    if (!adminAuthorized(request, env)) {
+        return json(request, env, {
+            error: "Non autorizzato."
+        }, 401);
+    }
+
+    const status = url.searchParams.get("status") || "active";
+
+    let where = `
+        WHERE m.status IN ('pending', 'pending_delivery')
+    `;
+
+    if (status === "all") {
+        where = "";
+    } else if (
+        [
+            "pending",
+            "pending_delivery",
+            "approved",
+            "read",
+            "delivered",
+            "rejected"
+        ].includes(status)
+    ) {
+        where = "WHERE m.status = ?";
+    }
+
+    let statement = env.DB.prepare(`
+        SELECT
+            m.id,
+            m.text,
+            m.reveal_sender,
+            m.delivery_type,
+            m.status,
+            m.created_at,
+            sender.address AS sender_address,
+            recipient.address AS recipient_address
+        FROM messages m
+        JOIN locations sender
+            ON sender.id = m.sender_location_id
+        JOIN locations recipient
+            ON recipient.id = m.recipient_location_id
+        ${where}
+        ORDER BY m.created_at DESC
+        LIMIT 250
+    `);
+
+    if (
+        status !== "all" &&
+        status !== "active" &&
+        [
+            "pending",
+            "pending_delivery",
+            "approved",
+            "read",
+            "delivered",
+            "rejected"
+        ].includes(status)
+    ) {
+        statement = statement.bind(status);
+    }
+
+    const result = await statement.all();
+
+    return json(request, env, {
+        messages: (result.results || []).map((row) => ({
+            id: row.id,
+            text: row.text,
+            revealSender: Boolean(row.reveal_sender),
+            deliveryType: row.delivery_type,
+            status: row.status,
+            createdAt: row.created_at,
+            senderAddress: row.sender_address,
+            recipientAddress: row.recipient_address
+        }))
+    });
+}
+
+async function adminUpdateMessage(request, env, messageId) {
+    if (!adminAuthorized(request, env)) {
+        return json(request, env, {
+            error: "Non autorizzato."
+        }, 401);
+    }
+
+    const body = await readJson(request);
+    const action = body?.action;
+
+    const message = await env.DB.prepare(`
+        SELECT
+            id,
+            delivery_type,
+            status
+        FROM messages
+        WHERE id = ?
+        LIMIT 1
+    `).bind(messageId).first();
+
+    if (!message) {
+        return json(request, env, {
+            error: "Messaggio non trovato."
+        }, 404);
+    }
+
+    let nextStatus = null;
+
+    if (
+        action === "approve" &&
+        message.delivery_type === "online" &&
+        message.status === "pending"
+    ) {
+        nextStatus = "approved";
+    }
+
+    if (
+        action === "delivered" &&
+        message.delivery_type === "physical" &&
+        message.status === "pending_delivery"
+    ) {
+        nextStatus = "delivered";
+    }
+
+    if (
+        action === "reject" &&
+        ["pending", "pending_delivery"].includes(message.status)
+    ) {
+        nextStatus = "rejected";
+    }
+
+    if (!nextStatus) {
+        return json(request, env, {
+            error: "Transizione di stato non valida."
+        }, 400);
+    }
+
+    await env.DB.prepare(`
+        UPDATE messages
+        SET
+            status = ?,
+            updated_at = ?
+        WHERE id = ?
+    `).bind(
+        nextStatus,
+        Date.now(),
+        messageId
+    ).run();
+
+    return json(request, env, {
+        ok: true,
+        status: nextStatus
+    });
+}
+
+async function requireSession(request, env) {
+    const token = bearerToken(request);
+
+    if (!token) {
+        return null;
+    }
+
+    const sessionHash = await sha256Hex(token);
+    const now = Date.now();
+
+    const session = await env.DB.prepare(`
+        SELECT
+            s.session_hash,
+            s.location_id,
+            s.expires_at,
+            l.address
+        FROM sessions s
+        JOIN locations l
+            ON l.id = s.location_id
+        WHERE
+            s.session_hash = ?
+            AND s.expires_at > ?
+        LIMIT 1
+    `).bind(
+        sessionHash,
+        now
+    ).first();
+
+    return session || null;
+}
+
+function bearerToken(request) {
+    const header = request.headers.get("Authorization") || "";
+
+    if (!header.startsWith("Bearer ")) {
+        return "";
+    }
+
+    return header.slice(7).trim();
+}
+
+function adminAuthorized(request, env) {
+    const supplied = request.headers.get("X-Admin-Token") || "";
+    const expected = env.ADMIN_TOKEN || "";
+
+    if (!supplied || !expected || supplied.length !== expected.length) {
+        return false;
+    }
+
+    let diff = 0;
+
+    for (let i = 0; i < supplied.length; i += 1) {
+        diff |= supplied.charCodeAt(i) ^ expected.charCodeAt(i);
+    }
+
+    return diff === 0;
+}
+
+function normalizePassword(value) {
+    return String(value || "").trim().toUpperCase();
+}
+
+async function verifyPassword(password, saltB64, expectedHashB64) {
+    const encoder = new TextEncoder();
+
+    const key = await crypto.subtle.importKey(
+        "raw",
+        encoder.encode(password),
+        "PBKDF2",
+        false,
+        ["deriveBits"]
+    );
+
+    const actualBits = await crypto.subtle.deriveBits(
+        {
+            name: "PBKDF2",
+            salt: fromBase64(saltB64),
+            iterations: PBKDF2_ITERATIONS,
+            hash: "SHA-256"
+        },
+        key,
+        256
+    );
+
+    const actual = new Uint8Array(actualBits);
+    const expected = fromBase64(expectedHashB64);
+
+    if (actual.length !== expected.length) {
+        return false;
+    }
+
+    let diff = 0;
+
+    for (let i = 0; i < actual.length; i += 1) {
+        diff |= actual[i] ^ expected[i];
+    }
+
+    return diff === 0;
+}
+
+async function hmacHex(secret, value) {
+    const encoder = new TextEncoder();
+
+    const key = await crypto.subtle.importKey(
+        "raw",
+        encoder.encode(secret),
+        {
+            name: "HMAC",
+            hash: "SHA-256"
+        },
+        false,
+        ["sign"]
+    );
+
+    const signature = await crypto.subtle.sign(
+        "HMAC",
+        key,
+        encoder.encode(value)
+    );
+
+    return toHex(new Uint8Array(signature));
+}
+
+async function sha256Hex(value) {
+    const digest = await crypto.subtle.digest(
+        "SHA-256",
+        new TextEncoder().encode(value)
+    );
+
+    return toHex(new Uint8Array(digest));
+}
+
+function randomToken(bytes) {
+    const data = new Uint8Array(bytes);
+    crypto.getRandomValues(data);
+
+    return base64Url(data);
+}
+
+function fromBase64(value) {
+    const binary = atob(value);
+    const bytes = new Uint8Array(binary.length);
+
+    for (let i = 0; i < binary.length; i += 1) {
+        bytes[i] = binary.charCodeAt(i);
+    }
+
+    return bytes;
+}
+
+function base64Url(bytes) {
+    let binary = "";
+
+    bytes.forEach((byte) => {
+        binary += String.fromCharCode(byte);
+    });
+
+    return btoa(binary)
+        .replaceAll("+", "-")
+        .replaceAll("/", "_")
+        .replaceAll("=", "");
+}
+
+function toHex(bytes) {
+    return Array.from(bytes)
+        .map((byte) => byte.toString(16).padStart(2, "0"))
+        .join("");
+}
+
+async function readJson(request) {
+    try {
+        return await request.json();
+    } catch (_) {
+        return null;
+    }
+}
+
+function corsHeaders(request, env) {
+    const origin = request.headers.get("Origin") || "";
+    const allowedOrigin =
+        env.ALLOWED_ORIGIN ||
+        "https://anonmrcn-ctrl.github.io";
+
+    const headers = {
+        "Access-Control-Allow-Methods": "GET,POST,PATCH,OPTIONS",
+        "Access-Control-Allow-Headers":
+            "Authorization,Content-Type,X-Admin-Token",
+        "Access-Control-Max-Age": "86400",
+        "Vary": "Origin"
+    };
+
+    if (
+        origin === allowedOrigin ||
+        origin === "http://localhost:8000" ||
+        origin === "http://127.0.0.1:8000"
+    ) {
+        headers["Access-Control-Allow-Origin"] = origin;
+    }
+
+    return headers;
+}
+
+function json(request, env, body, status = 200) {
+    return new Response(
+        JSON.stringify(body),
+        {
+            status,
+            headers: {
+                "Content-Type": "application/json; charset=utf-8",
+                "Cache-Control": "no-store",
+                ...corsHeaders(request, env)
+            }
+        }
+    );
+}
