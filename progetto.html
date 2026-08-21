@@ -123,7 +123,7 @@
 
             <div
                 id="map"
-                aria-label="Mappa satellitare interattiva dei luoghi del progetto"
+                aria-label="Mappa interattiva dei luoghi del progetto"
             ></div>
 
         </section>
@@ -239,7 +239,7 @@
                 scrollWheelZoom: true
             }
         ).setView(
-            [45.5545, 12.2994],
+            [45.5515, 12.3278],
             13
         );
 
@@ -249,13 +249,81 @@
            MAPPA SATELLITARE
            ========================= */
 
-        L.tileLayer(
+        const satelliteOggi = L.tileLayer(
             "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
             {
                 maxZoom: 19,
 
                 attribution:
-                    "Tiles &copy; Esri — Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community"
+                    "Tiles &copy; Esri"
+            }
+        );
+
+
+
+        /* =========================
+           FOTO AEREA 1975
+           ========================= */
+
+        const foto1975 = L.imageOverlay(
+
+            "./marcon_1975_web.webp",
+
+            [
+                [45.5314854758, 12.2633666786],
+                [45.5670779946, 12.3922261726]
+            ],
+
+            {
+                opacity: 1
+            }
+
+        );
+
+
+
+        /* =========================
+           LAYER TEMPORALI
+           ========================= */
+
+        const oggi = L.layerGroup([
+            satelliteOggi
+        ]);
+
+
+        const anno1975 = L.layerGroup([
+            satelliteOggi,
+            foto1975
+        ]);
+
+
+
+        /* =========================
+           MAPPA INIZIALE
+           ========================= */
+
+        oggi.addTo(map);
+
+
+
+        /* =========================
+           SELETTORE TEMPORALE
+           ========================= */
+
+        const mappeTemporali = {
+
+            "Oggi": oggi,
+
+            "1975": anno1975
+
+        };
+
+
+        L.control.layers(
+            mappeTemporali,
+            null,
+            {
+                collapsed: false
             }
         ).addTo(map);
 
@@ -266,16 +334,6 @@
            ========================= */
 
         const luoghi = [
-
-            /*
-            {
-                nome: "Via Alta",
-                lat: 45.000000,
-                lon: 12.000000,
-                descrizione:
-                    "Descrizione del luogo."
-            }
-            */
 
         ];
 
