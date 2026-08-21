@@ -14,6 +14,13 @@
     >
 
     <style>
+        .progetto-intro {
+            width: min(650px, 100%);
+            margin: 0 auto;
+            font-size: 1.1rem;
+            line-height: 1.8;
+        }
+
         .poesia-overlay {
             position: fixed;
             inset: 0;
@@ -52,6 +59,11 @@
         }
 
         @media (max-width: 700px) {
+            .progetto-intro {
+                font-size: 1rem;
+                line-height: 1.7;
+            }
+
             .poesia-close {
                 top: 0.75rem;
                 right: 0.75rem;
@@ -108,6 +120,10 @@
             <h1 class="titolo-pagina">
                 Il progetto
             </h1>
+
+            <p class="progetto-intro">
+                Questa mappa mostra i luoghi di cui parla la poesia, dando la possibilità di tornare indietro nel tempo. Se hai ricevuto personalmente una poesia a casa tua, puoi accedere con la password che ti è stata fornita all'interno di essa. Questo accesso sbloccherà sulla mappa le diverse locations dove sono state distribuite le poesie e ti consentirà di spedire un messaggio (tramite me) in una di queste location
+            </p>
         </section>
 
         <section class="sezione-mappa">
@@ -296,7 +312,6 @@
 
         /* =========================
            POESIA — VIA PIAVE 33
-           stessa impaginazione della pagina principale
            ========================= */
 
         const poesiaViaPiave33 = `
@@ -361,13 +376,10 @@
                     </p>
                 </section>
 
-
                 <section class="canto">
                     <h2 class="numero">II</h2>
 
-                    <p class="isolato">
-                        Ma
-                    </p>
+                    <p class="isolato">Ma</p>
 
                     <p>
                         Forse in un futurista furore
@@ -375,9 +387,7 @@
                         <span class="rientro-profondo">fra il Colmello e il Pojanon</span>
                     </p>
 
-                    <p>
-                        E prese a tormentarsi
-                    </p>
+                    <p>E prese a tormentarsi</p>
 
                     <p>
                         "Io devo perlustrare"
@@ -410,9 +420,7 @@
                         "Il grigio e veloce Fiume"
                     </p>
 
-                    <p>
-                        E riprese a tormentarsi
-                    </p>
+                    <p>E riprese a tormentarsi</p>
 
                     <p>
                         "Ora devo perlustrare"
@@ -425,22 +433,14 @@
                         <span class="rientro">"..."</span>
                     </p>
 
-                    <p>
-                        "Perché?"
-                    </p>
-
-                    <p>
-                        Perché?
-                    </p>
+                    <p>"Perché?"</p>
+                    <p>Perché?</p>
                 </section>
-
 
                 <section class="canto">
                     <h2 class="numero">III</h2>
 
-                    <p>
-                        A quel punto successe
-                    </p>
+                    <p>A quel punto successe</p>
 
                     <p>
                         Qualcosa parlò
@@ -462,18 +462,14 @@
                         <span class="rientro-profondo">come scheletro del tuo corpo"</span>
                     </p>
 
-                    <p class="isolato">
-                        Ma
-                    </p>
+                    <p class="isolato">Ma</p>
 
                     <p>
                         Si chiese
                         <span class="rientro">nonostante tutto</span>
                     </p>
 
-                    <p class="perche">
-                        Perché
-                    </p>
+                    <p class="perche">Perché</p>
 
                     <p>
                         Figura
@@ -481,9 +477,7 @@
                         <span class="rientro-profondo">e gliela rivolse</span>
                     </p>
 
-                    <p>
-                        Non ci vide più
-                    </p>
+                    <p>Non ci vide più</p>
 
                     <p>
                         "Ecco Il Perché"
@@ -500,11 +494,8 @@
                         <span class="rientro-profondo">Via due Giugno</span>
                     </p>
 
-                    <p class="isolato">
-                        Corse.
-                    </p>
+                    <p class="isolato">Corse.</p>
                 </section>
-
 
                 <section class="canto">
                     <h2 class="numero">IV</h2>
@@ -514,9 +505,7 @@
                         <span class="rientro">era in pieno controllo</span>
                     </p>
 
-                    <p>
-                        E continuò
-                    </p>
+                    <p>E continuò</p>
 
                     <p class="accelerazione">
                         rotolò, incespicò, cadde
@@ -555,9 +544,7 @@
                         <span>L'Ebrezza</span>
                     </p>
 
-                    <p class="non-tempo">
-                        Non c'è Tempo
-                    </p>
+                    <p class="non-tempo">Non c'è Tempo</p>
 
                     <p>
                         E
@@ -565,13 +552,8 @@
                         <span class="rientro-profondo">reincontrò</span>
                     </p>
 
-                    <p class="chi">
-                        Chi?
-                    </p>
-
-                    <p class="finale">
-                        "Dove corri?"
-                    </p>
+                    <p class="chi">Chi?</p>
+                    <p class="finale">"Dove corri?"</p>
                 </section>
 
             </main>
