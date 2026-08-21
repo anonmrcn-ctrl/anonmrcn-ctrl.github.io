@@ -245,7 +245,7 @@ body {
     top: 2rem;
     right: 2rem;
 
-    z-index: 300;
+    z-index: 1900;
 
     padding: 0.7rem 1rem;
 
@@ -289,7 +289,7 @@ body {
     opacity: 0;
     visibility: hidden;
 
-    z-index: 400;
+    z-index: 2000;
 
     transition:
         opacity 300ms ease,
@@ -319,7 +319,7 @@ body {
 
     background: #f4f1e8;
 
-    z-index: 500;
+    z-index: 2100;
 
     transform: translateX(100%);
 
