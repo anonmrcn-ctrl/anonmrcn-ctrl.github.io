@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="it">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Amministrazione — nnMrcn</title>
+
+    <link rel="stylesheet" href="./style.css">
+
+    <style>
+        .admin {
+            width: min(860px, calc(100% - 3rem));
+            margin: 0 auto;
+            padding: 8vh 0 12vh;
+        }
+
+        .admin h1 {
+            margin: 0 0 3rem;
+            text-align: center;
+            font-size: clamp(2rem, 4vw, 3rem);
+        }
+
+        .admin-accesso {
+            width: min(620px, 100%);
+            margin: 0 auto 4rem;
+        }
+
+        .admin-accesso form {
+            display: flex;
+            gap: 0.75rem;
+        }
+
+        .admin-accesso input,
+        .admin-accesso button,
+        .admin-filter select,
+        .admin-filter button,
+        .admin-action {
+            padding: 0.75rem 0.9rem;
+            background: transparent;
+            color: #171717;
+            border: 1px solid #171717;
+            font: inherit;
+        }
+
+        .admin-accesso input {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .admin-accesso button,
+        .admin-filter button,
+        .admin-action {
+            cursor: pointer;
+        }
+
+        .admin-status {
+            min-height: 1.5em;
+            margin-top: 0.75rem;
+        }
+
+        .admin-panel[hidden] {
+            display: none;
+        }
+
+        .admin-filter {
+            display: flex;
+            gap: 0.75rem;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+
+        .admin-list {
+            display: grid;
+            gap: 1.5rem;
+        }
+
+        .admin-message {
+            padding: 1.25rem 0;
+            border-top: 1px solid rgba(23, 23, 23, 0.25);
+        }
+
+        .admin-message h2 {
+            margin: 0 0 0.75rem;
+            font-size: 1.15rem;
+        }
+
+        .admin-message p {
+            white-space: pre-wrap;
+        }
+
+        .admin-meta {
+            margin: 0.35rem 0;
+            font-size: 0.9rem;
+        }
+
+        .admin-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.6rem;
+            margin-top: 1rem;
+        }
+
+        @media (max-width: 650px) {
+            .admin-accesso form,
+            .admin-filter {
+                flex-direction: column;
+                align-items: stretch;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <main class="admin">
+        <h1>Amministrazione</h1>
+
+        <section class="admin-accesso">
+            <form id="adminLoginForm">
+                <input
+                    id="adminToken"
+                    type="password"
+                    autocomplete="off"
+                    placeholder="Token amministratore"
+                    aria-label="Token amministratore"
+                    required
+                >
+                <button type="submit">Accedi</button>
+            </form>
+
+            <p class="admin-status" id="adminStatus" aria-live="polite"></p>
+        </section>
+
+        <section class="admin-panel" id="adminPanel" hidden>
+            <div class="admin-filter">
+                <label for="adminStatusFilter">Mostra:</label>
+
+                <select id="adminStatusFilter">
+                    <option value="active">Da gestire</option>
+                    <option value="pending">Online da approvare</option>
+                    <option value="pending_delivery">Lettere da consegnare</option>
+                    <option value="approved">Online approvati</option>
+                    <option value="read">Online letti</option>
+                    <option value="delivered">Lettere consegnate</option>
+                    <option value="rejected">Rifiutati</option>
+                    <option value="all">Tutti</option>
+                </select>
+
+                <button id="adminRefresh" type="button">Aggiorna</button>
+            </div>
+
+            <div class="admin-list" id="adminList"></div>
+        </section>
+    </main>
+
+    <script src="./config.js"></script>
+    <script src="./admin.js"></script>
+</body>
+</html>
