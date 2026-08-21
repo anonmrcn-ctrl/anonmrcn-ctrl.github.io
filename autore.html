@@ -3,25 +3,15 @@
 
 <head>
     <meta charset="UTF-8">
-
-    <meta name="viewport"
-          content="width=device-width, initial-scale=1.0">
-
-    <meta name="description"
-          content="L'autore del progetto poetico dedicato a Marcon">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="L'autore del progetto poetico dedicato a Marcon">
 
     <title>L’autore — nnMrcn</title>
 
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="./style.css">
 </head>
 
-
 <body class="pagina-autore">
-
-
-    <!-- =========================
-         MENU PRINCIPALE
-         ========================= -->
 
     <button
         class="menu-button"
@@ -33,19 +23,13 @@
         MENU
     </button>
 
-
-    <div
-        class="menu-overlay"
-        id="menuOverlay"
-    ></div>
-
+    <div class="menu-overlay" id="menuOverlay"></div>
 
     <nav
         class="menu-principale"
         id="menuPrincipale"
         aria-label="Menu principale"
     >
-
         <button
             class="menu-close"
             id="menuClose"
@@ -54,30 +38,20 @@
             ×
         </button>
 
+        <div class="menu-contenuto">
+            <a href="./index.html">
+                La poesia
+            </a>
 
-<div class="menu-contenuto">
+            <a href="./autore.html" class="voce-attiva">
+                L’autore
+            </a>
 
-    <a href="./index.html">
-        La poesia
-    </a>
-
-    <a href="./autore.html" class="voce-attiva">
-        L’autore
-    </a>
-
-    <a href="./progetto.html">
-        Il progetto
-    </a>
-
-</div>
-        
+            <a href="./progetto.html">
+                Il progetto
+            </a>
+        </div>
     </nav>
-
-
-
-    <!-- =========================
-         CONTENUTO
-         ========================= -->
 
     <main class="autore">
 
@@ -85,23 +59,14 @@
             L’autore
         </h1>
 
-
-        <div class="autore-logo">
-
         <figure class="autore-logo">
-
-    <img
-        src="https://anonmrcn-ctrl.github.io/logo.PNG"
-        alt="Logo di nnMrcn"
-    >
-
-</figure>
-
-        </div>
-
+            <img
+                src="./logo.PNG"
+                alt="Logo di nnMrcn"
+            >
+        </figure>
 
         <article class="autore-testo">
-
             <p>
                 Sono un ragazzo nato e vissuto a Marcon
                 che ha deciso di iniziare a fare qualcosa
@@ -122,99 +87,43 @@
                 tempi in cui viviamo.
             </p>
 
-
             <p class="firma">
                 -nnMrcn-
             </p>
-
         </article>
 
     </main>
 
-
-
-    <!-- =========================
-         SCRIPT MENU
-         ========================= -->
-
     <script>
-
-        const menuButton =
-            document.getElementById("menuButton");
-
-        const menuClose =
-            document.getElementById("menuClose");
-
-        const menuPrincipale =
-            document.getElementById("menuPrincipale");
-
-        const menuOverlay =
-            document.getElementById("menuOverlay");
-
+        const menuButton = document.getElementById("menuButton");
+        const menuClose = document.getElementById("menuClose");
+        const menuPrincipale = document.getElementById("menuPrincipale");
+        const menuOverlay = document.getElementById("menuOverlay");
 
         function apriMenu() {
-
             menuPrincipale.classList.add("aperto");
             menuOverlay.classList.add("aperto");
-
-            menuButton.setAttribute(
-                "aria-expanded",
-                "true"
-            );
-
-            document.body.classList.add(
-                "menu-aperto"
-            );
+            menuButton.setAttribute("aria-expanded", "true");
+            document.body.classList.add("menu-aperto");
         }
-
 
         function chiudiMenu() {
-
             menuPrincipale.classList.remove("aperto");
             menuOverlay.classList.remove("aperto");
-
-            menuButton.setAttribute(
-                "aria-expanded",
-                "false"
-            );
-
-            document.body.classList.remove(
-                "menu-aperto"
-            );
+            menuButton.setAttribute("aria-expanded", "false");
+            document.body.classList.remove("menu-aperto");
         }
 
+        menuButton.addEventListener("click", apriMenu);
+        menuClose.addEventListener("click", chiudiMenu);
+        menuOverlay.addEventListener("click", chiudiMenu);
 
-        menuButton.addEventListener(
-            "click",
-            apriMenu
-        );
-
-
-        menuClose.addEventListener(
-            "click",
-            chiudiMenu
-        );
-
-
-        menuOverlay.addEventListener(
-            "click",
-            chiudiMenu
-        );
-
-
-        document.addEventListener(
-            "keydown",
-            function(event) {
-
-                if (event.key === "Escape") {
-                    chiudiMenu();
-                }
-
+        document.addEventListener("keydown", function(event) {
+            if (event.key === "Escape") {
+                chiudiMenu();
             }
-        );
-
+        });
     </script>
 
 </body>
-
 </html>
