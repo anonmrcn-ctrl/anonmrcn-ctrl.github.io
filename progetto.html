@@ -12,6 +12,52 @@
         rel="stylesheet"
         href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
     >
+
+    <style>
+        .poesia-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 2200;
+            display: block;
+            overflow-y: auto;
+            padding: 0;
+            background: #f4f1e8;
+        }
+
+        .poesia-overlay[hidden] {
+            display: none;
+        }
+
+        .poesia-dialogo {
+            position: relative;
+            width: 100%;
+            min-height: 100%;
+            max-height: none;
+            overflow: visible;
+            padding: 0;
+            background: #f4f1e8;
+            border: 0;
+        }
+
+        .poesia-close {
+            position: fixed;
+            top: 1.5rem;
+            right: 1.5rem;
+            z-index: 2210;
+        }
+
+        .poesia-location {
+            font-size: inherit;
+            line-height: inherit;
+        }
+
+        @media (max-width: 700px) {
+            .poesia-close {
+                top: 0.75rem;
+                right: 0.75rem;
+            }
+        }
+    </style>
 </head>
 
 <body class="pagina-progetto">
@@ -84,9 +130,9 @@
     >
         <article
             class="poesia-dialogo"
+            id="poesiaDialogo"
             role="dialog"
             aria-modal="true"
-            aria-labelledby="poesiaTitolo"
         >
             <button
                 class="poesia-close"
@@ -96,8 +142,6 @@
             >
                 ×
             </button>
-
-            <h2 id="poesiaTitolo"></h2>
 
             <div
                 class="poesia-location"
@@ -116,7 +160,7 @@
 
         const poesiaOverlay = document.getElementById("poesiaOverlay");
         const poesiaClose = document.getElementById("poesiaClose");
-        const poesiaTitolo = document.getElementById("poesiaTitolo");
+        const poesiaDialogo = document.getElementById("poesiaDialogo");
         const poesiaTesto = document.getElementById("poesiaTesto");
 
         function apriMenu() {
@@ -134,30 +178,23 @@
         }
 
         function apriPoesia(luogo) {
-            poesiaTitolo.textContent = luogo.nome;
-            poesiaTesto.replaceChildren();
+            poesiaDialogo.setAttribute(
+                "aria-label",
+                `Poesia di ${luogo.nome}`
+            );
 
             if (!luogo.poesia) {
-                const messaggio = document.createElement("p");
-                messaggio.textContent = "Poesia non ancora inserita.";
-                poesiaTesto.appendChild(messaggio);
+                poesiaTesto.innerHTML = `
+                    <main class="poesia">
+                        <p>Poesia non ancora inserita.</p>
+                    </main>
+                `;
             } else {
-                luogo.poesia.split("\n").forEach(function(riga) {
-                    if (riga.startsWith("# ")) {
-                        const titoloSezione = document.createElement("h3");
-                        titoloSezione.textContent = riga.slice(2);
-                        poesiaTesto.appendChild(titoloSezione);
-                        return;
-                    }
-
-                    const elementoRiga = document.createElement("div");
-                    elementoRiga.className = "riga-poesia-location";
-                    elementoRiga.textContent = riga || " ";
-                    poesiaTesto.appendChild(elementoRiga);
-                });
+                poesiaTesto.innerHTML = luogo.poesia;
             }
 
             poesiaOverlay.hidden = false;
+            poesiaOverlay.scrollTop = 0;
             document.body.classList.add("poesia-aperta");
             poesiaClose.focus();
         }
@@ -171,12 +208,6 @@
         menuClose.addEventListener("click", chiudiMenu);
         menuOverlay.addEventListener("click", chiudiMenu);
         poesiaClose.addEventListener("click", chiudiPoesia);
-
-        poesiaOverlay.addEventListener("click", function(event) {
-            if (event.target === poesiaOverlay) {
-                chiudiPoesia();
-            }
-        });
 
         document.addEventListener("keydown", function(event) {
             if (event.key === "Escape") {
@@ -265,126 +296,286 @@
 
         /* =========================
            POESIA — VIA PIAVE 33
+           stessa impaginazione della pagina principale
            ========================= */
 
-        const poesiaViaPiave33 = `# I
-E poi si svegliò
-   Il Gajo tra i Praelli
-Si guardò dall'interno
-   e loro si salutavano
-Si guardò dall'esterno
-   e si salutarono anche loro
-Poi molte Lune
-   molti Risvegli
-   molti Sguardi
-   e
-   molti Saluti
-E poi si svegliò 
-   tra il Gajo e i Praelli
-Si guardò dall'interno
-   ...
-Si guardò dall'esterno
-   ...
-Poi sentì una fitta allo stomaco
-   all'altezza di via Altinia
-      e le Ombre?
-Poi sentì il suo sangue scorrere
-   i verdi campi, via Alta
-      e il grigio Fiume?
-E poi si diede un pizzicotto
-Si chiese se per caso
-   stesse sognando
-# II
-Ma
-Forse in un futurista furore
-   iniziò dal nulla a fomentarsi
-      fra il Colmello e il Pojanon
-E prese a tormentarsi
-"Io devo perlustrare"
-   Si disse
-"Ora devo osservare"
-   Si ripetè
-"Ora io devo..."
-   Si fermò
-È lì infatti che notò
-   qualcosa
-      molto meno grande
-         ma nella sua stessa situazione
-"Fossa storta!"
-   chiamò
-"Così non mi chiamo"
-   "..."
-"Vengo dalle Ombre"
-   "chi ti fece"
-"Il grigio e veloce Fiume"
-E riprese a tormentarsi
-"Ora devo perlustrare"
-    Si ripetè
-"Io devo osservare"
-    Si disse
-"Io ora devo..."
-   "..."
-"Perché?"
-Perché?
-# III
-A quel punto successe
-Qualcosa parlò 
-   e qualcosa successe
-"Perché sei indietro"
-   Si stupì, si sentì le ginocchia cedere
-"Perché sei goffamente indietro"
-   Si girò, l'afrenalina salì
-"Non hanno bisogno di te
-   se non come gnomone
-      come orma per la loro zampa
-         come scheletro del tuo corpo"
-Ma
-Si chiese
-   nonostante tutto
-      Perché
-Figura 
-   aprì la mano
-      e gliela rivolse
-Non ci vide più
-"Ecco Il Perché"
-   Disse
-"Sei indietro, perché"
-   Si girò, l'adrenalina saliva
-"Perché sei goffamente indietro"
-   Si stupì, si sentì le ginocchia cedere
-      come le fossero comparse dal nulla
-         Via due Giugno
-Corse.
-# IV
-Ora il futurista furore
-   era in pieno controllo
-E continuò
-rotolò, incespicò, cadde
-   Il Gajo, i Praelli
-si rialzò, corse
-   Inutili
-accelerando
-   Davanti al Bagliore
-senza scrupoli, letale
-   I campi, Fossa Storta
-incespicò, rotolò, cadde
-   Ora grigi
-corse, si rialzò
-   Non c'è Tempo
-accelerando
-   La Calma è da vecchi
-letale, senza scrupoli
-   Il Bagliore
-   L'Accelerazione
-   L'Accecamento
-   L'Ebrezza
-      
-      Non c'è Tempo
-E 
-   preso dal Bagliore
-      reincontrò
-Chi?
-"Dove corri?"`;
+        const poesiaViaPiave33 = `
+            <main class="poesia">
+
+                <section class="canto">
+                    <h2 class="numero">I</h2>
+
+                    <p>
+                        E poi si svegliò
+                        <span class="rientro">Il Gajo tra i Praelli</span>
+                    </p>
+
+                    <p>
+                        Si guardò dall'interno
+                        <span class="rientro">e loro si salutavano</span>
+
+                        Si guardò dall'esterno
+                        <span class="rientro">e si salutarono anche loro</span>
+                    </p>
+
+                    <p>
+                        Poi molte Lune
+                        <span class="rientro">molti Risvegli</span>
+                        <span class="rientro">molti Sguardi</span>
+                        <span class="rientro">e</span>
+                        <span class="rientro">molti Saluti</span>
+                    </p>
+
+                    <p>
+                        E poi si svegliò
+                        <span class="rientro">tra il Gajo e i Praelli</span>
+                    </p>
+
+                    <p>
+                        Si guardò dall'interno
+                        <span class="rientro">...</span>
+
+                        Si guardò dall'esterno
+                        <span class="rientro">...</span>
+                    </p>
+
+                    <p>
+                        Poi sentì una fitta allo stomaco
+                        <span class="rientro">all'altezza di via Altinia</span>
+                        <span class="rientro-profondo">e le Ombre?</span>
+                    </p>
+
+                    <p>
+                        Poi sentì il suo sangue scorrere
+                        <span class="rientro">i verdi campi, via Alta</span>
+                        <span class="rientro-profondo">e il grigio Fiume?</span>
+                    </p>
+
+                    <p>
+                        E poi si diede un pizzicotto
+                    </p>
+
+                    <p>
+                        Si chiese se per caso
+                        <span class="rientro">stesse sognando</span>
+                    </p>
+                </section>
+
+
+                <section class="canto">
+                    <h2 class="numero">II</h2>
+
+                    <p class="isolato">
+                        Ma
+                    </p>
+
+                    <p>
+                        Forse in un futurista furore
+                        <span class="rientro">iniziò dal nulla a fomentarsi</span>
+                        <span class="rientro-profondo">fra il Colmello e il Pojanon</span>
+                    </p>
+
+                    <p>
+                        E prese a tormentarsi
+                    </p>
+
+                    <p>
+                        "Io devo perlustrare"
+                        <span class="rientro">Si disse</span>
+
+                        "Ora devo osservare"
+                        <span class="rientro">Si ripetè</span>
+
+                        "Ora io devo..."
+                        <span class="rientro">Si fermò</span>
+                    </p>
+
+                    <p>
+                        È lì infatti che notò
+                        <span class="rientro">qualcosa</span>
+                        <span class="rientro-profondo">molto meno grande</span>
+                        <span class="rientro-profondo">ma nella sua stessa situazione</span>
+                    </p>
+
+                    <p>
+                        "Fossa storta!"
+                        <span class="rientro">chiamò</span>
+
+                        "Così non mi chiamo"
+                        <span class="rientro">"..."</span>
+
+                        "Vengo dalle Ombre"
+                        <span class="rientro">"chi ti fece"</span>
+
+                        "Il grigio e veloce Fiume"
+                    </p>
+
+                    <p>
+                        E riprese a tormentarsi
+                    </p>
+
+                    <p>
+                        "Ora devo perlustrare"
+                        <span class="rientro">Si ripetè</span>
+
+                        "Io devo osservare"
+                        <span class="rientro">Si disse</span>
+
+                        "Io ora devo..."
+                        <span class="rientro">"..."</span>
+                    </p>
+
+                    <p>
+                        "Perché?"
+                    </p>
+
+                    <p>
+                        Perché?
+                    </p>
+                </section>
+
+
+                <section class="canto">
+                    <h2 class="numero">III</h2>
+
+                    <p>
+                        A quel punto successe
+                    </p>
+
+                    <p>
+                        Qualcosa parlò
+                        <span class="rientro">e qualcosa successe</span>
+                    </p>
+
+                    <p>
+                        "Perché sei indietro"
+                        <span class="rientro">Si stupì, si sentì le ginocchia cedere</span>
+
+                        "Perché sei goffamente indietro"
+                        <span class="rientro">Si girò, l'afrenalina salì</span>
+                    </p>
+
+                    <p>
+                        "Non hanno bisogno di te
+                        <span class="rientro">se non come gnomone</span>
+                        <span class="rientro-profondo">come orma per la loro zampa</span>
+                        <span class="rientro-profondo">come scheletro del tuo corpo"</span>
+                    </p>
+
+                    <p class="isolato">
+                        Ma
+                    </p>
+
+                    <p>
+                        Si chiese
+                        <span class="rientro">nonostante tutto</span>
+                    </p>
+
+                    <p class="perche">
+                        Perché
+                    </p>
+
+                    <p>
+                        Figura
+                        <span class="rientro">aprì la mano</span>
+                        <span class="rientro-profondo">e gliela rivolse</span>
+                    </p>
+
+                    <p>
+                        Non ci vide più
+                    </p>
+
+                    <p>
+                        "Ecco Il Perché"
+                        <span class="rientro">Disse</span>
+                    </p>
+
+                    <p>
+                        "Sei indietro, perché"
+                        <span class="rientro">Si girò, l'adrenalina saliva</span>
+
+                        "Perché sei goffamente indietro"
+                        <span class="rientro">Si stupì, si sentì le ginocchia cedere</span>
+                        <span class="rientro-profondo">come le fossero comparse dal nulla</span>
+                        <span class="rientro-profondo">Via due Giugno</span>
+                    </p>
+
+                    <p class="isolato">
+                        Corse.
+                    </p>
+                </section>
+
+
+                <section class="canto">
+                    <h2 class="numero">IV</h2>
+
+                    <p>
+                        Ora il futurista furore
+                        <span class="rientro">era in pieno controllo</span>
+                    </p>
+
+                    <p>
+                        E continuò
+                    </p>
+
+                    <p class="accelerazione">
+                        rotolò, incespicò, cadde
+                        <span class="rientro">Il Gajo, i Praelli</span>
+
+                        si rialzò, corse
+                        <span class="rientro">Inutili</span>
+
+                        accelerando
+                        <span class="rientro">Davanti al Bagliore</span>
+
+                        senza scrupoli, letale
+                    </p>
+
+                    <p class="accelerazione">
+                        <span class="rientro">I campi, Fossa Storta</span>
+
+                        incespicò, rotolò, cadde
+                        <span class="rientro">Ora grigi</span>
+
+                        corse, si rialzò
+                        <span class="rientro">Non c'è Tempo</span>
+                    </p>
+
+                    <p class="accelerazione">
+                        accelerando
+                        <span class="rientro">La Calma è da vecchi</span>
+
+                        letale, senza scrupoli
+                    </p>
+
+                    <p class="parole">
+                        Il Bagliore
+                        <span>L'Accelerazione</span>
+                        <span>L'Accecamento</span>
+                        <span>L'Ebrezza</span>
+                    </p>
+
+                    <p class="non-tempo">
+                        Non c'è Tempo
+                    </p>
+
+                    <p>
+                        E
+                        <span class="rientro">preso dal Bagliore</span>
+                        <span class="rientro-profondo">reincontrò</span>
+                    </p>
+
+                    <p class="chi">
+                        Chi?
+                    </p>
+
+                    <p class="finale">
+                        "Dove corri?"
+                    </p>
+                </section>
+
+            </main>
+        `;
 
 
         /* =========================
