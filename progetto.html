@@ -21,6 +21,81 @@
             line-height: 1.8;
         }
 
+        .accesso-rete {
+            width: min(650px, calc(100% - 4rem));
+            margin: 3rem auto 0;
+            padding-top: 2rem;
+            border-top: 1px solid rgba(23, 23, 23, 0.25);
+        }
+
+        .accesso-rete h2 {
+            margin: 0 0 1.25rem;
+            font-size: 1.35rem;
+        }
+
+        .accesso-form {
+            display: flex;
+            gap: 0.75rem;
+            align-items: stretch;
+        }
+
+        .accesso-form label {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
+        }
+
+        .accesso-form input {
+            flex: 1;
+            min-width: 0;
+            padding: 0.75rem 0.9rem;
+            background: transparent;
+            color: #171717;
+            border: 1px solid #171717;
+            font: inherit;
+            letter-spacing: 0.04em;
+        }
+
+        .accesso-form button,
+        .logout-button {
+            padding: 0.75rem 1rem;
+            background: transparent;
+            color: #171717;
+            border: 1px solid #171717;
+            font-family: Georgia, "Times New Roman", serif;
+            font-size: 0.9rem;
+            cursor: pointer;
+        }
+
+        .accesso-form button:hover,
+        .accesso-form button:focus-visible,
+        .logout-button:hover,
+        .logout-button:focus-visible {
+            background: #171717;
+            color: #f4f1e8;
+        }
+
+        .accesso-form button:disabled {
+            opacity: 0.5;
+            cursor: wait;
+        }
+
+        .login-message {
+            min-height: 1.5em;
+            margin: 0.75rem 0 0;
+            font-size: 0.9rem;
+        }
+
+        .login-attivo p {
+            margin: 0 0 1rem;
+        }
+
         .poesia-overlay {
             position: fixed;
             inset: 0;
@@ -58,10 +133,24 @@
             line-height: inherit;
         }
 
+        .popup-luogo strong {
+            display: block;
+            margin-bottom: 0.6rem;
+        }
+
         @media (max-width: 700px) {
             .progetto-intro {
                 font-size: 1rem;
                 line-height: 1.7;
+            }
+
+            .accesso-rete {
+                width: calc(100% - 2rem);
+                margin-top: 2rem;
+            }
+
+            .accesso-form {
+                flex-direction: column;
             }
 
             .poesia-close {
@@ -124,6 +213,48 @@
             <p class="progetto-intro">
                 Questa mappa mostra i luoghi di cui parla la poesia, dando la possibilità di tornare indietro nel tempo. Se hai ricevuto personalmente una poesia a casa tua, puoi accedere con la password che ti è stata fornita all'interno di essa. Questo accesso sbloccherà sulla mappa le diverse locations dove sono state distribuite le poesie e ti consentirà di spedire un messaggio (tramite me) in una di queste location
             </p>
+
+            <section class="accesso-rete" aria-labelledby="accessoTitolo">
+                <h2 id="accessoTitolo">Accesso alle locations</h2>
+
+                <div id="loginLoggedOut">
+                    <form class="accesso-form" id="loginForm">
+                        <label for="loginPassword">Password della poesia</label>
+                        <input
+                            id="loginPassword"
+                            name="password"
+                            type="password"
+                            inputmode="text"
+                            autocomplete="off"
+                            placeholder="Password della poesia"
+                            required
+                        >
+                        <button id="loginButton" type="submit">
+                            Accedi
+                        </button>
+                    </form>
+
+                    <p
+                        class="login-message"
+                        id="loginMessage"
+                        aria-live="polite"
+                    ></p>
+                </div>
+
+                <div class="login-attivo" id="loginLoggedIn" hidden>
+                    <p>
+                        Accesso riconosciuto: <strong id="loginLocation"></strong>
+                    </p>
+
+                    <button
+                        class="logout-button"
+                        id="logoutButton"
+                        type="button"
+                    >
+                        Esci
+                    </button>
+                </div>
+            </section>
         </section>
 
         <section class="sezione-mappa">
@@ -167,541 +298,7 @@
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
-    <script>
-        const menuButton = document.getElementById("menuButton");
-        const menuClose = document.getElementById("menuClose");
-        const menuPrincipale = document.getElementById("menuPrincipale");
-        const menuOverlay = document.getElementById("menuOverlay");
-
-        const poesiaOverlay = document.getElementById("poesiaOverlay");
-        const poesiaClose = document.getElementById("poesiaClose");
-        const poesiaDialogo = document.getElementById("poesiaDialogo");
-        const poesiaTesto = document.getElementById("poesiaTesto");
-
-        function apriMenu() {
-            menuPrincipale.classList.add("aperto");
-            menuOverlay.classList.add("aperto");
-            menuButton.setAttribute("aria-expanded", "true");
-            document.body.classList.add("menu-aperto");
-        }
-
-        function chiudiMenu() {
-            menuPrincipale.classList.remove("aperto");
-            menuOverlay.classList.remove("aperto");
-            menuButton.setAttribute("aria-expanded", "false");
-            document.body.classList.remove("menu-aperto");
-        }
-
-        function apriPoesia(luogo) {
-            poesiaDialogo.setAttribute(
-                "aria-label",
-                `Poesia di ${luogo.nome}`
-            );
-
-            if (!luogo.poesia) {
-                poesiaTesto.innerHTML = `
-                    <main class="poesia">
-                        <p>Poesia non ancora inserita.</p>
-                    </main>
-                `;
-            } else {
-                poesiaTesto.innerHTML = luogo.poesia;
-            }
-
-            poesiaOverlay.hidden = false;
-            poesiaOverlay.scrollTop = 0;
-            document.body.classList.add("poesia-aperta");
-            poesiaClose.focus();
-        }
-
-        function chiudiPoesia() {
-            poesiaOverlay.hidden = true;
-            document.body.classList.remove("poesia-aperta");
-        }
-
-        menuButton.addEventListener("click", apriMenu);
-        menuClose.addEventListener("click", chiudiMenu);
-        menuOverlay.addEventListener("click", chiudiMenu);
-        poesiaClose.addEventListener("click", chiudiPoesia);
-
-        document.addEventListener("keydown", function(event) {
-            if (event.key === "Escape") {
-                if (!poesiaOverlay.hidden) {
-                    chiudiPoesia();
-                } else {
-                    chiudiMenu();
-                }
-            }
-        });
-
-
-        /* =========================
-           MAPPA
-           ========================= */
-
-        const map = L.map("map", {
-            scrollWheelZoom: true
-        }).setView(
-            [45.5515, 12.3278],
-            13
-        );
-
-
-        /* =========================
-           MAPPA SATELLITARE
-           ========================= */
-
-        const satelliteOggi = L.tileLayer(
-            "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
-            {
-                maxZoom: 19,
-                attribution:
-                    "Tiles &copy; Esri — Sources: Esri, Maxar, Earthstar Geographics, and the GIS User Community"
-            }
-        );
-
-
-        /* =========================
-           FOTO AEREA 1975
-           ========================= */
-
-        const foto1975 = L.imageOverlay(
-            "./marcon_1975_web.webp",
-            [
-                [45.5314854758, 12.2633666786],
-                [45.5670779946, 12.3922261726]
-            ],
-            {
-                opacity: 1
-            }
-        );
-
-
-        /* =========================
-           LAYER TEMPORALI
-           ========================= */
-
-        const oggi = L.layerGroup([
-            satelliteOggi
-        ]);
-
-        const anno1975 = L.layerGroup([
-            satelliteOggi,
-            foto1975
-        ]);
-
-        oggi.addTo(map);
-
-
-        /* =========================
-           SELETTORE TEMPORALE
-           ========================= */
-
-        L.control.layers(
-            {
-                "Oggi": oggi,
-                "1975": anno1975
-            },
-            null,
-            {
-                collapsed: false
-            }
-        ).addTo(map);
-
-
-        /* =========================
-           POESIA — VIA PIAVE 33
-           ========================= */
-
-        const poesiaViaPiave33 = `
-            <main class="poesia">
-
-                <section class="canto">
-                    <h2 class="numero">I</h2>
-
-                    <p>
-                        E poi si svegliò
-                        <span class="rientro">Il Gajo tra i Praelli</span>
-                    </p>
-
-                    <p>
-                        Si guardò dall'interno
-                        <span class="rientro">e loro si salutavano</span>
-
-                        Si guardò dall'esterno
-                        <span class="rientro">e si salutarono anche loro</span>
-                    </p>
-
-                    <p>
-                        Poi molte Lune
-                        <span class="rientro">molti Risvegli</span>
-                        <span class="rientro">molti Sguardi</span>
-                        <span class="rientro">e</span>
-                        <span class="rientro">molti Saluti</span>
-                    </p>
-
-                    <p>
-                        E poi si svegliò
-                        <span class="rientro">tra il Gajo e i Praelli</span>
-                    </p>
-
-                    <p>
-                        Si guardò dall'interno
-                        <span class="rientro">...</span>
-
-                        Si guardò dall'esterno
-                        <span class="rientro">...</span>
-                    </p>
-
-                    <p>
-                        Poi sentì una fitta allo stomaco
-                        <span class="rientro">all'altezza di via Altinia</span>
-                        <span class="rientro-profondo">e le Ombre?</span>
-                    </p>
-
-                    <p>
-                        Poi sentì il suo sangue scorrere
-                        <span class="rientro">i verdi campi, via Alta</span>
-                        <span class="rientro-profondo">e il grigio Fiume?</span>
-                    </p>
-
-                    <p>
-                        E poi si diede un pizzicotto
-                    </p>
-
-                    <p>
-                        Si chiese se per caso
-                        <span class="rientro">stesse sognando</span>
-                    </p>
-                </section>
-
-                <section class="canto">
-                    <h2 class="numero">II</h2>
-
-                    <p class="isolato">Ma</p>
-
-                    <p>
-                        Forse in un futurista furore
-                        <span class="rientro">iniziò dal nulla a fomentarsi</span>
-                        <span class="rientro-profondo">fra il Colmello e il Pojanon</span>
-                    </p>
-
-                    <p>E prese a tormentarsi</p>
-
-                    <p>
-                        "Io devo perlustrare"
-                        <span class="rientro">Si disse</span>
-
-                        "Ora devo osservare"
-                        <span class="rientro">Si ripetè</span>
-
-                        "Ora io devo..."
-                        <span class="rientro">Si fermò</span>
-                    </p>
-
-                    <p>
-                        È lì infatti che notò
-                        <span class="rientro">qualcosa</span>
-                        <span class="rientro-profondo">molto meno grande</span>
-                        <span class="rientro-profondo">ma nella sua stessa situazione</span>
-                    </p>
-
-                    <p>
-                        "Fossa storta!"
-                        <span class="rientro">chiamò</span>
-
-                        "Così non mi chiamo"
-                        <span class="rientro">"..."</span>
-
-                        "Vengo dalle Ombre"
-                        <span class="rientro">"chi ti fece"</span>
-
-                        "Il grigio e veloce Fiume"
-                    </p>
-
-                    <p>E riprese a tormentarsi</p>
-
-                    <p>
-                        "Ora devo perlustrare"
-                        <span class="rientro">Si ripetè</span>
-
-                        "Io devo osservare"
-                        <span class="rientro">Si disse</span>
-
-                        "Io ora devo..."
-                        <span class="rientro">"..."</span>
-                    </p>
-
-                    <p>"Perché?"</p>
-                    <p>Perché?</p>
-                </section>
-
-                <section class="canto">
-                    <h2 class="numero">III</h2>
-
-                    <p>A quel punto successe</p>
-
-                    <p>
-                        Qualcosa parlò
-                        <span class="rientro">e qualcosa successe</span>
-                    </p>
-
-                    <p>
-                        "Perché sei indietro"
-                        <span class="rientro">Si stupì, si sentì le ginocchia cedere</span>
-
-                        "Perché sei goffamente indietro"
-                        <span class="rientro">Si girò, l'afrenalina salì</span>
-                    </p>
-
-                    <p>
-                        "Non hanno bisogno di te
-                        <span class="rientro">se non come gnomone</span>
-                        <span class="rientro-profondo">come orma per la loro zampa</span>
-                        <span class="rientro-profondo">come scheletro del tuo corpo"</span>
-                    </p>
-
-                    <p class="isolato">Ma</p>
-
-                    <p>
-                        Si chiese
-                        <span class="rientro">nonostante tutto</span>
-                    </p>
-
-                    <p class="perche">Perché</p>
-
-                    <p>
-                        Figura
-                        <span class="rientro">aprì la mano</span>
-                        <span class="rientro-profondo">e gliela rivolse</span>
-                    </p>
-
-                    <p>Non ci vide più</p>
-
-                    <p>
-                        "Ecco Il Perché"
-                        <span class="rientro">Disse</span>
-                    </p>
-
-                    <p>
-                        "Sei indietro, perché"
-                        <span class="rientro">Si girò, l'adrenalina saliva</span>
-
-                        "Perché sei goffamente indietro"
-                        <span class="rientro">Si stupì, si sentì le ginocchia cedere</span>
-                        <span class="rientro-profondo">come le fossero comparse dal nulla</span>
-                        <span class="rientro-profondo">Via due Giugno</span>
-                    </p>
-
-                    <p class="isolato">Corse.</p>
-                </section>
-
-                <section class="canto">
-                    <h2 class="numero">IV</h2>
-
-                    <p>
-                        Ora il futurista furore
-                        <span class="rientro">era in pieno controllo</span>
-                    </p>
-
-                    <p>E continuò</p>
-
-                    <p class="accelerazione">
-                        rotolò, incespicò, cadde
-                        <span class="rientro">Il Gajo, i Praelli</span>
-
-                        si rialzò, corse
-                        <span class="rientro">Inutili</span>
-
-                        accelerando
-                        <span class="rientro">Davanti al Bagliore</span>
-
-                        senza scrupoli, letale
-                    </p>
-
-                    <p class="accelerazione">
-                        <span class="rientro">I campi, Fossa Storta</span>
-
-                        incespicò, rotolò, cadde
-                        <span class="rientro">Ora grigi</span>
-
-                        corse, si rialzò
-                        <span class="rientro">Non c'è Tempo</span>
-                    </p>
-
-                    <p class="accelerazione">
-                        accelerando
-                        <span class="rientro">La Calma è da vecchi</span>
-
-                        letale, senza scrupoli
-                    </p>
-
-                    <p class="parole">
-                        Il Bagliore
-                        <span>L'Accelerazione</span>
-                        <span>L'Accecamento</span>
-                        <span>L'Ebrezza</span>
-                    </p>
-
-                    <p class="non-tempo">Non c'è Tempo</p>
-
-                    <p>
-                        E
-                        <span class="rientro">preso dal Bagliore</span>
-                        <span class="rientro-profondo">reincontrò</span>
-                    </p>
-
-                    <p class="chi">Chi?</p>
-                    <p class="finale">"Dove corri?"</p>
-                </section>
-
-            </main>
-        `;
-
-
-        /* =========================
-           LUOGHI DELLE POESIE
-           ========================= */
-
-        const luoghi = [
-            {
-                nome: "Via Leonardo da Vinci 69",
-                lat: 45.55068889,
-                lon: 12.29783611
-            },
-            {
-                nome: "Via Piave 33",
-                lat: 45.54905278,
-                lon: 12.30069444,
-                poesia: poesiaViaPiave33
-            },
-            {
-                nome: "Via Pialoi 15",
-                lat: 45.55051667,
-                lon: 12.29298889
-            },
-            {
-                nome: "Via Michelangelo 20",
-                lat: 45.55116389,
-                lon: 12.29913611
-            },
-            {
-                nome: "Via Boschette",
-                lat: 45.56014167,
-                lon: 12.30475000
-            },
-            {
-                nome: "Via Giovanni Paolo II",
-                lat: 45.55928333,
-                lon: 12.30306111
-            },
-            {
-                nome: "Viale Don Luigi Sturzo",
-                lat: 45.55278333,
-                lon: 12.31991667
-            },
-            {
-                nome: "Via Ferrovia 17",
-                lat: 45.54861944,
-                lon: 12.32383611
-            },
-            {
-                nome: "Via Matteotti 22",
-                lat: 45.56081389,
-                lon: 12.32211667
-            },
-            {
-                nome: "Via Fornace 28",
-                lat: 45.56269722,
-                lon: 12.32306111
-            },
-            {
-                nome: "Via Bosco Berizzi",
-                lat: 45.53867778,
-                lon: 12.29911111
-            },
-            {
-                nome: "Via Altinia",
-                lat: 45.53990556,
-                lon: 12.30399722
-            },
-            {
-                nome: "Via Bosco Berizzi 2",
-                lat: 45.53820278,
-                lon: 12.30164722
-            },
-            {
-                nome: "Via Alta 110",
-                lat: 45.55623611,
-                lon: 12.28671389
-            },
-            {
-                nome: "Via Praello 50",
-                lat: 45.53796111,
-                lon: 12.32425000
-            },
-            {
-                nome: "Via Praello",
-                lat: 45.54035833,
-                lon: 12.32820000
-            },
-            {
-                nome: "Via Poianon 14",
-                lat: 45.55638056,
-                lon: 12.35706667
-            },
-            {
-                nome: "Via Zuccarello",
-                lat: 45.53708333,
-                lon: 12.36081944
-            },
-            {
-                nome: "Via Cortellazzo 30",
-                lat: 45.56294722,
-                lon: 12.27724167
-            },
-            {
-                nome: "Via Praello 87",
-                lat: 45.53335000,
-                lon: 12.32175833
-            }
-        ];
-
-        luoghi.forEach(function(luogo, indice) {
-            const marker = L.marker([
-                luogo.lat,
-                luogo.lon
-            ]).addTo(map);
-
-            marker.bindPopup(`
-                <div class="popup-luogo">
-                    <button
-                        type="button"
-                        class="mostra-poesia"
-                        data-indice="${indice}"
-                    >
-                        Mostra poesia ${luogo.nome}
-                    </button>
-                </div>
-            `);
-        });
-
-        map.on("popupopen", function(event) {
-            const popup = event.popup.getElement();
-            const pulsante = popup?.querySelector(".mostra-poesia");
-
-            if (!pulsante) {
-                return;
-            }
-
-            pulsante.addEventListener("click", function() {
-                const indice = Number(pulsante.dataset.indice);
-                apriPoesia(luoghi[indice]);
-                map.closePopup();
-            });
-        });
-    </script>
+    <script src="./accesso.js"></script>
 
 </body>
 </html>
