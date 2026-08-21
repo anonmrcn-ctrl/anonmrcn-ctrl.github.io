@@ -185,10 +185,111 @@
 
 
         /* =========================
-           LUOGHI
+           LUOGHI DELLE POESIE
            ========================= */
 
-        const luoghi = [];
+        const luoghi = [
+            {
+                nome: "Via Leonardo da Vinci 69",
+                lat: 45.55068889,
+                lon: 12.29783611
+            },
+            {
+                nome: "Via Piave 33",
+                lat: 45.54905278,
+                lon: 12.30069444
+            },
+            {
+                nome: "Via Pialoi 15",
+                lat: 45.55051667,
+                lon: 12.29298889
+            },
+            {
+                nome: "Via Michelangelo 20",
+                lat: 45.55116389,
+                lon: 12.29913611
+            },
+            {
+                nome: "Via Boschette",
+                lat: 45.56014167,
+                lon: 12.30475000
+            },
+            {
+                nome: "Via Giovanni Paolo II",
+                lat: 45.55928333,
+                lon: 12.30306111
+            },
+            {
+                nome: "Viale Don Luigi Sturzo",
+                lat: 45.55278333,
+                lon: 12.31991667
+            },
+            {
+                nome: "Via Ferrovia 17",
+                lat: 45.54861944,
+                lon: 12.32383611
+            },
+            {
+                nome: "Via Matteotti 22",
+                lat: 45.56081389,
+                lon: 12.32211667
+            },
+            {
+                nome: "Via Fornace 28",
+                lat: 45.56269722,
+                lon: 12.32306111
+            },
+            {
+                nome: "Via Bosco Berizzi",
+                lat: 45.53867778,
+                lon: 12.29911111
+            },
+            {
+                nome: "Via Altinia",
+                lat: 45.53990556,
+                lon: 12.30399722
+            },
+            {
+                nome: "Via Bosco Berizzi 2",
+                lat: 45.53820278,
+                lon: 12.30164722
+            },
+            {
+                nome: "Via Alta 110",
+                lat: 45.55623611,
+                lon: 12.28671389
+            },
+            {
+                nome: "Via Praello 50",
+                lat: 45.53796111,
+                lon: 12.32425000
+            },
+            {
+                nome: "Via Praello",
+                lat: 45.54035833,
+                lon: 12.32820000
+            },
+            {
+                nome: "Via Poianon 14",
+                lat: 45.55638056,
+                lon: 12.35706667
+            },
+            {
+                nome: "Via Zuccarello",
+                lat: 45.53708333,
+                lon: 12.36081944
+            },
+            {
+                nome: "Via Cortellazzo 30",
+                lat: 45.56294722,
+                lon: 12.27724167
+            },
+            {
+                nome: "Via Praello 87",
+                lat: 45.53335000,
+                lon: 12.32175833
+            }
+        ];
 
         luoghi.forEach(function(luogo) {
             const marker = L.marker([
@@ -199,7 +300,6 @@
             marker.bindPopup(`
                 <div class="popup-luogo">
                     <strong>${luogo.nome}</strong>
-                    <p>${luogo.descrizione}</p>
                 </div>
             `);
         });
