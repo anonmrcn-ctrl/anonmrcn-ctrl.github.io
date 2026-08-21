@@ -1,0 +1,16 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "nnmrcn-rete",
+  "main": "src/index.js",
+  "compatibility_date": "2026-08-21",
+  "vars": {
+    "ALLOWED_ORIGIN": "https://anonmrcn-ctrl.github.io"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "nnmrcn-rete",
+      "database_id": "REPLACE_WITH_D1_DATABASE_ID"
+    }
+  ]
+}
