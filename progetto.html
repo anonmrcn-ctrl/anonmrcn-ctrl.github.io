@@ -77,6 +77,35 @@
 
     </main>
 
+    <div
+        class="poesia-overlay"
+        id="poesiaOverlay"
+        hidden
+    >
+        <article
+            class="poesia-dialogo"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="poesiaTitolo"
+        >
+            <button
+                class="poesia-close"
+                id="poesiaClose"
+                type="button"
+                aria-label="Chiudi la poesia"
+            >
+                ×
+            </button>
+
+            <h2 id="poesiaTitolo"></h2>
+
+            <div
+                class="poesia-location"
+                id="poesiaTesto"
+            ></div>
+        </article>
+    </div>
+
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
     <script>
@@ -84,6 +113,11 @@
         const menuClose = document.getElementById("menuClose");
         const menuPrincipale = document.getElementById("menuPrincipale");
         const menuOverlay = document.getElementById("menuOverlay");
+
+        const poesiaOverlay = document.getElementById("poesiaOverlay");
+        const poesiaClose = document.getElementById("poesiaClose");
+        const poesiaTitolo = document.getElementById("poesiaTitolo");
+        const poesiaTesto = document.getElementById("poesiaTesto");
 
         function apriMenu() {
             menuPrincipale.classList.add("aperto");
@@ -99,13 +133,58 @@
             document.body.classList.remove("menu-aperto");
         }
 
+        function apriPoesia(luogo) {
+            poesiaTitolo.textContent = luogo.nome;
+            poesiaTesto.replaceChildren();
+
+            if (!luogo.poesia) {
+                const messaggio = document.createElement("p");
+                messaggio.textContent = "Poesia non ancora inserita.";
+                poesiaTesto.appendChild(messaggio);
+            } else {
+                luogo.poesia.split("\n").forEach(function(riga) {
+                    if (riga.startsWith("# ")) {
+                        const titoloSezione = document.createElement("h3");
+                        titoloSezione.textContent = riga.slice(2);
+                        poesiaTesto.appendChild(titoloSezione);
+                        return;
+                    }
+
+                    const elementoRiga = document.createElement("div");
+                    elementoRiga.className = "riga-poesia-location";
+                    elementoRiga.textContent = riga || " ";
+                    poesiaTesto.appendChild(elementoRiga);
+                });
+            }
+
+            poesiaOverlay.hidden = false;
+            document.body.classList.add("poesia-aperta");
+            poesiaClose.focus();
+        }
+
+        function chiudiPoesia() {
+            poesiaOverlay.hidden = true;
+            document.body.classList.remove("poesia-aperta");
+        }
+
         menuButton.addEventListener("click", apriMenu);
         menuClose.addEventListener("click", chiudiMenu);
         menuOverlay.addEventListener("click", chiudiMenu);
+        poesiaClose.addEventListener("click", chiudiPoesia);
+
+        poesiaOverlay.addEventListener("click", function(event) {
+            if (event.target === poesiaOverlay) {
+                chiudiPoesia();
+            }
+        });
 
         document.addEventListener("keydown", function(event) {
             if (event.key === "Escape") {
-                chiudiMenu();
+                if (!poesiaOverlay.hidden) {
+                    chiudiPoesia();
+                } else {
+                    chiudiMenu();
+                }
             }
         });
 
@@ -185,6 +264,130 @@
 
 
         /* =========================
+           POESIA — VIA PIAVE 33
+           ========================= */
+
+        const poesiaViaPiave33 = `# I
+E poi si svegliò
+   Il Gajo tra i Praelli
+Si guardò dall'interno
+   e loro si salutavano
+Si guardò dall'esterno
+   e si salutarono anche loro
+Poi molte Lune
+   molti Risvegli
+   molti Sguardi
+   e
+   molti Saluti
+E poi si svegliò 
+   tra il Gajo e i Praelli
+Si guardò dall'interno
+   ...
+Si guardò dall'esterno
+   ...
+Poi sentì una fitta allo stomaco
+   all'altezza di via Altinia
+      e le Ombre?
+Poi sentì il suo sangue scorrere
+   i verdi campi, via Alta
+      e il grigio Fiume?
+E poi si diede un pizzicotto
+Si chiese se per caso
+   stesse sognando
+# II
+Ma
+Forse in un futurista furore
+   iniziò dal nulla a fomentarsi
+      fra il Colmello e il Pojanon
+E prese a tormentarsi
+"Io devo perlustrare"
+   Si disse
+"Ora devo osservare"
+   Si ripetè
+"Ora io devo..."
+   Si fermò
+È lì infatti che notò
+   qualcosa
+      molto meno grande
+         ma nella sua stessa situazione
+"Fossa storta!"
+   chiamò
+"Così non mi chiamo"
+   "..."
+"Vengo dalle Ombre"
+   "chi ti fece"
+"Il grigio e veloce Fiume"
+E riprese a tormentarsi
+"Ora devo perlustrare"
+    Si ripetè
+"Io devo osservare"
+    Si disse
+"Io ora devo..."
+   "..."
+"Perché?"
+Perché?
+# III
+A quel punto successe
+Qualcosa parlò 
+   e qualcosa successe
+"Perché sei indietro"
+   Si stupì, si sentì le ginocchia cedere
+"Perché sei goffamente indietro"
+   Si girò, l'afrenalina salì
+"Non hanno bisogno di te
+   se non come gnomone
+      come orma per la loro zampa
+         come scheletro del tuo corpo"
+Ma
+Si chiese
+   nonostante tutto
+      Perché
+Figura 
+   aprì la mano
+      e gliela rivolse
+Non ci vide più
+"Ecco Il Perché"
+   Disse
+"Sei indietro, perché"
+   Si girò, l'adrenalina saliva
+"Perché sei goffamente indietro"
+   Si stupì, si sentì le ginocchia cedere
+      come le fossero comparse dal nulla
+         Via due Giugno
+Corse.
+# IV
+Ora il futurista furore
+   era in pieno controllo
+E continuò
+rotolò, incespicò, cadde
+   Il Gajo, i Praelli
+si rialzò, corse
+   Inutili
+accelerando
+   Davanti al Bagliore
+senza scrupoli, letale
+   I campi, Fossa Storta
+incespicò, rotolò, cadde
+   Ora grigi
+corse, si rialzò
+   Non c'è Tempo
+accelerando
+   La Calma è da vecchi
+letale, senza scrupoli
+   Il Bagliore
+   L'Accelerazione
+   L'Accecamento
+   L'Ebrezza
+      
+      Non c'è Tempo
+E 
+   preso dal Bagliore
+      reincontrò
+Chi?
+"Dove corri?"`;
+
+
+        /* =========================
            LUOGHI DELLE POESIE
            ========================= */
 
@@ -197,7 +400,8 @@
             {
                 nome: "Via Piave 33",
                 lat: 45.54905278,
-                lon: 12.30069444
+                lon: 12.30069444,
+                poesia: poesiaViaPiave33
             },
             {
                 nome: "Via Pialoi 15",
@@ -291,7 +495,7 @@
             }
         ];
 
-        luoghi.forEach(function(luogo) {
+        luoghi.forEach(function(luogo, indice) {
             const marker = L.marker([
                 luogo.lat,
                 luogo.lon
@@ -299,9 +503,30 @@
 
             marker.bindPopup(`
                 <div class="popup-luogo">
-                    <strong>${luogo.nome}</strong>
+                    <button
+                        type="button"
+                        class="mostra-poesia"
+                        data-indice="${indice}"
+                    >
+                        Mostra poesia ${luogo.nome}
+                    </button>
                 </div>
             `);
+        });
+
+        map.on("popupopen", function(event) {
+            const popup = event.popup.getElement();
+            const pulsante = popup?.querySelector(".mostra-poesia");
+
+            if (!pulsante) {
+                return;
+            }
+
+            pulsante.addEventListener("click", function() {
+                const indice = Number(pulsante.dataset.indice);
+                apriPoesia(luoghi[indice]);
+                map.closePopup();
+            });
         });
     </script>
 
