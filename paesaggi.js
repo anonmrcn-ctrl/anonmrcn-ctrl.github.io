@@ -21,7 +21,71 @@
             return "Corso d’acqua";
         }
 
+        if (categoria === "cava") {
+            return "Area di cava";
+        }
+
         return "Paesaggio significativo";
+    }
+
+    function stilePrincipale(feature) {
+        const categoria = feature.properties?.categoria;
+
+        if (categoria === "cava") {
+            return {
+                color: "#7fc2d6",
+                weight: 2,
+                opacity: 0.9,
+                fillColor: "#7fc2d6",
+                fillOpacity: 0.18
+            };
+        }
+
+        return {
+            color: "#7fc2d6",
+            weight: 12,
+            opacity: 0.22,
+            lineCap: "round",
+            lineJoin: "round"
+        };
+    }
+
+    function stileDettaglio(feature) {
+        const categoria = feature.properties?.categoria;
+
+        if (categoria === "cava") {
+            return {
+                color: "#d7f1f7",
+                weight: 1.5,
+                opacity: 0.95,
+                fill: false
+            };
+        }
+
+        return {
+            color: "#d7f1f7",
+            weight: 3,
+            opacity: 0.95,
+            lineCap: "round",
+            lineJoin: "round"
+        };
+    }
+
+    function collegaInterazione(feature, layer) {
+        const nome = feature.properties?.nome || "Paesaggio";
+        const categoria = labelCategoria(feature.properties?.categoria);
+
+        layer.bindTooltip(nome, {
+            sticky: true,
+            direction: "top"
+        });
+
+        layer.bindPopup(`
+            <div class="popup-luogo popup-paesaggio">
+                <strong>${escapeHtml(nome)}</strong>
+                <span>${escapeHtml(categoria)}</span>
+            </div>
+        `);
     }
 
     fetch("./luoghi-significativi.geojson")
@@ -35,45 +99,18 @@
         .then((data) => {
             const paesaggi = L.layerGroup().addTo(map);
 
-            const fascia = L.geoJSON(data, {
-                style: {
-                    color: "#7fc2d6",
-                    weight: 12,
-                    opacity: 0.22,
-                    lineCap: "round",
-                    lineJoin: "round"
-                },
-                onEachFeature(feature, layer) {
-                    const nome = feature.properties?.nome || "Paesaggio";
-                    const categoria = labelCategoria(feature.properties?.categoria);
-
-                    layer.bindTooltip(nome, {
-                        sticky: true,
-                        direction: "top"
-                    });
-
-                    layer.bindPopup(`
-                        <div class="popup-luogo popup-paesaggio">
-                            <strong>${escapeHtml(nome)}</strong>
-                            <span>${escapeHtml(categoria)}</span>
-                        </div>
-                    `);
-                }
+            const principale = L.geoJSON(data, {
+                style: stilePrincipale,
+                onEachFeature: collegaInterazione
             });
 
-            const linea = L.geoJSON(data, {
+            const dettaglio = L.geoJSON(data, {
                 interactive: false,
-                style: {
-                    color: "#d7f1f7",
-                    weight: 3,
-                    opacity: 0.95,
-                    lineCap: "round",
-                    lineJoin: "round"
-                }
+                style: stileDettaglio
             });
 
-            fascia.addTo(paesaggi);
-            linea.addTo(paesaggi);
+            principale.addTo(paesaggi);
+            dettaglio.addTo(paesaggi);
 
             window.NNMRCN_PAESAGGI_LAYER = paesaggi;
         })
