@@ -6,16 +6,20 @@
 window.NNMRCN_API_BASE = "";
 
 /*
- * I paesaggi non devono aprire etichette rettangolari al tocco.
- * Il nome potrà essere gestito in seguito con un'interfaccia dedicata.
+ * Su alcuni browser mobili il tocco su una geometria SVG di Leaflet
+ * disegna un grande rettangolo di focus attorno al suo bounding box.
+ * Eliminiamo solo quel contorno, lasciando intatti i tooltip con il nome.
  */
-const stileTooltipPaesaggi = document.createElement("style");
-stileTooltipPaesaggi.textContent = `
-    .pagina-progetto .leaflet-tooltip {
-        display: none !important;
+const stileFocusPaesaggi = document.createElement("style");
+stileFocusPaesaggi.textContent = `
+    .pagina-progetto .leaflet-interactive:focus,
+    .pagina-progetto .leaflet-interactive:focus-visible,
+    .pagina-progetto .leaflet-overlay-pane svg:focus,
+    .pagina-progetto .leaflet-overlay-pane svg:focus-visible {
+        outline: none !important;
     }
 `;
-document.head.appendChild(stileTooltipPaesaggi);
+document.head.appendChild(stileFocusPaesaggi);
 
 /*
  * Rende disponibile la mappa Leaflet ai livelli pubblici.
@@ -43,7 +47,7 @@ if (window.L && typeof L.map === "function") {
     }
 
     const script = document.createElement("script");
-    script.src = "./paesaggi.js?v=20260823-5";
+    script.src = "./paesaggi.js?v=20260823-6";
     script.dataset.nnmrcnPaesaggi = "true";
     document.body.appendChild(script);
 })();
