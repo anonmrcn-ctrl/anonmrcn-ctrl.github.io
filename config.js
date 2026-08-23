@@ -31,7 +31,7 @@ if (window.L && typeof L.map === "function") {
     }
 
     const script = document.createElement("script");
-    script.src = "./paesaggi.js?v=20260823-3";
+    script.src = "./paesaggi.js?v=20260823-4";
     script.dataset.nnmrcnPaesaggi = "true";
     document.body.appendChild(script);
 })();
