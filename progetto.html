@@ -1,346 +1,15 @@
 <!DOCTYPE html>
 <html lang="it">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
     <title>Il progetto — nnMrcn</title>
 
     <link rel="stylesheet" href="./style.css">
-    <link
-        rel="stylesheet"
-        href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-    >
-
-    <style>
-        .progetto-intro {
-            width: min(650px, 100%);
-            margin: 0 auto;
-            font-size: 1.1rem;
-            line-height: 1.8;
-        }
-
-        .accesso-rete,
-        .posta {
-            width: min(650px, calc(100% - 4rem));
-            margin: 3rem auto 0;
-            padding-top: 2rem;
-            border-top: 1px solid rgba(23, 23, 23, 0.25);
-        }
-
-        .accesso-rete h2,
-        .posta h2 {
-            margin: 0 0 1.25rem;
-            font-size: 1.35rem;
-        }
-
-        .accesso-form {
-            display: flex;
-            gap: 0.75rem;
-            align-items: stretch;
-        }
-
-        .accesso-form label {
-            position: absolute;
-            width: 1px;
-            height: 1px;
-            padding: 0;
-            margin: -1px;
-            overflow: hidden;
-            clip: rect(0, 0, 0, 0);
-            white-space: nowrap;
-            border: 0;
-        }
-
-        .accesso-form input,
-        .messaggio-form textarea {
-            width: 100%;
-            padding: 0.75rem 0.9rem;
-            background: transparent;
-            color: #171717;
-            border: 1px solid #171717;
-            font: inherit;
-        }
-
-        .accesso-form input {
-            flex: 1;
-            min-width: 0;
-            letter-spacing: 0.04em;
-        }
-
-        .accesso-form button,
-        .logout-button,
-        .rete-button,
-        .messaggio-form button,
-        .messaggio-close,
-        .posta-refresh {
-            padding: 0.75rem 1rem;
-            background: transparent;
-            color: #171717;
-            border: 1px solid #171717;
-            font-family: Georgia, "Times New Roman", serif;
-            font-size: 0.9rem;
-            cursor: pointer;
-        }
-
-        .accesso-form button:hover,
-        .accesso-form button:focus-visible,
-        .logout-button:hover,
-        .logout-button:focus-visible,
-        .rete-button:hover,
-        .rete-button:focus-visible,
-        .messaggio-form button:hover,
-        .messaggio-form button:focus-visible,
-        .posta-refresh:hover,
-        .posta-refresh:focus-visible {
-            background: #171717;
-            color: #f4f1e8;
-        }
-
-        .accesso-form button:disabled,
-        .messaggio-form button:disabled {
-            opacity: 0.5;
-            cursor: wait;
-        }
-
-        .login-message,
-        .messaggio-status {
-            min-height: 1.5em;
-            margin: 0.75rem 0 0;
-            font-size: 0.9rem;
-        }
-
-        .login-attivo p {
-            margin: 0 0 1rem;
-        }
-
-        .rete-azioni {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.75rem;
-        }
-
-        .posta-intestazione {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 1rem;
-            margin-bottom: 1rem;
-        }
-
-        .posta-intestazione h2 {
-            margin: 0;
-        }
-
-        .posta-lista {
-            display: grid;
-            gap: 1rem;
-        }
-
-        .messaggio-ricevuto {
-            padding: 1rem 0;
-            border-top: 1px solid rgba(23, 23, 23, 0.18);
-        }
-
-        .messaggio-ricevuto:first-child {
-            border-top: 0;
-        }
-
-        .messaggio-ricevuto h3 {
-            margin: 0 0 0.5rem;
-            font-size: 1rem;
-        }
-
-        .messaggio-ricevuto p {
-            margin: 0 0 0.65rem;
-            white-space: pre-wrap;
-        }
-
-        .messaggio-meta {
-            font-size: 0.82rem;
-            opacity: 0.65;
-        }
-
-        .poesia-overlay,
-        .messaggio-overlay {
-            position: fixed;
-            inset: 0;
-            z-index: 2200;
-            background: #f4f1e8;
-        }
-
-        .poesia-overlay {
-            display: block;
-            overflow-y: auto;
-            padding: 0;
-        }
-
-        .poesia-overlay[hidden],
-        .messaggio-overlay[hidden] {
-            display: none;
-        }
-
-        .poesia-dialogo {
-            position: relative;
-            width: 100%;
-            min-height: 100%;
-            max-height: none;
-            overflow: visible;
-            padding: 0;
-            background: #f4f1e8;
-            border: 0;
-        }
-
-        .poesia-close {
-            position: fixed;
-            top: 1.5rem;
-            right: 1.5rem;
-            z-index: 2210;
-        }
-
-        .poesia-location {
-            font-size: inherit;
-            line-height: inherit;
-        }
-
-        .messaggio-overlay {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            overflow-y: auto;
-            padding: 2rem;
-            background: rgba(244, 241, 232, 0.98);
-        }
-
-        .messaggio-dialogo {
-            position: relative;
-            width: min(650px, 100%);
-            padding: 3.5rem 0 2rem;
-        }
-
-        .messaggio-close {
-            position: absolute;
-            top: 0;
-            right: 0;
-            width: 2.7rem;
-            height: 2.7rem;
-            padding: 0;
-            border: 0;
-            font-size: 1.8rem;
-            line-height: 1;
-        }
-
-        .messaggio-dialogo h2 {
-            margin: 0 3rem 2rem 0;
-            font-size: clamp(1.5rem, 4vw, 2.2rem);
-        }
-
-        .messaggio-form textarea {
-            min-height: 180px;
-            resize: vertical;
-            line-height: 1.55;
-        }
-
-        .messaggio-opzioni {
-            margin: 1.5rem 0;
-            padding: 0;
-            border: 0;
-        }
-
-        .messaggio-opzioni legend {
-            margin-bottom: 0.65rem;
-            font-weight: 700;
-        }
-
-        .messaggio-opzioni label {
-            display: block;
-            margin: 0.45rem 0;
-        }
-
-        .messaggio-contatore {
-            margin: 0.5rem 0 1.25rem;
-            text-align: right;
-            font-size: 0.82rem;
-            opacity: 0.65;
-        }
-
-        .popup-luogo strong {
-            display: block;
-            margin-bottom: 0.6rem;
-        }
-
-        .popup-azioni {
-            display: grid;
-            gap: 0.5rem;
-        }
-
-        .popup-azioni button {
-            width: 100%;
-        }
-
-        .location-propria {
-            margin: 0 0 0.6rem;
-            font-size: 0.8rem;
-            opacity: 0.7;
-        }
-
-        /*
-         * Brave/Chromium su Android può disegnare un enorme rettangolo
-         * di focus attorno alle geometrie SVG Leaflet. Questo rimuove
-         * solo quel focus senza nascondere il tooltip con il nome.
-         */
-        #map .leaflet-interactive,
-        #map .leaflet-interactive:focus,
-        #map .leaflet-interactive:focus-visible,
-        #map .leaflet-overlay-pane svg,
-        #map .leaflet-overlay-pane svg:focus,
-        #map .leaflet-overlay-pane svg:focus-visible {
-            outline: none !important;
-            box-shadow: none !important;
-            -webkit-tap-highlight-color: transparent !important;
-        }
-
-        @media (max-width: 700px) {
-            .progetto-intro {
-                font-size: 1rem;
-                line-height: 1.7;
-            }
-
-            .accesso-rete,
-            .posta {
-                width: calc(100% - 2rem);
-                margin-top: 2rem;
-            }
-
-            .accesso-form {
-                flex-direction: column;
-            }
-
-            .poesia-close {
-                top: 0.75rem;
-                right: 0.75rem;
-            }
-
-            .messaggio-overlay {
-                align-items: flex-start;
-                padding: 1rem;
-            }
-
-            .messaggio-dialogo {
-                padding-top: 3.25rem;
-            }
-
-            .posta-intestazione {
-                align-items: flex-start;
-                flex-direction: column;
-            }
-        }
-    </style>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 </head>
 
 <body class="pagina-progetto">
-
     <button
         class="menu-button"
         id="menuButton"
@@ -358,35 +27,20 @@
         id="menuPrincipale"
         aria-label="Menu principale"
     >
-        <button
-            class="menu-close"
-            id="menuClose"
-            aria-label="Chiudi il menu"
-        >
+        <button class="menu-close" id="menuClose" aria-label="Chiudi il menu">
             ×
         </button>
 
         <div class="menu-contenuto">
-            <a href="./index.html">
-                La poesia
-            </a>
-
-            <a href="./autore.html">
-                L’autore
-            </a>
-
-            <a href="./progetto.html" class="voce-attiva">
-                Il progetto
-            </a>
+            <a href="./index.html">La poesia</a>
+            <a href="./autore.html">L’autore</a>
+            <a href="./progetto.html" class="voce-attiva">Il progetto</a>
         </div>
     </nav>
 
     <main>
-
         <section class="progetto">
-            <h1 class="titolo-pagina">
-                Il progetto
-            </h1>
+            <h1 class="titolo-pagina">Il progetto</h1>
 
             <p class="progetto-intro">
                 Questa mappa mostra i luoghi di cui parla la poesia, dando la possibilità di tornare indietro nel tempo. Se hai ricevuto personalmente una poesia a casa tua, puoi accedere con la password che ti è stata fornita all'interno di essa. Questo accesso sbloccherà sulla mappa le diverse locations dove sono state distribuite le poesie e ti consentirà di spedire un messaggio (tramite me) in una di queste location
@@ -402,21 +56,14 @@
                             id="loginPassword"
                             name="password"
                             type="password"
-                            inputmode="text"
                             autocomplete="off"
                             placeholder="Password della poesia"
                             required
                         >
-                        <button id="loginButton" type="submit">
-                            Accedi
-                        </button>
+                        <button id="loginButton" type="submit">Accedi</button>
                     </form>
 
-                    <p
-                        class="login-message"
-                        id="loginMessage"
-                        aria-live="polite"
-                    ></p>
+                    <p class="login-message" id="loginMessage" aria-live="polite"></p>
                 </div>
 
                 <div class="login-attivo" id="loginLoggedIn" hidden>
@@ -425,19 +72,10 @@
                     </p>
 
                     <div class="rete-azioni">
-                        <button
-                            class="rete-button"
-                            id="postaButton"
-                            type="button"
-                        >
+                        <button class="rete-button" id="postaButton" type="button">
                             Messaggi ricevuti
                         </button>
-
-                        <button
-                            class="logout-button"
-                            id="logoutButton"
-                            type="button"
-                        >
+                        <button class="logout-button" id="logoutButton" type="button">
                             Esci
                         </button>
                     </div>
@@ -459,23 +97,12 @@
         </section>
 
         <section class="sezione-mappa">
-            <h2>
-                I luoghi
-            </h2>
-
-            <div
-                id="map"
-                aria-label="Mappa interattiva dei luoghi del progetto"
-            ></div>
+            <h2>I luoghi</h2>
+            <div id="map" aria-label="Mappa interattiva dei luoghi del progetto"></div>
         </section>
-
     </main>
 
-    <div
-        class="poesia-overlay"
-        id="poesiaOverlay"
-        hidden
-    >
+    <div class="poesia-overlay" id="poesiaOverlay" hidden>
         <article
             class="poesia-dialogo"
             id="poesiaDialogo"
@@ -491,18 +118,11 @@
                 ×
             </button>
 
-            <div
-                class="poesia-location"
-                id="poesiaTesto"
-            ></div>
+            <div class="poesia-location" id="poesiaTesto"></div>
         </article>
     </div>
 
-    <div
-        class="messaggio-overlay"
-        id="messaggioOverlay"
-        hidden
-    >
+    <div class="messaggio-overlay" id="messaggioOverlay" hidden>
         <article
             class="messaggio-dialogo"
             role="dialog"
@@ -530,72 +150,41 @@
                     placeholder="Scrivi qui..."
                 ></textarea>
 
-                <p class="messaggio-contatore" id="messaggioContatore">
-                    0 / 1500
-                </p>
+                <p class="messaggio-contatore" id="messaggioContatore">0 / 1500</p>
 
                 <fieldset class="messaggio-opzioni">
                     <legend>Mittente</legend>
-
                     <label>
-                        <input
-                            type="radio"
-                            name="mittente"
-                            value="anonimo"
-                            checked
-                        >
+                        <input type="radio" name="mittente" value="anonimo" checked>
                         Anonimo
                     </label>
-
                     <label>
-                        <input
-                            type="radio"
-                            name="mittente"
-                            value="location"
-                        >
+                        <input type="radio" name="mittente" value="location">
                         Mostra la mia location
                     </label>
                 </fieldset>
 
                 <fieldset class="messaggio-opzioni">
                     <legend>Consegna</legend>
-
                     <label>
-                        <input
-                            type="radio"
-                            name="consegna"
-                            value="online"
-                            checked
-                        >
+                        <input type="radio" name="consegna" value="online" checked>
                         Online
                     </label>
-
                     <label>
-                        <input
-                            type="radio"
-                            name="consegna"
-                            value="physical"
-                        >
+                        <input type="radio" name="consegna" value="physical">
                         Lettera fisica
                     </label>
                 </fieldset>
 
-                <button id="messaggioInvia" type="submit">
-                    Invia
-                </button>
-
-                <p
-                    class="messaggio-status"
-                    id="messaggioStatus"
-                    aria-live="polite"
-                ></p>
+                <button id="messaggioInvia" type="submit">Invia</button>
+                <p class="messaggio-status" id="messaggioStatus" aria-live="polite"></p>
             </form>
         </article>
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="./config.js?v=20260823-7"></script>
-    <script src="./accesso.js?v=20260823-7"></script>
-
+    <script src="./config.js"></script>
+    <script src="./site.js"></script>
+    <script src="./progetto.js"></script>
 </body>
 </html>

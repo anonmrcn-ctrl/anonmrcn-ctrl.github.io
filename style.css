@@ -1,6 +1,8 @@
-/* =========================
-   BASE
-   ========================= */
+:root {
+    --paper: #f4f1e8;
+    --ink: #171717;
+    --line: rgba(23, 23, 23, 0.25);
+}
 
 * {
     box-sizing: border-box;
@@ -13,30 +15,36 @@ html {
 
 body {
     margin: 0;
-    background: #f4f1e8;
-    color: #171717;
+    overflow-x: hidden;
+    background: var(--paper);
+    color: var(--ink);
     font-family: Georgia, "Times New Roman", serif;
     font-size: 18px;
     line-height: 1.55;
-    overflow-x: hidden;
 }
 
+[hidden] {
+    display: none !important;
+}
 
-/* =========================
-   POESIA
-   ========================= */
+button,
+input,
+textarea,
+select {
+    font: inherit;
+}
+
+/* Poesia */
 
 .poesia {
     width: min(860px, calc(100% - 4rem));
     margin: 0 auto;
-    padding-top: 7vh;
-    padding-bottom: 18vh;
+    padding: 7vh 0 18vh;
 }
 
 .canto {
     min-height: 100vh;
-    padding-top: 4vh;
-    padding-bottom: 16vh;
+    padding: 4vh 0 16vh;
     scroll-margin-top: 3rem;
 }
 
@@ -50,18 +58,21 @@ body {
 }
 
 .canto p {
-    margin: 0 0 2.3rem;
     max-width: 100%;
+    margin: 0 0 2.3rem;
+}
+
+.rientro,
+.rientro-profondo {
+    display: block;
 }
 
 .rientro {
-    display: block;
     margin-left: 5rem;
     max-width: calc(100% - 5rem);
 }
 
 .rientro-profondo {
-    display: block;
     margin-left: 10rem;
     max-width: calc(100% - 10rem);
 }
@@ -71,36 +82,33 @@ body {
     margin-bottom: 4.5rem !important;
 }
 
-.perche {
+.perche,
+.figura,
+.parole,
+.non-tempo {
     margin-top: 5rem !important;
     margin-bottom: 5rem !important;
-    text-align: center;
 }
 
-.figura {
-    margin-top: 5rem !important;
-    margin-bottom: 5rem !important;
+.perche {
+    text-align: center;
 }
 
 .accelerazione {
     line-height: 1.65;
 }
 
-.parole {
-    margin-top: 5rem !important;
-    margin-bottom: 5rem !important;
+.parole,
+.non-tempo {
     padding-left: 5rem;
+}
+
+.parole {
     letter-spacing: 0.025em;
 }
 
 .parole span {
     display: block;
-}
-
-.non-tempo {
-    margin-top: 5rem !important;
-    margin-bottom: 5rem !important;
-    padding-left: 5rem;
 }
 
 .chi {
@@ -114,20 +122,17 @@ body {
     font-size: 1.4rem;
 }
 
-
-/* =========================
-   INDICE DELLA POESIA
-   ========================= */
+/* Indice */
 
 .indice {
     position: fixed;
-    left: 2rem;
     top: 50%;
-    transform: translateY(-50%);
+    left: 2rem;
+    z-index: 100;
     display: flex;
     flex-direction: column;
     gap: 0.65rem;
-    z-index: 100;
+    transform: translateY(-50%);
 }
 
 .indice a {
@@ -136,30 +141,24 @@ body {
     height: 2.6rem;
     align-items: center;
     justify-content: center;
-    color: #171717;
-    text-decoration: none;
-    font-size: 0.95rem;
-    font-weight: 700;
     border: 1px solid transparent;
     border-radius: 50%;
-    transition:
-        border-color 180ms ease,
-        background-color 180ms ease,
-        transform 180ms ease;
+    color: var(--ink);
+    font-size: 0.95rem;
+    font-weight: 700;
+    text-decoration: none;
+    transition: border-color 180ms ease, background-color 180ms ease, transform 180ms ease;
 }
 
 .indice a:hover,
 .indice a:focus-visible {
-    border-color: #171717;
+    outline: none;
+    border-color: var(--ink);
     background: rgba(23, 23, 23, 0.05);
     transform: scale(1.08);
-    outline: none;
 }
 
-
-/* =========================
-   MENU PRINCIPALE
-   ========================= */
+/* Menu */
 
 .menu-button {
     position: fixed;
@@ -167,53 +166,49 @@ body {
     right: 2rem;
     z-index: 1900;
     padding: 0.7rem 1rem;
+    border: 1px solid var(--ink);
     background: transparent;
-    color: #171717;
-    border: 1px solid #171717;
+    color: var(--ink);
     font-family: Georgia, "Times New Roman", serif;
     font-size: 0.8rem;
     font-weight: 700;
     letter-spacing: 0.12em;
     cursor: pointer;
-    transition:
-        background-color 180ms ease,
-        color 180ms ease;
+    transition: background-color 180ms ease, color 180ms ease;
 }
 
 .menu-button:hover,
 .menu-button:focus-visible {
-    background: #171717;
-    color: #f4f1e8;
     outline: none;
+    background: var(--ink);
+    color: var(--paper);
 }
 
 .menu-overlay {
     position: fixed;
     inset: 0;
+    z-index: 2000;
+    visibility: hidden;
     background: rgba(0, 0, 0, 0.25);
     opacity: 0;
-    visibility: hidden;
-    z-index: 2000;
-    transition:
-        opacity 300ms ease,
-        visibility 300ms ease;
+    transition: opacity 300ms ease, visibility 300ms ease;
 }
 
 .menu-overlay.aperto {
-    opacity: 1;
     visibility: visible;
+    opacity: 1;
 }
 
 .menu-principale {
     position: fixed;
     top: 0;
     right: 0;
+    z-index: 2100;
     width: min(430px, 90vw);
     height: 100vh;
     height: 100dvh;
     padding: 2rem;
-    background: #f4f1e8;
-    z-index: 2100;
+    background: var(--paper);
     transform: translateX(100%);
     transition: transform 350ms ease;
 }
@@ -229,25 +224,24 @@ body {
     width: 3rem;
     height: 3rem;
     padding: 0;
-    background: transparent;
-    color: #171717;
     border: 0;
+    background: transparent;
+    color: var(--ink);
     font-family: Georgia, "Times New Roman", serif;
     font-size: 2rem;
-    font-weight: normal;
     line-height: 1;
     cursor: pointer;
 }
 
 .menu-close:hover,
 .menu-close:focus-visible {
-    opacity: 0.55;
     outline: none;
+    opacity: 0.55;
 }
 
 .menu-contenuto {
-    height: 100%;
     display: flex;
+    height: 100%;
     flex-direction: column;
     justify-content: center;
     gap: 2rem;
@@ -255,20 +249,18 @@ body {
 
 .menu-contenuto a {
     display: block;
-    color: #171717;
-    text-decoration: none;
+    color: var(--ink);
     font-size: clamp(1.5rem, 3vw, 2.2rem);
     line-height: 1.15;
-    transition:
-        transform 180ms ease,
-        opacity 180ms ease;
+    text-decoration: none;
+    transition: transform 180ms ease, opacity 180ms ease;
 }
 
 .menu-contenuto a:hover,
 .menu-contenuto a:focus-visible {
-    transform: translateX(0.5rem);
-    opacity: 0.55;
     outline: none;
+    opacity: 0.55;
+    transform: translateX(0.5rem);
 }
 
 .menu-contenuto a.voce-attiva {
@@ -280,10 +272,7 @@ body.poesia-aperta {
     overflow: hidden;
 }
 
-
-/* =========================
-   TITOLI DELLE PAGINE
-   ========================= */
+/* Pagine */
 
 .titolo-pagina {
     margin: 0 0 8vh;
@@ -293,10 +282,7 @@ body.poesia-aperta {
     letter-spacing: 0.04em;
 }
 
-
-/* =========================
-   PAGINA AUTORE
-   ========================= */
+/* Autore */
 
 .pagina-autore {
     min-height: 100vh;
@@ -305,13 +291,12 @@ body.poesia-aperta {
 .autore {
     width: min(720px, calc(100% - 4rem));
     margin: 0 auto;
-    padding-top: 8vh;
-    padding-bottom: 15vh;
+    padding: 8vh 0 15vh;
 }
 
 .autore-logo {
-    width: 100%;
     display: flex;
+    width: 100%;
     justify-content: center;
     margin: 0 0 7vh;
 }
@@ -342,10 +327,7 @@ body.poesia-aperta {
     letter-spacing: 0.08em;
 }
 
-
-/* =========================
-   PAGINA PROGETTO E MAPPA
-   ========================= */
+/* Progetto */
 
 .pagina-progetto {
     min-height: 100vh;
@@ -354,9 +336,170 @@ body.poesia-aperta {
 .progetto {
     width: min(760px, calc(100% - 4rem));
     margin: 0 auto;
-    padding-top: 8vh;
-    padding-bottom: 15vh;
+    padding: 8vh 0 15vh;
 }
+
+.progetto-intro {
+    width: min(650px, 100%);
+    margin: 0 auto;
+    font-size: 1.1rem;
+    line-height: 1.8;
+}
+
+.accesso-rete,
+.posta {
+    width: min(650px, calc(100% - 4rem));
+    margin: 3rem auto 0;
+    padding-top: 2rem;
+    border-top: 1px solid var(--line);
+}
+
+.accesso-rete h2,
+.posta h2 {
+    margin: 0 0 1.25rem;
+    font-size: 1.35rem;
+}
+
+.accesso-form {
+    display: flex;
+    align-items: stretch;
+    gap: 0.75rem;
+}
+
+.accesso-form label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+.accesso-form input,
+.messaggio-form textarea {
+    width: 100%;
+    padding: 0.75rem 0.9rem;
+    border: 1px solid var(--ink);
+    background: transparent;
+    color: var(--ink);
+}
+
+.accesso-form input {
+    min-width: 0;
+    flex: 1;
+    letter-spacing: 0.04em;
+}
+
+.accesso-form button,
+.logout-button,
+.rete-button,
+.messaggio-form button,
+.messaggio-close,
+.posta-refresh,
+.admin-accesso button,
+.admin-filter button,
+.admin-action {
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--ink);
+    background: transparent;
+    color: var(--ink);
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 0.9rem;
+    cursor: pointer;
+}
+
+.accesso-form button:hover,
+.accesso-form button:focus-visible,
+.logout-button:hover,
+.logout-button:focus-visible,
+.rete-button:hover,
+.rete-button:focus-visible,
+.messaggio-form button:hover,
+.messaggio-form button:focus-visible,
+.posta-refresh:hover,
+.posta-refresh:focus-visible,
+.admin-accesso button:hover,
+.admin-accesso button:focus-visible,
+.admin-filter button:hover,
+.admin-filter button:focus-visible,
+.admin-action:hover,
+.admin-action:focus-visible {
+    outline: none;
+    background: var(--ink);
+    color: var(--paper);
+}
+
+.accesso-form button:disabled,
+.messaggio-form button:disabled,
+.admin-action:disabled {
+    opacity: 0.5;
+    cursor: wait;
+}
+
+.login-message,
+.messaggio-status,
+.admin-status {
+    min-height: 1.5em;
+    margin: 0.75rem 0 0;
+    font-size: 0.9rem;
+}
+
+.login-attivo p {
+    margin: 0 0 1rem;
+}
+
+.rete-azioni,
+.admin-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+}
+
+.posta-intestazione {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.posta-intestazione h2 {
+    margin: 0;
+}
+
+.posta-lista {
+    display: grid;
+    gap: 1rem;
+}
+
+.messaggio-ricevuto {
+    padding: 1rem 0;
+    border-top: 1px solid rgba(23, 23, 23, 0.18);
+}
+
+.messaggio-ricevuto:first-child {
+    border-top: 0;
+}
+
+.messaggio-ricevuto h3 {
+    margin: 0 0 0.5rem;
+    font-size: 1rem;
+}
+
+.messaggio-ricevuto p {
+    margin: 0 0 0.65rem;
+    white-space: pre-wrap;
+}
+
+.messaggio-meta {
+    font-size: 0.82rem;
+    opacity: 0.65;
+}
+
+/* Mappa */
 
 .sezione-mappa {
     width: min(1100px, calc(100% - 4rem));
@@ -376,19 +519,50 @@ body.poesia-aperta {
     border: 1px solid rgba(23, 23, 23, 0.3);
 }
 
+#map .leaflet-interactive,
+#map .leaflet-interactive:focus,
+#map .leaflet-interactive:focus-visible,
+#map .leaflet-overlay-pane svg,
+#map .leaflet-overlay-pane svg:focus,
+#map .leaflet-overlay-pane svg:focus-visible {
+    outline: none !important;
+    box-shadow: none !important;
+    -webkit-tap-highlight-color: transparent;
+}
+
 .popup-luogo {
     font-family: Georgia, "Times New Roman", serif;
     font-size: 0.95rem;
     line-height: 1.45;
 }
 
+.popup-luogo strong {
+    display: block;
+    margin-bottom: 0.6rem;
+}
+
+.popup-azioni {
+    display: grid;
+    gap: 0.5rem;
+}
+
+.popup-azioni button {
+    width: 100%;
+}
+
+.location-propria {
+    margin: 0 0 0.6rem;
+    font-size: 0.8rem;
+    opacity: 0.7;
+}
+
 .mostra-poesia {
     display: block;
     max-width: 220px;
     padding: 0.65rem 0.8rem;
+    border: 1px solid var(--ink);
     background: transparent;
-    color: #171717;
-    border: 1px solid #171717;
+    color: var(--ink);
     font-family: Georgia, "Times New Roman", serif;
     font-size: 0.9rem;
     line-height: 1.35;
@@ -398,52 +572,45 @@ body.poesia-aperta {
 
 .mostra-poesia:hover,
 .mostra-poesia:focus-visible {
-    background: #171717;
-    color: #f4f1e8;
     outline: none;
+    background: var(--ink);
+    color: var(--paper);
 }
 
+/* Overlay poesia e messaggi */
 
-/* =========================
-   POESIA APERTA DALLA MAPPA
-   ========================= */
-
-.poesia-overlay {
+.poesia-overlay,
+.messaggio-overlay {
     position: fixed;
     inset: 0;
     z-index: 2200;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 3vh 1.5rem;
-    background: rgba(0, 0, 0, 0.35);
+    background: var(--paper);
 }
 
-.poesia-overlay[hidden] {
-    display: none;
+.poesia-overlay {
+    overflow-y: auto;
 }
 
 .poesia-dialogo {
     position: relative;
-    width: min(760px, 100%);
-    max-height: 94vh;
-    max-height: 94dvh;
-    overflow-y: auto;
-    padding: 3.5rem 4rem 5rem;
-    background: #f4f1e8;
-    border: 1px solid rgba(23, 23, 23, 0.35);
+    width: 100%;
+    min-height: 100%;
+    padding: 0;
+    border: 0;
+    background: var(--paper);
 }
 
 .poesia-close {
-    position: absolute;
-    top: 1rem;
-    right: 1rem;
+    position: fixed;
+    top: 1.5rem;
+    right: 1.5rem;
+    z-index: 2210;
     width: 3rem;
     height: 3rem;
     padding: 0;
-    background: transparent;
-    color: #171717;
     border: 0;
+    background: transparent;
+    color: var(--ink);
     font-family: Georgia, "Times New Roman", serif;
     font-size: 2rem;
     line-height: 1;
@@ -452,42 +619,150 @@ body.poesia-aperta {
 
 .poesia-close:hover,
 .poesia-close:focus-visible {
-    opacity: 0.55;
     outline: none;
-}
-
-.poesia-dialogo > h2 {
-    margin: 0 3rem 4rem 0;
-    font-size: clamp(1.7rem, 4vw, 2.5rem);
-    font-weight: 700;
+    opacity: 0.55;
 }
 
 .poesia-location {
-    font-size: 1rem;
-    line-height: 1.65;
+    font-size: inherit;
+    line-height: inherit;
 }
 
-.poesia-location h3 {
-    margin: 5rem 0 3rem;
-    text-align: center;
-    font-size: 1.5rem;
+.messaggio-overlay {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow-y: auto;
+    padding: 2rem;
+    background: rgba(244, 241, 232, 0.98);
+}
+
+.messaggio-dialogo {
+    position: relative;
+    width: min(650px, 100%);
+    padding: 3.5rem 0 2rem;
+}
+
+.messaggio-close {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 2.7rem;
+    height: 2.7rem;
+    padding: 0;
+    border: 0;
+    font-size: 1.8rem;
     line-height: 1;
-    letter-spacing: 0.08em;
 }
 
-.poesia-location h3:first-child {
-    margin-top: 0;
+.messaggio-dialogo h2 {
+    margin: 0 3rem 2rem 0;
+    font-size: clamp(1.5rem, 4vw, 2.2rem);
 }
 
-.riga-poesia-location {
+.messaggio-form textarea {
+    min-height: 180px;
+    resize: vertical;
+    line-height: 1.55;
+}
+
+.messaggio-opzioni {
+    margin: 1.5rem 0;
+    padding: 0;
+    border: 0;
+}
+
+.messaggio-opzioni legend {
+    margin-bottom: 0.65rem;
+    font-weight: 700;
+}
+
+.messaggio-opzioni label {
+    display: block;
+    margin: 0.45rem 0;
+}
+
+.messaggio-contatore {
+    margin: 0.5rem 0 1.25rem;
+    text-align: right;
+    font-size: 0.82rem;
+    opacity: 0.65;
+}
+
+/* Amministrazione */
+
+.admin {
+    width: min(860px, calc(100% - 3rem));
+    margin: 0 auto;
+    padding: 8vh 0 12vh;
+}
+
+.admin h1 {
+    margin: 0 0 3rem;
+    text-align: center;
+    font-size: clamp(2rem, 4vw, 3rem);
+}
+
+.admin-accesso {
+    width: min(620px, 100%);
+    margin: 0 auto 4rem;
+}
+
+.admin-accesso form,
+.admin-filter {
+    display: flex;
+    gap: 0.75rem;
+}
+
+.admin-accesso input,
+.admin-filter select,
+.admin-filter button,
+.admin-action {
+    padding: 0.75rem 0.9rem;
+    border: 1px solid var(--ink);
+    background: transparent;
+    color: var(--ink);
+}
+
+.admin-accesso input {
+    min-width: 0;
+    flex: 1;
+}
+
+.admin-filter {
+    align-items: center;
+    margin-bottom: 2rem;
+}
+
+.admin-list {
+    display: grid;
+    gap: 1.5rem;
+}
+
+.admin-message {
+    padding: 1.25rem 0;
+    border-top: 1px solid var(--line);
+}
+
+.admin-message h2 {
+    margin: 0 0 0.75rem;
+    font-size: 1.15rem;
+}
+
+.admin-message p {
     white-space: pre-wrap;
-    min-height: 1.65em;
 }
 
+.admin-meta {
+    margin: 0.35rem 0;
+    font-size: 0.9rem;
+}
 
-/* =========================
-   TABLET
-   ========================= */
+.admin-actions {
+    margin-top: 1rem;
+}
+
+/* Responsive */
 
 @media (max-width: 1100px) {
     .poesia {
@@ -496,23 +771,18 @@ body.poesia-aperta {
     }
 
     .indice {
-        left: 50%;
         top: auto;
         bottom: 1rem;
-        transform: translateX(-50%);
+        left: 50%;
         flex-direction: row;
         padding: 0.35rem 0.6rem;
-        background: rgba(244, 241, 232, 0.94);
         border: 1px solid rgba(23, 23, 23, 0.15);
         border-radius: 999px;
+        background: rgba(244, 241, 232, 0.94);
         backdrop-filter: blur(8px);
+        transform: translateX(-50%);
     }
 }
-
-
-/* =========================
-   SMARTPHONE
-   ========================= */
 
 @media (max-width: 700px) {
     body {
@@ -541,15 +811,14 @@ body.poesia-aperta {
 
     .poesia {
         width: 100%;
-        padding-left: 7vw;
         padding-right: 7vw;
+        padding-left: 7vw;
         padding-bottom: 9rem;
     }
 
     .canto {
         min-height: auto;
-        padding-top: 3vh;
-        padding-bottom: 13vh;
+        padding: 3vh 0 13vh;
     }
 
     .numero {
@@ -610,11 +879,12 @@ body.poesia-aperta {
         font-size: 2rem;
     }
 
-    .autore {
+    .autore,
+    .progetto {
         width: 100%;
-        padding-left: 7vw;
-        padding-right: 7vw;
         padding-top: 6vh;
+        padding-right: 7vw;
+        padding-left: 7vw;
     }
 
     .autore-logo {
@@ -625,7 +895,8 @@ body.poesia-aperta {
         width: min(360px, 100%);
     }
 
-    .autore-testo {
+    .autore-testo,
+    .progetto-intro {
         font-size: 1rem;
         line-height: 1.7;
     }
@@ -634,11 +905,18 @@ body.poesia-aperta {
         margin-top: 3rem !important;
     }
 
-    .progetto {
-        width: 100%;
-        padding-left: 7vw;
-        padding-right: 7vw;
-        padding-top: 6vh;
+    .accesso-rete,
+    .posta {
+        width: calc(100% - 2rem);
+        margin-top: 2rem;
+    }
+
+    .accesso-form,
+    .admin-accesso form,
+    .admin-filter,
+    .posta-intestazione {
+        flex-direction: column;
+        align-items: stretch;
     }
 
     .sezione-mappa {
@@ -651,45 +929,25 @@ body.poesia-aperta {
         min-height: 430px;
     }
 
-    .poesia-overlay {
-        padding: 0;
+    .poesia-close {
+        top: 0.75rem;
+        right: 0.75rem;
     }
 
-    .poesia-dialogo {
-        width: 100%;
-        max-height: 100vh;
-        max-height: 100dvh;
-        min-height: 100vh;
-        min-height: 100dvh;
-        padding: 4rem 7vw 6rem;
-        border: 0;
+    .messaggio-overlay {
+        align-items: flex-start;
+        padding: 1rem;
     }
 
-    .poesia-dialogo > h2 {
-        margin-bottom: 3rem;
-        font-size: 1.8rem;
-    }
-
-    .poesia-location {
-        font-size: 0.98rem;
-    }
-
-    .poesia-location h3 {
-        margin-top: 4rem;
-        margin-bottom: 2.5rem;
-        font-size: 1.3rem;
+    .messaggio-dialogo {
+        padding-top: 3.25rem;
     }
 }
 
-
-/* =========================
-   TELEFONI MOLTO STRETTI
-   ========================= */
-
 @media (max-width: 390px) {
     .poesia {
-        padding-left: 5vw;
         padding-right: 5vw;
+        padding-left: 5vw;
     }
 
     .rientro {
@@ -702,11 +960,6 @@ body.poesia-aperta {
         max-width: calc(100% - 2.75rem);
     }
 }
-
-
-/* =========================
-   ACCESSIBILITÀ
-   ========================= */
 
 @media (prefers-reduced-motion: reduce) {
     html {
