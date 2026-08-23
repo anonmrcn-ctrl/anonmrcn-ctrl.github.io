@@ -6,8 +6,9 @@
 window.NNMRCN_API_BASE = "";
 
 /*
- * Rende disponibile la mappa Leaflet anche ai livelli pubblici
- * caricati separatamente da accesso.js.
+ * Rende disponibile la mappa Leaflet ai livelli pubblici.
+ * accesso.js crea la mappa dopo questo file: intercettiamo L.map
+ * e poi carichiamo paesaggi.js appena l'istanza è disponibile.
  */
 if (window.L && typeof L.map === "function") {
     const creaMappaLeaflet = L.map.bind(L);
@@ -19,8 +20,18 @@ if (window.L && typeof L.map === "function") {
     };
 }
 
-window.addEventListener("load", () => {
+(function caricaPaesaggiQuandoPronto() {
+    if (!window.NNMRCN_MAP) {
+        window.setTimeout(caricaPaesaggiQuandoPronto, 50);
+        return;
+    }
+
+    if (document.querySelector('script[data-nnmrcn-paesaggi]')) {
+        return;
+    }
+
     const script = document.createElement("script");
-    script.src = "./paesaggi.js";
+    script.src = "./paesaggi.js?v=20260823-2";
+    script.dataset.nnmrcnPaesaggi = "true";
     document.body.appendChild(script);
-});
+})();
