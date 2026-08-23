@@ -8,7 +8,7 @@ window.NNMRCN_API_BASE = "";
 /*
  * Rende disponibile la mappa Leaflet ai livelli pubblici.
  * accesso.js crea la mappa dopo questo file: intercettiamo L.map
- * e poi carichiamo paesaggi.js appena l'istanza è disponibile.
+ * e carichiamo lo script dei paesaggi non appena l'istanza esiste.
  */
 if (window.L && typeof L.map === "function") {
     const creaMappaLeaflet = L.map.bind(L);
@@ -31,7 +31,7 @@ if (window.L && typeof L.map === "function") {
     }
 
     const script = document.createElement("script");
-    script.src = "./paesaggi.js?v=20260823-2";
+    script.src = "./paesaggi.js?v=20260823-3";
     script.dataset.nnmrcnPaesaggi = "true";
     document.body.appendChild(script);
 })();
