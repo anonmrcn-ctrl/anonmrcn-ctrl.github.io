@@ -6,26 +6,25 @@
 window.NNMRCN_API_BASE = "";
 
 /*
- * Su alcuni browser mobili il tocco su una geometria SVG di Leaflet
- * disegna un grande rettangolo di focus attorno al suo bounding box.
- * Eliminiamo solo quel contorno, lasciando intatti i tooltip con il nome.
+ * Evita il grande rettangolo di focus che alcuni browser mobili
+ * disegnano attorno alle geometrie SVG di Leaflet.
+ * I tooltip con i nomi restano attivi.
  */
 const stileFocusPaesaggi = document.createElement("style");
 stileFocusPaesaggi.textContent = `
-    .pagina-progetto .leaflet-interactive:focus,
-    .pagina-progetto .leaflet-interactive:focus-visible,
-    .pagina-progetto .leaflet-overlay-pane svg:focus,
-    .pagina-progetto .leaflet-overlay-pane svg:focus-visible {
+    .pagina-progetto #map .leaflet-interactive,
+    .pagina-progetto #map .leaflet-interactive:focus,
+    .pagina-progetto #map .leaflet-interactive:focus-visible,
+    .pagina-progetto #map .leaflet-overlay-pane svg,
+    .pagina-progetto #map .leaflet-overlay-pane svg:focus,
+    .pagina-progetto #map .leaflet-overlay-pane svg:focus-visible {
         outline: none !important;
+        box-shadow: none !important;
+        -webkit-tap-highlight-color: transparent !important;
     }
 `;
 document.head.appendChild(stileFocusPaesaggi);
 
-/*
- * Rende disponibile la mappa Leaflet ai livelli pubblici.
- * accesso.js crea la mappa dopo questo file: intercettiamo L.map
- * e carichiamo lo script dei paesaggi non appena l'istanza esiste.
- */
 if (window.L && typeof L.map === "function") {
     const creaMappaLeaflet = L.map.bind(L);
 
@@ -47,7 +46,7 @@ if (window.L && typeof L.map === "function") {
     }
 
     const script = document.createElement("script");
-    script.src = "./paesaggi.js?v=20260823-6";
+    script.src = "./paesaggi.js?v=20260823-7";
     script.dataset.nnmrcnPaesaggi = "true";
     document.body.appendChild(script);
 })();
