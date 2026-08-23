@@ -285,6 +285,22 @@
             opacity: 0.7;
         }
 
+        /*
+         * Brave/Chromium su Android può disegnare un enorme rettangolo
+         * di focus attorno alle geometrie SVG Leaflet. Questo rimuove
+         * solo quel focus senza nascondere il tooltip con il nome.
+         */
+        #map .leaflet-interactive,
+        #map .leaflet-interactive:focus,
+        #map .leaflet-interactive:focus-visible,
+        #map .leaflet-overlay-pane svg,
+        #map .leaflet-overlay-pane svg:focus,
+        #map .leaflet-overlay-pane svg:focus-visible {
+            outline: none !important;
+            box-shadow: none !important;
+            -webkit-tap-highlight-color: transparent !important;
+        }
+
         @media (max-width: 700px) {
             .progetto-intro {
                 font-size: 1rem;
@@ -578,8 +594,8 @@
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="./config.js"></script>
-    <script src="./accesso.js"></script>
+    <script src="./config.js?v=20260823-7"></script>
+    <script src="./accesso.js?v=20260823-7"></script>
 
 </body>
 </html>
