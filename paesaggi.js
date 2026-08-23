@@ -33,18 +33,18 @@
 
         if (categoria === "cava") {
             return {
-                color: "#7fc2d6",
-                weight: 2,
-                opacity: 0.9,
+                color: "#5aaec8",
+                weight: 3,
+                opacity: 1,
                 fillColor: "#7fc2d6",
-                fillOpacity: 0.18
+                fillOpacity: 0.32
             };
         }
 
         return {
-            color: "#7fc2d6",
-            weight: 12,
-            opacity: 0.22,
+            color: "#4fa9c5",
+            weight: 15,
+            opacity: 0.58,
             lineCap: "round",
             lineJoin: "round"
         };
@@ -55,17 +55,17 @@
 
         if (categoria === "cava") {
             return {
-                color: "#d7f1f7",
-                weight: 1.5,
-                opacity: 0.95,
+                color: "#e5f7fb",
+                weight: 2,
+                opacity: 1,
                 fill: false
             };
         }
 
         return {
-            color: "#d7f1f7",
-            weight: 3,
-            opacity: 0.95,
+            color: "#e5f7fb",
+            weight: 4,
+            opacity: 1,
             lineCap: "round",
             lineJoin: "round"
         };
@@ -88,7 +88,9 @@
         `);
     }
 
-    fetch("./luoghi-significativi.geojson")
+    fetch("./luoghi-significativi.geojson?v=20260823-2", {
+        cache: "no-store"
+    })
         .then((response) => {
             if (!response.ok) {
                 throw new Error("Impossibile caricare i paesaggi significativi.");
@@ -112,9 +114,13 @@
             principale.addTo(paesaggi);
             dettaglio.addTo(paesaggi);
 
+            if (map.createPane && !window.NNMRCN_PAESAGGI_READY) {
+                window.NNMRCN_PAESAGGI_READY = true;
+            }
+
             window.NNMRCN_PAESAGGI_LAYER = paesaggi;
         })
         .catch((error) => {
-            console.error(error);
+            console.error("nnMrcn paesaggi:", error);
         });
 })();
