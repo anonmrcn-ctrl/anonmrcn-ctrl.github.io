@@ -8,8 +8,43 @@
 
     const OVERLAY_NAME = "Aree e località citate";
     const CATEGORY_NAME = "Cosa fare e vedere";
-    const MUNICIPAL_PAGE_URL =
+    const MUNICIPAL_DEFAULT_PAGE_URL =
         "https://www.comune.marcon.ve.it/vivere-il-comune/territorio/cosa-fare-e-vedere/";
+
+    const MUNICIPAL_PLACE_LINKS = Object.freeze({
+        "Colmello": {
+            url: "https://www.comune.marcon.ve.it/vivere-il-comune/luoghi/frazione-colmello/",
+            label: "Comune di Marcon — Frazione Colmello"
+        },
+        "Parco dello Zero": {
+            url: "https://www.comune.marcon.ve.it/vivere-il-comune/luoghi/parco-dello-zero/",
+            label: "Comune di Marcon — Parco dello Zero"
+        },
+        "Ex campo di volo": {
+            url: "https://www.comune.marcon.ve.it/vivere-il-comune/luoghi/ex-campo-di-volo/",
+            label: "Comune di Marcon — Ex campo di volo"
+        },
+        "Oasi Cave di Gaggio Nord": {
+            url: "https://www.comune.marcon.ve.it/vivere-il-comune/luoghi/oasi-cave-di-gaggio-nord/",
+            label: "Comune di Marcon — Oasi Cave di Gaggio Nord"
+        },
+        "Gaggio": {
+            url: "https://www.comune.marcon.ve.it/vivere-il-comune/luoghi/gaggio/",
+            label: "Comune di Marcon — Frazione Gaggio"
+        },
+        "San Liberale": {
+            url: "https://www.comune.marcon.ve.it/vivere-il-comune/luoghi/san-liberale/",
+            label: "Comune di Marcon — Frazione San Liberale"
+        },
+        "Zuccarello": {
+            url: "https://www.comune.marcon.ve.it/vivere-il-comune/luoghi/frazione-zuccarello/",
+            label: "Comune di Marcon — Frazione Zuccarello"
+        },
+        "Praello": {
+            url: "https://www.comune.marcon.ve.it/vivere-il-comune/luoghi/frazione-praello/",
+            label: "Comune di Marcon — Frazione Praello"
+        }
+    });
 
     const WIKIPEDIA_LINKS = Object.freeze({
         "Colmello": {
@@ -90,11 +125,20 @@
         const links = document.createElement("div");
         links.className = "popup-area-links";
 
-        appendExternalLink(
-            links,
-            MUNICIPAL_PAGE_URL,
-            "Cosa fare e vedere — Comune di Marcon"
-        );
+        const municipalPlace = MUNICIPAL_PLACE_LINKS[properties.nome];
+        if (municipalPlace) {
+            appendExternalLink(
+                links,
+                municipalPlace.url,
+                municipalPlace.label
+            );
+        } else {
+            appendExternalLink(
+                links,
+                MUNICIPAL_DEFAULT_PAGE_URL,
+                "Cosa fare e vedere — Comune di Marcon"
+            );
+        }
 
         const wikipedia = WIKIPEDIA_LINKS[properties.nome];
         if (wikipedia) {
