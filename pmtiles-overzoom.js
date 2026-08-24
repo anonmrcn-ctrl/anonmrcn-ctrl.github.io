@@ -1,45 +1,54 @@
 (() => {
     "use strict";
 
-    if (!window.pmtiles?.leafletRasterLayer) {
-        console.error("PMTiles non è disponibile: overzoom non attivato.");
+    if (!window.L || !window.pmtiles?.leafletRasterLayer) {
+        console.error("Leaflet o PMTiles non sono disponibili: overzoom non attivato.");
         return;
     }
 
     const originalLeafletRasterLayer = window.pmtiles.leafletRasterLayer;
 
     window.pmtiles.leafletRasterLayer = function (source, options = {}) {
-        const layer = originalLeafletRasterLayer(source, {
-            ...options,
-            maxZoom: options.maxZoom ?? 19,
-            maxNativeZoom: options.maxNativeZoom ?? 17
-        });
+        const container = L.layerGroup();
 
         source.getHeader()
             .then((header) => {
+                const nativeMinZoom = Number(header?.minZoom);
                 const nativeMaxZoom = Number(header?.maxZoom);
 
                 if (!Number.isFinite(nativeMaxZoom)) {
-                    return;
+                    throw new Error("maxZoom PMTiles non valido.");
                 }
 
-                layer.options.maxNativeZoom = nativeMaxZoom;
-                layer.options.maxZoom = Math.max(
-                    Number(layer.options.maxZoom) || nativeMaxZoom,
-                    nativeMaxZoom
+                const layer = originalLeafletRasterLayer(source, {
+                    ...options,
+                    minNativeZoom: Number.isFinite(nativeMinZoom)
+                        ? nativeMinZoom
+                        : undefined,
+                    maxNativeZoom: nativeMaxZoom,
+                    maxZoom: Math.max(
+                        Number(options.maxZoom) || 22,
+                        nativeMaxZoom
+                    )
+                });
+
+                layer.on("tileerror", (event) => {
+                    container.fire("tileerror", event, true);
+                });
+
+                container.addLayer(layer);
+
+                console.info(
+                    `Mappa 1975: zoom nativo ${nativeMinZoom}–${nativeMaxZoom}; overzoom fino a ${layer.options.maxZoom}.`
                 );
-
-                if (layer._map) {
-                    layer.redraw();
-                }
             })
             .catch((error) => {
                 console.error(
-                    "Impossibile leggere il livello massimo del PMTiles.",
+                    "Impossibile inizializzare l'overzoom del PMTiles 1975.",
                     error
                 );
             });
 
-        return layer;
+        return container;
     };
 })();
