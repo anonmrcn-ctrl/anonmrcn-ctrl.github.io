@@ -2,6 +2,7 @@
     "use strict";
 
     const apiClient = window.NNMRCN_API;
+    const mapExtensions = window.NNMRCN_MAP;
     const SESSION_KEY = "nnmrcn_session";
     const MAX_MESSAGE_LENGTH = 1500;
     const MAX_BATCH_RECIPIENTS = 5;
@@ -150,13 +151,9 @@
         ).addTo(map);
 
         try {
-            const response = await fetch("./luoghi-significativi.geojson");
-
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}`);
-            }
-
-            const data = await response.json();
+            const data = await mapExtensions.loadGeoJSON(
+                "./luoghi-significativi.geojson"
+            );
 
             L.geoJSON(data, {
                 style: landscapeMainStyle,
@@ -220,6 +217,8 @@
                 direction: "top"
             });
         }
+
+        mapExtensions.enhanceFeature(feature, layer);
 
         layer.on("add", () => {
             requestAnimationFrame(() => {

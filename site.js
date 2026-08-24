@@ -6,22 +6,6 @@
     const menu = document.getElementById("menuPrincipale");
     const overlay = document.getElementById("menuOverlay");
 
-    const projectIntro = document.querySelector(
-        ".pagina-progetto .progetto-intro"
-    );
-
-    if (projectIntro) {
-        const linkParagraph = document.createElement("p");
-        linkParagraph.className = "progetto-link-esterno";
-
-        const link = document.createElement("a");
-        link.href = "https://www.comune.marcon.ve.it/vivere-il-comune/territorio/cosa-fare-e-vedere/";
-        link.textContent = "cosa fare e vedere";
-
-        linkParagraph.appendChild(link);
-        projectIntro.insertAdjacentElement("afterend", linkParagraph);
-    }
-
     if (!button || !closeButton || !menu || !overlay) {
         return;
     }

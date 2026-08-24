@@ -1,7 +1,7 @@
 (() => {
     "use strict";
 
-    if (!window.L?.Path?.prototype?.bindTooltip) {
+    if (!window.NNMRCN_MAP) {
         return;
     }
 
@@ -19,8 +19,6 @@
             length: "6,2 km"
         }
     });
-
-    const originalBindTooltip = L.Path.prototype.bindTooltip;
 
     function buildRiverPopup(name, info) {
         const root = document.createElement("div");
@@ -42,22 +40,23 @@
         return root;
     }
 
-    L.Path.prototype.bindTooltip = function (...args) {
-        const result = originalBindTooltip.apply(this, args);
-        const properties = this.feature?.properties;
+    function enhanceRiver(feature, layer) {
+        const properties = feature?.properties;
         const name = properties?.nome;
         const info = RIVER_INFO[name];
 
         if (
             properties?.categoria === "corso_d_acqua" &&
             info &&
-            !this.getPopup?.()
+            !layer.getPopup?.()
         ) {
-            this.bindPopup(buildRiverPopup(name, info), {
+            layer.bindPopup(buildRiverPopup(name, info), {
                 maxWidth: 280
             });
         }
+    }
 
-        return result;
-    };
+    window.NNMRCN_MAP.registerExtension({
+        feature: enhanceRiver
+    });
 })();

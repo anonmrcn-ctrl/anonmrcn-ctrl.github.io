@@ -1,13 +1,13 @@
 (() => {
     "use strict";
 
-    if (!window.L?.control?.layers) {
+    if (!window.NNMRCN_MAP || !window.L?.geoJSON) {
         return;
     }
 
+    const mapExtensions = window.NNMRCN_MAP;
     const PLACES_NAME = "Luoghi rilevanti lungo il percorso";
     const LANDSCAPES_URL = "./luoghi-significativi.geojson";
-    const previousLayersFactory = L.control.layers;
 
     const CAVE_INFO = Object.freeze({
         "Cave del Praello": {
@@ -69,12 +69,7 @@
     }
 
     async function addRelevantQuarries(targetGroup) {
-        const response = await fetch(LANDSCAPES_URL, { cache: "no-store" });
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}`);
-        }
-
-        const data = await response.json();
+        const data = await mapExtensions.loadGeoJSON(LANDSCAPES_URL);
         const features = (data.features || []).filter(
             (feature) => CAVE_INFO[feature.properties?.nome]
         );
@@ -135,14 +130,7 @@
         });
     }
 
-    L.control.layers = function (baseLayers, overlays, options) {
-        const control = previousLayersFactory.call(
-            L.control,
-            baseLayers,
-            overlays,
-            options
-        );
-        enhanceRelevantPlaces(control);
-        return control;
-    };
+    mapExtensions.registerExtension({
+        control: enhanceRelevantPlaces
+    });
 })();

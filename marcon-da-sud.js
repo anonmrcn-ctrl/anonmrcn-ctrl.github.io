@@ -1,15 +1,15 @@
 (() => {
     "use strict";
 
-    if (!window.L?.control?.layers) {
+    if (!window.NNMRCN_MAP || !window.L?.layerGroup) {
         return;
     }
 
+    const mapExtensions = window.NNMRCN_MAP;
     const ROUTE_NAME = "Proposta di percorso ciclo-turistico";
     const PLACES_NAME = "Luoghi rilevanti lungo il percorso";
     const SOUTH_ROUTE_NAME = "Marcon da sud";
     const SOUTH_ROUTE_URL = "./marcon-da-sud.geojson";
-    const previousLayersFactory = L.control.layers;
 
     function buildPopup(feature) {
         const root = document.createElement("div");
@@ -23,15 +23,7 @@
     }
 
     async function loadSouthRoute(targetGroup) {
-        const response = await fetch(SOUTH_ROUTE_URL, {
-            cache: "no-store"
-        });
-
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}`);
-        }
-
-        const data = await response.json();
+        const data = await mapExtensions.loadGeoJSON(SOUTH_ROUTE_URL);
         const layer = L.geoJSON(data, {
             style: {
                 color: "#704f3b",
@@ -86,12 +78,7 @@
         return ordered;
     }
 
-    L.control.layers = function (baseLayers, overlays, options) {
-        return previousLayersFactory.call(
-            L.control,
-            baseLayers,
-            insertSouthRoute(overlays),
-            options
-        );
-    };
+    mapExtensions.registerExtension({
+        overlays: insertSouthRoute
+    });
 })();

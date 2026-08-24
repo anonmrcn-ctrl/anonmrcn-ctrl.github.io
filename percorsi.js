@@ -1,11 +1,12 @@
 (() => {
     "use strict";
 
-    if (!window.L?.control?.layers) {
+    if (!window.L?.control?.layers || !window.NNMRCN_MAP) {
         console.error("Leaflet non è disponibile: percorsi e paesaggi non caricati.");
         return;
     }
 
+    const mapExtensions = window.NNMRCN_MAP;
     const ROUTE_NAME = "Proposta di percorso ciclo-turistico";
     const PLACES_NAME = "Luoghi rilevanti lungo il percorso";
     const RIVERS_NAME = "Fiumi";
@@ -424,15 +425,7 @@
     }
 
     async function loadRelevantPlacesLayer() {
-        const response = await fetch("./luoghi-rilevanti.geojson", {
-            cache: "no-store"
-        });
-
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}`);
-        }
-
-        const data = await response.json();
+        const data = await mapExtensions.loadGeoJSON("./luoghi-rilevanti.geojson");
         const features = data.features || [];
         const layerGroup = L.layerGroup();
         const fallbackLayers = new Map();
@@ -491,15 +484,7 @@
     }
 
     async function loadRouteLayer() {
-        const response = await fetch("./percorsi.geojson", {
-            cache: "no-store"
-        });
-
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}`);
-        }
-
-        const data = await response.json();
+        const data = await mapExtensions.loadGeoJSON("./percorsi.geojson");
 
         return L.geoJSON(data, {
             style: {
@@ -691,9 +676,11 @@
         const control = originalLayersFactory.call(
             L.control,
             baseLayers,
-            normalizedOverlays,
+            mapExtensions.extendOverlays(normalizedOverlays),
             options
         );
+
+        mapExtensions.enhanceControl(control);
 
         if (shouldOrganize) {
             organizeControl(control);
