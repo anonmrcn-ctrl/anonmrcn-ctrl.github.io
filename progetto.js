@@ -66,20 +66,44 @@
             L.tileLayer(satelliteUrl, satelliteOptions)
         ]);
 
-        const year1975 = L.layerGroup([
-            L.tileLayer(satelliteUrl, satelliteOptions),
-            L.imageOverlay(
-                "./marcon_1975_web.webp",
-                [
-                    [45.5314854758, 12.2633666786],
-                    [45.5670779946, 12.3922261726]
-                ],
+        const year1975Layers = [
+            L.tileLayer(satelliteUrl, satelliteOptions)
+        ];
+
+        if (
+            window.pmtiles?.PMTiles &&
+            typeof window.pmtiles.leafletRasterLayer === "function"
+        ) {
+            const archive1975 = new window.pmtiles.PMTiles(
+                new URL(
+                    "./mappe/marcon_1975.pmtiles",
+                    window.location.href
+                ).href
+            );
+
+            const historical1975 = window.pmtiles.leafletRasterLayer(
+                archive1975,
                 {
+                    pane: "historicalRaster",
                     opacity: 1,
-                    pane: "historicalRaster"
+                    noWrap: true,
+                    attribution: "Aerofototeca Veneta — 1975"
                 }
-            )
-        ]);
+            );
+
+            historical1975.on("tileerror", (event) => {
+                console.error(
+                    "Impossibile caricare una tessera della mappa del 1975.",
+                    event.error || event
+                );
+            });
+
+            year1975Layers.push(historical1975);
+        } else {
+            console.error("PMTiles non è disponibile: il livello 1975 non può essere caricato.");
+        }
+
+        const year1975 = L.layerGroup(year1975Layers);
 
         today.addTo(instance);
 
