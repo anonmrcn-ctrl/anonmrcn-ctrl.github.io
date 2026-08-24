@@ -1,6 +1,6 @@
 .leaflet-control-layers-overlays .livello-categoria {
-    margin: 0.75rem 0.25rem 0.35rem;
-    padding-top: 0.6rem;
+    margin: 0.85rem 0.25rem 0.35rem;
+    padding-top: 0.65rem;
     border-top: 1px solid rgba(23, 23, 23, 0.18);
     color: #171717;
     font-family: Georgia, "Times New Roman", serif;
@@ -11,21 +11,67 @@
 }
 
 .leaflet-control-layers-overlays label {
-    max-width: 270px;
+    max-width: 285px;
     white-space: normal;
 }
 
-.popup-percorso {
+.leaflet-control-layers-overlays label.livello-sottolivello {
+    margin-left: 1.15rem;
+    font-size: 0.92em;
+}
+
+.leaflet-control-layers-overlays label.livello-sottolivello span {
+    opacity: 0.82;
+}
+
+.popup-percorso,
+.popup-luogo-rilevante {
     font-family: Georgia, "Times New Roman", serif;
     font-size: 0.92rem;
     line-height: 1.45;
 }
 
-.popup-percorso strong {
+.popup-percorso strong,
+.popup-luogo-rilevante strong {
     display: block;
     margin-bottom: 0.55rem;
 }
 
 .popup-percorso p {
     margin: 0;
+}
+
+.popup-luogo-rilevante p {
+    margin: 0 0 0.65rem;
+}
+
+.popup-luogo-fonte-geometria {
+    font-size: 0.78rem;
+    opacity: 0.66;
+}
+
+.popup-luogo-links {
+    display: grid;
+    gap: 0.4rem;
+    margin-top: 0.8rem;
+    padding-top: 0.7rem;
+    border-top: 1px solid rgba(23, 23, 23, 0.16);
+}
+
+.popup-luogo-links a,
+.popup-percorso a {
+    width: fit-content;
+    max-width: 100%;
+    color: inherit;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+    text-decoration: underline;
+    text-underline-offset: 0.15em;
+}
+
+.popup-luogo-links a:hover,
+.popup-luogo-links a:focus-visible,
+.popup-percorso a:hover,
+.popup-percorso a:focus-visible {
+    opacity: 0.6;
 }
