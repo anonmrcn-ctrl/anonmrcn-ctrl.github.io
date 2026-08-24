@@ -19,9 +19,23 @@
 }
 
 .popup-area-comune a {
+    display: block;
+    width: fit-content;
+    max-width: 100%;
+    margin-top: 0.45rem;
     color: inherit;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
     text-decoration: underline;
     text-underline-offset: 0.15em;
+}
+
+.popup-area-comune a:first-of-type {
+    margin-top: 0.85rem;
+}
+
+.popup-area-comune a + a {
+    margin-top: 0.35rem;
 }
 
 .popup-area-comune a:hover,
