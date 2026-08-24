@@ -10,7 +10,60 @@
     const CATEGORY_NAME = "Cosa fare e vedere";
     const MUNICIPAL_PAGE_URL =
         "https://www.comune.marcon.ve.it/vivere-il-comune/territorio/cosa-fare-e-vedere/";
+
+    const WIKIPEDIA_LINKS = Object.freeze({
+        "Colmello": {
+            url: "https://it.wikipedia.org/wiki/Marcon#Origini_del_nome",
+            label: "Wikipedia — Marcon"
+        },
+        "Parco dello Zero": {
+            url: "https://it.wikipedia.org/wiki/Zero_(fiume)",
+            label: "Wikipedia — Zero (fiume)"
+        },
+        "Ex campo di volo": {
+            url: "https://it.wikipedia.org/wiki/Campo_di_volo_di_Marcon",
+            label: "Wikipedia — Campo di volo di Marcon"
+        },
+        "Oasi Cave di Gaggio Nord": {
+            url: "https://it.wikipedia.org/wiki/Gaggio_(Marcon)",
+            label: "Wikipedia — Gaggio (Marcon)"
+        },
+        "Gaggio": {
+            url: "https://it.wikipedia.org/wiki/Gaggio_(Marcon)",
+            label: "Wikipedia — Gaggio (Marcon)"
+        },
+        "San Liberale": {
+            url: "https://it.wikipedia.org/wiki/San_Liberale_(Marcon)",
+            label: "Wikipedia — San Liberale (Marcon)"
+        },
+        "Poian": {
+            url: "https://it.wikipedia.org/wiki/Marcon#Origini_del_nome",
+            label: "Wikipedia — Marcon"
+        },
+        "Le Crete": {
+            url: "https://it.wikipedia.org/wiki/Quarto_d%27Altino#Geografia_antropica",
+            label: "Wikipedia — Quarto d’Altino"
+        },
+        "Zuccarello": {
+            url: "https://it.wikipedia.org/wiki/Marcon#Origini_del_nome",
+            label: "Wikipedia — Marcon"
+        },
+        "Praello": {
+            url: "https://it.wikipedia.org/wiki/Marcon#Origini_del_nome",
+            label: "Wikipedia — Marcon"
+        }
+    });
+
     const previousLayersFactory = L.control.layers;
+
+    function appendExternalLink(container, href, text) {
+        const link = document.createElement("a");
+        link.href = href;
+        link.target = "_blank";
+        link.rel = "noopener noreferrer";
+        link.textContent = text;
+        container.appendChild(link);
+    }
 
     function buildPopup(feature) {
         const properties = feature.properties || {};
@@ -34,13 +87,21 @@
             root.appendChild(precision);
         }
 
-        const source = document.createElement("a");
-        source.href = MUNICIPAL_PAGE_URL;
-        source.target = "_blank";
-        source.rel = "noopener noreferrer";
-        source.textContent = "Cosa fare e vedere — Comune di Marcon";
-        root.appendChild(source);
+        const links = document.createElement("div");
+        links.className = "popup-area-links";
 
+        appendExternalLink(
+            links,
+            MUNICIPAL_PAGE_URL,
+            "Cosa fare e vedere — Comune di Marcon"
+        );
+
+        const wikipedia = WIKIPEDIA_LINKS[properties.nome];
+        if (wikipedia) {
+            appendExternalLink(links, wikipedia.url, wikipedia.label);
+        }
+
+        root.appendChild(links);
         return root;
     }
 
