@@ -7,6 +7,9 @@
     }
 
     const ROUTE_NAME = "Proposta di percorso ciclo-turistico";
+    const MUNICIPAL_PAGE_URL =
+        "https://www.comune.marcon.ve.it/vivere-il-comune/territorio/cosa-fare-e-vedere/";
+    const MUNICIPAL_LINK_TEXT = "Cosa fare e vedere";
     const originalLayersFactory = L.control.layers;
 
     function buildRoutePopup(feature) {
@@ -20,7 +23,30 @@
         const description = feature.properties?.descrizione;
         if (description) {
             const paragraph = document.createElement("p");
-            paragraph.textContent = description;
+            const linkIndex = description.indexOf(MUNICIPAL_LINK_TEXT);
+
+            if (linkIndex === -1) {
+                paragraph.textContent = description;
+            } else {
+                paragraph.append(
+                    document.createTextNode(description.slice(0, linkIndex))
+                );
+
+                const link = document.createElement("a");
+                link.href = MUNICIPAL_PAGE_URL;
+                link.textContent = MUNICIPAL_LINK_TEXT;
+                link.target = "_blank";
+                link.rel = "noopener noreferrer";
+                link.title = "Apri la pagina Cosa fare e vedere del Comune di Marcon";
+                paragraph.appendChild(link);
+
+                paragraph.append(
+                    document.createTextNode(
+                        description.slice(linkIndex + MUNICIPAL_LINK_TEXT.length)
+                    )
+                );
+            }
+
             root.appendChild(paragraph);
         }
 
