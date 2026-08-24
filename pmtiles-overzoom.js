@@ -15,18 +15,26 @@
     }
 
     window.pmtiles.leafletRasterLayer = function (source, options = {}) {
-        const headerPromise = source.getHeader().then((header) => {
-            if (header.tileType === 1 || header.tileType === 6) {
-                throw new Error("Il PMTiles contiene tessere vettoriali, non raster.");
+        let headerPromise;
+
+        function getHeader() {
+            if (!headerPromise) {
+                headerPromise = source.getHeader().then((header) => {
+                    if (header.tileType === 1 || header.tileType === 6) {
+                        throw new Error("Il PMTiles contiene tessere vettoriali, non raster.");
+                    }
+
+                    console.info(
+                        `Mappa 1975: zoom nativo ${header.minZoom}–${header.maxZoom}. ` +
+                        "Overzoom raster reale attivo oltre il livello massimo."
+                    );
+
+                    return header;
+                });
             }
 
-            console.info(
-                `Mappa 1975: zoom nativo ${header.minZoom}–${header.maxZoom}. ` +
-                "Overzoom raster reale attivo oltre il livello massimo."
-            );
-
-            return header;
-        });
+            return headerPromise;
+        }
 
         const OverzoomRasterLayer = L.GridLayer.extend({
             createTile(coord, done) {
@@ -40,7 +48,7 @@
                 canvas.cancel = () => controller.abort();
 
                 (async () => {
-                    const header = await headerPromise;
+                    const header = await getHeader();
 
                     if (coord.z < header.minZoom) {
                         done(undefined, canvas);

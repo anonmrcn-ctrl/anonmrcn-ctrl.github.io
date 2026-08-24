@@ -15,6 +15,8 @@ Sito GitHub Pages del progetto nnMrcn.
 - `admin.js` — interfaccia amministratore
 - `config.js` — URL del backend
 - `pmtiles-overzoom.js` — visualizzazione delle mappe storiche oltre lo zoom nativo
+- `logo.webp` — logo ottimizzato senza perdita di qualità
+- `logo.PNG` — versione originale del logo
 - `luoghi-significativi.geojson` — geometrie pubbliche della mappa
 - `mappe/marcon_1975.pmtiles` — ortofoto storica usata nella mappa interattiva
 - `marcon_1975_web.webp` — copia dell’ortofoto storica

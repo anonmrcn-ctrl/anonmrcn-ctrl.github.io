@@ -135,9 +135,7 @@
         ).addTo(map);
 
         try {
-            const response = await fetch("./luoghi-significativi.geojson", {
-                cache: "no-store"
-            });
+            const response = await fetch("./luoghi-significativi.geojson");
 
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}`);
