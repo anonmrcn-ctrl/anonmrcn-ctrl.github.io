@@ -2,156 +2,159 @@
     "use strict";
 
     if (!window.L || !window.pmtiles?.leafletRasterLayer) {
-        console.error("Leaflet o PMTiles non sono disponibili: limite zoom 1975 non attivato.");
+        console.error("Leaflet o PMTiles non sono disponibili: overzoom 1975 non attivato.");
         return;
     }
 
-    const originalLeafletRasterLayer = window.pmtiles.leafletRasterLayer;
-    const TODAY_MAX_ZOOM = 19;
+    function mimeTypeFor(tileType) {
+        if (tileType === 2) return "image/png";
+        if (tileType === 3) return "image/jpeg";
+        if (tileType === 4) return "image/webp";
+        if (tileType === 5) return "image/avif";
+        return "application/octet-stream";
+    }
 
     window.pmtiles.leafletRasterLayer = function (source, options = {}) {
-        const container = L.layerGroup();
-        let nativeMinZoom = null;
-        let nativeMaxZoom = null;
-        let activeMap = null;
-        let previousMaxZoom = TODAY_MAX_ZOOM;
-        let wheelTarget = null;
-        let guardsAttached = false;
-
-        function clampZoom() {
-            if (!activeMap || !Number.isFinite(nativeMaxZoom)) {
-                return;
+        const headerPromise = source.getHeader().then((header) => {
+            if (header.tileType === 1 || header.tileType === 6) {
+                throw new Error("Il PMTiles contiene tessere vettoriali, non raster.");
             }
 
-            if (activeMap.getZoom() > nativeMaxZoom) {
-                activeMap.setView(
-                    activeMap.getCenter(),
-                    nativeMaxZoom,
-                    { animate: false }
-                );
-            }
-        }
-
-        function blockWheelPastMax(event) {
-            if (!activeMap || !Number.isFinite(nativeMaxZoom)) {
-                return;
-            }
-
-            const isZoomingIn = event.deltaY < 0;
-            const atMaximum = activeMap.getZoom() >= nativeMaxZoom;
-
-            if (isZoomingIn && atMaximum) {
-                event.preventDefault();
-                event.stopPropagation();
-                event.stopImmediatePropagation();
-            }
-        }
-
-        function attachZoomGuards() {
-            if (
-                guardsAttached ||
-                !activeMap ||
-                !Number.isFinite(nativeMaxZoom)
-            ) {
-                return;
-            }
-
-            activeMap.setMaxZoom(nativeMaxZoom);
-
-            wheelTarget = activeMap.getContainer();
-            wheelTarget.addEventListener(
-                "wheel",
-                blockWheelPastMax,
-                { passive: false, capture: true }
+            console.info(
+                `Mappa 1975: zoom nativo ${header.minZoom}–${header.maxZoom}. ` +
+                "Overzoom raster reale attivo oltre il livello massimo."
             );
 
-            activeMap.on("zoomend", clampZoom);
-            guardsAttached = true;
-            clampZoom();
-        }
-
-        function detachZoomGuards() {
-            if (wheelTarget) {
-                wheelTarget.removeEventListener(
-                    "wheel",
-                    blockWheelPastMax,
-                    { capture: true }
-                );
-                wheelTarget = null;
-            }
-
-            if (activeMap) {
-                activeMap.off("zoomend", clampZoom);
-            }
-
-            guardsAttached = false;
-        }
-
-        container.on("add", () => {
-            activeMap = container._map || null;
-
-            if (activeMap) {
-                const currentMaxZoom = activeMap.getMaxZoom();
-
-                if (Number.isFinite(currentMaxZoom)) {
-                    previousMaxZoom = currentMaxZoom;
-                }
-            }
-
-            attachZoomGuards();
+            return header;
         });
 
-        container.on("remove", () => {
-            detachZoomGuards();
+        const OverzoomRasterLayer = L.GridLayer.extend({
+            createTile(coord, done) {
+                const tileSize = this.getTileSize();
+                const canvas = document.createElement("canvas");
+                const controller = new AbortController();
+                const signal = controller.signal;
 
-            if (activeMap) {
-                const restoredMaxZoom =
-                    Number.isFinite(previousMaxZoom) && previousMaxZoom > 0
-                        ? previousMaxZoom
-                        : TODAY_MAX_ZOOM;
+                canvas.width = tileSize.x;
+                canvas.height = tileSize.y;
+                canvas.cancel = () => controller.abort();
 
-                activeMap.setMaxZoom(restoredMaxZoom);
-            }
+                (async () => {
+                    const header = await headerPromise;
 
-            activeMap = null;
-        });
+                    if (coord.z < header.minZoom) {
+                        done(undefined, canvas);
+                        return;
+                    }
 
-        source.getHeader()
-            .then((header) => {
-                nativeMinZoom = Number(header?.minZoom);
-                nativeMaxZoom = Number(header?.maxZoom);
+                    let sourceZoom = Math.min(coord.z, header.maxZoom);
+                    let response = null;
+                    let scale = 1;
+                    let sourceX = coord.x;
+                    let sourceY = coord.y;
 
-                if (!Number.isFinite(nativeMaxZoom)) {
-                    throw new Error("maxZoom PMTiles non valido.");
+                    while (sourceZoom >= header.minZoom) {
+                        scale = 2 ** (coord.z - sourceZoom);
+                        sourceX = Math.floor(coord.x / scale);
+                        sourceY = Math.floor(coord.y / scale);
+
+                        response = await source.getZxy(
+                            sourceZoom,
+                            sourceX,
+                            sourceY,
+                            signal
+                        );
+
+                        if (response || coord.z <= header.maxZoom) {
+                            break;
+                        }
+
+                        sourceZoom -= 1;
+                    }
+
+                    if (!response) {
+                        done(undefined, canvas);
+                        return;
+                    }
+
+                    const mimeType = mimeTypeFor(header.tileType);
+                    const blob = new Blob([response.data], { type: mimeType });
+                    const imageUrl = window.URL.createObjectURL(blob);
+
+                    try {
+                        const image = new Image();
+
+                        await new Promise((resolve, reject) => {
+                            image.onload = resolve;
+                            image.onerror = () => reject(
+                                new Error("Impossibile decodificare una tessera del PMTiles 1975.")
+                            );
+                            image.src = imageUrl;
+                        });
+
+                        if (signal.aborted) {
+                            return;
+                        }
+
+                        const subX = coord.x - sourceX * scale;
+                        const subY = coord.y - sourceY * scale;
+                        const sourceWidth = image.naturalWidth / scale;
+                        const sourceHeight = image.naturalHeight / scale;
+                        const sourceLeft = subX * sourceWidth;
+                        const sourceTop = subY * sourceHeight;
+
+                        const context = canvas.getContext("2d");
+                        context.imageSmoothingEnabled = true;
+                        context.imageSmoothingQuality = "high";
+                        context.drawImage(
+                            image,
+                            sourceLeft,
+                            sourceTop,
+                            sourceWidth,
+                            sourceHeight,
+                            0,
+                            0,
+                            canvas.width,
+                            canvas.height
+                        );
+
+                        done(undefined, canvas);
+                    } finally {
+                        window.URL.revokeObjectURL(imageUrl);
+                    }
+                })().catch((error) => {
+                    if (error?.name === "AbortError") {
+                        return;
+                    }
+
+                    console.error("Errore nel rendering PMTiles 1975.", error);
+                    done(error, canvas);
+                });
+
+                return canvas;
+            },
+
+            _removeTile(key) {
+                const tile = this._tiles[key];
+
+                if (!tile) {
+                    return;
                 }
 
-                const layer = originalLeafletRasterLayer(source, {
-                    ...options,
-                    minZoom: Number.isFinite(nativeMinZoom)
-                        ? nativeMinZoom
-                        : undefined,
-                    maxZoom: nativeMaxZoom
+                if (tile.el.cancel) {
+                    tile.el.cancel();
+                }
+
+                L.DomUtil.remove(tile.el);
+                delete this._tiles[key];
+
+                this.fire("tileunload", {
+                    tile: tile.el,
+                    coords: this._keyToTileCoords(key)
                 });
+            }
+        });
 
-                layer.on("tileerror", (event) => {
-                    container.fire("tileerror", event, true);
-                });
-
-                container.addLayer(layer);
-                attachZoomGuards();
-
-                console.info(
-                    `Mappa 1975: zoom disponibili ${nativeMinZoom}–${nativeMaxZoom}. ` +
-                    `Blocco esplicito dello zoom oltre ${nativeMaxZoom} attivo.`
-                );
-            })
-            .catch((error) => {
-                console.error(
-                    "Impossibile leggere i limiti di zoom del PMTiles 1975.",
-                    error
-                );
-            });
-
-        return container;
+        return new OverzoomRasterLayer(options);
     };
 })();
