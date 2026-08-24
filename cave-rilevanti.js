@@ -13,8 +13,8 @@
         "Cave del Praello": {
             nome: "Cave del Praello",
             descrizione: "Cave del Praello lungo la parte meridionale del percorso.",
-            municipalUrl: "https://www.comune.marcon.ve.it/vivere-il-comune/territorio/cosa-fare-e-vedere/",
-            municipalLabel: "Cosa fare e vedere — Comune di Marcon",
+            municipalUrl: "https://www.comune.marcon.ve.it/vivere-il-comune/luoghi/cave-del-praello/",
+            municipalLabel: "Scheda del luogo — Comune di Marcon",
             wikipediaUrl: "https://it.wikipedia.org/wiki/Marcon"
         },
         "Cave di Gaggio nord": {
