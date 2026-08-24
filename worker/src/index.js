@@ -1,4 +1,5 @@
-const PBKDF2_ITERATIONS = 150000;
+// workerd refuses PBKDF2 requests above 100,000 iterations.
+const PBKDF2_ITERATIONS = 100000;
 const SESSION_TTL_MS = 12 * 60 * 60 * 1000;
 const MESSAGE_LIMIT_PER_HOUR = 5;
 const MAX_MESSAGE_LENGTH = 1500;
@@ -17,46 +18,46 @@ export default {
             const path = url.pathname;
 
             if (request.method === "POST" && path === "/api/login") {
-                return login(request, env);
+                return await login(request, env);
             }
 
             if (request.method === "GET" && path === "/api/session") {
-                return sessionInfo(request, env);
+                return await sessionInfo(request, env);
             }
 
             if (request.method === "POST" && path === "/api/logout") {
-                return logout(request, env);
+                return await logout(request, env);
             }
 
             if (request.method === "GET" && path === "/api/locations") {
-                return listLocations(request, env);
+                return await listLocations(request, env);
             }
 
             if (request.method === "GET" && path.startsWith("/api/poems/")) {
                 const id = Number(path.split("/").pop());
-                return getPoem(request, env, id);
+                return await getPoem(request, env, id);
             }
 
             if (request.method === "GET" && path === "/api/messages") {
-                return listMessages(request, env);
+                return await listMessages(request, env);
             }
 
             if (request.method === "POST" && path === "/api/messages") {
-                return createMessage(request, env);
+                return await createMessage(request, env);
             }
 
             if (request.method === "PATCH" && /^\/api\/messages\/\d+$/.test(path)) {
                 const id = Number(path.split("/").pop());
-                return markMessage(request, env, id);
+                return await markMessage(request, env, id);
             }
 
             if (request.method === "GET" && path === "/api/admin/messages") {
-                return adminListMessages(request, env, url);
+                return await adminListMessages(request, env, url);
             }
 
             if (request.method === "PATCH" && /^\/api\/admin\/messages\/\d+$/.test(path)) {
                 const id = Number(path.split("/").pop());
-                return adminUpdateMessage(request, env, id);
+                return await adminUpdateMessage(request, env, id);
             }
 
             if (request.method === "GET" && path === "/api/health") {

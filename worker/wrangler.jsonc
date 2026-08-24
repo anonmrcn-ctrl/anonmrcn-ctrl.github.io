@@ -2,7 +2,12 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "nnmrcn-rete",
   "main": "src/index.js",
-  "compatibility_date": "2026-08-21",
+  "compatibility_date": "2026-08-24",
+  "workers_dev": true,
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1
+  },
   "vars": {
     "ALLOWED_ORIGIN": "https://anonmrcn-ctrl.github.io"
   },

@@ -1,0 +1,13 @@
+# Dati privati delle location, password e segreti del Worker.
+nnmrcn_seed_private*.sql
+nnmrcn_password_hash_update*.sql
+nnmrcn_worker_secrets*.txt
+nnmrcn_location_codes*.txt
+password_locations_nnmrcn*.txt
+
+# Configurazione locale Cloudflare e dipendenze.
+.dev.vars*
+.env*
+!.env.example
+.wrangler/
+node_modules/
