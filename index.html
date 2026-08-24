@@ -12,6 +12,7 @@
     <button
         class="menu-button"
         id="menuButton"
+        type="button"
         aria-label="Apri il menu"
         aria-expanded="false"
         aria-controls="menuPrincipale"
@@ -22,10 +23,10 @@
     <div class="menu-overlay" id="menuOverlay"></div>
 
     <nav class="menu-principale" id="menuPrincipale" aria-label="Menu principale">
-        <button class="menu-close" id="menuClose" aria-label="Chiudi il menu">×</button>
+        <button class="menu-close" id="menuClose" type="button" aria-label="Chiudi il menu">×</button>
 
         <div class="menu-contenuto">
-            <a href="./index.html" class="voce-attiva">La poesia</a>
+            <a href="./index.html" class="voce-attiva" aria-current="page">La poesia</a>
             <a href="./autore.html">L’autore</a>
             <a href="./progetto.html">Il progetto</a>
         </div>

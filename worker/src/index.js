@@ -3,6 +3,14 @@ const PBKDF2_ITERATIONS = 100000;
 const SESSION_TTL_MS = 12 * 60 * 60 * 1000;
 const MESSAGE_LIMIT_PER_HOUR = 5;
 const MAX_MESSAGE_LENGTH = 1500;
+const MESSAGE_STATUSES = Object.freeze([
+    "pending",
+    "pending_delivery",
+    "approved",
+    "read",
+    "delivered",
+    "rejected"
+]);
 
 export default {
     async fetch(request, env) {
@@ -71,7 +79,12 @@ export default {
                 error: "Not found."
             }, 404);
         } catch (error) {
-            console.error(error);
+            console.error(JSON.stringify({
+                event: "worker_request_failed",
+                method: request.method,
+                path: new URL(request.url).pathname,
+                error: error instanceof Error ? error.message : String(error)
+            }));
 
             return json(request, env, {
                 error: "Errore interno."
@@ -199,9 +212,7 @@ async function listLocations(request, env) {
     const session = await requireSession(request, env);
 
     if (!session) {
-        return json(request, env, {
-            error: "Non autorizzato."
-        }, 401);
+        return unauthorized(request, env);
     }
 
     const result = await env.DB.prepare(`
@@ -235,9 +246,7 @@ async function getPoem(request, env, locationId) {
     const session = await requireSession(request, env);
 
     if (!session) {
-        return json(request, env, {
-            error: "Non autorizzato."
-        }, 401);
+        return unauthorized(request, env);
     }
 
     if (!Number.isInteger(locationId) || locationId <= 0) {
@@ -268,9 +277,7 @@ async function listMessages(request, env) {
     const session = await requireSession(request, env);
 
     if (!session) {
-        return json(request, env, {
-            error: "Non autorizzato."
-        }, 401);
+        return unauthorized(request, env);
     }
 
     const result = await env.DB.prepare(`
@@ -310,9 +317,7 @@ async function createMessage(request, env) {
     const session = await requireSession(request, env);
 
     if (!session) {
-        return json(request, env, {
-            error: "Non autorizzato."
-        }, 401);
+        return unauthorized(request, env);
     }
 
     const body = await readJson(request);
@@ -414,9 +419,7 @@ async function markMessage(request, env, messageId) {
     const session = await requireSession(request, env);
 
     if (!session) {
-        return json(request, env, {
-            error: "Non autorizzato."
-        }, 401);
+        return unauthorized(request, env);
     }
 
     const body = await readJson(request);
@@ -449,13 +452,12 @@ async function markMessage(request, env, messageId) {
 }
 
 async function adminListMessages(request, env, url) {
-    if (!adminAuthorized(request, env)) {
-        return json(request, env, {
-            error: "Non autorizzato."
-        }, 401);
+    if (!(await adminAuthorized(request, env))) {
+        return unauthorized(request, env);
     }
 
     const status = url.searchParams.get("status") || "active";
+    const filterByStatus = MESSAGE_STATUSES.includes(status);
 
     let where = `
         WHERE m.status IN ('pending', 'pending_delivery')
@@ -463,16 +465,7 @@ async function adminListMessages(request, env, url) {
 
     if (status === "all") {
         where = "";
-    } else if (
-        [
-            "pending",
-            "pending_delivery",
-            "approved",
-            "read",
-            "delivered",
-            "rejected"
-        ].includes(status)
-    ) {
+    } else if (filterByStatus) {
         where = "WHERE m.status = ?";
     }
 
@@ -496,18 +489,7 @@ async function adminListMessages(request, env, url) {
         LIMIT 250
     `);
 
-    if (
-        status !== "all" &&
-        status !== "active" &&
-        [
-            "pending",
-            "pending_delivery",
-            "approved",
-            "read",
-            "delivered",
-            "rejected"
-        ].includes(status)
-    ) {
+    if (filterByStatus) {
         statement = statement.bind(status);
     }
 
@@ -528,10 +510,8 @@ async function adminListMessages(request, env, url) {
 }
 
 async function adminUpdateMessage(request, env, messageId) {
-    if (!adminAuthorized(request, env)) {
-        return json(request, env, {
-            error: "Non autorizzato."
-        }, 401);
+    if (!(await adminAuthorized(request, env))) {
+        return unauthorized(request, env);
     }
 
     const body = await readJson(request);
@@ -643,21 +623,27 @@ function bearerToken(request) {
     return header.slice(7).trim();
 }
 
-function adminAuthorized(request, env) {
+function unauthorized(request, env) {
+    return json(request, env, {
+        error: "Non autorizzato."
+    }, 401);
+}
+
+async function adminAuthorized(request, env) {
     const supplied = request.headers.get("X-Admin-Token") || "";
     const expected = env.ADMIN_TOKEN || "";
 
-    if (!supplied || !expected || supplied.length !== expected.length) {
+    if (!expected) {
         return false;
     }
 
-    let diff = 0;
+    const encoder = new TextEncoder();
+    const [suppliedHash, expectedHash] = await Promise.all([
+        crypto.subtle.digest("SHA-256", encoder.encode(supplied)),
+        crypto.subtle.digest("SHA-256", encoder.encode(expected))
+    ]);
 
-    for (let i = 0; i < supplied.length; i += 1) {
-        diff |= supplied.charCodeAt(i) ^ expected.charCodeAt(i);
-    }
-
-    return diff === 0;
+    return crypto.subtle.timingSafeEqual(suppliedHash, expectedHash);
 }
 
 function normalizePassword(value) {
@@ -693,13 +679,7 @@ async function verifyPassword(password, saltB64, expectedHashB64) {
         return false;
     }
 
-    let diff = 0;
-
-    for (let i = 0; i < actual.length; i += 1) {
-        diff |= actual[i] ^ expected[i];
-    }
-
-    return diff === 0;
+    return crypto.subtle.timingSafeEqual(actual, expected);
 }
 
 async function hmacHex(secret, value) {

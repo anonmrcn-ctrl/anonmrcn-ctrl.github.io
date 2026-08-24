@@ -1,7 +1,7 @@
 (() => {
     "use strict";
 
-    const API_BASE = String(window.NNMRCN_API_BASE || "").replace(/\/+$/, "");
+    const apiClient = window.NNMRCN_API;
     const SESSION_KEY = "nnmrcn_session";
     const MAX_MESSAGE_LENGTH = 1500;
 
@@ -246,45 +246,41 @@
     }
 
     function apiConfigured() {
-        return Boolean(API_BASE);
+        return Boolean(apiClient.baseUrl);
     }
 
     async function api(path, options = {}) {
-        if (!apiConfigured()) {
-            const error = new Error("API_NOT_CONFIGURED");
-            error.code = "API_NOT_CONFIGURED";
-            throw error;
-        }
-
         const headers = new Headers(options.headers || {});
-        headers.set("Accept", "application/json");
-
-        if (options.body && !headers.has("Content-Type")) {
-            headers.set("Content-Type", "application/json");
-        }
 
         if (sessionToken) {
             headers.set("Authorization", `Bearer ${sessionToken}`);
         }
 
-        const response = await fetch(`${API_BASE}${path}`, {
-            ...options,
-            headers
-        });
+        try {
+            return await apiClient.request(path, {
+                ...options,
+                headers
+            });
+        } catch (error) {
+            if (error.status === 401) {
+                clearSession();
+            }
 
-        const data = await response.json().catch(() => null);
-
-        if (response.status === 401) {
-            clearSession();
-        }
-
-        if (!response.ok) {
-            const error = new Error(data?.error || "Errore di rete.");
-            error.status = response.status;
             throw error;
         }
+    }
 
-        return data;
+    function showMessage(container, message) {
+        const paragraph = document.createElement("p");
+        paragraph.textContent = message;
+        container.replaceChildren(paragraph);
+    }
+
+    function showPoemMessage(message) {
+        const poem = document.createElement("main");
+        poem.className = "poesia";
+        showMessage(poem, message);
+        elements.poesiaTesto.replaceChildren(poem);
     }
 
     async function handleLogin(event) {
@@ -378,7 +374,7 @@
         elements.loginLoggedIn.hidden = true;
         elements.loginLocation.textContent = "";
         elements.postaSection.hidden = true;
-        elements.postaLista.innerHTML = "<p>Nessun messaggio.</p>";
+        showMessage(elements.postaLista, "Nessun messaggio.");
     }
 
     async function loadNetwork() {
@@ -476,8 +472,7 @@
             `Poesia di ${location.address}`
         );
 
-        elements.poesiaTesto.innerHTML =
-            '<main class="poesia"><p>Caricamento…</p></main>';
+        showPoemMessage("Caricamento…");
 
         elements.poesiaOverlay.hidden = false;
         elements.poesiaOverlay.scrollTop = 0;
@@ -487,8 +482,7 @@
             const data = await api(`/api/poems/${location.id}`);
             elements.poesiaTesto.innerHTML = data.html;
         } catch (_) {
-            elements.poesiaTesto.innerHTML =
-                '<main class="poesia"><p>Non è stato possibile caricare la poesia.</p></main>';
+            showPoemMessage("Non è stato possibile caricare la poesia.");
         }
 
         elements.poesiaClose.focus();
@@ -518,14 +512,16 @@
             return;
         }
 
-        elements.postaLista.innerHTML = "<p>Caricamento…</p>";
+        showMessage(elements.postaLista, "Caricamento…");
 
         try {
             const data = await api("/api/messages");
             renderInbox(data.messages || []);
         } catch (_) {
-            elements.postaLista.innerHTML =
-                "<p>Non è stato possibile caricare i messaggi.</p>";
+            showMessage(
+                elements.postaLista,
+                "Non è stato possibile caricare i messaggi."
+            );
         }
     }
 
@@ -533,7 +529,7 @@
         elements.postaLista.replaceChildren();
 
         if (!messages.length) {
-            elements.postaLista.innerHTML = "<p>Nessun messaggio.</p>";
+            showMessage(elements.postaLista, "Nessun messaggio.");
             return;
         }
 

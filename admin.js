@@ -1,7 +1,7 @@
 (() => {
     "use strict";
 
-    const API_BASE = String(window.NNMRCN_API_BASE || "").replace(/\/+$/, "");
+    const api = window.NNMRCN_API;
     const TOKEN_KEY = "nnmrcn_admin_token";
 
     const form = document.getElementById("adminLoginForm");
@@ -15,36 +15,23 @@
     let adminToken = sessionStorage.getItem(TOKEN_KEY) || "";
 
     async function request(path, options = {}) {
-        if (!API_BASE) {
-            throw new Error("Backend non configurato.");
-        }
-
         const headers = new Headers(options.headers || {});
-        headers.set("Accept", "application/json");
         headers.set("X-Admin-Token", adminToken);
 
-        if (options.body) {
-            headers.set("Content-Type", "application/json");
-        }
-
-        const response = await fetch(`${API_BASE}${path}`, {
+        return api.request(path, {
             ...options,
             headers
         });
+    }
 
-        const data = await response.json().catch(() => null);
-
-        if (!response.ok) {
-            const error = new Error(data?.error || "Errore.");
-            error.status = response.status;
-            throw error;
-        }
-
-        return data;
+    function showListMessage(message) {
+        const paragraph = document.createElement("p");
+        paragraph.textContent = message;
+        list.replaceChildren(paragraph);
     }
 
     async function loadMessages() {
-        list.innerHTML = "<p>Caricamento…</p>";
+        showListMessage("Caricamento…");
 
         try {
             const data = await request(
@@ -61,7 +48,7 @@
                 sessionStorage.removeItem(TOKEN_KEY);
                 adminToken = "";
             } else {
-                list.innerHTML = "<p>Errore nel caricamento.</p>";
+                showListMessage("Errore nel caricamento.");
             }
         }
     }
@@ -70,7 +57,7 @@
         list.replaceChildren();
 
         if (!messages.length) {
-            list.innerHTML = "<p>Nessun messaggio.</p>";
+            showListMessage("Nessun messaggio.");
             return;
         }
 
@@ -197,7 +184,7 @@
 
     if (adminToken) {
         loadMessages();
-    } else if (!API_BASE) {
+    } else if (!api.baseUrl) {
         statusText.textContent =
             "Backend non ancora collegato in config.js.";
     }

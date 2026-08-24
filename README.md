@@ -10,11 +10,14 @@ Sito GitHub Pages del progetto nnMrcn.
 - `admin.html` — area di moderazione non linkata pubblicamente
 - `style.css` — tutti gli stili del sito
 - `site.js` — comportamento comune del menu
+- `api.js` — richieste HTTP condivise verso il backend
 - `progetto.js` — mappa, paesaggi, login e messaggistica
 - `admin.js` — interfaccia amministratore
 - `config.js` — URL del backend
+- `pmtiles-overzoom.js` — visualizzazione delle mappe storiche oltre lo zoom nativo
 - `luoghi-significativi.geojson` — geometrie pubbliche della mappa
-- `marcon_1975_web.webp` — ortofoto storica
+- `mappe/marcon_1975.pmtiles` — ortofoto storica usata nella mappa interattiva
+- `marcon_1975_web.webp` — copia dell’ortofoto storica
 
 ## Backend
 

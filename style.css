@@ -2,6 +2,7 @@
     --paper: #f4f1e8;
     --ink: #171717;
     --line: rgba(23, 23, 23, 0.25);
+    --font-serif: Georgia, "Times New Roman", serif;
 }
 
 * {
@@ -18,7 +19,7 @@ body {
     overflow-x: hidden;
     background: var(--paper);
     color: var(--ink);
-    font-family: Georgia, "Times New Roman", serif;
+    font-family: var(--font-serif);
     font-size: 18px;
     line-height: 1.55;
 }
@@ -169,7 +170,7 @@ select {
     border: 1px solid var(--ink);
     background: transparent;
     color: var(--ink);
-    font-family: Georgia, "Times New Roman", serif;
+    font-family: var(--font-serif);
     font-size: 0.8rem;
     font-weight: 700;
     letter-spacing: 0.12em;
@@ -227,7 +228,7 @@ select {
     border: 0;
     background: transparent;
     color: var(--ink);
-    font-family: Georgia, "Times New Roman", serif;
+    font-family: var(--font-serif);
     font-size: 2rem;
     line-height: 1;
     cursor: pointer;
@@ -284,7 +285,8 @@ body.poesia-aperta {
 
 /* Autore */
 
-.pagina-autore {
+.pagina-autore,
+.pagina-progetto {
     min-height: 100vh;
 }
 
@@ -328,10 +330,6 @@ body.poesia-aperta {
 }
 
 /* Progetto */
-
-.pagina-progetto {
-    min-height: 100vh;
-}
 
 .progetto {
     width: min(760px, calc(100% - 4rem));
@@ -406,7 +404,7 @@ body.poesia-aperta {
     border: 1px solid var(--ink);
     background: transparent;
     color: var(--ink);
-    font-family: Georgia, "Times New Roman", serif;
+    font-family: var(--font-serif);
     font-size: 0.9rem;
     cursor: pointer;
 }
@@ -531,7 +529,7 @@ body.poesia-aperta {
 }
 
 .popup-luogo {
-    font-family: Georgia, "Times New Roman", serif;
+    font-family: var(--font-serif);
     font-size: 0.95rem;
     line-height: 1.45;
 }
@@ -563,7 +561,7 @@ body.poesia-aperta {
     border: 1px solid var(--ink);
     background: transparent;
     color: var(--ink);
-    font-family: Georgia, "Times New Roman", serif;
+    font-family: var(--font-serif);
     font-size: 0.9rem;
     line-height: 1.35;
     text-align: left;
@@ -611,7 +609,7 @@ body.poesia-aperta {
     border: 0;
     background: transparent;
     color: var(--ink);
-    font-family: Georgia, "Times New Roman", serif;
+    font-family: var(--font-serif);
     font-size: 2rem;
     line-height: 1;
     cursor: pointer;

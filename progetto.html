@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Il progetto poetico nnMrcn, i luoghi di Marcon e la mappa storica del 1975">
     <title>Il progetto — nnMrcn</title>
 
     <link rel="stylesheet" href="./style.css">
@@ -13,6 +14,7 @@
     <button
         class="menu-button"
         id="menuButton"
+        type="button"
         aria-label="Apri il menu"
         aria-expanded="false"
         aria-controls="menuPrincipale"
@@ -27,14 +29,14 @@
         id="menuPrincipale"
         aria-label="Menu principale"
     >
-        <button class="menu-close" id="menuClose" aria-label="Chiudi il menu">
+        <button class="menu-close" id="menuClose" type="button" aria-label="Chiudi il menu">
             ×
         </button>
 
         <div class="menu-contenuto">
             <a href="./index.html">La poesia</a>
             <a href="./autore.html">L’autore</a>
-            <a href="./progetto.html" class="voce-attiva">Il progetto</a>
+            <a href="./progetto.html" class="voce-attiva" aria-current="page">Il progetto</a>
         </div>
     </nav>
 
@@ -186,6 +188,7 @@
     <script src="https://unpkg.com/pmtiles@4.4.1/dist/pmtiles.js"></script>
     <script src="./pmtiles-overzoom.js"></script>
     <script src="./config.js"></script>
+    <script src="./api.js"></script>
     <script src="./site.js"></script>
     <script src="./progetto.js"></script>
 </body>
