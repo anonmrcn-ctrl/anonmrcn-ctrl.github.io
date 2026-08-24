@@ -1,0 +1,30 @@
+.popup-area-comune {
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 0.92rem;
+    line-height: 1.45;
+}
+
+.popup-area-comune strong {
+    display: block;
+    margin-bottom: 0.55rem;
+}
+
+.popup-area-comune p {
+    margin: 0 0 0.65rem;
+}
+
+.popup-area-precisione {
+    font-size: 0.8rem;
+    opacity: 0.7;
+}
+
+.popup-area-comune a {
+    color: inherit;
+    text-decoration: underline;
+    text-underline-offset: 0.15em;
+}
+
+.popup-area-comune a:hover,
+.popup-area-comune a:focus-visible {
+    opacity: 0.6;
+}
