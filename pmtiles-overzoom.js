@@ -15,17 +15,76 @@
         let nativeMaxZoom = null;
         let activeMap = null;
         let previousMaxZoom = TODAY_MAX_ZOOM;
+        let wheelTarget = null;
+        let guardsAttached = false;
 
-        function apply1975ZoomLimit() {
+        function clampZoom() {
             if (!activeMap || !Number.isFinite(nativeMaxZoom)) {
+                return;
+            }
+
+            if (activeMap.getZoom() > nativeMaxZoom) {
+                activeMap.setView(
+                    activeMap.getCenter(),
+                    nativeMaxZoom,
+                    { animate: false }
+                );
+            }
+        }
+
+        function blockWheelPastMax(event) {
+            if (!activeMap || !Number.isFinite(nativeMaxZoom)) {
+                return;
+            }
+
+            const isZoomingIn = event.deltaY < 0;
+            const atMaximum = activeMap.getZoom() >= nativeMaxZoom;
+
+            if (isZoomingIn && atMaximum) {
+                event.preventDefault();
+                event.stopPropagation();
+                event.stopImmediatePropagation();
+            }
+        }
+
+        function attachZoomGuards() {
+            if (
+                guardsAttached ||
+                !activeMap ||
+                !Number.isFinite(nativeMaxZoom)
+            ) {
                 return;
             }
 
             activeMap.setMaxZoom(nativeMaxZoom);
 
-            if (activeMap.getZoom() > nativeMaxZoom) {
-                activeMap.setZoom(nativeMaxZoom);
+            wheelTarget = activeMap.getContainer();
+            wheelTarget.addEventListener(
+                "wheel",
+                blockWheelPastMax,
+                { passive: false, capture: true }
+            );
+
+            activeMap.on("zoomend", clampZoom);
+            guardsAttached = true;
+            clampZoom();
+        }
+
+        function detachZoomGuards() {
+            if (wheelTarget) {
+                wheelTarget.removeEventListener(
+                    "wheel",
+                    blockWheelPastMax,
+                    { capture: true }
+                );
+                wheelTarget = null;
             }
+
+            if (activeMap) {
+                activeMap.off("zoomend", clampZoom);
+            }
+
+            guardsAttached = false;
         }
 
         container.on("add", () => {
@@ -39,10 +98,12 @@
                 }
             }
 
-            apply1975ZoomLimit();
+            attachZoomGuards();
         });
 
         container.on("remove", () => {
+            detachZoomGuards();
+
             if (activeMap) {
                 const restoredMaxZoom =
                     Number.isFinite(previousMaxZoom) && previousMaxZoom > 0
@@ -77,11 +138,11 @@
                 });
 
                 container.addLayer(layer);
-                apply1975ZoomLimit();
+                attachZoomGuards();
 
                 console.info(
                     `Mappa 1975: zoom disponibili ${nativeMinZoom}–${nativeMaxZoom}. ` +
-                    `Con il livello 1975 attivo lo zoom massimo è ${nativeMaxZoom}.`
+                    `Blocco esplicito dello zoom oltre ${nativeMaxZoom} attivo.`
                 );
             })
             .catch((error) => {
