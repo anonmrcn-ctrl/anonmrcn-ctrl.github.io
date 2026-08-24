@@ -164,14 +164,28 @@
                 continue;
             }
 
-            const area = L.circle([lat, lon], {
+            const baseStyle = {
                 radius,
-                color: "#6d5733",
-                weight: 2,
-                opacity: 0.95,
-                fillColor: "#bda36a",
-                fillOpacity: 0.12,
-                dashArray: "6 5"
+                color: "#9b3f18",
+                weight: 4,
+                opacity: 1,
+                fillColor: "#e27a36",
+                fillOpacity: 0.30,
+                dashArray: "9 6"
+            };
+
+            const area = L.circle([lat, lon], baseStyle);
+
+            area.on("mouseover", () => {
+                area.setStyle({
+                    weight: 5,
+                    fillOpacity: 0.42
+                });
+                area.bringToFront();
+            });
+
+            area.on("mouseout", () => {
+                area.setStyle(baseStyle);
             });
 
             area.bindTooltip(feature.properties?.nome || "Area citata", {
