@@ -1,0 +1,193 @@
+/* Messaggistica sulla mappa */
+
+.messaggistica-mappa {
+    margin: 0 0 1rem;
+}
+
+.mappa-messaggio-button,
+.destinatari-panel button {
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--ink);
+    background: transparent;
+    color: var(--ink);
+    font-family: var(--font-serif);
+    font-size: 0.9rem;
+    cursor: pointer;
+}
+
+.mappa-messaggio-button {
+    display: block;
+    margin: 0 auto 1rem;
+}
+
+.mappa-messaggio-button:hover,
+.mappa-messaggio-button:focus-visible,
+.destinatari-panel button:hover,
+.destinatari-panel button:focus-visible {
+    outline: none;
+    background: var(--ink);
+    color: var(--paper);
+}
+
+.destinatari-panel button:disabled {
+    opacity: 0.4;
+    cursor: default;
+}
+
+.destinatari-panel button:disabled:hover,
+.destinatari-panel button:disabled:focus-visible {
+    background: transparent;
+    color: var(--ink);
+}
+
+.destinatari-panel {
+    margin: 0 0 1rem;
+    padding: 1.25rem;
+    border: 1px solid var(--line);
+    background: rgba(244, 241, 232, 0.97);
+}
+
+.destinatari-intestazione {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 2rem;
+    margin-bottom: 1rem;
+}
+
+.destinatari-intestazione h3 {
+    margin: 0 0 0.35rem;
+    font-size: 1.2rem;
+}
+
+.destinatari-intestazione p {
+    margin: 0;
+    font-size: 0.9rem;
+    line-height: 1.45;
+}
+
+.destinatari-conteggio {
+    flex: 0 0 auto;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.destinatari-strumenti,
+.destinatari-azioni {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.65rem;
+}
+
+.destinatari-strumenti {
+    margin-bottom: 1rem;
+}
+
+.destinatari-azioni {
+    justify-content: flex-end;
+    margin-top: 1rem;
+}
+
+.destinatari-azioni #destinatariContinua:not(:disabled) {
+    background: var(--ink);
+    color: var(--paper);
+}
+
+.destinatari-azioni #destinatariContinua:not(:disabled):hover,
+.destinatari-azioni #destinatariContinua:not(:disabled):focus-visible {
+    opacity: 0.72;
+}
+
+.destinatari-lista {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.45rem;
+    max-height: 290px;
+    overflow-y: auto;
+    padding: 0.75rem 0;
+    border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+}
+
+.destinatario-opzione {
+    display: flex;
+    min-width: 0;
+    align-items: flex-start;
+    gap: 0.65rem;
+    padding: 0.65rem 0.75rem;
+    cursor: pointer;
+    transition: background-color 140ms ease;
+}
+
+.destinatario-opzione:hover {
+    background: rgba(23, 23, 23, 0.05);
+}
+
+.destinatario-opzione.selezionato {
+    background: rgba(23, 23, 23, 0.11);
+}
+
+.destinatario-opzione input {
+    flex: 0 0 auto;
+    margin-top: 0.28em;
+    accent-color: var(--ink);
+}
+
+.destinatario-opzione span {
+    min-width: 0;
+    overflow-wrap: anywhere;
+    line-height: 1.35;
+}
+
+.destinatario-opzione:has(input:disabled) {
+    opacity: 0.5;
+}
+
+#map.selezione-destinatari-attiva {
+    cursor: crosshair;
+}
+
+#map.selezione-destinatari-attiva .leaflet-interactive {
+    cursor: pointer;
+}
+
+.messaggio-destinatari {
+    margin: -1rem 0 1.5rem;
+    padding-left: 0.85rem;
+    border-left: 2px solid var(--ink);
+    font-size: 0.9rem;
+    line-height: 1.5;
+}
+
+@media (max-width: 700px) {
+    .destinatari-intestazione {
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .destinatari-conteggio {
+        white-space: normal;
+    }
+
+    .destinatari-lista {
+        grid-template-columns: 1fr;
+        max-height: 330px;
+    }
+
+    .destinatari-strumenti,
+    .destinatari-azioni {
+        display: grid;
+        grid-template-columns: 1fr;
+    }
+
+    .destinatari-panel button,
+    .mappa-messaggio-button {
+        width: 100%;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .destinatario-opzione {
+        transition: none;
+    }
+}
