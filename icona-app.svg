@@ -6,15 +6,7 @@
 >
     <title>nnMrcn</title>
     <rect width="512" height="512" fill="#f4f1e8" />
-    <text
-        x="256"
-        y="266"
-        fill="#171717"
-        dominant-baseline="middle"
-        font-family="Georgia, 'Times New Roman', serif"
-        font-size="92"
-        font-weight="700"
-        letter-spacing="2"
-        text-anchor="middle"
-    >nnMrcn</text>
+    <svg x="56" y="56" width="400" height="400" viewBox="283 0 714 720">
+        <image href="./logo.PNG" x="0" y="0" width="1280" height="720" />
+    </svg>
 </svg>
