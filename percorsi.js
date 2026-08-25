@@ -8,6 +8,7 @@
 
     const mapExtensions = window.NNMRCN_MAP;
     const ROUTE_NAME = "Proposta di percorso ciclo-turistico";
+    const SOUTH_ROUTE_NAME = "Marcon da sud";
     const PLACES_NAME = "Luoghi rilevanti lungo il percorso";
     const RIVERS_NAME = "Fiumi";
     const QUARRIES_NAME = "Cave";
@@ -566,9 +567,121 @@
     function findLabel(list, text) {
         return (
             [...list.querySelectorAll("label")].find(
-                (label) => label.textContent.trim() === text
+                (label) =>
+                    label.dataset.routeName === text ||
+                    label.textContent.trim() === text
             ) || null
         );
+    }
+
+    function closeRouteMenus(list, excludedMenu = null) {
+        for (const menu of list.querySelectorAll(".percorso-livello-menu")) {
+            if (menu === excludedMenu) {
+                continue;
+            }
+
+            const button = menu.querySelector(".percorso-livello-pulsante");
+            const panel = menu.querySelector(".percorso-livello-pannello");
+
+            if (!button || !panel) {
+                continue;
+            }
+
+            button.setAttribute("aria-expanded", "false");
+            panel.hidden = true;
+        }
+    }
+
+    function addRouteMenu(list, name, geojsonUrl) {
+        const label = findLabel(list, name);
+
+        if (!label) {
+            return false;
+        }
+
+        if (label.dataset.routeMenu === "ready") {
+            return true;
+        }
+
+        const row = document.createElement("div");
+        const menu = document.createElement("div");
+        const button = document.createElement("button");
+        const panel = document.createElement("div");
+
+        row.className = "percorso-livello-riga";
+        menu.className = "percorso-livello-menu";
+        button.className = "percorso-livello-pulsante";
+        button.type = "button";
+        button.textContent = "⋯";
+        button.setAttribute("aria-label", "Azioni per " + name);
+        button.setAttribute("aria-expanded", "false");
+        button.setAttribute("aria-haspopup", "true");
+        panel.className = "percorso-livello-pannello";
+        panel.hidden = true;
+        label.dataset.routeName = name;
+        label.dataset.routeMenu = "ready";
+
+        label.replaceWith(row);
+        row.append(label, menu);
+        menu.append(button, panel);
+
+        button.addEventListener("click", async (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+
+            const shouldOpen = panel.hidden;
+
+            closeRouteMenus(list, shouldOpen ? menu : null);
+
+            if (!shouldOpen) {
+                return;
+            }
+
+            panel.hidden = false;
+            button.setAttribute("aria-expanded", "true");
+
+            if (panel.dataset.loaded === "true") {
+                return;
+            }
+
+            panel.textContent = "Caricamento…";
+
+            try {
+                const data = await mapExtensions.loadGeoJSON(geojsonUrl);
+                const feature = (data.features || []).find(
+                    (candidate) => candidate.properties?.nome === name
+                );
+                const actions = feature
+                    ? mapExtensions.createRouteActions(feature)
+                    : null;
+
+                if (!actions) {
+                    throw new Error("Percorso non disponibile.");
+                }
+
+                panel.replaceChildren(actions);
+                panel.dataset.loaded = "true";
+            } catch (error) {
+                panel.textContent = "Impossibile caricare il percorso.";
+                console.error("Impossibile aprire il menu del percorso.", error);
+            }
+        });
+
+        panel.addEventListener("click", (event) => {
+            event.stopPropagation();
+        });
+
+        if (list.dataset.routeMenusEvents !== "ready") {
+            document.addEventListener("click", () => closeRouteMenus(list));
+            list.addEventListener("keydown", (event) => {
+                if (event.key === "Escape") {
+                    closeRouteMenus(list);
+                }
+            });
+            list.dataset.routeMenusEvents = "ready";
+        }
+
+        return true;
     }
 
     function addHeading(list, beforeText, className, headingText) {
@@ -624,8 +737,23 @@
                 placesLabel.classList.add("livello-sottolivello");
             }
 
+            const cycleRouteMenuReady = addRouteMenu(
+                list,
+                ROUTE_NAME,
+                "./percorsi.geojson"
+            );
+            const southRouteMenuReady = addRouteMenu(
+                list,
+                SOUTH_ROUTE_NAME,
+                "./marcon-da-sud.geojson"
+            );
+
             if (
-                (!routesReady || !landscapeReady || !placesLabel) &&
+                (!routesReady ||
+                    !landscapeReady ||
+                    !placesLabel ||
+                    !cycleRouteMenuReady ||
+                    !southRouteMenuReady) &&
                 attempts < 60
             ) {
                 requestAnimationFrame(apply);
