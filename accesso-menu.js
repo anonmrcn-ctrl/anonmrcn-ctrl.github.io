@@ -183,6 +183,9 @@
 
     function syncLocationVisibility() {
         const hidden = sessionLocation?.visible === false;
+        elements.locationVisibilityToggle.textContent = hidden
+            ? "Mostra la mia location sulla mappa"
+            : "Nascondi la mia location sulla mappa";
         elements.locationVisibilityToggle.setAttribute(
             "aria-pressed",
             String(hidden)
