@@ -43,6 +43,32 @@
     margin: 0;
 }
 
+.popup-percorso p + p,
+.popup-percorso p + strong {
+    margin-top: 0.65rem;
+}
+
+.popup-percorso-azioni {
+    display: grid;
+    gap: 0.45rem;
+    margin-top: 0.85rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid rgba(23, 23, 23, 0.16);
+}
+
+.popup-percorso-esporta {
+    width: fit-content;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    cursor: pointer;
+    font: inherit;
+    text-align: left;
+    text-decoration: underline;
+    text-underline-offset: 0.15em;
+}
+
 .popup-luogo-rilevante p {
     margin: 0 0 0.65rem;
 }
@@ -81,6 +107,8 @@
 .popup-luogo-links a:focus-visible,
 .popup-percorso a:hover,
 .popup-percorso a:focus-visible,
+.popup-percorso-esporta:hover,
+.popup-percorso-esporta:focus-visible,
 .popup-fiume a:hover,
 .popup-fiume a:focus-visible {
     opacity: 0.6;

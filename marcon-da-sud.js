@@ -36,6 +36,15 @@
         warning.textContent = SOUTH_ROUTE_WARNING;
         root.appendChild(warning);
 
+        const actions = mapExtensions.createRouteActions(feature, {
+            description: [...SOUTH_ROUTE_DESCRIPTION, SOUTH_ROUTE_WARNING].join(
+                "\n\n"
+            )
+        });
+        if (actions) {
+            root.appendChild(actions);
+        }
+
         return root;
     }
 

@@ -67,6 +67,11 @@
             root.appendChild(paragraph);
         }
 
+        const actions = mapExtensions.createRouteActions(feature);
+        if (actions) {
+            root.appendChild(actions);
+        }
+
         return root;
     }
 
@@ -504,7 +509,8 @@
                 });
 
                 layer.bindPopup(buildRoutePopup(feature), {
-                    maxWidth: 320
+                    maxWidth: 320,
+                    maxHeight: 320
                 });
             }
         });
