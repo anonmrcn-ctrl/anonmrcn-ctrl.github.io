@@ -376,6 +376,22 @@ select {
     line-height: 1.5;
 }
 
+.menu-admin-link {
+    align-self: flex-start;
+    flex: 0 0 auto;
+    margin-top: 1rem;
+    color: var(--ink);
+    font-size: 0.76rem;
+    text-decoration: none;
+    opacity: 0.65;
+}
+
+.menu-admin-link:hover,
+.menu-admin-link:focus-visible {
+    text-decoration: underline;
+    opacity: 1;
+}
+
 body.menu-aperto,
 body.poesia-aperta {
     overflow: hidden;
