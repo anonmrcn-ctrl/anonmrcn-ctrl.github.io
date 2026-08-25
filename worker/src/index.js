@@ -13,6 +13,7 @@ const MESSAGE_LIMIT_PER_HOUR = 5;
 const MAX_MESSAGE_LENGTH = 1500;
 const MAX_CONTACT_NAME_LENGTH = 80;
 const MAX_CONTACT_EMAIL_LENGTH = 254;
+const MAX_LOCATION_ADDRESS_LENGTH = 240;
 const MAX_CONTACT_REQUEST_BYTES = 8192;
 const MESSAGE_STATUSES = Object.freeze([
     "pending",
@@ -39,6 +40,19 @@ const CONTACT_STORAGE_STATEMENTS = Object.freeze([
     `CREATE INDEX IF NOT EXISTS idx_contact_messages_admin
         ON contact_messages(status, created_at)`
 ]);
+let locationProfileStoragePromise = null;
+const LOCATION_PROFILE_COLUMNS = Object.freeze([
+    {
+        name: "username",
+        statement: "ALTER TABLE locations ADD COLUMN username TEXT NOT NULL DEFAULT ''"
+    },
+    {
+        name: "is_visible",
+        statement:
+            "ALTER TABLE locations ADD COLUMN is_visible INTEGER NOT NULL DEFAULT 1 CHECK (is_visible IN (0, 1))"
+    }
+]);
+
 
 export default {
     async fetch(request, env, ctx) {
@@ -84,6 +98,17 @@ export default {
 
             if (request.method === "POST" && path === "/api/contact") {
                 return await createContactMessage(request, env, ctx);
+            }
+
+            if (request.method === "POST" && path === "/api/access-request") {
+                return await createAccessRequest(request, env, ctx);
+            }
+
+            if (
+                request.method === "PATCH" &&
+                path === "/api/location/preferences"
+            ) {
+                return await updateLocationPreferences(request, env);
             }
 
             if (request.method === "PATCH" && /^\/api\/messages\/\d+$/.test(path)) {
@@ -163,12 +188,16 @@ async function login(request, env) {
         throw new Error("PASSWORD_PEPPER secret missing.");
     }
 
+    await ensureLocationProfileStorage(env);
+
     const lookup = await hmacHex(env.PASSWORD_PEPPER, password);
 
     const location = await env.DB.prepare(`
         SELECT
             id,
             address,
+            username,
+            is_visible,
             password_salt,
             password_hash
         FROM locations
@@ -224,7 +253,9 @@ async function login(request, env) {
         expiresAt,
         location: {
             id: location.id,
-            address: location.address
+            address: location.address,
+            username: location.username,
+            visible: Number(location.is_visible) === 1
         }
     });
 }
@@ -241,7 +272,9 @@ async function sessionInfo(request, env) {
     return json(request, env, {
         location: {
             id: session.location_id,
-            address: session.address
+            address: session.address,
+            username: session.username,
+            visible: Number(session.is_visible) === 1
         },
         expiresAt: session.expires_at
     });
@@ -264,6 +297,41 @@ async function logout(request, env) {
     });
 }
 
+async function updateLocationPreferences(request, env) {
+    const session = await requireSession(request, env);
+
+    if (!session) {
+        return unauthorized(request, env);
+    }
+
+    const body = await readJson(request);
+
+    if (typeof body?.visible !== "boolean") {
+        return json(request, env, {
+            error: "Preferenza di visibilità non valida."
+        }, 400);
+    }
+
+    await env.DB.prepare(`
+        UPDATE locations
+        SET is_visible = ?
+        WHERE id = ?
+    `).bind(
+        body.visible ? 1 : 0,
+        session.location_id
+    ).run();
+
+    return json(request, env, {
+        ok: true,
+        location: {
+            id: session.location_id,
+            address: session.address,
+            username: session.username,
+            visible: body.visible
+        }
+    });
+}
+
 async function listLocations(request, env) {
     const session = await requireSession(request, env);
 
@@ -275,8 +343,10 @@ async function listLocations(request, env) {
         SELECT
             l.id,
             l.address,
+            l.username,
             l.lat,
             l.lon,
+            l.is_visible,
             CASE
                 WHEN p.location_id IS NULL THEN 0
                 ELSE 1
@@ -288,13 +358,23 @@ async function listLocations(request, env) {
     `).all();
 
     return json(request, env, {
-        locations: (result.results || []).map((row) => ({
-            id: row.id,
-            address: row.address,
-            lat: row.lat,
-            lon: row.lon,
-            hasPoem: Boolean(row.has_poem)
-        }))
+        locations: (result.results || []).map((row) => {
+            const isOwn = Number(row.id) === Number(session.location_id);
+            const visible = Number(row.is_visible) === 1;
+            const discloseLocation = isOwn || visible;
+
+            return {
+                id: row.id,
+                address: discloseLocation
+                    ? row.address
+                    : row.username || "Location riservata",
+                username: row.username,
+                lat: discloseLocation ? row.lat : null,
+                lon: discloseLocation ? row.lon : null,
+                visible,
+                hasPoem: Boolean(row.has_poem)
+            };
+        })
     });
 }
 
@@ -555,13 +635,7 @@ async function createContactMessage(request, env, ctx) {
         }, 400);
     }
 
-    if (
-        email &&
-        (
-            email.length > MAX_CONTACT_EMAIL_LENGTH ||
-            !/^[^\s@]+@[^\s@]+\.[^\s@]+$/u.test(email)
-        )
-    ) {
+    if (!validEmail(email, false)) {
         return json(request, env, {
             error: "L’indirizzo email non è valido."
         }, 400);
@@ -573,6 +647,127 @@ async function createContactMessage(request, env, ctx) {
         }, 400);
     }
 
+    return saveContactMessage(request, env, ctx, {
+        name,
+        email,
+        text,
+        notificationTitle: "nnMrcn — nuovo contatto",
+        notificationBody: "Hai ricevuto un nuovo messaggio diretto."
+    });
+}
+
+async function createAccessRequest(request, env, ctx) {
+    const contentLength = Number(request.headers.get("Content-Length") || 0);
+
+    if (contentLength > MAX_CONTACT_REQUEST_BYTES) {
+        return json(request, env, {
+            error: "La richiesta inviata è troppo lunga."
+        }, 413);
+    }
+
+    const body = await readJson(request);
+
+    if (!body || typeof body !== "object" || Array.isArray(body)) {
+        return json(request, env, {
+            error: "Richiesta non valida."
+        }, 400);
+    }
+
+    if (String(body.website || "").trim()) {
+        return json(request, env, { ok: true }, 201);
+    }
+
+    const username = String(body.username || "").trim();
+    const address = String(body.address || "").trim();
+    const email = String(body.email || "").trim();
+    const latValue = body.lat;
+    const lonValue = body.lon;
+    const hasLat = latValue !== null && latValue !== undefined && String(latValue).trim() !== "";
+    const hasLon = lonValue !== null && lonValue !== undefined && String(lonValue).trim() !== "";
+    const lat = hasLat ? Number(latValue) : null;
+    const lon = hasLon ? Number(lonValue) : null;
+    const hasPoint =
+        hasLat &&
+        hasLon &&
+        Number.isFinite(lat) &&
+        Number.isFinite(lon) &&
+        lat >= -90 &&
+        lat <= 90 &&
+        lon >= -180 &&
+        lon <= 180;
+
+    if (username.length > MAX_CONTACT_NAME_LENGTH) {
+        return json(request, env, {
+            error: "Lo username inserito è troppo lungo."
+        }, 400);
+    }
+
+    if (address.length > MAX_LOCATION_ADDRESS_LENGTH) {
+        return json(request, env, {
+            error: "L’indirizzo inserito è troppo lungo."
+        }, 400);
+    }
+
+    if (!validEmail(email, true)) {
+        return json(request, env, {
+            error: "Inserisci un indirizzo email valido per ricevere il codice."
+        }, 400);
+    }
+
+    if (hasLat !== hasLon || ((hasLat || hasLon) && !hasPoint)) {
+        return json(request, env, {
+            error: "Il punto selezionato sulla mappa non è valido."
+        }, 400);
+    }
+
+    if (!username && !address && !hasPoint) {
+        return json(request, env, {
+            error: "Inserisci almeno lo username oppure la tua location."
+        }, 400);
+    }
+
+    const lines = [
+        "Richiesta di codice.",
+        `Username: ${username || "non indicato"}`,
+        `Indirizzo: ${address || "non indicato"}`
+    ];
+
+    if (hasPoint) {
+        const coordinates = `${lat.toFixed(6)}, ${lon.toFixed(6)}`;
+        lines.push(`Coordinate: ${coordinates}`);
+        lines.push(`Mappa: https://www.google.com/maps?q=${lat.toFixed(6)},${lon.toFixed(6)}`);
+    } else {
+        lines.push("Coordinate: non indicate");
+    }
+
+    lines.push("Visibilità iniziale: mostra sulla mappa dopo la registrazione");
+
+    return saveContactMessage(request, env, ctx, {
+        name: username,
+        email,
+        text: lines.join("\n"),
+        notificationTitle: "nnMrcn — richiesta di codice",
+        notificationBody: "Hai ricevuto una nuova richiesta di accesso."
+    });
+}
+
+function validEmail(email, required) {
+    if (!email) {
+        return !required;
+    }
+
+    return (
+        email.length <= MAX_CONTACT_EMAIL_LENGTH &&
+        /^[^\s@]+@[^\s@]+\.[^\s@]+$/u.test(email)
+    );
+}
+
+async function saveContactMessage(
+    request,
+    env,
+    ctx,
+    { name, email, text, notificationTitle, notificationBody }
+) {
     if (!env.PASSWORD_PEPPER) {
         throw new Error("PASSWORD_PEPPER secret missing.");
     }
@@ -631,8 +826,8 @@ async function createContactMessage(request, env, ctx) {
         "admin",
         null,
         {
-            title: "nnMrcn — nuovo contatto",
-            body: "Hai ricevuto un nuovo messaggio diretto.",
+            title: notificationTitle,
+            body: notificationBody,
             url: "/admin.html",
             tag: `nnmrcn-contact-${messageId || now}`
         }
@@ -729,6 +924,39 @@ async function ensureContactStorage(env) {
             env.DB.prepare(statement)
         )
     );
+}
+
+async function ensureLocationProfileStorage(env) {
+    if (!locationProfileStoragePromise) {
+        locationProfileStoragePromise = initializeLocationProfileStorage(env)
+            .catch((error) => {
+                locationProfileStoragePromise = null;
+                throw error;
+            });
+    }
+
+    return locationProfileStoragePromise;
+}
+
+async function initializeLocationProfileStorage(env) {
+    const result = await env.DB.prepare("PRAGMA table_info(locations)").all();
+    const columns = new Set(
+        (result.results || []).map((column) => String(column.name))
+    );
+
+    for (const column of LOCATION_PROFILE_COLUMNS) {
+        if (columns.has(column.name)) {
+            continue;
+        }
+
+        try {
+            await env.DB.prepare(column.statement).run();
+        } catch (error) {
+            if (!/duplicate column name/iu.test(String(error?.message || error))) {
+                throw error;
+            }
+        }
+    }
 }
 
 async function adminListMessages(request, env, url) {
@@ -980,6 +1208,8 @@ async function requireSession(request, env) {
         return null;
     }
 
+    await ensureLocationProfileStorage(env);
+
     const sessionHash = await sha256Hex(token);
     const now = Date.now();
 
@@ -988,7 +1218,9 @@ async function requireSession(request, env) {
             s.session_hash,
             s.location_id,
             s.expires_at,
-            l.address
+            l.address,
+            l.username,
+            l.is_visible
         FROM sessions s
         JOIN locations l
             ON l.id = s.location_id

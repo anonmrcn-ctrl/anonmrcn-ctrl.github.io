@@ -10,6 +10,9 @@ Apri Cloudflare → **Storage & databases** → **D1 SQL Database** e seleziona
 `nnmrcn-rete`. Il suo identificativo è già configurato in `wrangler.jsonc`.
 
 Apri **Console** ed esegui innanzitutto il contenuto di `worker/schema.sql`.
+Il Worker aggiunge automaticamente alle installazioni esistenti i campi
+`username` e `is_visible`, usati per il nome pubblico e per la preferenza di
+visibilità della location.
 
 Se le location non sono ancora presenti, esegui successivamente il contenuto del
 file privato `nnmrcn_seed_private_d1_20260823.sql` aggiornato. Contiene le 20
@@ -97,6 +100,11 @@ I messaggi online entrano nello stato `pending` e diventano visibili al
 destinatario solo dopo l'approvazione. Le lettere fisiche entrano nello stato
 `pending_delivery` e possono essere segnate come consegnate. Ogni location può
 inviare al massimo cinque messaggi ogni ora.
+
+Le richieste di codice inviate dalla pagina del progetto compaiono tra i
+messaggi diretti con username, indirizzo e, se selezionato, un collegamento al
+punto sulla mappa. Al momento della registrazione la location è visibile per
+impostazione predefinita; l’utente può nasconderla o mostrarla dal menu.
 
 ## 6. Attiva le notifiche push
 

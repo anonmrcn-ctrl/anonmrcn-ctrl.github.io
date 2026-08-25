@@ -125,7 +125,8 @@
                 new Date(message.createdAt).toLocaleString("it-IT");
 
             const text = document.createElement("p");
-            text.textContent = message.text;
+            text.className = "admin-contact-text";
+            appendContactText(text, message.text);
 
             article.append(title, reply, date, text);
 
@@ -137,6 +138,28 @@
             }
 
             contactList.appendChild(article);
+        });
+    }
+
+    function appendContactText(container, value) {
+        String(value || "").split("\n").forEach((line, index) => {
+            if (index > 0) {
+                container.appendChild(document.createElement("br"));
+            }
+
+            if (line.startsWith("Mappa: https://")) {
+                container.append("Mappa: ");
+
+                const link = document.createElement("a");
+                link.href = line.slice("Mappa: ".length);
+                link.target = "_blank";
+                link.rel = "noopener noreferrer";
+                link.textContent = "apri il punto selezionato";
+                container.appendChild(link);
+                return;
+            }
+
+            container.append(line);
         });
     }
 

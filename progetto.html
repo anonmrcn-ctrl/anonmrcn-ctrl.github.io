@@ -102,6 +102,20 @@
                     id="locationPushStatus"
                     aria-live="polite"
                 ></p>
+
+                <div class="location-visibility-control">
+                    <button
+                        class="location-visibility-toggle"
+                        id="locationVisibilityToggle"
+                        type="button"
+                        aria-pressed="false"
+                    >Nascondi la mia location sulla mappa</button>
+                    <p
+                        class="location-visibility-status"
+                        id="locationVisibilityStatus"
+                        aria-live="polite"
+                    ></p>
+                </div>
             </div>
         </section>
 
@@ -141,31 +155,89 @@
                     non hai ricevuto la poesia ma vuoi comunque inviare messaggi?
                     <a
                         class="contatti-toggle"
-                        href="#contattoForm"
-                        id="contattoToggle"
+                        href="#richiestaCodiceForm"
+                        id="richiestaCodiceToggle"
                         aria-expanded="false"
-                        aria-controls="contattoForm"
+                        aria-controls="richiestaCodiceForm"
                     >Richiedi un codice all'admin</a>
                 </p>
 
                 <form
-                    class="contatto-form"
-                    id="contattoForm"
-                    data-contact-purpose="code-request"
+                    class="contatto-form richiesta-codice-form"
+                    id="richiestaCodiceForm"
                     hidden
                 >
-                    <label for="contattoNome">Nome (facoltativo)</label>
+                    <label for="richiestaUsername">
+                        Username (obbligatorio se non inserisci la location)
+                    </label>
                     <input
-                        id="contattoNome"
-                        name="name"
+                        id="richiestaUsername"
+                        name="username"
                         type="text"
-                        autocomplete="name"
+                        autocomplete="username"
                         maxlength="80"
                     >
 
-                    <label for="contattoEmail">Email per ricevere il codice</label>
+                    <label for="richiestaIndirizzo">
+                        La mia location (indirizzo di casa, dove possono esserti consegnate le lettere fisiche)
+                    </label>
                     <input
-                        id="contattoEmail"
+                        id="richiestaIndirizzo"
+                        name="address"
+                        type="text"
+                        autocomplete="street-address"
+                        maxlength="240"
+                        placeholder="Via, numero civico, località"
+                    >
+
+                    <div class="richiesta-location-actions">
+                        <button
+                            class="richiesta-location-button"
+                            id="richiestaMappaToggle"
+                            type="button"
+                            aria-expanded="false"
+                            aria-controls="richiestaLocationPanel"
+                        >Seleziona un punto dalla mappa</button>
+                        <button
+                            class="richiesta-location-button richiesta-location-rimuovi"
+                            id="richiestaMappaRimuovi"
+                            type="button"
+                            hidden
+                        >Rimuovi il punto</button>
+                    </div>
+
+                    <div
+                        class="richiesta-location-panel"
+                        id="richiestaLocationPanel"
+                        hidden
+                    >
+                        <p id="richiestaMappaIstruzioni">
+                            Tocca la posizione della tua casa. Il punto esatto sarà inviato soltanto all’admin.
+                        </p>
+                        <div
+                            class="richiesta-location-map"
+                            id="richiestaLocationMappa"
+                            role="application"
+                            aria-label="Mappa per selezionare la propria location"
+                            aria-describedby="richiestaMappaIstruzioni"
+                        ></div>
+                        <p
+                            class="richiesta-location-status"
+                            id="richiestaMappaStatus"
+                            aria-live="polite"
+                        >Nessun punto selezionato.</p>
+                    </div>
+
+                    <input id="richiestaLatitudine" name="lat" type="hidden">
+                    <input id="richiestaLongitudine" name="lon" type="hidden">
+
+                    <p class="richiesta-codice-nota">
+                        Se registrata, la location sarà mostrata sulla mappa interattiva. Dopo l’accesso potrai nasconderla dal menu.
+                    </p>
+
+                    <label for="richiestaEmail">Email per ricevere il codice</label>
+                    <input
+                        id="richiestaEmail"
                         name="email"
                         type="email"
                         autocomplete="email"
@@ -173,19 +245,10 @@
                         required
                     >
 
-                    <label for="contattoTesto">Messaggio</label>
-                    <textarea
-                        id="contattoTesto"
-                        name="text"
-                        rows="4"
-                        maxlength="1500"
-                        required
-                    >Vorrei ricevere un codice per accedere e inviare messaggi.</textarea>
-
                     <div class="contatto-antispam" aria-hidden="true">
-                        <label for="contattoSito">Lascia questo campo vuoto</label>
+                        <label for="richiestaSito">Lascia questo campo vuoto</label>
                         <input
-                            id="contattoSito"
+                            id="richiestaSito"
                             name="website"
                             type="text"
                             tabindex="-1"
@@ -193,8 +256,14 @@
                         >
                     </div>
 
-                    <button id="contattoInvia" type="submit">Invia richiesta</button>
-                    <p class="contatto-status" id="contattoStatus" aria-live="polite"></p>
+                    <button id="richiestaCodiceInvia" type="submit">
+                        Invia richiesta
+                    </button>
+                    <p
+                        class="contatto-status"
+                        id="richiestaCodiceStatus"
+                        aria-live="polite"
+                    ></p>
                 </form>
             </div>
 
@@ -367,7 +436,7 @@
     <script src="./pmtiles-overzoom.js"></script>
     <script src="./config.js"></script>
     <script src="./api.js"></script>
-    <script src="./contatti.js"></script>
+    <script src="./richiesta-codice.js"></script>
     <script src="./notifiche.js"></script>
     <script src="./site.js"></script>
     <script src="./mappa.js"></script>

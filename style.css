@@ -335,6 +335,49 @@ select {
     font-size: 0.8rem;
 }
 
+.location-visibility-control {
+    margin-top: 0.8rem;
+    opacity: 0.62;
+    transition: opacity 180ms ease;
+}
+
+.location-visibility-control:hover,
+.location-visibility-control:focus-within {
+    opacity: 1;
+}
+
+.location-visibility-toggle {
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font-family: var(--font-serif);
+    font-size: 0.7rem;
+    line-height: 1.4;
+    text-align: left;
+    text-decoration: underline;
+    text-underline-offset: 0.14em;
+    cursor: pointer;
+}
+
+.location-visibility-toggle::before {
+    content: "○";
+    display: inline-block;
+    width: 1.1em;
+    text-decoration: none;
+}
+
+.location-visibility-toggle[aria-pressed="true"]::before {
+    content: "●";
+}
+
+.location-visibility-status {
+    min-height: 1.4em;
+    margin: 0.25rem 0 0;
+    font-size: 0.67rem;
+    line-height: 1.4;
+}
+
 .menu-installazione {
     display: grid;
     gap: 0.55rem;
@@ -561,6 +604,78 @@ body.poesia-aperta {
 .contatto-status {
     min-height: 1.5em;
     margin: 0.25rem 0 0;
+}
+
+.richiesta-codice-form {
+    margin-bottom: 2rem;
+}
+
+.richiesta-location-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.55rem;
+    margin-top: 0.25rem;
+}
+
+.richiesta-location-button {
+    width: fit-content;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    font-size: 0.86rem;
+    text-decoration: underline;
+    text-underline-offset: 0.14em;
+    cursor: pointer;
+}
+
+.richiesta-location-button:hover,
+.richiesta-location-button:focus-visible {
+    opacity: 0.65;
+}
+
+.richiesta-location-rimuovi {
+    opacity: 0.72;
+}
+
+.richiesta-location-panel {
+    display: grid;
+    gap: 0.65rem;
+    margin-top: 0.75rem;
+}
+
+.richiesta-location-panel[hidden] {
+    display: none;
+}
+
+.richiesta-location-panel > p {
+    margin: 0;
+    font-size: 0.82rem;
+    line-height: 1.5;
+}
+
+.richiesta-location-map {
+    width: 100%;
+    height: min(52vh, 360px);
+    min-height: 260px;
+    border: 1px solid var(--ink);
+    background: rgba(23, 23, 23, 0.05);
+}
+
+.richiesta-location-status {
+    opacity: 0.72;
+}
+
+.richiesta-codice-nota {
+    margin: 0.65rem 0 0;
+    font-size: 0.78rem;
+    line-height: 1.5;
+    opacity: 0.72;
+}
+
+.admin-contact-text {
+    white-space: pre-line;
 }
 
 /* Progetto */

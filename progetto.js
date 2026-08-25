@@ -19,6 +19,12 @@
         postaButton: document.getElementById("postaButton"),
         locationPushButton: document.getElementById("locationPushButton"),
         locationPushStatus: document.getElementById("locationPushStatus"),
+        locationVisibilityToggle: document.getElementById(
+            "locationVisibilityToggle"
+        ),
+        locationVisibilityStatus: document.getElementById(
+            "locationVisibilityStatus"
+        ),
         postaSection: document.getElementById("postaSection"),
         postaLista: document.getElementById("postaLista"),
         postaRefresh: document.getElementById("postaRefresh"),
@@ -248,6 +254,10 @@
     function bindInterface() {
         elements.loginForm.addEventListener("submit", handleLogin);
         elements.logoutButton.addEventListener("click", handleLogout);
+        elements.locationVisibilityToggle.addEventListener(
+            "click",
+            toggleLocationVisibility
+        );
         elements.postaButton.addEventListener("click", toggleInbox);
         elements.postaRefresh.addEventListener("click", loadInbox);
         elements.nuovoMessaggioButton.addEventListener("click", toggleRecipientPanel);
@@ -363,6 +373,35 @@
         clearSession();
     }
 
+    async function toggleLocationVisibility() {
+        if (!sessionLocation) {
+            return;
+        }
+
+        const nextVisible = sessionLocation.visible === false;
+        elements.locationVisibilityToggle.disabled = true;
+        elements.locationVisibilityStatus.textContent = "Aggiornamento…";
+
+        try {
+            const data = await api("/api/location/preferences", {
+                method: "PATCH",
+                body: JSON.stringify({ visible: nextVisible })
+            });
+
+            sessionLocation = data.location;
+            syncLocationVisibility();
+            await loadNetwork();
+            elements.locationVisibilityStatus.textContent = nextVisible
+                ? "La location è di nuovo visibile sulla mappa."
+                : "La location è nascosta dalla mappa.";
+        } catch (error) {
+            elements.locationVisibilityStatus.textContent =
+                error.message || "Non è stato possibile aggiornare la visibilità.";
+        } finally {
+            elements.locationVisibilityToggle.disabled = false;
+        }
+    }
+
     async function restoreSession() {
         if (!apiConfigured()) {
             elements.loginMessage.textContent =
@@ -393,15 +432,25 @@
 
     function setLoggedIn(location) {
         sessionLocation = location;
-        elements.loginLocation.textContent = location.address;
+        elements.loginLocation.textContent = location.username || location.address;
         elements.loginLoggedOut.hidden = true;
         elements.loginLoggedIn.hidden = false;
         elements.messaggisticaMappa.hidden = false;
         elements.loginMessage.textContent = "";
+        elements.locationVisibilityStatus.textContent = "";
+        syncLocationVisibility();
 
         pushNotifications.sync().catch((error) => {
             console.error("Impossibile controllare le notifiche.", error);
         });
+    }
+
+    function syncLocationVisibility() {
+        const hidden = sessionLocation?.visible === false;
+        elements.locationVisibilityToggle.setAttribute(
+            "aria-pressed",
+            String(hidden)
+        );
     }
 
     function clearSession() {
@@ -418,6 +467,8 @@
         elements.loginLoggedOut.hidden = false;
         elements.loginLoggedIn.hidden = true;
         elements.loginLocation.textContent = "";
+        elements.locationVisibilityToggle.setAttribute("aria-pressed", "false");
+        elements.locationVisibilityStatus.textContent = "";
         elements.postaSection.hidden = true;
         elements.messaggisticaMappa.hidden = true;
         elements.destinatariPanel.hidden = true;
@@ -442,6 +493,10 @@
 
         locations.forEach((location) => {
             const isOwn = Number(location.id) === Number(sessionLocation?.id);
+
+            if (location.visible === false) {
+                return;
+            }
 
             if (mapRecipientSelectionMode) {
                 const marker = isOwn

@@ -3,8 +3,11 @@ PRAGMA foreign_keys = ON;
 CREATE TABLE IF NOT EXISTS locations (
     id INTEGER PRIMARY KEY,
     address TEXT NOT NULL UNIQUE,
+    username TEXT NOT NULL DEFAULT '',
     lat REAL NOT NULL,
     lon REAL NOT NULL,
+    is_visible INTEGER NOT NULL DEFAULT 1
+        CHECK (is_visible IN (0, 1)),
     password_lookup TEXT NOT NULL UNIQUE,
     password_salt TEXT NOT NULL,
     password_hash TEXT NOT NULL
