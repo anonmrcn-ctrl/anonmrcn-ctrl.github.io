@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="L'autore del progetto poetico dedicato a Marcon">
     <title>L’autore — nnMrcn</title>
+    <link rel="manifest" href="./manifest.webmanifest">
+    <link rel="apple-touch-icon" href="./logo.PNG">
     <link rel="stylesheet" href="./style.css">
 </head>
 
@@ -30,6 +32,56 @@
             <a href="./autore.html" class="voce-attiva" aria-current="page">L’autore</a>
             <a href="./progetto.html">Il progetto</a>
         </div>
+
+        <section class="accesso-rete menu-accesso" id="accessoLocations" aria-labelledby="accessoTitolo">
+            <h2 id="accessoTitolo">Accesso alle locations</h2>
+
+            <div id="loginLoggedOut">
+                <form class="accesso-form" id="loginForm">
+                    <label for="loginPassword">Password della poesia</label>
+                    <input
+                        id="loginPassword"
+                        name="password"
+                        type="password"
+                        autocomplete="off"
+                        placeholder="Password della poesia"
+                        required
+                    >
+                    <button id="loginButton" type="submit">Accedi</button>
+                </form>
+
+                <p class="login-message" id="loginMessage" aria-live="polite"></p>
+            </div>
+
+            <div class="login-attivo" id="loginLoggedIn" hidden>
+                <p>
+                    Accesso riconosciuto: <strong id="loginLocation"></strong>
+                </p>
+
+                <div class="rete-azioni">
+                    <button class="rete-button" id="postaButton" type="button">
+                        Messaggi ricevuti
+                    </button>
+                    <button
+                        class="rete-button notifiche-button"
+                        id="locationPushButton"
+                        type="button"
+                        aria-pressed="false"
+                    >
+                        Attiva notifiche
+                    </button>
+                    <button class="logout-button" id="logoutButton" type="button">
+                        Esci
+                    </button>
+                </div>
+
+                <p
+                    class="notifiche-status"
+                    id="locationPushStatus"
+                    aria-live="polite"
+                ></p>
+            </div>
+        </section>
     </nav>
 
     <main class="autore">
@@ -71,6 +123,10 @@
         </article>
     </main>
 
+    <script src="./config.js"></script>
+    <script src="./api.js"></script>
+    <script src="./notifiche.js"></script>
     <script src="./site.js"></script>
+    <script src="./accesso-menu.js"></script>
 </body>
 </html>
