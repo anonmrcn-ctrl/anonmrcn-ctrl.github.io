@@ -206,11 +206,13 @@ select {
     right: 0;
     z-index: 2100;
     width: min(430px, 90vw);
-    height: 100vh;
-    height: 100dvh;
+    height: var(--menu-visible-height, 100vh);
+    height: var(--menu-visible-height, 100dvh);
     display: flex;
     flex-direction: column;
     overflow-y: auto;
+    overscroll-behavior: contain;
+    scroll-padding-block: 2rem;
     padding: 2rem;
     background: var(--paper);
     transform: translateX(100%);

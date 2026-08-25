@@ -7,6 +7,7 @@
     const overlay = document.getElementById("menuOverlay");
     const accessShortcut = document.getElementById("accessoPasswordLink");
     const passwordInput = document.getElementById("loginPassword");
+    const accessSection = document.getElementById("accessoLocations");
     const installSection = document.getElementById("installazioneApp");
     const installButton = document.getElementById("installaAppButton");
     const installInstructions = document.getElementById(
@@ -17,14 +18,36 @@
         return;
     }
 
+    let keepAccessVisible = false;
+
+    function fitMenuToViewport() {
+        const visualViewport = window.visualViewport;
+
+        if (visualViewport) {
+            menu.style.setProperty(
+                "--menu-visible-height",
+                `${Math.round(visualViewport.height)}px`
+            );
+        }
+
+        if (keepAccessVisible && menu.classList.contains("aperto")) {
+            (accessSection || passwordInput).scrollIntoView({
+                block: "center",
+                inline: "nearest"
+            });
+        }
+    }
+
     function openMenu() {
         menu.classList.add("aperto");
         overlay.classList.add("aperto");
         button.setAttribute("aria-expanded", "true");
         document.body.classList.add("menu-aperto");
+        fitMenuToViewport();
     }
 
     function closeMenu() {
+        keepAccessVisible = false;
         menu.classList.remove("aperto");
         overlay.classList.remove("aperto");
         button.setAttribute("aria-expanded", "false");
@@ -35,12 +58,30 @@
     closeButton.addEventListener("click", closeMenu);
     overlay.addEventListener("click", closeMenu);
 
+    if (window.visualViewport) {
+        window.visualViewport.addEventListener("resize", fitMenuToViewport);
+        fitMenuToViewport();
+    }
+
+    if (passwordInput) {
+        passwordInput.addEventListener("focus", () => {
+            keepAccessVisible = true;
+            fitMenuToViewport();
+        });
+
+        passwordInput.addEventListener("blur", () => {
+            keepAccessVisible = false;
+        });
+    }
+
     if (accessShortcut && passwordInput) {
         accessShortcut.addEventListener("click", (event) => {
             event.preventDefault();
             openMenu();
+            keepAccessVisible = true;
             passwordInput.focus({ preventScroll: true });
-            passwordInput.scrollIntoView({ block: "center" });
+            fitMenuToViewport();
+            window.setTimeout(fitMenuToViewport, 350);
         });
     }
 
