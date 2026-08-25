@@ -10,6 +10,13 @@
     const PLACES_NAME = "Luoghi rilevanti lungo il percorso";
     const SOUTH_ROUTE_NAME = "Marcon da sud";
     const SOUTH_ROUTE_URL = "./marcon-da-sud.geojson";
+    const SOUTH_ROUTE_DESCRIPTION = [
+        'Il percorso "Marcon da sud", di mia ideazione, non è da considerarsi un percorso turistico o paesaggistico, bensì una specie di esplorazione in quei luoghi che i marconesi solitamente non frequentano, pur essendo parte considerevole del territorio comunale.',
+        'Penso che questo percorso possa farci cambiare prospettiva sul nostro modo di vivere il territorio: particolarmente impattante è stato per me percorrere fino alla conclusione Via Istituto Santa Maria della Pietà, guardando la grande scritta rossa "Iperossetto": il centro commerciale non è altro che la bella faccia di questa zona industriale.',
+        "Consiglio di compiere questo percorso verso il tramonto, quando tutti gli stabilimenti sono chiusi e l'area diventa deserta, ma la luce ancora la illumina."
+    ];
+    const SOUTH_ROUTE_WARNING =
+        "Attenzione: il percorso comporta un piccolo tragitto sulla sp40";
 
     function buildPopup(feature) {
         const root = document.createElement("div");
@@ -18,6 +25,16 @@
         const title = document.createElement("strong");
         title.textContent = feature.properties?.nome || SOUTH_ROUTE_NAME;
         root.appendChild(title);
+
+        for (const text of SOUTH_ROUTE_DESCRIPTION) {
+            const paragraph = document.createElement("p");
+            paragraph.textContent = text;
+            root.appendChild(paragraph);
+        }
+
+        const warning = document.createElement("strong");
+        warning.textContent = SOUTH_ROUTE_WARNING;
+        root.appendChild(warning);
 
         return root;
     }
@@ -42,7 +59,8 @@
                 });
 
                 featureLayer.bindPopup(buildPopup(feature), {
-                    maxWidth: 320
+                    maxWidth: 320,
+                    maxHeight: 320
                 });
             }
         });
