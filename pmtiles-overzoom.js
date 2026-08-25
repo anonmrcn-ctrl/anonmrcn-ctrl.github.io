@@ -16,20 +16,40 @@
 
     window.pmtiles.leafletRasterLayer = function (source, options = {}) {
         let headerPromise;
+        const headerRetryDelays = [250, 750, 1500];
+
+        async function loadHeader(attempt = 0) {
+            try {
+                const header = await source.getHeader();
+
+                if (header.tileType === 1 || header.tileType === 6) {
+                    throw new Error("Il PMTiles contiene tessere vettoriali, non raster.");
+                }
+
+                console.info(
+                    `Mappa 1975: zoom nativo ${header.minZoom}–${header.maxZoom}. ` +
+                    "Overzoom raster reale attivo oltre il livello massimo."
+                );
+
+                return header;
+            } catch (error) {
+                if (attempt >= headerRetryDelays.length) {
+                    throw error;
+                }
+
+                await new Promise((resolve) => {
+                    window.setTimeout(resolve, headerRetryDelays[attempt]);
+                });
+
+                return loadHeader(attempt + 1);
+            }
+        }
 
         function getHeader() {
             if (!headerPromise) {
-                headerPromise = source.getHeader().then((header) => {
-                    if (header.tileType === 1 || header.tileType === 6) {
-                        throw new Error("Il PMTiles contiene tessere vettoriali, non raster.");
-                    }
-
-                    console.info(
-                        `Mappa 1975: zoom nativo ${header.minZoom}–${header.maxZoom}. ` +
-                        "Overzoom raster reale attivo oltre il livello massimo."
-                    );
-
-                    return header;
+                headerPromise = loadHeader().catch((error) => {
+                    headerPromise = undefined;
+                    throw error;
                 });
             }
 
@@ -163,6 +183,29 @@
             }
         });
 
-        return new OverzoomRasterLayer(options);
+        const layer = new OverzoomRasterLayer(options);
+
+        layer.on("add", () => {
+            const map = layer._map;
+
+            getHeader().then(() => {
+                window.requestAnimationFrame(() => {
+                    if (layer._map !== map || !map.hasLayer(layer)) {
+                        return;
+                    }
+
+                    map.invalidateSize({ pan: false });
+                    layer.redraw();
+                });
+            }).catch((error) => {
+                console.error("Impossibile preparare la mappa del 1975.", error);
+            });
+        });
+
+        getHeader().catch((error) => {
+            console.error("Impossibile precaricare la mappa del 1975.", error);
+        });
+
+        return layer;
     };
 })();
