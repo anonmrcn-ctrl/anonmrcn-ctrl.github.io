@@ -244,35 +244,23 @@ select {
 }
 
 .menu-donazioni {
-    --donazioni-scala: 0.55;
-    --donazioni-altezza: 303px;
+    display: inline-flex;
+    align-self: center;
     flex: 0 0 auto;
-    margin: 1.5rem 0 0.5rem;
-    text-align: center;
+    margin: 1.5rem 0 0;
+    padding: 0.55rem 0.85rem;
+    border: 1px solid var(--ink);
+    color: var(--ink);
+    font-size: 0.9rem;
+    text-decoration: none;
+    transition: background-color 180ms ease, color 180ms ease;
 }
 
-.menu-donazioni h2 {
-    margin: 0 0 0.65rem;
-    font-size: 0.95rem;
-}
-
-.menu-donazioni-widget {
-    position: relative;
-    width: 100%;
-    height: var(--donazioni-altezza);
-    overflow: hidden;
-}
-
-.menu-donazioni-widget iframe {
-    position: absolute;
-    top: 0;
-    left: 50%;
-    width: 290px;
-    height: 550px;
-    margin-left: -145px;
-    border: 0;
-    transform: scale(var(--donazioni-scala));
-    transform-origin: center top;
+.menu-donazioni:hover,
+.menu-donazioni:focus-visible {
+    outline: none;
+    background: var(--ink);
+    color: var(--paper);
 }
 
 .menu-donazioni + .menu-contenuto {
@@ -895,11 +883,6 @@ body.poesia-aperta {
 
     .menu-principale {
         width: 100%;
-    }
-
-    .menu-donazioni {
-        --donazioni-scala: 0.5;
-        --donazioni-altezza: 275px;
     }
 
     .menu-contenuto {
