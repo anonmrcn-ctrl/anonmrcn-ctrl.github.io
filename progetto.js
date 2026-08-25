@@ -378,6 +378,14 @@
             const data = await api("/api/session");
             setLoggedIn(data.location);
             await loadNetwork();
+
+            if (window.location.hash === "#postaSection") {
+                elements.postaSection.hidden = false;
+                elements.postaSection.scrollIntoView({
+                    behavior: "smooth",
+                    block: "start"
+                });
+            }
         } catch (_) {
             clearSession();
         }
