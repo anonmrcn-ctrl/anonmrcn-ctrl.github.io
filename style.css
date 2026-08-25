@@ -333,6 +333,49 @@ select {
     font-size: 0.8rem;
 }
 
+.menu-installazione {
+    display: grid;
+    gap: 0.55rem;
+    flex: 0 0 auto;
+    margin-top: 1.25rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--line);
+}
+
+.menu-installazione[hidden] {
+    display: none;
+}
+
+.menu-installa {
+    width: fit-content;
+    padding: 0.55rem 0.75rem;
+    border: 1px solid var(--ink);
+    background: transparent;
+    color: var(--ink);
+    font-family: var(--font-serif);
+    font-size: 0.82rem;
+    cursor: pointer;
+    transition: background-color 180ms ease, color 180ms ease;
+}
+
+.menu-installa:hover,
+.menu-installa:focus-visible {
+    outline: none;
+    background: var(--ink);
+    color: var(--paper);
+}
+
+.menu-installa:disabled {
+    cursor: wait;
+    opacity: 0.55;
+}
+
+.installazione-istruzioni {
+    margin: 0;
+    font-size: 0.77rem;
+    line-height: 1.5;
+}
+
 body.menu-aperto,
 body.poesia-aperta {
     overflow: hidden;

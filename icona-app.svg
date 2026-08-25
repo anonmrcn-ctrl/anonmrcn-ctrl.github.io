@@ -1,0 +1,20 @@
+<svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="512"
+    height="512"
+    viewBox="0 0 512 512"
+>
+    <title>nnMrcn</title>
+    <rect width="512" height="512" fill="#f4f1e8" />
+    <text
+        x="256"
+        y="266"
+        fill="#171717"
+        dominant-baseline="middle"
+        font-family="Georgia, 'Times New Roman', serif"
+        font-size="92"
+        font-weight="700"
+        letter-spacing="2"
+        text-anchor="middle"
+    >nnMrcn</text>
+</svg>
