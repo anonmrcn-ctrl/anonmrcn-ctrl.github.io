@@ -5,9 +5,9 @@
     const extensions = [];
     const SHARED_ROUTE_MAPS = Object.freeze({
         "Proposta di percorso ciclo-turistico":
-            "https://www.google.com/maps/d/viewer?mid=1PWXQp0S-adpXSgptsQ3P2M6-0ZknzLQ&ll=45.54686084234527%2C12.32669999999998&z=13",
+            "https://www.google.com/maps/d/viewer?mid=1rRQ8GtEBEuBSQFPSEg5-BExu_HPkIa0",
         "Marcon da sud":
-            "https://www.google.com/maps/d/viewer?mid=1EUiKbigNCJ2wfTDtj2iaTgOdZIX-oE4&ll=45.54272096882251%2C12.296092999999999&z=15"
+            "https://www.google.com/maps/d/viewer?mid=1dBfUYDkPCE5Wo7s6toRX2JygRkW4m9I"
     });
 
     function loadGeoJSON(url) {
