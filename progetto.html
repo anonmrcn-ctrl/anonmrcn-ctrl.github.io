@@ -44,6 +44,56 @@
             <a href="./autore.html">L’autore</a>
             <a href="./progetto.html" class="voce-attiva" aria-current="page">Il progetto</a>
         </div>
+
+        <section class="accesso-rete menu-accesso" id="accessoLocations" aria-labelledby="accessoTitolo">
+            <h2 id="accessoTitolo">Accesso alle locations</h2>
+
+            <div id="loginLoggedOut">
+                <form class="accesso-form" id="loginForm">
+                    <label for="loginPassword">Password della poesia</label>
+                    <input
+                        id="loginPassword"
+                        name="password"
+                        type="password"
+                        autocomplete="off"
+                        placeholder="Password della poesia"
+                        required
+                    >
+                    <button id="loginButton" type="submit">Accedi</button>
+                </form>
+
+                <p class="login-message" id="loginMessage" aria-live="polite"></p>
+            </div>
+
+            <div class="login-attivo" id="loginLoggedIn" hidden>
+                <p>
+                    Accesso riconosciuto: <strong id="loginLocation"></strong>
+                </p>
+
+                <div class="rete-azioni">
+                    <button class="rete-button" id="postaButton" type="button">
+                        Messaggi ricevuti
+                    </button>
+                    <button
+                        class="rete-button notifiche-button"
+                        id="locationPushButton"
+                        type="button"
+                        aria-pressed="false"
+                    >
+                        Attiva notifiche
+                    </button>
+                    <button class="logout-button" id="logoutButton" type="button">
+                        Esci
+                    </button>
+                </div>
+
+                <p
+                    class="notifiche-status"
+                    id="locationPushStatus"
+                    aria-live="polite"
+                ></p>
+            </div>
+        </section>
     </nav>
 
     <main>
@@ -60,55 +110,7 @@
                 </p>
             </div>
 
-            <section class="accesso-rete" aria-labelledby="accessoTitolo">
-                <h2 id="accessoTitolo">Accesso alle locations</h2>
 
-                <div id="loginLoggedOut">
-                    <form class="accesso-form" id="loginForm">
-                        <label for="loginPassword">Password della poesia</label>
-                        <input
-                            id="loginPassword"
-                            name="password"
-                            type="password"
-                            autocomplete="off"
-                            placeholder="Password della poesia"
-                            required
-                        >
-                        <button id="loginButton" type="submit">Accedi</button>
-                    </form>
-
-                    <p class="login-message" id="loginMessage" aria-live="polite"></p>
-                </div>
-
-                <div class="login-attivo" id="loginLoggedIn" hidden>
-                    <p>
-                        Accesso riconosciuto: <strong id="loginLocation"></strong>
-                    </p>
-
-                    <div class="rete-azioni">
-                        <button class="rete-button" id="postaButton" type="button">
-                            Messaggi ricevuti
-                        </button>
-                        <button
-                            class="rete-button notifiche-button"
-                            id="locationPushButton"
-                            type="button"
-                            aria-pressed="false"
-                        >
-                            Attiva notifiche
-                        </button>
-                        <button class="logout-button" id="logoutButton" type="button">
-                            Esci
-                        </button>
-                    </div>
-
-                    <p
-                        class="notifiche-status"
-                        id="locationPushStatus"
-                        aria-live="polite"
-                    ></p>
-                </div>
-            </section>
 
             <section class="posta" id="postaSection" hidden aria-labelledby="postaTitolo">
                 <div class="posta-intestazione">
