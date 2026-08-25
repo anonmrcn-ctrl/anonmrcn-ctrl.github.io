@@ -4,7 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="robots" content="noindex, nofollow">
+    <meta name="theme-color" content="#f4f1e8">
     <title>Amministrazione — nnMrcn</title>
+    <link rel="manifest" href="./admin.webmanifest">
+    <link rel="apple-touch-icon" href="./logo.PNG">
     <link rel="stylesheet" href="./style.css">
 </head>
 
@@ -29,6 +32,23 @@
         </section>
 
         <section class="admin-panel" id="adminPanel" hidden>
+            <section class="notifiche-panel" aria-label="Notifiche amministratore">
+                <button
+                    class="rete-button notifiche-button"
+                    id="adminPushButton"
+                    type="button"
+                    aria-pressed="false"
+                >
+                    Attiva notifiche
+                </button>
+
+                <p
+                    class="notifiche-status"
+                    id="adminPushStatus"
+                    aria-live="polite"
+                ></p>
+            </section>
+
             <div class="admin-filter">
                 <label for="adminStatusFilter">Mostra:</label>
 
@@ -52,6 +72,7 @@
 
     <script src="./config.js"></script>
     <script src="./api.js"></script>
+    <script src="./notifiche.js"></script>
     <script src="./admin.js"></script>
 </body>
 </html>

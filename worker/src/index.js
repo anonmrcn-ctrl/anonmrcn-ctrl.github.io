@@ -1,3 +1,11 @@
+import {
+    getPushConfiguration,
+    notifyPushSubscribers,
+    PushRequestError,
+    removePushSubscription,
+    savePushSubscription
+} from "./push.js";
+
 // workerd refuses PBKDF2 requests above 100,000 iterations.
 const PBKDF2_ITERATIONS = 100000;
 const SESSION_TTL_MS = 12 * 60 * 60 * 1000;
@@ -13,7 +21,7 @@ const MESSAGE_STATUSES = Object.freeze([
 ]);
 
 export default {
-    async fetch(request, env) {
+    async fetch(request, env, ctx) {
         try {
             if (request.method === "OPTIONS") {
                 return new Response(null, {
@@ -51,7 +59,7 @@ export default {
             }
 
             if (request.method === "POST" && path === "/api/messages") {
-                return await createMessage(request, env);
+                return await createMessage(request, env, ctx);
             }
 
             if (request.method === "PATCH" && /^\/api\/messages\/\d+$/.test(path)) {
@@ -65,7 +73,19 @@ export default {
 
             if (request.method === "PATCH" && /^\/api\/admin\/messages\/\d+$/.test(path)) {
                 const id = Number(path.split("/").pop());
-                return await adminUpdateMessage(request, env, id);
+                return await adminUpdateMessage(request, env, ctx, id);
+            }
+
+            if (request.method === "GET" && path === "/api/push/config") {
+                return await pushConfiguration(request, env);
+            }
+
+            if (request.method === "POST" && path === "/api/push/subscribe") {
+                return await subscribeToPush(request, env);
+            }
+
+            if (request.method === "POST" && path === "/api/push/unsubscribe") {
+                return await unsubscribeFromPush(request, env);
             }
 
             if (request.method === "GET" && path === "/api/health") {
@@ -313,7 +333,7 @@ async function listMessages(request, env) {
     });
 }
 
-async function createMessage(request, env) {
+async function createMessage(request, env, ctx) {
     const session = await requireSession(request, env);
 
     if (!session) {
@@ -408,9 +428,26 @@ async function createMessage(request, env) {
         now
     ).run();
 
+    const messageId = result.meta?.last_row_id ?? null;
+
+    queuePushNotification(
+        ctx,
+        env,
+        "admin",
+        null,
+        {
+            title: "nnMrcn — nuovo messaggio",
+            body: deliveryType === "physical"
+                ? "È arrivata una lettera da controllare."
+                : "È arrivato un messaggio da approvare.",
+            url: "/admin.html",
+            tag: `nnmrcn-admin-${messageId || now}`
+        }
+    );
+
     return json(request, env, {
         ok: true,
-        id: result.meta?.last_row_id ?? null,
+        id: messageId,
         status
     }, 201);
 }
@@ -509,7 +546,7 @@ async function adminListMessages(request, env, url) {
     });
 }
 
-async function adminUpdateMessage(request, env, messageId) {
+async function adminUpdateMessage(request, env, ctx, messageId) {
     if (!(await adminAuthorized(request, env))) {
         return unauthorized(request, env);
     }
@@ -521,7 +558,8 @@ async function adminUpdateMessage(request, env, messageId) {
         SELECT
             id,
             delivery_type,
-            status
+            status,
+            recipient_location_id
         FROM messages
         WHERE id = ?
         LIMIT 1
@@ -576,10 +614,120 @@ async function adminUpdateMessage(request, env, messageId) {
         messageId
     ).run();
 
+    if (nextStatus === "approved") {
+        queuePushNotification(
+            ctx,
+            env,
+            "location",
+            message.recipient_location_id,
+            {
+                title: "nnMrcn — nuovo messaggio",
+                body: "Hai ricevuto un nuovo messaggio.",
+                url: "/progetto.html",
+                tag: `nnmrcn-message-${messageId}`
+            }
+        );
+    }
+
     return json(request, env, {
         ok: true,
         status: nextStatus
     });
+}
+
+async function pushConfiguration(request, env) {
+    const identity = await requirePushIdentity(request, env);
+
+    if (!identity) {
+        return unauthorized(request, env);
+    }
+
+    return json(request, env, await getPushConfiguration(env, identity));
+}
+
+async function subscribeToPush(request, env) {
+    const identity = await requirePushIdentity(request, env);
+
+    if (!identity) {
+        return unauthorized(request, env);
+    }
+
+    const body = await readJson(request);
+
+    try {
+        return json(
+            request,
+            env,
+            await savePushSubscription(env, identity, body?.subscription),
+            201
+        );
+    } catch (error) {
+        if (error instanceof PushRequestError) {
+            return json(request, env, { error: error.message }, error.status);
+        }
+
+        throw error;
+    }
+}
+
+async function unsubscribeFromPush(request, env) {
+    const identity = await requirePushIdentity(request, env);
+
+    if (!identity) {
+        return unauthorized(request, env);
+    }
+
+    const body = await readJson(request);
+
+    try {
+        return json(
+            request,
+            env,
+            await removePushSubscription(env, identity, body?.endpoint)
+        );
+    } catch (error) {
+        if (error instanceof PushRequestError) {
+            return json(request, env, { error: error.message }, error.status);
+        }
+
+        throw error;
+    }
+}
+
+async function requirePushIdentity(request, env) {
+    if (request.headers.has("X-Admin-Token")) {
+        if (!(await adminAuthorized(request, env))) {
+            return null;
+        }
+
+        return { audience: "admin", locationId: null };
+    }
+
+    const session = await requireSession(request, env);
+
+    if (!session) {
+        return null;
+    }
+
+    return {
+        audience: "location",
+        locationId: Number(session.location_id)
+    };
+}
+
+function queuePushNotification(ctx, env, audience, locationId, notification) {
+    ctx.waitUntil(
+        notifyPushSubscribers(env, audience, locationId, notification)
+            .catch((error) => {
+                console.error(JSON.stringify({
+                    event: "push_notification_failed",
+                    audience,
+                    error: error instanceof Error
+                        ? error.message
+                        : String(error)
+                }));
+            })
+    );
 }
 
 async function requireSession(request, env) {

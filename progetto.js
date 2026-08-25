@@ -17,6 +17,8 @@
         loginLocation: document.getElementById("loginLocation"),
         logoutButton: document.getElementById("logoutButton"),
         postaButton: document.getElementById("postaButton"),
+        locationPushButton: document.getElementById("locationPushButton"),
+        locationPushStatus: document.getElementById("locationPushStatus"),
         postaSection: document.getElementById("postaSection"),
         postaLista: document.getElementById("postaLista"),
         postaRefresh: document.getElementById("postaRefresh"),
@@ -52,6 +54,15 @@
     let currentRecipients = [];
     let selectedRecipientIds = new Set();
     let mapRecipientSelectionMode = false;
+
+    const pushNotifications = window.NNMRCN_NOTIFICHE.create({
+        button: elements.locationPushButton,
+        status: elements.locationPushStatus,
+        request: api,
+        identity: () => sessionLocation
+            ? `location-${sessionLocation.id}`
+            : ""
+    });
 
     const map = createMap();
     const locationsLayer = L.layerGroup().addTo(map);
@@ -379,6 +390,10 @@
         elements.loginLoggedIn.hidden = false;
         elements.messaggisticaMappa.hidden = false;
         elements.loginMessage.textContent = "";
+
+        pushNotifications.sync().catch((error) => {
+            console.error("Impossibile controllare le notifiche.", error);
+        });
     }
 
     function clearSession() {
@@ -400,6 +415,7 @@
         elements.destinatariPanel.hidden = true;
         elements.nuovoMessaggioButton.setAttribute("aria-expanded", "false");
         elements.map.classList.remove("selezione-destinatari-attiva");
+        pushNotifications.reset();
         showMessage(elements.postaLista, "Nessun messaggio.");
     }
 

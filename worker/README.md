@@ -98,6 +98,24 @@ destinatario solo dopo l'approvazione. Le lettere fisiche entrano nello stato
 `pending_delivery` e possono essere segnate come consegnate. Ogni location può
 inviare al massimo cinque messaggi ogni ora.
 
+## 6. Attiva le notifiche push
+
+Nella pagina `admin.html`, dopo l'accesso, seleziona **Attiva notifiche** per
+ricevere un avviso quando arriva un messaggio da moderare o una lettera da
+gestire. Nella pagina `progetto.html`, ogni location può attivare lo stesso
+pulsante dopo l'accesso per ricevere una notifica quando un messaggio viene
+approvato.
+
+Il Worker crea automaticamente le tabelle necessarie e le chiavi VAPID. La
+chiave privata viene conservata cifrata nel database D1 mediante il segreto
+`PASSWORD_PEPPER` già esistente: non occorre aggiungere segreti, dipendenze o
+servizi esterni. Il contenuto dei messaggi non compare nelle notifiche.
+
+Su iPhone e iPad occorre prima aggiungere il sito alla schermata Home tramite
+**Condividi** → **Aggiungi alla schermata Home**, aprirlo dalla Home e solo
+allora attivare le notifiche. Su ogni dispositivo e browser il consenso deve
+essere accordato separatamente.
+
 ## File da non pubblicare
 
 - `nnmrcn_seed_private*.sql`;

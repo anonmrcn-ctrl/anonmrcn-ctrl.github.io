@@ -1,0 +1,19 @@
+{
+    "id": "/admin.html",
+    "name": "nnMrcn — Amministrazione",
+    "short_name": "nnMrcn Admin",
+    "description": "Moderazione dei messaggi del progetto nnMrcn.",
+    "start_url": "/admin.html",
+    "scope": "/",
+    "display": "standalone",
+    "background_color": "#f4f1e8",
+    "theme_color": "#f4f1e8",
+    "icons": [
+        {
+            "src": "/logo.webp",
+            "sizes": "any",
+            "type": "image/webp",
+            "purpose": "any"
+        }
+    ]
+}

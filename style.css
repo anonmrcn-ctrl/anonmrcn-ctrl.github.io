@@ -445,6 +445,27 @@ body.poesia-aperta {
     font-size: 0.9rem;
 }
 
+.notifiche-panel {
+    margin-bottom: 2rem;
+}
+
+.notifiche-status {
+    min-height: 1.4em;
+    margin: 0.65rem 0 0;
+    font-size: 0.85rem;
+    line-height: 1.45;
+}
+
+.notifiche-button:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+}
+
+.notifiche-button[aria-pressed="true"] {
+    background: var(--ink);
+    color: var(--paper);
+}
+
 .login-attivo p {
     margin: 0 0 1rem;
 }

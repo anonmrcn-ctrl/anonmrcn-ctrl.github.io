@@ -4,8 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Il progetto poetico nnMrcn, i luoghi di Marcon e la mappa storica del 1975">
+    <meta name="theme-color" content="#f4f1e8">
     <title>Il progetto — nnMrcn</title>
 
+    <link rel="manifest" href="./manifest.webmanifest">
+    <link rel="apple-touch-icon" href="./logo.PNG">
     <link rel="preconnect" href="https://server.arcgisonline.com">
     <link rel="stylesheet" href="./style.css">
     <link rel="stylesheet" href="./messaggistica.css">
@@ -84,10 +87,24 @@
                         <button class="rete-button" id="postaButton" type="button">
                             Messaggi ricevuti
                         </button>
+                        <button
+                            class="rete-button notifiche-button"
+                            id="locationPushButton"
+                            type="button"
+                            aria-pressed="false"
+                        >
+                            Attiva notifiche
+                        </button>
                         <button class="logout-button" id="logoutButton" type="button">
                             Esci
                         </button>
                     </div>
+
+                    <p
+                        class="notifiche-status"
+                        id="locationPushStatus"
+                        aria-live="polite"
+                    ></p>
                 </div>
             </section>
 
@@ -258,6 +275,7 @@
     <script src="./pmtiles-overzoom.js"></script>
     <script src="./config.js"></script>
     <script src="./api.js"></script>
+    <script src="./notifiche.js"></script>
     <script src="./site.js"></script>
     <script src="./mappa.js"></script>
     <script src="./marcon-da-sud.js"></script>

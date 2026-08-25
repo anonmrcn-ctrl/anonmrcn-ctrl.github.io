@@ -11,8 +11,17 @@
     const list = document.getElementById("adminList");
     const filter = document.getElementById("adminStatusFilter");
     const refresh = document.getElementById("adminRefresh");
+    const pushButton = document.getElementById("adminPushButton");
+    const pushStatus = document.getElementById("adminPushStatus");
 
     let adminToken = sessionStorage.getItem(TOKEN_KEY) || "";
+
+    const pushNotifications = window.NNMRCN_NOTIFICHE.create({
+        button: pushButton,
+        status: pushStatus,
+        request,
+        identity: () => adminToken ? "admin" : ""
+    });
 
     async function request(path, options = {}) {
         const headers = new Headers(options.headers || {});
@@ -41,12 +50,14 @@
             render(data.messages || []);
             panel.hidden = false;
             statusText.textContent = "";
+            await pushNotifications.sync();
         } catch (error) {
             if (error.status === 401) {
                 panel.hidden = true;
                 statusText.textContent = "Token non valido.";
                 sessionStorage.removeItem(TOKEN_KEY);
                 adminToken = "";
+                pushNotifications.reset();
             } else {
                 showListMessage("Errore nel caricamento.");
             }

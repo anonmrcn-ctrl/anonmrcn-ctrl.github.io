@@ -69,3 +69,32 @@ CREATE INDEX IF NOT EXISTS idx_messages_sender_rate
 
 CREATE INDEX IF NOT EXISTS idx_messages_admin
     ON messages(status, created_at);
+
+CREATE TABLE IF NOT EXISTS push_keys (
+    id TEXT PRIMARY KEY,
+    public_key TEXT NOT NULL,
+    encrypted_private_key TEXT NOT NULL,
+    created_at INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS push_subscriptions (
+    id TEXT PRIMARY KEY,
+    audience TEXT NOT NULL
+        CHECK (audience IN ('admin', 'location')),
+    location_id INTEGER,
+    endpoint TEXT NOT NULL,
+    p256dh TEXT NOT NULL,
+    auth TEXT NOT NULL,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    CHECK (
+        (audience = 'admin' AND location_id IS NULL) OR
+        (audience = 'location' AND location_id IS NOT NULL)
+    ),
+    FOREIGN KEY (location_id)
+        REFERENCES locations(id)
+        ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_push_subscriptions_audience
+    ON push_subscriptions(audience, location_id);
