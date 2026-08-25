@@ -5,6 +5,8 @@
     const closeButton = document.getElementById("menuClose");
     const menu = document.getElementById("menuPrincipale");
     const overlay = document.getElementById("menuOverlay");
+    const accessShortcut = document.getElementById("accessoPasswordLink");
+    const passwordInput = document.getElementById("loginPassword");
     const installSection = document.getElementById("installazioneApp");
     const installButton = document.getElementById("installaAppButton");
     const installInstructions = document.getElementById(
@@ -32,6 +34,15 @@
     button.addEventListener("click", openMenu);
     closeButton.addEventListener("click", closeMenu);
     overlay.addEventListener("click", closeMenu);
+
+    if (accessShortcut && passwordInput) {
+        accessShortcut.addEventListener("click", (event) => {
+            event.preventDefault();
+            openMenu();
+            passwordInput.focus({ preventScroll: true });
+            passwordInput.scrollIntoView({ block: "center" });
+        });
+    }
 
     document.addEventListener("keydown", (event) => {
         if (event.key === "Escape") {

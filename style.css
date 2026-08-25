@@ -576,6 +576,18 @@ body.poesia-aperta {
     line-height: 1.8;
 }
 
+.accesso-password-link {
+    color: inherit;
+    text-decoration: underline;
+    text-underline-offset: 0.16em;
+    transition: opacity 180ms ease;
+}
+
+.accesso-password-link:hover,
+.accesso-password-link:focus-visible {
+    opacity: 0.55;
+}
+
 .accesso-rete,
 .posta {
     width: min(650px, calc(100% - 4rem));
