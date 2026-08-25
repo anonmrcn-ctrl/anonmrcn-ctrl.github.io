@@ -767,6 +767,7 @@
             return;
         }
 
+        document.getElementById("menuClose")?.click();
         await loadInbox();
         elements.postaSection.scrollIntoView({
             behavior: "smooth",
