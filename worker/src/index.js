@@ -11,6 +11,9 @@ const PBKDF2_ITERATIONS = 100000;
 const SESSION_TTL_MS = 12 * 60 * 60 * 1000;
 const MESSAGE_LIMIT_PER_HOUR = 5;
 const MAX_MESSAGE_LENGTH = 1500;
+const MAX_CONTACT_NAME_LENGTH = 80;
+const MAX_CONTACT_EMAIL_LENGTH = 254;
+const MAX_CONTACT_REQUEST_BYTES = 8192;
 const MESSAGE_STATUSES = Object.freeze([
     "pending",
     "pending_delivery",
@@ -18,6 +21,23 @@ const MESSAGE_STATUSES = Object.freeze([
     "read",
     "delivered",
     "rejected"
+]);
+const CONTACT_STORAGE_STATEMENTS = Object.freeze([
+    `CREATE TABLE IF NOT EXISTS contact_messages (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL DEFAULT '',
+        email TEXT NOT NULL DEFAULT '',
+        text TEXT NOT NULL CHECK (length(text) BETWEEN 1 AND 1500),
+        status TEXT NOT NULL DEFAULT 'unread'
+            CHECK (status IN ('unread', 'read')),
+        sender_hash TEXT NOT NULL,
+        created_at INTEGER NOT NULL,
+        updated_at INTEGER NOT NULL
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_contact_messages_sender_rate
+        ON contact_messages(sender_hash, created_at)`,
+    `CREATE INDEX IF NOT EXISTS idx_contact_messages_admin
+        ON contact_messages(status, created_at)`
 ]);
 
 export default {
@@ -62,6 +82,10 @@ export default {
                 return await createMessage(request, env, ctx);
             }
 
+            if (request.method === "POST" && path === "/api/contact") {
+                return await createContactMessage(request, env, ctx);
+            }
+
             if (request.method === "PATCH" && /^\/api\/messages\/\d+$/.test(path)) {
                 const id = Number(path.split("/").pop());
                 return await markMessage(request, env, id);
@@ -69,6 +93,18 @@ export default {
 
             if (request.method === "GET" && path === "/api/admin/messages") {
                 return await adminListMessages(request, env, url);
+            }
+
+            if (request.method === "GET" && path === "/api/admin/contact-messages") {
+                return await adminListContactMessages(request, env);
+            }
+
+            if (
+                request.method === "PATCH" &&
+                /^\/api\/admin\/contact-messages\/\d+$/.test(path)
+            ) {
+                const id = Number(path.split("/").pop());
+                return await adminUpdateContactMessage(request, env, id);
             }
 
             if (request.method === "PATCH" && /^\/api\/admin\/messages\/\d+$/.test(path)) {
@@ -486,6 +522,213 @@ async function markMessage(request, env, messageId) {
     return json(request, env, {
         ok: true
     });
+}
+
+async function createContactMessage(request, env, ctx) {
+    const contentLength = Number(request.headers.get("Content-Length") || 0);
+
+    if (contentLength > MAX_CONTACT_REQUEST_BYTES) {
+        return json(request, env, {
+            error: "Il messaggio inviato è troppo lungo."
+        }, 413);
+    }
+
+    const body = await readJson(request);
+
+    if (!body || typeof body !== "object" || Array.isArray(body)) {
+        return json(request, env, {
+            error: "Messaggio non valido."
+        }, 400);
+    }
+
+    if (String(body.website || "").trim()) {
+        return json(request, env, { ok: true }, 201);
+    }
+
+    const name = String(body.name || "").trim();
+    const email = String(body.email || "").trim();
+    const text = String(body.text || "").trim();
+
+    if (name.length > MAX_CONTACT_NAME_LENGTH) {
+        return json(request, env, {
+            error: "Il nome inserito è troppo lungo."
+        }, 400);
+    }
+
+    if (
+        email &&
+        (
+            email.length > MAX_CONTACT_EMAIL_LENGTH ||
+            !/^[^\s@]+@[^\s@]+\.[^\s@]+$/u.test(email)
+        )
+    ) {
+        return json(request, env, {
+            error: "L’indirizzo email non è valido."
+        }, 400);
+    }
+
+    if (!text || text.length > MAX_MESSAGE_LENGTH) {
+        return json(request, env, {
+            error: `Il messaggio deve contenere da 1 a ${MAX_MESSAGE_LENGTH} caratteri.`
+        }, 400);
+    }
+
+    if (!env.PASSWORD_PEPPER) {
+        throw new Error("PASSWORD_PEPPER secret missing.");
+    }
+
+    await ensureContactStorage(env);
+
+    const sender = request.headers.get("CF-Connecting-IP") || "unknown";
+    const senderHash = await hmacHex(
+        env.PASSWORD_PEPPER,
+        `contact:${sender}`
+    );
+    const now = Date.now();
+
+    const previous = await env.DB.prepare(`
+        SELECT COUNT(*) AS count
+        FROM contact_messages
+        WHERE
+            sender_hash = ?
+            AND created_at >= ?
+    `).bind(
+        senderHash,
+        now - 60 * 60 * 1000
+    ).first();
+
+    if (Number(previous?.count || 0) >= MESSAGE_LIMIT_PER_HOUR) {
+        return json(request, env, {
+            error: "Hai inviato troppi messaggi. Riprova più tardi."
+        }, 429);
+    }
+
+    const result = await env.DB.prepare(`
+        INSERT INTO contact_messages (
+            name,
+            email,
+            text,
+            status,
+            sender_hash,
+            created_at,
+            updated_at
+        )
+        VALUES (?, ?, ?, 'unread', ?, ?, ?)
+    `).bind(
+        name,
+        email,
+        text,
+        senderHash,
+        now,
+        now
+    ).run();
+
+    const messageId = result.meta?.last_row_id ?? null;
+
+    queuePushNotification(
+        ctx,
+        env,
+        "admin",
+        null,
+        {
+            title: "nnMrcn — nuovo contatto",
+            body: "Hai ricevuto un nuovo messaggio diretto.",
+            url: "/admin.html",
+            tag: `nnmrcn-contact-${messageId || now}`
+        }
+    );
+
+    return json(request, env, {
+        ok: true,
+        id: messageId
+    }, 201);
+}
+
+async function adminListContactMessages(request, env) {
+    if (!(await adminAuthorized(request, env))) {
+        return unauthorized(request, env);
+    }
+
+    await ensureContactStorage(env);
+
+    const result = await env.DB.prepare(`
+        SELECT
+            id,
+            name,
+            email,
+            text,
+            status,
+            created_at
+        FROM contact_messages
+        ORDER BY
+            CASE WHEN status = 'unread' THEN 0 ELSE 1 END,
+            created_at DESC
+        LIMIT 250
+    `).all();
+
+    return json(request, env, {
+        messages: (result.results || []).map((row) => ({
+            id: row.id,
+            name: row.name,
+            email: row.email,
+            text: row.text,
+            status: row.status,
+            createdAt: row.created_at
+        }))
+    });
+}
+
+async function adminUpdateContactMessage(request, env, messageId) {
+    if (!(await adminAuthorized(request, env))) {
+        return unauthorized(request, env);
+    }
+
+    const body = await readJson(request);
+
+    if (body?.action !== "read") {
+        return json(request, env, {
+            error: "Azione non valida."
+        }, 400);
+    }
+
+    await ensureContactStorage(env);
+
+    const message = await env.DB.prepare(`
+        SELECT id
+        FROM contact_messages
+        WHERE id = ?
+        LIMIT 1
+    `).bind(messageId).first();
+
+    if (!message) {
+        return json(request, env, {
+            error: "Messaggio non trovato."
+        }, 404);
+    }
+
+    await env.DB.prepare(`
+        UPDATE contact_messages
+        SET
+            status = 'read',
+            updated_at = ?
+        WHERE id = ?
+    `).bind(
+        Date.now(),
+        messageId
+    ).run();
+
+    return json(request, env, {
+        ok: true,
+        status: "read"
+    });
+}
+
+async function ensureContactStorage(env) {
+    await env.DB.batch(
+        CONTACT_STORAGE_STATEMENTS.map((statement) =>
+            env.DB.prepare(statement)
+        )
+    );
 }
 
 async function adminListMessages(request, env, url) {

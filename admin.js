@@ -9,6 +9,7 @@
     const statusText = document.getElementById("adminStatus");
     const panel = document.getElementById("adminPanel");
     const list = document.getElementById("adminList");
+    const contactList = document.getElementById("adminContactList");
     const filter = document.getElementById("adminStatusFilter");
     const refresh = document.getElementById("adminRefresh");
     const pushButton = document.getElementById("adminPushButton");
@@ -50,6 +51,7 @@
             render(data.messages || []);
             panel.hidden = false;
             statusText.textContent = "";
+            await loadContactMessages();
             await pushNotifications.sync();
         } catch (error) {
             if (error.status === 401) {
@@ -62,6 +64,106 @@
                 showListMessage("Errore nel caricamento.");
             }
         }
+    }
+
+    function showContactListMessage(message) {
+        const paragraph = document.createElement("p");
+        paragraph.textContent = message;
+        contactList.replaceChildren(paragraph);
+    }
+
+    async function loadContactMessages() {
+        showContactListMessage("Caricamento…");
+
+        try {
+            const data = await request("/api/admin/contact-messages");
+            renderContactMessages(data.messages || []);
+        } catch (_) {
+            showContactListMessage(
+                "I messaggi diretti non sono momentaneamente disponibili."
+            );
+        }
+    }
+
+    function renderContactMessages(messages) {
+        contactList.replaceChildren();
+
+        if (!messages.length) {
+            showContactListMessage("Nessun messaggio diretto.");
+            return;
+        }
+
+        messages.forEach((message) => {
+            const article = document.createElement("article");
+            article.className = "admin-message";
+
+            if (message.status === "unread") {
+                article.classList.add("admin-contatto-nuovo");
+            }
+
+            const title = document.createElement("h2");
+            title.textContent = message.name || "Mittente anonimo";
+
+            const reply = document.createElement("p");
+            reply.className = "admin-meta";
+
+            if (message.email) {
+                reply.append("Rispondi a: ");
+
+                const address = document.createElement("a");
+                address.className = "admin-contatto-email";
+                address.href = `mailto:${message.email}`;
+                address.textContent = message.email;
+                reply.appendChild(address);
+            } else {
+                reply.textContent = "Nessuna email indicata.";
+            }
+
+            const date = document.createElement("p");
+            date.className = "admin-meta";
+            date.textContent =
+                new Date(message.createdAt).toLocaleString("it-IT");
+
+            const text = document.createElement("p");
+            text.textContent = message.text;
+
+            article.append(title, reply, date, text);
+
+            if (message.status === "unread") {
+                const actions = document.createElement("div");
+                actions.className = "admin-actions";
+                actions.appendChild(contactActionButton(message.id));
+                article.appendChild(actions);
+            }
+
+            contactList.appendChild(article);
+        });
+    }
+
+    function contactActionButton(id) {
+        const button = document.createElement("button");
+        button.className = "admin-action";
+        button.type = "button";
+        button.textContent = "Segna come letto";
+
+        button.addEventListener("click", async () => {
+            button.disabled = true;
+
+            try {
+                await request(`/api/admin/contact-messages/${id}`, {
+                    method: "PATCH",
+                    body: JSON.stringify({ action: "read" })
+                });
+
+                await loadContactMessages();
+            } catch (_) {
+                statusText.textContent =
+                    "Non è stato possibile aggiornare il messaggio diretto.";
+                button.disabled = false;
+            }
+        });
+
+        return button;
     }
 
     function render(messages) {

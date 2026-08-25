@@ -130,10 +130,83 @@
 
             <p class="firma">-nnMrcn-</p>
         </article>
+
+        <section class="autore-contatti" aria-labelledby="contattiTitolo">
+            <h2 id="contattiTitolo">Contatti</h2>
+
+            <ul class="contatti-elenco">
+                <li>
+                    <span>Mail:</span>
+                    <a href="mailto:anonmrcn@gmail.com">anonmrcn@gmail.com</a>
+                </li>
+                <li>
+                    <span>Facebook:</span>
+                    <a
+                        href="https://www.facebook.com/anonmrcn"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                    >facebook.com/anonmrcn</a>
+                </li>
+                <li>
+                    <span>Messaggio tramite sito:</span>
+                    <button
+                        class="contatti-toggle"
+                        id="contattoToggle"
+                        type="button"
+                        aria-expanded="false"
+                        aria-controls="contattoForm"
+                    >Scrivi all’autore</button>
+                </li>
+            </ul>
+
+            <form class="contatto-form" id="contattoForm" hidden>
+                <label for="contattoNome">Nome (facoltativo)</label>
+                <input
+                    id="contattoNome"
+                    name="name"
+                    type="text"
+                    autocomplete="name"
+                    maxlength="80"
+                >
+
+                <label for="contattoEmail">Email per ricevere risposta (facoltativa)</label>
+                <input
+                    id="contattoEmail"
+                    name="email"
+                    type="email"
+                    autocomplete="email"
+                    maxlength="254"
+                >
+
+                <label for="contattoTesto">Messaggio</label>
+                <textarea
+                    id="contattoTesto"
+                    name="text"
+                    rows="5"
+                    maxlength="1500"
+                    required
+                ></textarea>
+
+                <div class="contatto-antispam" aria-hidden="true">
+                    <label for="contattoSito">Lascia questo campo vuoto</label>
+                    <input
+                        id="contattoSito"
+                        name="website"
+                        type="text"
+                        tabindex="-1"
+                        autocomplete="off"
+                    >
+                </div>
+
+                <button id="contattoInvia" type="submit">Invia messaggio</button>
+                <p class="contatto-status" id="contattoStatus" aria-live="polite"></p>
+            </form>
+        </section>
     </main>
 
     <script src="./config.js"></script>
     <script src="./api.js"></script>
+    <script src="./contatti.js"></script>
     <script src="./notifiche.js"></script>
     <script src="./site.js"></script>
     <script src="./accesso-menu.js"></script>

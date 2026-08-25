@@ -70,6 +70,25 @@ CREATE INDEX IF NOT EXISTS idx_messages_sender_rate
 CREATE INDEX IF NOT EXISTS idx_messages_admin
     ON messages(status, created_at);
 
+CREATE TABLE IF NOT EXISTS contact_messages (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL DEFAULT '',
+    email TEXT NOT NULL DEFAULT '',
+    text TEXT NOT NULL
+        CHECK (length(text) BETWEEN 1 AND 1500),
+    status TEXT NOT NULL DEFAULT 'unread'
+        CHECK (status IN ('unread', 'read')),
+    sender_hash TEXT NOT NULL,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_contact_messages_sender_rate
+    ON contact_messages(sender_hash, created_at);
+
+CREATE INDEX IF NOT EXISTS idx_contact_messages_admin
+    ON contact_messages(status, created_at);
+
 CREATE TABLE IF NOT EXISTS push_keys (
     id TEXT PRIMARY KEY,
     public_key TEXT NOT NULL,
