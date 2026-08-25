@@ -243,6 +243,43 @@ select {
     opacity: 0.55;
 }
 
+.menu-donazioni {
+    --donazioni-scala: 0.55;
+    --donazioni-altezza: 303px;
+    flex: 0 0 auto;
+    margin: 1.5rem 0 0.5rem;
+    text-align: center;
+}
+
+.menu-donazioni h2 {
+    margin: 0 0 0.65rem;
+    font-size: 0.95rem;
+}
+
+.menu-donazioni-widget {
+    position: relative;
+    width: 100%;
+    height: var(--donazioni-altezza);
+    overflow: hidden;
+}
+
+.menu-donazioni-widget iframe {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    width: 290px;
+    height: 550px;
+    margin-left: -145px;
+    border: 0;
+    transform: scale(var(--donazioni-scala));
+    transform-origin: center top;
+}
+
+.menu-donazioni + .menu-contenuto {
+    min-height: 10rem;
+    gap: 1.25rem;
+}
+
 .menu-contenuto {
     display: flex;
     min-height: 12rem;
@@ -385,7 +422,6 @@ body.poesia-aperta {
 }
 
 .accesso-rete,
-.donazioni,
 .posta {
     width: min(650px, calc(100% - 4rem));
     margin: 3rem auto 0;
@@ -394,22 +430,9 @@ body.poesia-aperta {
 }
 
 .accesso-rete h2,
-.donazioni h2,
 .posta h2 {
     margin: 0 0 1.25rem;
     font-size: 1.35rem;
-}
-
-.donazioni {
-    text-align: center;
-}
-
-.donazioni-widget {
-    display: block;
-    width: min(290px, 100%);
-    height: 550px;
-    margin: 0 auto;
-    border: 0;
 }
 
 .accesso-form {
@@ -874,6 +897,11 @@ body.poesia-aperta {
         width: 100%;
     }
 
+    .menu-donazioni {
+        --donazioni-scala: 0.5;
+        --donazioni-altezza: 275px;
+    }
+
     .menu-contenuto {
         gap: 2.5rem;
     }
@@ -979,7 +1007,6 @@ body.poesia-aperta {
     }
 
     .accesso-rete,
-    .donazioni,
     .posta {
         width: calc(100% - 2rem);
         margin-top: 2rem;
