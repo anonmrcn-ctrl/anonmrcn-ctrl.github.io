@@ -3,6 +3,12 @@
 
     const requests = new Map();
     const extensions = [];
+    const SHARED_ROUTE_MAPS = Object.freeze({
+        "Proposta di percorso ciclo-turistico":
+            "https://www.google.com/maps/d/viewer?mid=1PWXQp0S-adpXSgptsQ3P2M6-0ZknzLQ&ll=45.54686084234527%2C12.32669999999998&z=13",
+        "Marcon da sud":
+            "https://www.google.com/maps/d/viewer?mid=1EUiKbigNCJ2wfTDtj2iaTgOdZIX-oE4&ll=45.54272096882251%2C12.296092999999999&z=15"
+    });
 
     function loadGeoJSON(url) {
         const cached = requests.get(url);
@@ -235,7 +241,11 @@
         const mapsLink = document.createElement("a");
 
         actions.className = "popup-percorso-azioni";
-        mapsLink.href = buildGoogleMapsUrl(coordinates);
+        mapsLink.href =
+            options.mapsUrl ||
+            properties.google_maps_url ||
+            SHARED_ROUTE_MAPS[name] ||
+            buildGoogleMapsUrl(coordinates);
         mapsLink.target = "_blank";
         mapsLink.rel = "noopener noreferrer";
         mapsLink.textContent = "Apri in Google Maps";
