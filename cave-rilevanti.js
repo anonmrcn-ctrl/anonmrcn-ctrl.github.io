@@ -45,7 +45,7 @@
         container.appendChild(link);
     }
 
-    function buildPopup(info) {
+    function buildPopup(info, geometrySource = "") {
         const root = document.createElement("div");
         root.className = "popup-luogo-rilevante";
 
@@ -55,17 +55,37 @@
         const description = document.createElement("p");
         description.textContent = info.descrizione;
 
-        const source = document.createElement("p");
-        source.className = "popup-luogo-fonte-geometria";
-        source.textContent = "Perimetro identico a quello del livello Cave.";
-
         const links = document.createElement("div");
         links.className = "popup-luogo-links";
         appendLink(links, info.municipalUrl, info.municipalLabel);
         appendLink(links, info.wikipediaUrl, "Wikipedia");
 
-        root.append(title, description, source, links);
+        root.append(title, description);
+
+        if (geometrySource) {
+            const source = document.createElement("p");
+            source.className = "popup-luogo-fonte-geometria";
+            source.textContent = geometrySource;
+            root.appendChild(source);
+        }
+
+        root.appendChild(links);
         return root;
+    }
+
+    function enhanceQuarry(feature, layer) {
+        const properties = feature?.properties;
+        const info = CAVE_INFO[properties?.nome];
+
+        if (
+            properties?.categoria === "cava" &&
+            info &&
+            !layer.getPopup?.()
+        ) {
+            layer.bindPopup(buildPopup(info), {
+                maxWidth: 340
+            });
+        }
     }
 
     async function addRelevantQuarries(targetGroup) {
@@ -91,9 +111,15 @@
                         sticky: true,
                         direction: "top"
                     });
-                    featureLayer.bindPopup(buildPopup(info), {
-                        maxWidth: 340
-                    });
+                    featureLayer.bindPopup(
+                        buildPopup(
+                            info,
+                            "Perimetro identico a quello del livello Cave."
+                        ),
+                        {
+                            maxWidth: 340
+                        }
+                    );
                     featureLayer.on("mouseover", () => {
                         featureLayer.setStyle({
                             weight: 5,
@@ -131,6 +157,7 @@
     }
 
     mapExtensions.registerExtension({
-        control: enhanceRelevantPlaces
+        control: enhanceRelevantPlaces,
+        feature: enhanceQuarry
     });
 })();
