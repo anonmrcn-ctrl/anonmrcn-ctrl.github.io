@@ -15,12 +15,15 @@
         return;
     }
 
-    toggle.addEventListener("click", () => {
+    const isCodeRequest = form.dataset.contactPurpose === "code-request";
+
+    toggle.addEventListener("click", (event) => {
+        event.preventDefault();
         form.hidden = !form.hidden;
         toggle.setAttribute("aria-expanded", String(!form.hidden));
 
         if (!form.hidden) {
-            message.focus();
+            (isCodeRequest && email ? email : message).focus();
         }
     });
 
@@ -54,7 +57,9 @@
             });
 
             form.reset();
-            status.textContent = "Messaggio inviato all’autore.";
+            status.textContent = isCodeRequest
+                ? "Richiesta di codice inviata all’admin."
+                : "Messaggio inviato all’autore.";
         } catch (error) {
             status.textContent =
                 error.code === "API_NOT_CONFIGURED"
