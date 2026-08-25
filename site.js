@@ -24,9 +24,12 @@
         const visualViewport = window.visualViewport;
 
         if (visualViewport) {
+            const visibleBottom =
+                visualViewport.height + Math.max(visualViewport.offsetTop || 0, 0);
+
             menu.style.setProperty(
                 "--menu-visible-height",
-                `${Math.round(visualViewport.height)}px`
+                `${Math.round(visibleBottom)}px`
             );
         }
 
@@ -60,6 +63,7 @@
 
     if (window.visualViewport) {
         window.visualViewport.addEventListener("resize", fitMenuToViewport);
+        window.visualViewport.addEventListener("scroll", fitMenuToViewport);
         fitMenuToViewport();
     }
 
