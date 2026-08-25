@@ -399,7 +399,7 @@ body.poesia-aperta {
 .progetto {
     width: min(760px, calc(100% - 4rem));
     margin: 0 auto;
-    padding: 8vh 0 15vh;
+    padding: 8vh 0 0;
 }
 
 .progetto-intro {
@@ -587,13 +587,7 @@ body.poesia-aperta {
 
 .sezione-mappa {
     width: min(1100px, calc(100% - 4rem));
-    margin: 10rem auto 0;
-}
-
-.sezione-mappa h2 {
-    margin: 0 0 1rem;
-    text-align: center;
-    font-size: clamp(2rem, 5vw, 3.5rem);
+    margin: 0 auto;
 }
 
 #map {
@@ -1005,7 +999,7 @@ body.poesia-aperta {
 
     .sezione-mappa {
         width: calc(100% - 2rem);
-        margin-top: 6rem;
+        margin-top: 0;
     }
 
     #map {
