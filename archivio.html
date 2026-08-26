@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="apple-mobile-web-app-title" content="anonMrcn">
+    <meta name="description" content="Archivio pubblico dei messaggi del progetto nnMrcn">
+    <meta name="theme-color" content="#f4f1e8">
+    <title>Archivio — nnMrcn</title>
+    <link rel="manifest" href="./manifest.webmanifest">
+    <link rel="apple-touch-icon" href="./icona-app-192.png?v=logo-png">
+    <link rel="stylesheet" href="./style.css">
+</head>
+
+<body class="pagina-archivio">
+    <button
+        class="menu-button"
+        id="menuButton"
+        type="button"
+        aria-label="Apri il menu"
+        aria-expanded="false"
+        aria-controls="menuPrincipale"
+    >MENU</button>
+
+    <div class="menu-overlay" id="menuOverlay"></div>
+
+    <nav class="menu-principale" id="menuPrincipale" aria-label="Menu principale">
+        <button class="menu-close" id="menuClose" type="button" aria-label="Chiudi il menu">×</button>
+
+        <a
+            class="menu-donazioni"
+            href="https://www.produzionidalbasso.com/project/fondi-necessari-per-portare-avanti-anonmrcn/"
+            target="_blank"
+            rel="noopener noreferrer"
+        >Sostieni il progetto</a>
+
+        <div class="menu-contenuto">
+            <a href="./index.html">La poesia</a>
+            <a href="./autore.html">L’autore</a>
+            <a href="./progetto.html">Il progetto</a>
+            <a href="./archivio.html" class="voce-attiva" aria-current="page">Archivio</a>
+        </div>
+
+        <section class="accesso-rete menu-accesso" id="accessoLocations" aria-labelledby="accessoTitolo">
+            <h2 id="accessoTitolo">Accesso alle locations</h2>
+
+            <div id="loginLoggedOut">
+                <form class="accesso-form" id="loginForm">
+                    <label for="loginPassword">Password della poesia</label>
+                    <input
+                        id="loginPassword"
+                        name="password"
+                        type="password"
+                        autocomplete="off"
+                        placeholder="Password della poesia"
+                        required
+                    >
+                    <button id="loginButton" type="submit">Accedi</button>
+                </form>
+                <p class="login-message" id="loginMessage" aria-live="polite"></p>
+            </div>
+
+            <div class="login-attivo" id="loginLoggedIn" hidden>
+                <p>Accesso riconosciuto: <strong id="loginLocation"></strong></p>
+                <div class="rete-azioni">
+                    <button class="rete-button" id="postaButton" type="button">Messaggi ricevuti</button>
+                    <button
+                        class="rete-button notifiche-button"
+                        id="locationPushButton"
+                        type="button"
+                        aria-pressed="false"
+                    >Attiva notifiche</button>
+                    <button class="logout-button" id="logoutButton" type="button">Esci</button>
+                </div>
+                <p class="notifiche-status" id="locationPushStatus" aria-live="polite"></p>
+
+                <div class="location-visibility-control">
+                    <button
+                        class="location-visibility-toggle"
+                        id="locationVisibilityToggle"
+                        type="button"
+                        aria-pressed="false"
+                    >Nascondi la mia location sulla mappa</button>
+                    <p class="location-visibility-status" id="locationVisibilityStatus" aria-live="polite"></p>
+                </div>
+            </div>
+        </section>
+
+        <section class="menu-installazione" id="installazioneApp">
+            <button
+                class="menu-installa"
+                id="installaAppButton"
+                type="button"
+                aria-describedby="installazioneIstruzioni"
+            >Installa come app</button>
+            <p
+                class="installazione-istruzioni"
+                id="installazioneIstruzioni"
+                aria-live="polite"
+                hidden
+            ></p>
+        </section>
+
+        <a class="menu-admin-link" href="./admin.html">admin space</a>
+    </nav>
+
+    <main class="archivio">
+        <h1 class="titolo-pagina">Archivio</h1>
+
+        <div class="archivio-intro">
+            <p>
+                Qui vengono raccolti anonimamente i messaggi che il mittente e
+                il destinatario hanno autorizzato e che l’amministratore ha
+                scelto di pubblicare.
+            </p>
+        </div>
+
+        <div class="archivio-strumenti">
+            <label for="archivioRicerca">Cerca nei messaggi caricati</label>
+            <input
+                id="archivioRicerca"
+                type="search"
+                autocomplete="off"
+                placeholder="Parola o frase"
+            >
+        </div>
+
+        <p class="archivio-status" id="archivioStatus" aria-live="polite">Caricamento…</p>
+        <div class="archivio-lista" id="archivioLista"></div>
+        <button class="archivio-altro" id="archivioAltro" type="button" hidden>
+            Carica altri messaggi
+        </button>
+    </main>
+
+    <script src="./config.js"></script>
+    <script src="./analytics.js"></script>
+    <script src="./api.js"></script>
+    <script src="./notifiche.js"></script>
+    <script src="./site.js"></script>
+    <script src="./accesso-menu.js"></script>
+    <script src="./archivio.js"></script>
+</body>
+</html>

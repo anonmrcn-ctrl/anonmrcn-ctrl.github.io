@@ -463,7 +463,8 @@ body.poesia-aperta {
 /* Autore */
 
 .pagina-autore,
-.pagina-progetto {
+.pagina-progetto,
+.pagina-archivio {
     min-height: 100vh;
 }
 
@@ -885,6 +886,45 @@ body.poesia-aperta {
     opacity: 0.65;
 }
 
+.messaggio-archivio {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.7rem;
+    margin: 1.5rem 0;
+    font-size: 0.86rem;
+    line-height: 1.5;
+}
+
+.messaggio-archivio input {
+    flex: 0 0 auto;
+    margin-top: 0.25em;
+    accent-color: var(--ink);
+}
+
+.messaggio-archivio-controllo {
+    margin-top: 0.85rem;
+    padding-left: 0.85rem;
+    border-left: 2px solid var(--ink);
+}
+
+.messaggio-archivio-button {
+    min-height: 2.75rem;
+    margin-top: 0.45rem;
+    padding: 0.55rem 0.8rem;
+    border: 1px solid var(--ink);
+    background: transparent;
+    color: var(--ink);
+    font: inherit;
+    font-size: 0.82rem;
+    cursor: pointer;
+}
+
+.messaggio-archivio-button:hover,
+.messaggio-archivio-button:focus-visible {
+    background: var(--ink);
+    color: var(--paper);
+}
+
 /* Mappa */
 
 .sezione-mappa {
@@ -892,11 +932,422 @@ body.poesia-aperta {
     margin: 0 auto;
 }
 
+.mappa-guida {
+    position: relative;
+    margin: 0 0 1rem;
+    padding: 1rem 3rem 1rem 1.15rem;
+    border: 1px solid var(--line);
+    background: rgba(244, 241, 232, 0.92);
+}
+
+.mappa-guida h2 {
+    margin: 0 0 0.6rem;
+    font-size: 1rem;
+}
+
+.mappa-guida ol {
+    margin: 0;
+    padding-left: 1.25rem;
+    font-size: 0.86rem;
+}
+
+.mappa-guida-close {
+    position: absolute;
+    top: 0.35rem;
+    right: 0.35rem;
+    width: 2.75rem;
+    height: 2.75rem;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--ink);
+    font-size: 1.6rem;
+    cursor: pointer;
+}
+
+.mappa-strumenti {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.55rem;
+    margin-bottom: 0.75rem;
+}
+
+.mappa-strumenti button,
+.elenco-mappa-lista button {
+    min-height: 2.75rem;
+    padding: 0.6rem 0.85rem;
+    border: 1px solid var(--ink);
+    background: transparent;
+    color: var(--ink);
+    font-family: var(--font-serif);
+    font-size: 0.84rem;
+    cursor: pointer;
+}
+
+.mappa-strumenti button:hover,
+.mappa-strumenti button:focus-visible,
+.mappa-strumenti button[aria-pressed="true"],
+.elenco-mappa-lista button:hover,
+.elenco-mappa-lista button:focus-visible {
+    outline: none;
+    background: var(--ink);
+    color: var(--paper);
+}
+
+.mappa-strumenti button:disabled {
+    cursor: wait;
+    opacity: 0.55;
+}
+
+.mappa-strumenti-status {
+    margin: 0 0 0.75rem;
+    font-size: 0.82rem;
+    text-align: center;
+}
+
+.mappa-strumenti-status:empty {
+    display: none;
+}
+
+.mappa-pannello {
+    margin: 0 0 0.75rem;
+    padding: 1rem;
+    border: 1px solid var(--line);
+    background: rgba(244, 241, 232, 0.96);
+}
+
+.confronto-mappa-panel label {
+    display: block;
+    margin-bottom: 0.55rem;
+    font-size: 0.85rem;
+    text-align: center;
+}
+
+.confronto-mappa-panel input[type="range"] {
+    display: block;
+    width: 100%;
+    min-height: 2.75rem;
+    margin: 0;
+    accent-color: var(--ink);
+    cursor: ew-resize;
+}
+
+.confronto-mappa-etichette {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.78rem;
+    font-weight: 700;
+}
+
+.legenda-mappa h2,
+.elenco-mappa h2 {
+    margin: 0 0 0.7rem;
+    font-size: 1.05rem;
+}
+
+.legenda-mappa ul {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.55rem 1rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-size: 0.84rem;
+}
+
+.legenda-mappa li {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+}
+
+.legenda-segno {
+    display: inline-block;
+    width: 1.5rem;
+    height: 0.65rem;
+    flex: 0 0 auto;
+    border: 1px solid var(--ink);
+}
+
+.legenda-1975 {
+    background: #a8a28d;
+}
+
+.legenda-acqua {
+    height: 0.25rem;
+    border: 0;
+    background: #00b8ff;
+}
+
+.legenda-cava {
+    border-color: #006e8a;
+    background: rgba(44, 200, 239, 0.6);
+}
+
+.legenda-percorso {
+    height: 0.25rem;
+    border: 0;
+    background: #222;
+}
+
+.legenda-luogo {
+    width: 0.8rem;
+    height: 0.8rem;
+    border-radius: 50%;
+    background: var(--paper);
+}
+
+.elenco-mappa-intestazione p {
+    margin: -0.45rem 0 0.8rem;
+    font-size: 0.82rem;
+    opacity: 0.72;
+}
+
+.elenco-mappa-lista {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0;
+    max-height: 380px;
+    overflow-y: auto;
+    border-top: 1px solid var(--line);
+}
+
+.elenco-mappa-lista article {
+    padding: 0.85rem;
+    border-bottom: 1px solid var(--line);
+}
+
+.elenco-mappa-lista article:nth-child(odd) {
+    border-right: 1px solid var(--line);
+}
+
+.elenco-mappa-lista h3 {
+    margin: 0 0 0.25rem;
+    font-size: 0.92rem;
+}
+
+.elenco-mappa-lista p {
+    margin: 0 0 0.6rem;
+    font-size: 0.78rem;
+    opacity: 0.7;
+}
+
+.elenco-mappa-lista button {
+    min-height: 2.5rem;
+    padding: 0.45rem 0.65rem;
+    font-size: 0.76rem;
+}
+
+.mappa-contenitore {
+    position: relative;
+}
+
 #map {
     width: 100%;
     height: 70vh;
     min-height: 500px;
     border: 1px solid rgba(23, 23, 23, 0.3);
+}
+
+.confronto-mappa-divisore {
+    position: absolute;
+    z-index: 800;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: var(--paper);
+    box-shadow: 0 0 0 1px rgba(23, 23, 23, 0.55);
+    pointer-events: none;
+    transform: translateX(-1px);
+}
+
+.confronto-mappa-divisore span {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 2.2rem;
+    height: 2.2rem;
+    border: 1px solid var(--ink);
+    border-radius: 50%;
+    background: var(--paper);
+    transform: translate(-50%, -50%);
+}
+
+.confronto-mappa-divisore span::before,
+.confronto-mappa-divisore span::after {
+    position: absolute;
+    top: 50%;
+    content: "";
+    width: 0;
+    height: 0;
+    border-top: 0.28rem solid transparent;
+    border-bottom: 0.28rem solid transparent;
+    transform: translateY(-50%);
+}
+
+.confronto-mappa-divisore span::before {
+    left: 0.4rem;
+    border-right: 0.38rem solid var(--ink);
+}
+
+.confronto-mappa-divisore span::after {
+    right: 0.4rem;
+    border-left: 0.38rem solid var(--ink);
+}
+
+.percorso-narrativo {
+    position: absolute;
+    z-index: 900;
+    right: 1rem;
+    bottom: 2.1rem;
+    left: 1rem;
+    display: grid;
+    grid-template-columns: minmax(8.5rem, 0.32fr) minmax(0, 1fr);
+    gap: 1.2rem;
+    max-height: calc(100% - 3.1rem);
+    overflow-y: auto;
+    padding: 1.1rem 3.2rem 1.1rem 1.15rem;
+    border: 1px solid var(--ink);
+    background: rgba(244, 241, 232, 0.96);
+    box-shadow: 0 0.45rem 1.4rem rgba(23, 23, 23, 0.2);
+    backdrop-filter: blur(8px);
+}
+
+.percorso-narrativo-close {
+    position: absolute;
+    top: 0.35rem;
+    right: 0.35rem;
+    width: 2.75rem;
+    height: 2.75rem;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--ink);
+    font-size: 1.6rem;
+    cursor: pointer;
+}
+
+.percorso-narrativo-linea {
+    position: relative;
+    display: grid;
+    align-content: center;
+    gap: 0.55rem;
+    padding: 0.25rem 0;
+}
+
+.percorso-narrativo-linea::before {
+    position: absolute;
+    top: 1.15rem;
+    bottom: 1.15rem;
+    left: 0.55rem;
+    width: 1px;
+    background: var(--ink);
+    content: "";
+    opacity: 0.45;
+}
+
+.percorso-narrativo-punto {
+    position: relative;
+    display: grid;
+    grid-template-columns: 1.1rem minmax(0, 1fr);
+    column-gap: 0.55rem;
+    align-items: center;
+    min-height: 2.75rem;
+    padding: 0.35rem 0.4rem 0.35rem 0;
+    border: 0;
+    background: transparent;
+    color: var(--ink);
+    font: inherit;
+    font-size: 0.82rem;
+    text-align: left;
+    cursor: pointer;
+}
+
+.percorso-narrativo-punto small {
+    grid-column: 2;
+    margin-top: -0.25rem;
+    font-size: 0.68rem;
+    opacity: 0.62;
+}
+
+.percorso-narrativo-nodo {
+    position: relative;
+    z-index: 1;
+    display: block;
+    width: 0.75rem;
+    height: 0.75rem;
+    justify-self: center;
+    border: 1px solid var(--ink);
+    border-radius: 50%;
+    background: var(--paper);
+}
+
+.percorso-narrativo-punto:hover,
+.percorso-narrativo-punto:focus-visible {
+    outline: none;
+    text-decoration: underline;
+    text-underline-offset: 0.15em;
+}
+
+.percorso-narrativo-punto.attivo .percorso-narrativo-nodo {
+    background: var(--ink);
+    box-shadow: 0 0 0 0.2rem var(--paper), 0 0 0 0.28rem var(--ink);
+}
+
+.percorso-narrativo-punto.attivo {
+    font-weight: 700;
+}
+
+.percorso-narrativo-scheda {
+    align-self: center;
+}
+
+.percorso-narrativo-verso {
+    margin: 0 0 0.35rem;
+    font-size: 0.76rem;
+    font-style: italic;
+    opacity: 0.7;
+}
+
+.percorso-narrativo-scheda h2 {
+    margin: 0 0 0.55rem;
+    font-size: 1.15rem;
+}
+
+.percorso-narrativo-scheda > p:not(.percorso-narrativo-verso) {
+    margin: 0;
+    font-size: 0.88rem;
+    line-height: 1.5;
+}
+
+.percorso-narrativo-azioni {
+    display: flex;
+    gap: 0.55rem;
+    justify-content: flex-end;
+    margin-top: 0.9rem;
+}
+
+.percorso-narrativo-azioni button {
+    min-height: 2.75rem;
+    padding: 0.55rem 0.75rem;
+    border: 1px solid var(--ink);
+    background: transparent;
+    color: var(--ink);
+    font: inherit;
+    font-size: 0.78rem;
+    cursor: pointer;
+}
+
+.percorso-narrativo-azioni button:hover,
+.percorso-narrativo-azioni button:focus-visible {
+    background: var(--ink);
+    color: var(--paper);
+}
+
+.percorso-narrativo-azioni button:disabled {
+    cursor: default;
+    opacity: 0.38;
 }
 
 #map .leaflet-interactive,
@@ -1146,6 +1597,119 @@ body.poesia-aperta {
     margin: 0 0 3rem;
 }
 
+.admin-riepilogo,
+.admin-strumenti {
+    margin: 0 0 2.5rem;
+}
+
+.admin-riepilogo > h2,
+.admin-strumenti > h2 {
+    margin: 0 0 1rem;
+    font-size: 1.2rem;
+}
+
+.admin-riepilogo-griglia {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 0.65rem;
+}
+
+.admin-riepilogo-griglia button,
+.admin-riepilogo-griglia > div {
+    display: grid;
+    min-height: 6.5rem;
+    padding: 0.85rem;
+    place-content: center;
+    border: 1px solid var(--line);
+    background: transparent;
+    color: var(--ink);
+    text-align: center;
+}
+
+.admin-riepilogo-griglia button {
+    cursor: pointer;
+}
+
+.admin-riepilogo-griglia button:hover,
+.admin-riepilogo-griglia button:focus-visible {
+    outline: none;
+    border-color: var(--ink);
+    background: var(--ink);
+    color: var(--paper);
+}
+
+.admin-riepilogo-griglia strong {
+    display: block;
+    font-size: 1.65rem;
+    line-height: 1;
+}
+
+.admin-riepilogo-griglia span {
+    display: block;
+    margin-top: 0.45rem;
+    font-size: 0.75rem;
+    line-height: 1.25;
+}
+
+.admin-strumenti {
+    display: grid;
+    gap: 0.55rem;
+}
+
+.admin-strumenti label {
+    font-size: 0.82rem;
+    font-weight: 700;
+}
+
+.admin-strumenti input {
+    width: 100%;
+    min-height: 2.75rem;
+    padding: 0.7rem 0.85rem;
+    border: 1px solid var(--ink);
+    background: transparent;
+    color: var(--ink);
+}
+
+.admin-export-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.65rem;
+    margin-top: 0.35rem;
+}
+
+.admin-export-actions button {
+    min-height: 2.75rem;
+    padding: 0.65rem 0.9rem;
+    border: 1px solid var(--ink);
+    background: transparent;
+    color: var(--ink);
+    font: inherit;
+    font-size: 0.85rem;
+    cursor: pointer;
+}
+
+.admin-export-actions button:hover,
+.admin-export-actions button:focus-visible {
+    background: var(--ink);
+    color: var(--paper);
+}
+
+.admin-export-actions button:disabled {
+    cursor: wait;
+    opacity: 0.55;
+}
+
+.admin-export-status {
+    min-height: 1.4em;
+    margin: 0;
+    font-size: 0.8rem;
+}
+
+.admin-archive-meta {
+    padding-left: 0.65rem;
+    border-left: 2px solid var(--ink);
+}
+
 .admin-contatti > h2 {
     margin: 0 0 1rem;
     font-size: 1.2rem;
@@ -1160,6 +1724,92 @@ body.poesia-aperta {
 
 .admin-contatto-email {
     color: inherit;
+}
+
+/* Archivio pubblico */
+
+.archivio {
+    width: min(760px, calc(100% - 4rem));
+    margin: 0 auto;
+    padding: 8vh 0 14vh;
+}
+
+.archivio-intro {
+    width: min(650px, 100%);
+    margin: 0 auto 2rem;
+    font-size: 1.05rem;
+    line-height: 1.75;
+}
+
+.archivio-strumenti {
+    display: grid;
+    gap: 0.45rem;
+    margin-bottom: 1rem;
+}
+
+.archivio-strumenti label {
+    font-size: 0.85rem;
+    font-weight: 700;
+}
+
+.archivio-strumenti input {
+    width: 100%;
+    min-height: 2.75rem;
+    padding: 0.7rem 0.85rem;
+    border: 1px solid var(--ink);
+    background: transparent;
+    color: var(--ink);
+}
+
+.archivio-status {
+    margin: 0 0 1rem;
+    font-size: 0.84rem;
+    opacity: 0.7;
+}
+
+.archivio-lista {
+    display: grid;
+    gap: 1.25rem;
+}
+
+.archivio-lista article {
+    padding: 1.2rem 0 0;
+    border-top: 1px solid var(--line);
+}
+
+.archivio-lista h2 {
+    margin: 0 0 0.6rem;
+    font-size: 1rem;
+}
+
+.archivio-lista p {
+    margin: 0 0 0.75rem;
+    white-space: pre-wrap;
+}
+
+.archivio-lista time {
+    display: block;
+    font-size: 0.78rem;
+    opacity: 0.65;
+}
+
+.archivio-altro {
+    display: block;
+    min-height: 2.75rem;
+    margin: 2rem auto 0;
+    padding: 0.65rem 1rem;
+    border: 1px solid var(--ink);
+    background: transparent;
+    color: var(--ink);
+    font: inherit;
+    font-size: 0.85rem;
+    cursor: pointer;
+}
+
+.archivio-altro:hover,
+.archivio-altro:focus-visible {
+    background: var(--ink);
+    color: var(--paper);
 }
 
 /* Responsive */
@@ -1285,7 +1935,8 @@ body.poesia-aperta {
     }
 
     .autore,
-    .progetto {
+    .progetto,
+    .archivio {
         width: 100%;
         padding-top: 6vh;
         padding-right: 7vw;
@@ -1329,8 +1980,84 @@ body.poesia-aperta {
         align-items: stretch;
     }
 
+    .admin-riepilogo-griglia {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .admin-riepilogo-griglia > :last-child {
+        grid-column: 1 / -1;
+    }
+
+    .admin-export-actions {
+        display: grid;
+        grid-template-columns: 1fr;
+    }
+
     .sezione-mappa {
         width: calc(100% - 2rem);
+        margin-top: 0;
+    }
+
+    .mappa-guida {
+        padding-right: 3.25rem;
+    }
+
+    .mappa-strumenti {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .mappa-strumenti button,
+    .elenco-mappa-lista button,
+    .messaggio-archivio-button,
+    .leaflet-control-zoom a,
+    .leaflet-control-layers-toggle,
+    .leaflet-control-layers label {
+        min-height: 44px;
+    }
+
+    .mappa-strumenti button {
+        width: 100%;
+    }
+
+    .percorso-narrativo {
+        right: 0.55rem;
+        bottom: 1.9rem;
+        left: 0.55rem;
+        grid-template-columns: minmax(6.8rem, 0.35fr) minmax(0, 1fr);
+        gap: 0.75rem;
+        max-height: calc(100% - 2.8rem);
+        padding: 0.85rem 2.85rem 0.85rem 0.85rem;
+    }
+
+    .percorso-narrativo-scheda > p:not(.percorso-narrativo-verso) {
+        font-size: 0.8rem;
+        line-height: 1.42;
+    }
+
+    .percorso-narrativo-azioni {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .legenda-mappa ul,
+    .elenco-mappa-lista {
+        grid-template-columns: 1fr;
+    }
+
+    .elenco-mappa-lista article:nth-child(odd) {
+        border-right: 0;
+    }
+
+    .leaflet-control-layers label {
+        display: flex;
+        align-items: center;
+        padding: 0.35rem 0;
+    }
+
+    .leaflet-control-layers-selector {
+        width: 1.25rem;
+        height: 1.25rem;
         margin-top: 0;
     }
 
@@ -1373,6 +2100,33 @@ body.poesia-aperta {
     .rientro-massimo {
         margin-left: 4rem;
         max-width: calc(100% - 4rem);
+    }
+
+    .mappa-strumenti {
+        grid-template-columns: 1fr;
+    }
+
+    .percorso-narrativo {
+        grid-template-columns: minmax(5.4rem, 0.34fr) minmax(0, 1fr);
+        gap: 0.5rem;
+        padding-left: 0.65rem;
+    }
+
+    .percorso-narrativo-linea {
+        gap: 0.35rem;
+    }
+
+    .percorso-narrativo-punto {
+        padding-right: 0.15rem;
+        font-size: 0.74rem;
+    }
+
+    .percorso-narrativo-punto small {
+        font-size: 0.64rem;
+    }
+
+    .percorso-narrativo-azioni {
+        grid-template-columns: 1fr;
     }
 }
 

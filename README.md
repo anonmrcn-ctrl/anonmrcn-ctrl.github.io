@@ -6,8 +6,9 @@ Sito GitHub Pages del progetto nnMrcn.
 
 - `index.html` — poesia
 - `autore.html` — autore
-- `progetto.html` — progetto, mappa, percorsi, accesso e messaggi
-- `admin.html` — area di moderazione non linkata pubblicamente
+- `progetto.html` — progetto, confronto 1975–oggi, percorso narrativo, mappa, accesso e messaggi
+- `archivio.html` — archivio anonimo dei messaggi pubblicati con doppio consenso
+- `admin.html` — moderazione, riepilogo, ricerca ed esportazione dei messaggi
 - `style.css` — stili comuni del sito
 - `messaggistica.css` — selezione dei destinatari e messaggi sulla mappa
 - `percorsi.css` — controlli della mappa, percorsi e schede dei luoghi
@@ -15,6 +16,8 @@ Sito GitHub Pages del progetto nnMrcn.
 - `api.js` — richieste HTTP condivise verso il backend
 - `mappa.js` — dati geografici condivisi ed estensioni della mappa
 - `progetto.js` — mappa, paesaggi, login e messaggistica
+- `archivio.js` — caricamento, ricerca e paginazione dell’archivio pubblico
+- `analytics.js` — attivazione facoltativa di Cloudflare Web Analytics
 - `percorsi.js` — percorsi, luoghi rilevanti e livelli paesaggistici
 - `marcon-da-sud.js` — percorso aggiuntivo Marcon da sud
 - `cave-rilevanti.js` — cave integrate tra i luoghi rilevanti
@@ -35,5 +38,10 @@ Sito GitHub Pages del progetto nnMrcn.
 
 Il backend Cloudflare Worker è nella cartella `worker/`.
 Le istruzioni di configurazione sono in `worker/README.md`.
+
+Cloudflare Web Analytics viene caricato soltanto quando
+`NNMRCN_ANALYTICS_TOKEN` contiene il token pubblico assegnato al sito. Il valore
+si imposta in `config.js`; con il campo vuoto non viene eseguita alcuna richiesta
+di analisi.
 
 Le locations private, le password e i secret non devono essere salvati nel repository pubblico.

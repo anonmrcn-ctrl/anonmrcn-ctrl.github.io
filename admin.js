@@ -14,8 +14,18 @@
     const refresh = document.getElementById("adminRefresh");
     const pushButton = document.getElementById("adminPushButton");
     const pushStatus = document.getElementById("adminPushStatus");
+    const search = document.getElementById("adminSearch");
+    const exportCsv = document.getElementById("adminExportCsv");
+    const exportJson = document.getElementById("adminExportJson");
+    const exportStatus = document.getElementById("adminExportStatus");
+    const countPending = document.getElementById("adminCountPending");
+    const countDelivery = document.getElementById("adminCountDelivery");
+    const countPublishable = document.getElementById("adminCountPublishable");
+    const countPublic = document.getElementById("adminCountPublic");
+    const countContacts = document.getElementById("adminCountContacts");
 
     let adminToken = sessionStorage.getItem(TOKEN_KEY) || "";
+    let loadedMessages = [];
 
     const pushNotifications = window.NNMRCN_NOTIFICHE.create({
         button: pushButton,
@@ -48,11 +58,15 @@
                 `/api/admin/messages?status=${encodeURIComponent(filter.value)}`
             );
 
-            render(data.messages || []);
+            loadedMessages = data.messages || [];
+            renderCurrentMessages();
             panel.hidden = false;
             statusText.textContent = "";
-            await loadContactMessages();
-            await pushNotifications.sync();
+            await Promise.all([
+                loadContactMessages(),
+                loadSummary(),
+                pushNotifications.sync()
+            ]);
         } catch (error) {
             if (error.status === 401) {
                 panel.hidden = true;
@@ -63,6 +77,44 @@
             } else {
                 showListMessage("Errore nel caricamento.");
             }
+        }
+    }
+
+    function renderCurrentMessages() {
+        const query = search.value.trim().toLocaleLowerCase("it");
+        const visible = query
+            ? loadedMessages.filter((message) => [
+                message.text,
+                message.senderAddress,
+                message.recipientAddress,
+                message.status,
+                message.deliveryType
+            ].some((value) =>
+                String(value || "").toLocaleLowerCase("it").includes(query)
+            ))
+            : loadedMessages;
+
+        render(visible);
+    }
+
+    async function loadSummary() {
+        try {
+            const data = await request("/api/admin/summary");
+            countPending.textContent = String(data.pendingOnline || 0);
+            countDelivery.textContent = String(data.pendingDelivery || 0);
+            countPublishable.textContent = String(data.publishable || 0);
+            countPublic.textContent = String(data.public || 0);
+            countContacts.textContent = String(data.unreadContacts || 0);
+        } catch (_) {
+            [
+                countPending,
+                countDelivery,
+                countPublishable,
+                countPublic,
+                countContacts
+            ].forEach((element) => {
+                element.textContent = "–";
+            });
         }
     }
 
@@ -178,7 +230,10 @@
                     body: JSON.stringify({ action: "read" })
                 });
 
-                await loadContactMessages();
+                await Promise.all([
+                    loadContactMessages(),
+                    loadSummary()
+                ]);
             } catch (_) {
                 statusText.textContent =
                     "Non è stato possibile aggiornare il messaggio diretto.";
@@ -218,6 +273,10 @@
                 message.revealSender
                     ? "Il destinatario vedrà la location del mittente."
                     : "Il mittente resterà anonimo al destinatario.";
+
+            const archive = document.createElement("p");
+            archive.className = "admin-meta admin-archive-meta";
+            archive.textContent = archiveStatusText(message);
 
             const state = document.createElement("p");
             state.className = "admin-meta";
@@ -260,10 +319,29 @@
                 );
             }
 
+            if (
+                message.deliveryType === "online" &&
+                ["approved", "read"].includes(message.status) &&
+                message.senderPublicConsent &&
+                message.recipientPublicConsent &&
+                !message.isPublic
+            ) {
+                actions.appendChild(
+                    actionButton(message.id, "publish", "Pubblica nell’archivio")
+                );
+            }
+
+            if (message.isPublic) {
+                actions.appendChild(
+                    actionButton(message.id, "unpublish", "Rimuovi dall’archivio")
+                );
+            }
+
             article.append(
                 title,
                 type,
                 sender,
+                archive,
                 state,
                 date,
                 text,
@@ -272,6 +350,26 @@
 
             list.appendChild(article);
         });
+    }
+
+    function archiveStatusText(message) {
+        if (message.deliveryType !== "online") {
+            return "Archivio pubblico: non previsto per la consegna fisica.";
+        }
+
+        if (message.isPublic) {
+            return "Archivio pubblico: pubblicato.";
+        }
+
+        if (message.senderPublicConsent && message.recipientPublicConsent) {
+            return "Archivio pubblico: entrambi i consensi ricevuti.";
+        }
+
+        if (message.senderPublicConsent) {
+            return "Archivio pubblico: manca il consenso del destinatario.";
+        }
+
+        return "Archivio pubblico: il mittente non ha dato il consenso.";
     }
 
     function actionButton(id, action, label) {
@@ -301,6 +399,51 @@
         return button;
     }
 
+    async function downloadExport(format) {
+        const button = format === "json" ? exportJson : exportCsv;
+        const extension = format === "json" ? "json" : "csv";
+
+        button.disabled = true;
+        exportStatus.textContent = "Preparazione dell’esportazione…";
+
+        try {
+            const response = await fetch(
+                `${api.baseUrl}/api/admin/export?format=${format}`,
+                {
+                    headers: {
+                        "X-Admin-Token": adminToken,
+                        "Accept": format === "json"
+                            ? "application/json"
+                            : "text/csv"
+                    }
+                }
+            );
+
+            if (!response.ok) {
+                const error = await response.json().catch(() => null);
+                throw new Error(error?.error || "Esportazione non riuscita.");
+            }
+
+            const blob = await response.blob();
+            const objectUrl = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            const date = new Date().toISOString().slice(0, 10);
+
+            link.href = objectUrl;
+            link.download = `nnmrcn-messaggi-${date}.${extension}`;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+            exportStatus.textContent = "Esportazione completata.";
+        } catch (error) {
+            exportStatus.textContent =
+                error.message || "Non è stato possibile esportare i messaggi.";
+        } finally {
+            button.disabled = false;
+        }
+    }
+
     form.addEventListener("submit", async (event) => {
         event.preventDefault();
 
@@ -317,6 +460,16 @@
 
     refresh.addEventListener("click", loadMessages);
     filter.addEventListener("change", loadMessages);
+    search.addEventListener("input", renderCurrentMessages);
+    exportCsv.addEventListener("click", () => downloadExport("csv"));
+    exportJson.addEventListener("click", () => downloadExport("json"));
+
+    document.querySelectorAll("[data-admin-filter]").forEach((button) => {
+        button.addEventListener("click", () => {
+            filter.value = button.dataset.adminFilter;
+            loadMessages();
+        });
+    });
 
     if (adminToken) {
         loadMessages();

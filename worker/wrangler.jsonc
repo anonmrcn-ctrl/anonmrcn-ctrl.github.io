@@ -2,7 +2,7 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "nnmrcn-rete",
   "main": "src/index.js",
-  "compatibility_date": "2026-08-24",
+  "compatibility_date": "2026-08-26",
   "workers_dev": true,
   "observability": {
     "enabled": true,
@@ -15,7 +15,8 @@
     {
       "binding": "DB",
       "database_name": "nnmrcn-rete",
-      "database_id": "43916c45-c2d5-47da-95f8-3577f421821f"
+      "database_id": "43916c45-c2d5-47da-95f8-3577f421821f",
+      "migrations_dir": "migrations"
     }
   ]
 }

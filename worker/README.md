@@ -12,7 +12,9 @@ Apri Cloudflare → **Storage & databases** → **D1 SQL Database** e seleziona
 Apri **Console** ed esegui innanzitutto il contenuto di `worker/schema.sql`.
 Il Worker aggiunge automaticamente alle installazioni esistenti i campi
 `username` e `is_visible`, usati per il nome pubblico e per la preferenza di
-visibilità della location.
+visibilità della location. Aggiunge inoltre, senza cancellare dati, i campi per
+il consenso e la pubblicazione nell’archivio. La stessa modifica è disponibile
+come migrazione in `worker/migrations/0001_public_archive.sql`.
 
 Se le location non sono ancora presenti, esegui successivamente il contenuto del
 file privato `nnmrcn_seed_private_d1_20260823.sql` aggiornato. Contiene le 20
@@ -100,6 +102,36 @@ I messaggi online entrano nello stato `pending` e diventano visibili al
 destinatario solo dopo l'approvazione. Le lettere fisiche entrano nello stato
 `pending_delivery` e possono essere segnate come consegnate. Ogni location può
 inviare al massimo cinque messaggi ogni ora.
+
+La pubblicazione nell’archivio richiede tre passaggi separati: consenso del
+mittente durante l’invio, consenso del destinatario dalla propria posta e
+conferma finale dell’amministratore. L’endpoint pubblico restituisce soltanto
+testo e date, senza indirizzi o coordinate. Il destinatario può revocare il
+consenso anche dopo la pubblicazione: il messaggio viene rimosso immediatamente
+dall’archivio.
+
+Il pannello amministrativo mostra i conteggi delle attività da gestire, consente
+la ricerca nella vista corrente e permette di esportare fino a 5.000 messaggi in
+CSV o JSON. I campi CSV che potrebbero essere interpretati come formule vengono
+neutralizzati durante l’esportazione.
+
+L’esportazione JSON può essere conservata come copia manuale dei messaggi. D1
+mantiene inoltre automaticamente la cronologia Time Travel. Per ottenere il
+bookmark corrente, dalla cartella `worker/` esegui:
+
+```sh
+npx wrangler d1 time-travel info nnmrcn-rete
+```
+
+Un ripristino sovrascrive il database e va eseguito soltanto dopo aver verificato
+il bookmark o il timestamp desiderato:
+
+```sh
+npx wrangler d1 time-travel restore nnmrcn-rete --bookmark=BOOKMARK
+```
+
+La procedura e i limiti di conservazione aggiornati sono descritti nella
+[documentazione ufficiale di D1](https://developers.cloudflare.com/d1/reference/time-travel/).
 
 Le richieste di codice inviate dalla pagina del progetto compaiono tra i
 messaggi diretti con username, indirizzo e, se selezionato, un collegamento al

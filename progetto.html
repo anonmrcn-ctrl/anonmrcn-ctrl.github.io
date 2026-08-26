@@ -53,6 +53,7 @@
             <a href="./index.html">La poesia</a>
             <a href="./autore.html">L’autore</a>
             <a href="./progetto.html" class="voce-attiva" aria-current="page">Il progetto</a>
+            <a href="./archivio.html">Archivio</a>
         </div>
 
         <section class="accesso-rete menu-accesso" id="accessoLocations" aria-labelledby="accessoTitolo">
@@ -152,7 +153,7 @@
                 </p>
 
                 <p>
-                    non hai ricevuto la poesia ma vuoi comunque inviare messaggi?
+                    Non hai ricevuto la poesia ma vuoi comunque inviare messaggi?
                     <a
                         class="contatti-toggle"
                         href="#richiestaCodiceForm"
@@ -286,6 +287,21 @@
         </section>
 
         <section class="sezione-mappa">
+            <aside class="mappa-guida" id="mappaGuida" aria-labelledby="mappaGuidaTitolo">
+                <button
+                    class="mappa-guida-close"
+                    id="mappaGuidaClose"
+                    type="button"
+                    aria-label="Chiudi la guida"
+                >×</button>
+                <h2 id="mappaGuidaTitolo">Come esplorare la mappa</h2>
+                <ol>
+                    <li>Confronta il territorio attuale con quello del 1975.</li>
+                    <li>Apri i livelli per mostrare percorsi, luoghi, fiumi e cave.</li>
+                    <li>Tocca un elemento della mappa per leggerne informazioni e collegamenti.</li>
+                </ol>
+            </aside>
+
             <div class="messaggistica-mappa" id="messaggisticaMappa" hidden>
                 <button
                     class="mappa-messaggio-button"
@@ -346,7 +362,116 @@
                 </section>
             </div>
 
-            <div id="map" aria-label="Mappa interattiva dei luoghi del progetto"></div>
+            <div class="mappa-strumenti" aria-label="Strumenti della mappa">
+                <button
+                    id="esploraPoesiaButton"
+                    type="button"
+                    aria-pressed="false"
+                    aria-controls="percorsoNarrativo"
+                >Esplora la poesia</button>
+                <button
+                    id="confrontoMappaButton"
+                    type="button"
+                    aria-pressed="false"
+                    aria-controls="confrontoMappaPanel"
+                >Confronta 1975–oggi</button>
+                <button id="geolocalizzaButton" type="button">Dove sono</button>
+                <button
+                    id="legendaMappaButton"
+                    type="button"
+                    aria-expanded="false"
+                    aria-controls="legendaMappa"
+                >Legenda</button>
+                <button
+                    id="elencoMappaButton"
+                    type="button"
+                    aria-expanded="false"
+                    aria-controls="elencoMappa"
+                >Elenco dei luoghi</button>
+            </div>
+
+            <p class="mappa-strumenti-status" id="mappaStrumentiStatus" aria-live="polite"></p>
+
+            <div class="mappa-pannello confronto-mappa-panel" id="confrontoMappaPanel" hidden>
+                <label for="confrontoMappaRange">
+                    Sposta il cursore per confrontare il 1975 con oggi
+                </label>
+                <div class="confronto-mappa-etichette" aria-hidden="true">
+                    <span>1975</span>
+                    <span>Oggi</span>
+                </div>
+                <input
+                    id="confrontoMappaRange"
+                    type="range"
+                    min="0"
+                    max="100"
+                    value="50"
+                    aria-valuetext="Metà mappa del 1975 e metà mappa attuale"
+                >
+            </div>
+
+            <section class="mappa-pannello legenda-mappa" id="legendaMappa" hidden aria-labelledby="legendaMappaTitolo">
+                <h2 id="legendaMappaTitolo">Legenda</h2>
+                <ul>
+                    <li><span class="legenda-segno legenda-1975"></span>Mappa storica del 1975</li>
+                    <li><span class="legenda-segno legenda-acqua"></span>Fiumi e corsi d’acqua</li>
+                    <li><span class="legenda-segno legenda-cava"></span>Cave</li>
+                    <li><span class="legenda-segno legenda-percorso"></span>Percorsi proposti</li>
+                    <li><span class="legenda-segno legenda-luogo"></span>Luoghi rilevanti</li>
+                </ul>
+            </section>
+
+            <section class="mappa-pannello elenco-mappa" id="elencoMappa" hidden aria-labelledby="elencoMappaTitolo">
+                <div class="elenco-mappa-intestazione">
+                    <h2 id="elencoMappaTitolo">Luoghi e paesaggi</h2>
+                    <p>Alternativa testuale alla consultazione della mappa.</p>
+                </div>
+                <div class="elenco-mappa-lista" id="elencoMappaLista">
+                    <p>Caricamento…</p>
+                </div>
+            </section>
+
+            <div class="mappa-contenitore">
+                <div
+                    id="map"
+                    role="region"
+                    aria-label="Mappa interattiva dei luoghi del progetto"
+                ></div>
+                <div class="confronto-mappa-divisore" id="confrontoMappaDivisore" hidden aria-hidden="true">
+                    <span></span>
+                </div>
+
+                <section
+                    class="percorso-narrativo"
+                    id="percorsoNarrativo"
+                    aria-labelledby="percorsoNarrativoTitolo"
+                    hidden
+                >
+                    <button
+                        class="percorso-narrativo-close"
+                        id="percorsoNarrativoClose"
+                        type="button"
+                        aria-label="Chiudi il percorso narrativo"
+                    >×</button>
+
+                    <nav
+                        class="percorso-narrativo-linea"
+                        id="percorsoNarrativoLinea"
+                        aria-label="Passaggi della poesia"
+                    ></nav>
+
+                    <article class="percorso-narrativo-scheda" aria-live="polite">
+                        <p class="percorso-narrativo-verso" id="percorsoNarrativoVerso"></p>
+                        <h2 id="percorsoNarrativoTitolo"></h2>
+                        <p id="percorsoNarrativoTesto"></p>
+
+                        <div class="percorso-narrativo-azioni">
+                            <button id="percorsoNarrativoIndietro" type="button">Precedente</button>
+                            <button id="percorsoNarrativoAvanti" type="button">Successivo</button>
+                        </div>
+                    </article>
+                </section>
+            </div>
         </section>
     </main>
 
@@ -425,6 +550,13 @@
                     </label>
                 </fieldset>
 
+                <label class="messaggio-archivio" id="messaggioArchivioLabel">
+                    <input id="messaggioArchivio" type="checkbox" name="archivioPubblico">
+                    Autorizzo la possibile pubblicazione anonima del messaggio
+                    nell’archivio pubblico. Serviranno anche il consenso del
+                    destinatario e l’approvazione dell’admin.
+                </label>
+
                 <button id="messaggioInvia" type="submit">Invia</button>
                 <p class="messaggio-status" id="messaggioStatus" aria-live="polite"></p>
             </form>
@@ -435,6 +567,7 @@
     <script src="https://unpkg.com/pmtiles@4.4.1/dist/pmtiles.js"></script>
     <script src="./pmtiles-overzoom.js"></script>
     <script src="./config.js"></script>
+    <script src="./analytics.js"></script>
     <script src="./api.js"></script>
     <script src="./richiesta-codice.js"></script>
     <script src="./notifiche.js"></script>

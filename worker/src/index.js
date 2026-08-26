@@ -40,7 +40,6 @@ const CONTACT_STORAGE_STATEMENTS = Object.freeze([
     `CREATE INDEX IF NOT EXISTS idx_contact_messages_admin
         ON contact_messages(status, created_at)`
 ]);
-let locationProfileStoragePromise = null;
 const LOCATION_PROFILE_COLUMNS = Object.freeze([
     {
         name: "username",
@@ -50,6 +49,27 @@ const LOCATION_PROFILE_COLUMNS = Object.freeze([
         name: "is_visible",
         statement:
             "ALTER TABLE locations ADD COLUMN is_visible INTEGER NOT NULL DEFAULT 1 CHECK (is_visible IN (0, 1))"
+    }
+]);
+const MESSAGE_ARCHIVE_COLUMNS = Object.freeze([
+    {
+        name: "sender_public_consent",
+        statement:
+            "ALTER TABLE messages ADD COLUMN sender_public_consent INTEGER NOT NULL DEFAULT 0 CHECK (sender_public_consent IN (0, 1))"
+    },
+    {
+        name: "recipient_public_consent",
+        statement:
+            "ALTER TABLE messages ADD COLUMN recipient_public_consent INTEGER NOT NULL DEFAULT 0 CHECK (recipient_public_consent IN (0, 1))"
+    },
+    {
+        name: "is_public",
+        statement:
+            "ALTER TABLE messages ADD COLUMN is_public INTEGER NOT NULL DEFAULT 0 CHECK (is_public IN (0, 1))"
+    },
+    {
+        name: "published_at",
+        statement: "ALTER TABLE messages ADD COLUMN published_at INTEGER"
     }
 ]);
 
@@ -92,6 +112,10 @@ export default {
                 return await listMessages(request, env);
             }
 
+            if (request.method === "GET" && path === "/api/public/messages") {
+                return await listPublicMessages(request, env, url);
+            }
+
             if (request.method === "POST" && path === "/api/messages") {
                 return await createMessage(request, env, ctx);
             }
@@ -113,11 +137,19 @@ export default {
 
             if (request.method === "PATCH" && /^\/api\/messages\/\d+$/.test(path)) {
                 const id = Number(path.split("/").pop());
-                return await markMessage(request, env, id);
+                return await markMessage(request, env, ctx, id);
             }
 
             if (request.method === "GET" && path === "/api/admin/messages") {
                 return await adminListMessages(request, env, url);
+            }
+
+            if (request.method === "GET" && path === "/api/admin/summary") {
+                return await adminSummary(request, env);
+            }
+
+            if (request.method === "GET" && path === "/api/admin/export") {
+                return await adminExportMessages(request, env, url);
             }
 
             if (request.method === "GET" && path === "/api/admin/contact-messages") {
@@ -416,6 +448,8 @@ async function listMessages(request, env) {
         return unauthorized(request, env);
     }
 
+    await ensureMessageArchiveStorage(env);
+
     const result = await env.DB.prepare(`
         SELECT
             m.id,
@@ -423,6 +457,9 @@ async function listMessages(request, env) {
             m.reveal_sender,
             m.created_at,
             m.status,
+            m.sender_public_consent,
+            m.recipient_public_consent,
+            m.is_public,
             CASE
                 WHEN m.reveal_sender = 1 THEN sender.address
                 ELSE NULL
@@ -444,9 +481,89 @@ async function listMessages(request, env) {
             text: row.text,
             senderAddress: row.sender_address,
             createdAt: row.created_at,
-            status: row.status
+            status: row.status,
+            senderPublicConsent: Boolean(row.sender_public_consent),
+            recipientPublicConsent: Boolean(row.recipient_public_consent),
+            isPublic: Boolean(row.is_public)
         }))
     });
+}
+
+async function listPublicMessages(request, env, url) {
+    await ensureMessageArchiveStorage(env);
+
+    const requestedLimit = Number(url.searchParams.get("limit") || 50);
+    const limit = Number.isInteger(requestedLimit)
+        ? Math.min(Math.max(requestedLimit, 1), 100)
+        : 50;
+    const cursor = parsePublicArchiveCursor(url.searchParams.get("before"));
+    let cursorCondition = "";
+    const bindings = [];
+
+    if (cursor) {
+        cursorCondition = `
+            AND (
+                published_at < ? OR
+                (published_at = ? AND id < ?)
+            )
+        `;
+        bindings.push(cursor.publishedAt, cursor.publishedAt, cursor.id);
+    }
+
+    bindings.push(limit + 1);
+
+    const result = await env.DB.prepare(`
+        SELECT
+            id,
+            text,
+            created_at,
+            published_at
+        FROM messages
+        WHERE
+            delivery_type = 'online'
+            AND status IN ('approved', 'read')
+            AND sender_public_consent = 1
+            AND recipient_public_consent = 1
+            AND is_public = 1
+            AND published_at IS NOT NULL
+            ${cursorCondition}
+        ORDER BY published_at DESC, id DESC
+        LIMIT ?
+    `).bind(...bindings).all();
+
+    const rows = result.results || [];
+    const hasMore = rows.length > limit;
+    const visibleRows = hasMore ? rows.slice(0, limit) : rows;
+    const last = visibleRows.at(-1);
+
+    return json(request, env, {
+        messages: visibleRows.map((row) => ({
+            id: row.id,
+            text: row.text,
+            createdAt: row.created_at,
+            publishedAt: row.published_at
+        })),
+        nextCursor: hasMore && last
+            ? `${last.published_at}:${last.id}`
+            : null
+    });
+}
+
+function parsePublicArchiveCursor(value) {
+    const [publishedAtText, idText] = String(value || "").split(":");
+    const publishedAt = Number(publishedAtText);
+    const id = Number(idText);
+
+    if (
+        !Number.isInteger(publishedAt) ||
+        publishedAt <= 0 ||
+        !Number.isInteger(id) ||
+        id <= 0
+    ) {
+        return null;
+    }
+
+    return { publishedAt, id };
 }
 
 async function createMessage(request, env, ctx) {
@@ -464,6 +581,8 @@ async function createMessage(request, env, ctx) {
         body?.deliveryType === "physical"
             ? "physical"
             : "online";
+    const publicConsent =
+        deliveryType === "online" && body?.publicConsent === true;
 
     if (!Number.isInteger(recipientId) || recipientId <= 0) {
         return json(request, env, {
@@ -521,6 +640,8 @@ async function createMessage(request, env, ctx) {
             ? "pending_delivery"
             : "pending";
 
+    await ensureMessageArchiveStorage(env);
+
     const result = await env.DB.prepare(`
         INSERT INTO messages (
             sender_location_id,
@@ -529,10 +650,11 @@ async function createMessage(request, env, ctx) {
             reveal_sender,
             delivery_type,
             status,
+            sender_public_consent,
             created_at,
             updated_at
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).bind(
         session.location_id,
         recipientId,
@@ -540,6 +662,7 @@ async function createMessage(request, env, ctx) {
         revealSender ? 1 : 0,
         deliveryType,
         status,
+        publicConsent ? 1 : 0,
         now,
         now
     ).run();
@@ -568,7 +691,7 @@ async function createMessage(request, env, ctx) {
     }, 201);
 }
 
-async function markMessage(request, env, messageId) {
+async function markMessage(request, env, ctx, messageId) {
     const session = await requireSession(request, env);
 
     if (!session) {
@@ -576,31 +699,121 @@ async function markMessage(request, env, messageId) {
     }
 
     const body = await readJson(request);
+    const action = body?.action;
 
-    if (body?.action !== "read") {
+    if (!["read", "allow_public", "revoke_public"].includes(action)) {
         return json(request, env, {
             error: "Azione non valida."
         }, 400);
     }
 
-    await env.DB.prepare(`
-        UPDATE messages
-        SET
-            status = 'read',
-            updated_at = ?
+    await ensureMessageArchiveStorage(env);
+
+    const message = await env.DB.prepare(`
+        SELECT
+            id,
+            delivery_type,
+            status,
+            sender_public_consent,
+            recipient_public_consent,
+            is_public
+        FROM messages
         WHERE
             id = ?
             AND recipient_location_id = ?
-            AND delivery_type = 'online'
-            AND status = 'approved'
+        LIMIT 1
     `).bind(
-        Date.now(),
         messageId,
         session.location_id
+    ).first();
+
+    if (!message || message.delivery_type !== "online") {
+        return json(request, env, {
+            error: "Messaggio non trovato."
+        }, 404);
+    }
+
+    if (action === "read") {
+        await env.DB.prepare(`
+            UPDATE messages
+            SET
+                status = 'read',
+                updated_at = ?
+            WHERE
+                id = ?
+                AND recipient_location_id = ?
+                AND delivery_type = 'online'
+                AND status = 'approved'
+        `).bind(
+            Date.now(),
+            messageId,
+            session.location_id
+        ).run();
+
+        return json(request, env, { ok: true });
+    }
+
+    if (!["approved", "read"].includes(message.status)) {
+        return json(request, env, {
+            error: "Il messaggio non è ancora disponibile."
+        }, 409);
+    }
+
+    if (action === "allow_public") {
+        if (!Boolean(message.sender_public_consent)) {
+            return json(request, env, {
+                error: "Il mittente non ha autorizzato la pubblicazione."
+            }, 409);
+        }
+
+        await env.DB.prepare(`
+            UPDATE messages
+            SET
+                recipient_public_consent = 1,
+                updated_at = ?
+            WHERE id = ?
+        `).bind(
+            Date.now(),
+            messageId
+        ).run();
+
+        queuePushNotification(
+            ctx,
+            env,
+            "admin",
+            null,
+            {
+                title: "nnMrcn — archivio",
+                body: "Un messaggio ha ricevuto entrambi i consensi ed è pronto per la pubblicazione.",
+                url: "/admin.html",
+                tag: `nnmrcn-public-${messageId}`
+            }
+        );
+
+        return json(request, env, {
+            ok: true,
+            recipientPublicConsent: true,
+            isPublic: Boolean(message.is_public)
+        });
+    }
+
+    await env.DB.prepare(`
+        UPDATE messages
+        SET
+            recipient_public_consent = 0,
+            is_public = 0,
+            published_at = NULL,
+            updated_at = ?
+        WHERE id = ?
+    `).bind(
+        Date.now(),
+        messageId
     ).run();
 
     return json(request, env, {
-        ok: true
+        ok: true,
+        recipientPublicConsent: false,
+        isPublic: false
     });
 }
 
@@ -927,18 +1140,6 @@ async function ensureContactStorage(env) {
 }
 
 async function ensureLocationProfileStorage(env) {
-    if (!locationProfileStoragePromise) {
-        locationProfileStoragePromise = initializeLocationProfileStorage(env)
-            .catch((error) => {
-                locationProfileStoragePromise = null;
-                throw error;
-            });
-    }
-
-    return locationProfileStoragePromise;
-}
-
-async function initializeLocationProfileStorage(env) {
     const result = await env.DB.prepare("PRAGMA table_info(locations)").all();
     const columns = new Set(
         (result.results || []).map((column) => String(column.name))
@@ -959,10 +1160,203 @@ async function initializeLocationProfileStorage(env) {
     }
 }
 
+async function ensureMessageArchiveStorage(env) {
+    const result = await env.DB.prepare("PRAGMA table_info(messages)").all();
+    const columns = new Set(
+        (result.results || []).map((column) => String(column.name))
+    );
+
+    for (const column of MESSAGE_ARCHIVE_COLUMNS) {
+        if (columns.has(column.name)) {
+            continue;
+        }
+
+        try {
+            await env.DB.prepare(column.statement).run();
+        } catch (error) {
+            if (!/duplicate column name/iu.test(String(error?.message || error))) {
+                throw error;
+            }
+        }
+    }
+
+    await env.DB.prepare(`
+        CREATE INDEX IF NOT EXISTS idx_messages_public_archive
+        ON messages(is_public, published_at, id)
+    `).run();
+}
+
+async function adminSummary(request, env) {
+    if (!(await adminAuthorized(request, env))) {
+        return unauthorized(request, env);
+    }
+
+    await ensureContactStorage(env);
+    await ensureMessageArchiveStorage(env);
+
+    const summary = await env.DB.prepare(`
+        SELECT
+            COALESCE(SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END), 0)
+                AS pending_online,
+            COALESCE(SUM(CASE WHEN status = 'pending_delivery' THEN 1 ELSE 0 END), 0)
+                AS pending_delivery,
+            COALESCE(SUM(CASE WHEN status = 'approved' THEN 1 ELSE 0 END), 0)
+                AS approved,
+            COALESCE(SUM(CASE WHEN status = 'read' THEN 1 ELSE 0 END), 0)
+                AS read_count,
+            COALESCE(SUM(CASE WHEN status = 'delivered' THEN 1 ELSE 0 END), 0)
+                AS delivered,
+            COALESCE(SUM(CASE WHEN status = 'rejected' THEN 1 ELSE 0 END), 0)
+                AS rejected,
+            COALESCE(SUM(
+                CASE
+                    WHEN
+                        delivery_type = 'online' AND
+                        status IN ('approved', 'read') AND
+                        sender_public_consent = 1 AND
+                        recipient_public_consent = 1 AND
+                        is_public = 0
+                    THEN 1
+                    ELSE 0
+                END
+            ), 0) AS publishable,
+            COALESCE(SUM(CASE WHEN is_public = 1 THEN 1 ELSE 0 END), 0)
+                AS public_count,
+            (SELECT COUNT(*) FROM contact_messages WHERE status = 'unread')
+                AS unread_contacts
+        FROM messages
+    `).first();
+
+    return json(request, env, {
+        pendingOnline: Number(summary?.pending_online || 0),
+        pendingDelivery: Number(summary?.pending_delivery || 0),
+        approved: Number(summary?.approved || 0),
+        read: Number(summary?.read_count || 0),
+        delivered: Number(summary?.delivered || 0),
+        rejected: Number(summary?.rejected || 0),
+        publishable: Number(summary?.publishable || 0),
+        public: Number(summary?.public_count || 0),
+        unreadContacts: Number(summary?.unread_contacts || 0)
+    });
+}
+
+async function adminExportMessages(request, env, url) {
+    if (!(await adminAuthorized(request, env))) {
+        return unauthorized(request, env);
+    }
+
+    await ensureMessageArchiveStorage(env);
+
+    const format = url.searchParams.get("format") === "json" ? "json" : "csv";
+    const result = await env.DB.prepare(`
+        SELECT
+            m.id,
+            m.text,
+            m.reveal_sender,
+            m.delivery_type,
+            m.status,
+            m.sender_public_consent,
+            m.recipient_public_consent,
+            m.is_public,
+            m.published_at,
+            m.created_at,
+            m.updated_at,
+            sender.address AS sender_address,
+            recipient.address AS recipient_address
+        FROM messages m
+        JOIN locations sender
+            ON sender.id = m.sender_location_id
+        JOIN locations recipient
+            ON recipient.id = m.recipient_location_id
+        ORDER BY m.created_at DESC
+        LIMIT 5001
+    `).all();
+
+    const allRows = result.results || [];
+    const truncated = allRows.length > 5000;
+    const rows = truncated ? allRows.slice(0, 5000) : allRows;
+    const date = new Date().toISOString().slice(0, 10);
+
+    if (format === "json") {
+        const data = rows.map(exportMessageRow);
+
+        return downloadResponse(
+            request,
+            env,
+            JSON.stringify({ exportedAt: Date.now(), truncated, messages: data }, null, 2),
+            "application/json; charset=utf-8",
+            `nnmrcn-messaggi-${date}.json`,
+            truncated
+        );
+    }
+
+    const headers = [
+        "id",
+        "createdAt",
+        "updatedAt",
+        "senderAddress",
+        "recipientAddress",
+        "text",
+        "revealSender",
+        "deliveryType",
+        "status",
+        "senderPublicConsent",
+        "recipientPublicConsent",
+        "isPublic",
+        "publishedAt"
+    ];
+    const lines = [
+        headers.join(","),
+        ...rows.map((row) => {
+            const message = exportMessageRow(row);
+            return headers.map((key) => csvCell(message[key])).join(",");
+        })
+    ];
+
+    return downloadResponse(
+        request,
+        env,
+        lines.join("\r\n"),
+        "text/csv; charset=utf-8",
+        `nnmrcn-messaggi-${date}.csv`,
+        truncated
+    );
+}
+
+function exportMessageRow(row) {
+    return {
+        id: row.id,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at,
+        senderAddress: row.sender_address,
+        recipientAddress: row.recipient_address,
+        text: row.text,
+        revealSender: Boolean(row.reveal_sender),
+        deliveryType: row.delivery_type,
+        status: row.status,
+        senderPublicConsent: Boolean(row.sender_public_consent),
+        recipientPublicConsent: Boolean(row.recipient_public_consent),
+        isPublic: Boolean(row.is_public),
+        publishedAt: row.published_at
+    };
+}
+
+function csvCell(value) {
+    let text = value === null || value === undefined ? "" : String(value);
+
+    if (/^[=+\-@]/u.test(text)) {
+        text = `'${text}`;
+    }
+
+    return `"${text.replaceAll('"', '""')}"`;
+}
+
 async function adminListMessages(request, env, url) {
     if (!(await adminAuthorized(request, env))) {
         return unauthorized(request, env);
     }
+
+    await ensureMessageArchiveStorage(env);
 
     const status = url.searchParams.get("status") || "active";
     const filterByStatus = MESSAGE_STATUSES.includes(status);
@@ -973,6 +1367,17 @@ async function adminListMessages(request, env, url) {
 
     if (status === "all") {
         where = "";
+    } else if (status === "publishable") {
+        where = `
+            WHERE
+                m.delivery_type = 'online' AND
+                m.status IN ('approved', 'read') AND
+                m.sender_public_consent = 1 AND
+                m.recipient_public_consent = 1 AND
+                m.is_public = 0
+        `;
+    } else if (status === "public") {
+        where = "WHERE m.is_public = 1";
     } else if (filterByStatus) {
         where = "WHERE m.status = ?";
     }
@@ -984,6 +1389,10 @@ async function adminListMessages(request, env, url) {
             m.reveal_sender,
             m.delivery_type,
             m.status,
+            m.sender_public_consent,
+            m.recipient_public_consent,
+            m.is_public,
+            m.published_at,
             m.created_at,
             sender.address AS sender_address,
             recipient.address AS recipient_address
@@ -1010,6 +1419,10 @@ async function adminListMessages(request, env, url) {
             revealSender: Boolean(row.reveal_sender),
             deliveryType: row.delivery_type,
             status: row.status,
+            senderPublicConsent: Boolean(row.sender_public_consent),
+            recipientPublicConsent: Boolean(row.recipient_public_consent),
+            isPublic: Boolean(row.is_public),
+            publishedAt: row.published_at,
             createdAt: row.created_at,
             senderAddress: row.sender_address,
             recipientAddress: row.recipient_address
@@ -1025,11 +1438,16 @@ async function adminUpdateMessage(request, env, ctx, messageId) {
     const body = await readJson(request);
     const action = body?.action;
 
+    await ensureMessageArchiveStorage(env);
+
     const message = await env.DB.prepare(`
         SELECT
             id,
             delivery_type,
             status,
+            sender_public_consent,
+            recipient_public_consent,
+            is_public,
             recipient_location_id
         FROM messages
         WHERE id = ?
@@ -1040,6 +1458,62 @@ async function adminUpdateMessage(request, env, ctx, messageId) {
         return json(request, env, {
             error: "Messaggio non trovato."
         }, 404);
+    }
+
+    if (action === "publish") {
+        if (
+            message.delivery_type !== "online" ||
+            !["approved", "read"].includes(message.status) ||
+            !Boolean(message.sender_public_consent) ||
+            !Boolean(message.recipient_public_consent)
+        ) {
+            return json(request, env, {
+                error: "Il messaggio non dispone di tutti i consensi necessari."
+            }, 409);
+        }
+
+        const publishedAt = Date.now();
+
+        await env.DB.prepare(`
+            UPDATE messages
+            SET
+                is_public = 1,
+                published_at = ?,
+                updated_at = ?
+            WHERE id = ?
+        `).bind(
+            publishedAt,
+            publishedAt,
+            messageId
+        ).run();
+
+        return json(request, env, {
+            ok: true,
+            status: message.status,
+            isPublic: true,
+            publishedAt
+        });
+    }
+
+    if (action === "unpublish" && Boolean(message.is_public)) {
+        await env.DB.prepare(`
+            UPDATE messages
+            SET
+                is_public = 0,
+                published_at = NULL,
+                updated_at = ?
+            WHERE id = ?
+        `).bind(
+            Date.now(),
+            messageId
+        ).run();
+
+        return json(request, env, {
+            ok: true,
+            status: message.status,
+            isPublic: false,
+            publishedAt: null
+        });
     }
 
     let nextStatus = null;
@@ -1419,4 +1893,23 @@ function json(request, env, body, status = 200) {
             }
         }
     );
+}
+
+function downloadResponse(
+    request,
+    env,
+    body,
+    contentType,
+    fileName,
+    truncated = false
+) {
+    return new Response(body, {
+        headers: {
+            "Content-Type": contentType,
+            "Content-Disposition": `attachment; filename="${fileName}"`,
+            "Cache-Control": "no-store",
+            "X-Export-Truncated": truncated ? "1" : "0",
+            ...corsHeaders(request, env)
+        }
+    });
 }

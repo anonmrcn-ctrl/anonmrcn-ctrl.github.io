@@ -49,6 +49,48 @@
                 ></p>
             </section>
 
+            <section class="admin-riepilogo" aria-labelledby="adminRiepilogoTitolo">
+                <h2 id="adminRiepilogoTitolo">Riepilogo</h2>
+                <div class="admin-riepilogo-griglia">
+                    <button type="button" data-admin-filter="pending">
+                        <strong id="adminCountPending">0</strong>
+                        <span>Da approvare</span>
+                    </button>
+                    <button type="button" data-admin-filter="pending_delivery">
+                        <strong id="adminCountDelivery">0</strong>
+                        <span>Da consegnare</span>
+                    </button>
+                    <button type="button" data-admin-filter="publishable">
+                        <strong id="adminCountPublishable">0</strong>
+                        <span>Pubblicabili</span>
+                    </button>
+                    <button type="button" data-admin-filter="public">
+                        <strong id="adminCountPublic">0</strong>
+                        <span>Nell’archivio</span>
+                    </button>
+                    <div>
+                        <strong id="adminCountContacts">0</strong>
+                        <span>Contatti non letti</span>
+                    </div>
+                </div>
+            </section>
+
+            <section class="admin-strumenti" aria-labelledby="adminStrumentiTitolo">
+                <h2 id="adminStrumentiTitolo">Strumenti</h2>
+                <label for="adminSearch">Cerca nei messaggi mostrati</label>
+                <input
+                    id="adminSearch"
+                    type="search"
+                    autocomplete="off"
+                    placeholder="Testo, mittente o destinatario"
+                >
+                <div class="admin-export-actions">
+                    <button id="adminExportCsv" type="button">Esporta CSV</button>
+                    <button id="adminExportJson" type="button">Esporta JSON</button>
+                </div>
+                <p class="admin-export-status" id="adminExportStatus" aria-live="polite"></p>
+            </section>
+
             <section class="admin-contatti" aria-labelledby="adminContattiTitolo">
                 <h2 id="adminContattiTitolo">Messaggi diretti</h2>
                 <div class="admin-list" id="adminContactList"></div>
@@ -63,6 +105,8 @@
                     <option value="pending_delivery">Lettere da consegnare</option>
                     <option value="approved">Online approvati</option>
                     <option value="read">Online letti</option>
+                    <option value="publishable">Pronti per l’archivio</option>
+                    <option value="public">Pubblicati nell’archivio</option>
                     <option value="delivered">Lettere consegnate</option>
                     <option value="rejected">Rifiutati</option>
                     <option value="all">Tutti</option>

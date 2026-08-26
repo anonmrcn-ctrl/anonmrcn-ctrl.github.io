@@ -51,6 +51,13 @@ CREATE TABLE IF NOT EXISTS messages (
                 'rejected'
             )
         ),
+    sender_public_consent INTEGER NOT NULL DEFAULT 0
+        CHECK (sender_public_consent IN (0, 1)),
+    recipient_public_consent INTEGER NOT NULL DEFAULT 0
+        CHECK (recipient_public_consent IN (0, 1)),
+    is_public INTEGER NOT NULL DEFAULT 0
+        CHECK (is_public IN (0, 1)),
+    published_at INTEGER,
     created_at INTEGER NOT NULL,
     updated_at INTEGER NOT NULL,
     FOREIGN KEY (sender_location_id)
@@ -72,6 +79,9 @@ CREATE INDEX IF NOT EXISTS idx_messages_sender_rate
 
 CREATE INDEX IF NOT EXISTS idx_messages_admin
     ON messages(status, created_at);
+
+CREATE INDEX IF NOT EXISTS idx_messages_public_archive
+    ON messages(is_public, published_at, id);
 
 CREATE TABLE IF NOT EXISTS contact_messages (
     id INTEGER PRIMARY KEY AUTOINCREMENT,

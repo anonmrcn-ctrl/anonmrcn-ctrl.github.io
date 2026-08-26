@@ -6,6 +6,38 @@
     const SESSION_KEY = "nnmrcn_session";
     const MAX_MESSAGE_LENGTH = 1500;
     const MAX_BATCH_RECIPIENTS = 5;
+    const NARRATIVE_STEPS = Object.freeze([
+        {
+            verse: "v. 2 — «Il Gajo tra i Praelli»",
+            label: "Gaggio",
+            title: "Il Gajo",
+            lat: 45.55191,
+            lon: 12.31671,
+            zoom: 16,
+            text:
+                "Il toponimo «Gaggio» deriva dal termine longobardo per «boscaglia». Infatti questo territorio, fino ai primi decenni del Novecento, era ricoperto da un fitto bosco. Nella poesia il «Gajo» è da considerarsi come questa ancestrale boscaglia andata perduta."
+        },
+        {
+            verse: "v. 2 — «Il Gajo tra i Praelli»",
+            label: "Praello",
+            title: "I Praelli",
+            lat: 45.53656,
+            lon: 12.32324,
+            zoom: 16,
+            text:
+                "Invece, «Praello» è un termine veneto, diminutivo di «prà», ossia prato. Nella poesia il «Gajo» è «tra i Praelli»: il bosco sta tra i piccoli prati."
+        },
+        {
+            verse: "v. 22 — «all’altezza di Via Alta»",
+            label: "Via Alta",
+            title: "Via Alta",
+            lat: 45.556404,
+            lon: 12.291392,
+            zoom: 15,
+            text:
+                "Via Alta è una delle strade storiche di Marcon, un tempo associata alla «Via Bassa», oggi Via Monte Grappa. Quest’ultima aveva la nomea di diventare impraticabile alla minima pioggia, a differenza di Via Alta."
+        }
+    ]);
 
     const elements = {
         loginForm: document.getElementById("loginForm"),
@@ -51,7 +83,31 @@
         messaggioTesto: document.getElementById("messaggioTesto"),
         messaggioContatore: document.getElementById("messaggioContatore"),
         messaggioInvia: document.getElementById("messaggioInvia"),
-        messaggioStatus: document.getElementById("messaggioStatus")
+        messaggioStatus: document.getElementById("messaggioStatus"),
+        messaggioArchivio: document.getElementById("messaggioArchivio"),
+        messaggioArchivioLabel: document.getElementById("messaggioArchivioLabel"),
+        mappaGuida: document.getElementById("mappaGuida"),
+        mappaGuidaClose: document.getElementById("mappaGuidaClose"),
+        confrontoMappaButton: document.getElementById("confrontoMappaButton"),
+        confrontoMappaPanel: document.getElementById("confrontoMappaPanel"),
+        confrontoMappaRange: document.getElementById("confrontoMappaRange"),
+        confrontoMappaDivisore: document.getElementById("confrontoMappaDivisore"),
+        geolocalizzaButton: document.getElementById("geolocalizzaButton"),
+        legendaMappaButton: document.getElementById("legendaMappaButton"),
+        legendaMappa: document.getElementById("legendaMappa"),
+        elencoMappaButton: document.getElementById("elencoMappaButton"),
+        elencoMappa: document.getElementById("elencoMappa"),
+        elencoMappaLista: document.getElementById("elencoMappaLista"),
+        mappaStrumentiStatus: document.getElementById("mappaStrumentiStatus"),
+        esploraPoesiaButton: document.getElementById("esploraPoesiaButton"),
+        percorsoNarrativo: document.getElementById("percorsoNarrativo"),
+        percorsoNarrativoClose: document.getElementById("percorsoNarrativoClose"),
+        percorsoNarrativoLinea: document.getElementById("percorsoNarrativoLinea"),
+        percorsoNarrativoVerso: document.getElementById("percorsoNarrativoVerso"),
+        percorsoNarrativoTitolo: document.getElementById("percorsoNarrativoTitolo"),
+        percorsoNarrativoTesto: document.getElementById("percorsoNarrativoTesto"),
+        percorsoNarrativoIndietro: document.getElementById("percorsoNarrativoIndietro"),
+        percorsoNarrativoAvanti: document.getElementById("percorsoNarrativoAvanti")
     };
 
     let sessionToken = sessionStorage.getItem(SESSION_KEY) || "";
@@ -60,6 +116,14 @@
     let currentRecipients = [];
     let selectedRecipientIds = new Set();
     let mapRecipientSelectionMode = false;
+    let todayLayer = null;
+    let year1975Layer = null;
+    let historical1975Layer = null;
+    let comparisonActive = false;
+    let userPositionLayer = null;
+    let mapListLoaded = false;
+    let narrativeStepIndex = 0;
+    let narrativeMarker = null;
 
     const pushNotifications = window.NNMRCN_NOTIFICHE.create({
         button: elements.locationPushButton,
@@ -95,7 +159,7 @@
                 "Tiles &copy; Esri — Sources: Esri, Maxar, Earthstar Geographics, and the GIS User Community"
         };
 
-        const today = L.layerGroup([
+        todayLayer = L.layerGroup([
             L.tileLayer(satelliteUrl, satelliteOptions)
         ]);
 
@@ -114,7 +178,7 @@
                 ).href
             );
 
-            const historical1975 = window.pmtiles.leafletRasterLayer(
+            historical1975Layer = window.pmtiles.leafletRasterLayer(
                 archive1975,
                 {
                     pane: "historicalRaster",
@@ -124,26 +188,26 @@
                 }
             );
 
-            historical1975.on("tileerror", (event) => {
+            historical1975Layer.on("tileerror", (event) => {
                 console.error(
                     "Impossibile caricare una tessera della mappa del 1975.",
                     event.error || event
                 );
             });
 
-            year1975Layers.push(historical1975);
+            year1975Layers.push(historical1975Layer);
         } else {
             console.error("PMTiles non è disponibile: il livello 1975 non può essere caricato.");
         }
 
-        const year1975 = L.layerGroup(year1975Layers);
+        year1975Layer = L.layerGroup(year1975Layers);
 
-        today.addTo(instance);
+        todayLayer.addTo(instance);
 
         L.control.layers(
             {
-                "Oggi": today,
-                "1975": year1975
+                "Oggi": todayLayer,
+                "1975": year1975Layer
             },
             null,
             {
@@ -151,7 +215,397 @@
             }
         ).addTo(instance);
 
+        instance.on("baselayerchange", () => {
+            if (comparisonActive) {
+                setComparisonMode(false);
+            }
+        });
+
+        instance.on("move zoom resize", () => {
+            if (comparisonActive) {
+                updateComparisonPosition();
+            }
+        });
+
         return instance;
+    }
+
+    function setComparisonMode(enabled) {
+        if (enabled && !historical1975Layer) {
+            elements.mappaStrumentiStatus.textContent =
+                "Il confronto non è disponibile perché la mappa del 1975 non è stata caricata.";
+            return;
+        }
+
+        comparisonActive = enabled;
+        elements.confrontoMappaButton.setAttribute(
+            "aria-pressed",
+            String(enabled)
+        );
+        elements.confrontoMappaButton.textContent = enabled
+            ? "Chiudi il confronto"
+            : "Confronta 1975–oggi";
+        elements.confrontoMappaPanel.hidden = !enabled;
+        elements.confrontoMappaDivisore.hidden = !enabled;
+
+        if (enabled) {
+            if (year1975Layer && map.hasLayer(year1975Layer)) {
+                map.removeLayer(year1975Layer);
+            }
+
+            if (todayLayer && !map.hasLayer(todayLayer)) {
+                todayLayer.addTo(map);
+            }
+
+            if (!map.hasLayer(historical1975Layer)) {
+                historical1975Layer.addTo(map);
+            }
+
+            updateComparisonPosition();
+            elements.mappaStrumentiStatus.textContent =
+                "Confronto attivo: 1975 a sinistra, oggi a destra.";
+            return;
+        }
+
+        if (
+            historical1975Layer &&
+            map.hasLayer(historical1975Layer) &&
+            (!year1975Layer || !map.hasLayer(year1975Layer))
+        ) {
+            map.removeLayer(historical1975Layer);
+        }
+
+        const historicalContainer = historical1975Layer?.getContainer?.();
+
+        if (historicalContainer) {
+            historicalContainer.style.clip = "";
+        }
+
+        elements.mappaStrumentiStatus.textContent = "";
+    }
+
+    function updateComparisonPosition() {
+        const position = Number(elements.confrontoMappaRange.value);
+        const historicalContainer = historical1975Layer?.getContainer?.();
+
+        if (!historicalContainer) {
+            return;
+        }
+
+        const mapSize = map.getSize();
+        const dividerX = (mapSize.x * position) / 100;
+        const northWest = map.containerPointToLayerPoint([0, 0]);
+        const southEast = map.containerPointToLayerPoint([
+            dividerX,
+            mapSize.y
+        ]);
+
+        historicalContainer.style.clip =
+            `rect(${northWest.y}px, ${southEast.x}px, ` +
+            `${southEast.y}px, ${northWest.x}px)`;
+        elements.confrontoMappaDivisore.style.left = `${position}%`;
+        elements.confrontoMappaRange.setAttribute(
+            "aria-valuetext",
+            `${position}% mappa del 1975 e ${100 - position}% mappa attuale`
+        );
+    }
+
+    function toggleMapPanel(button, panel) {
+        const willOpen = panel.hidden;
+
+        [
+            [elements.legendaMappaButton, elements.legendaMappa],
+            [elements.elencoMappaButton, elements.elencoMappa]
+        ].forEach(([otherButton, otherPanel]) => {
+            const open = willOpen && otherPanel === panel;
+            otherPanel.hidden = !open;
+            otherButton.setAttribute("aria-expanded", String(open));
+        });
+    }
+
+    function restoreMapGuidePreference() {
+        try {
+            elements.mappaGuida.hidden =
+                localStorage.getItem("nnmrcn_map_guide_dismissed") === "1";
+        } catch (_) {
+            elements.mappaGuida.hidden = false;
+        }
+    }
+
+    function dismissMapGuide() {
+        elements.mappaGuida.hidden = true;
+
+        try {
+            localStorage.setItem("nnmrcn_map_guide_dismissed", "1");
+        } catch (_) {
+            // La guida resta chiusa per la sessione corrente.
+        }
+    }
+
+    function buildNarrativeTimeline() {
+        elements.percorsoNarrativoLinea.replaceChildren();
+
+        NARRATIVE_STEPS.forEach((step, index) => {
+            const button = document.createElement("button");
+            const point = document.createElement("span");
+            const label = document.createElement("span");
+            const verse = document.createElement("small");
+
+            button.type = "button";
+            button.className = "percorso-narrativo-punto";
+            button.setAttribute(
+                "aria-label",
+                `${step.verse}: ${step.label}`
+            );
+            point.className = "percorso-narrativo-nodo";
+            point.setAttribute("aria-hidden", "true");
+            label.textContent = step.label;
+            verse.textContent = index < 2 ? "v. 2" : "v. 22";
+            button.append(point, label, verse);
+            button.addEventListener("click", () => showNarrativeStep(index));
+            elements.percorsoNarrativoLinea.appendChild(button);
+        });
+    }
+
+    function openNarrativeJourney() {
+        dismissMapGuide();
+        elements.legendaMappa.hidden = true;
+        elements.elencoMappa.hidden = true;
+        elements.legendaMappaButton.setAttribute("aria-expanded", "false");
+        elements.elencoMappaButton.setAttribute("aria-expanded", "false");
+        elements.percorsoNarrativo.hidden = false;
+        elements.esploraPoesiaButton.setAttribute("aria-pressed", "true");
+        elements.esploraPoesiaButton.textContent = "Chiudi l’esplorazione";
+        showNarrativeStep(0);
+    }
+
+    function closeNarrativeJourney() {
+        elements.percorsoNarrativo.hidden = true;
+        elements.esploraPoesiaButton.setAttribute("aria-pressed", "false");
+        elements.esploraPoesiaButton.textContent = "Esplora la poesia";
+
+        if (narrativeMarker) {
+            map.removeLayer(narrativeMarker);
+            narrativeMarker = null;
+        }
+    }
+
+    function showNarrativeStep(index) {
+        const boundedIndex = Math.min(
+            Math.max(Number(index) || 0, 0),
+            NARRATIVE_STEPS.length - 1
+        );
+        const step = NARRATIVE_STEPS[boundedIndex];
+
+        narrativeStepIndex = boundedIndex;
+        elements.percorsoNarrativoVerso.textContent = step.verse;
+        elements.percorsoNarrativoTitolo.textContent = step.title;
+        elements.percorsoNarrativoTesto.textContent = step.text;
+        elements.percorsoNarrativoIndietro.disabled = boundedIndex === 0;
+        elements.percorsoNarrativoAvanti.textContent =
+            boundedIndex === NARRATIVE_STEPS.length - 1
+                ? "Fine"
+                : "Successivo";
+
+        elements.percorsoNarrativoLinea
+            .querySelectorAll("button")
+            .forEach((button, buttonIndex) => {
+                const active = buttonIndex === boundedIndex;
+                button.classList.toggle("attivo", active);
+
+                if (active) {
+                    button.setAttribute("aria-current", "step");
+                } else {
+                    button.removeAttribute("aria-current");
+                }
+            });
+
+        if (narrativeMarker) {
+            map.removeLayer(narrativeMarker);
+        }
+
+        narrativeMarker = L.circleMarker([step.lat, step.lon], {
+            radius: 10,
+            color: "#171717",
+            weight: 3,
+            fillColor: "#f4f1e8",
+            fillOpacity: 1
+        })
+            .bindTooltip(step.label, {
+                permanent: true,
+                direction: "top",
+                offset: [0, -9]
+            })
+            .addTo(map);
+
+        map.flyTo([step.lat, step.lon], step.zoom, {
+            animate: !window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+            duration: 1.1
+        });
+        elements.map.scrollIntoView({
+            behavior: "smooth",
+            block: "center"
+        });
+    }
+
+    function locateVisitor() {
+        if (!navigator.geolocation) {
+            elements.mappaStrumentiStatus.textContent =
+                "La geolocalizzazione non è disponibile in questo browser.";
+            return;
+        }
+
+        elements.geolocalizzaButton.disabled = true;
+        elements.mappaStrumentiStatus.textContent = "Ricerca della posizione…";
+
+        const handleLocationFound = (event) => {
+            map.off("locationerror", handleLocationError);
+
+            if (userPositionLayer) {
+                map.removeLayer(userPositionLayer);
+            }
+
+            userPositionLayer = L.layerGroup([
+                L.circle(event.latlng, {
+                    radius: Math.max(Number(event.accuracy || 0), 10),
+                    color: "#171717",
+                    weight: 1,
+                    fillColor: "#f4f1e8",
+                    fillOpacity: 0.18,
+                    interactive: false
+                }),
+                L.circleMarker(event.latlng, {
+                    radius: 7,
+                    color: "#171717",
+                    weight: 2,
+                    fillColor: "#f4f1e8",
+                    fillOpacity: 1
+                }).bindPopup("Sei qui")
+            ]).addTo(map);
+
+            map.setView(event.latlng, Math.max(map.getZoom(), 16));
+            elements.mappaStrumentiStatus.textContent =
+                "Posizione trovata. L’area chiara indica la precisione stimata.";
+            elements.geolocalizzaButton.disabled = false;
+        };
+
+        const handleLocationError = () => {
+            map.off("locationfound", handleLocationFound);
+            elements.mappaStrumentiStatus.textContent =
+                "Non è stato possibile ottenere la posizione. Controlla il permesso del browser.";
+            elements.geolocalizzaButton.disabled = false;
+        };
+
+        map.once("locationfound", handleLocationFound);
+        map.once("locationerror", handleLocationError);
+
+        map.locate({
+            enableHighAccuracy: true,
+            setView: false,
+            timeout: 12000,
+            maximumAge: 30000
+        });
+    }
+
+    async function loadMapTextList() {
+        const sources = [
+            "./luoghi-rilevanti.geojson",
+            "./luoghi-significativi.geojson",
+            "./percorsi.geojson",
+            "./marcon-da-sud.geojson"
+        ];
+
+        try {
+            const collections = await Promise.all(
+                sources.map((source) => mapExtensions.loadGeoJSON(source))
+            );
+            const features = collections
+                .flatMap((collection) => collection.features || [])
+                .filter((feature) => feature?.properties?.nome)
+                .sort((left, right) =>
+                    String(left.properties.nome).localeCompare(
+                        String(right.properties.nome),
+                        "it"
+                    )
+                );
+
+            elements.elencoMappaLista.replaceChildren();
+
+            features.forEach((feature) => {
+                const article = document.createElement("article");
+                const title = document.createElement("h3");
+                const category = document.createElement("p");
+                const button = document.createElement("button");
+
+                title.textContent = feature.properties.nome;
+                category.textContent = mapFeatureCategory(feature);
+                button.type = "button";
+                button.textContent = "Mostra sulla mappa";
+                button.addEventListener("click", () => {
+                    focusMapFeature(feature);
+                    elements.mappaStrumentiStatus.textContent =
+                        `Mostro ${feature.properties.nome}.`;
+                });
+
+                article.append(title, category, button);
+                elements.elencoMappaLista.appendChild(article);
+            });
+
+            mapListLoaded = true;
+        } catch (error) {
+            console.error("Impossibile creare l’elenco testuale della mappa.", error);
+            showMessage(
+                elements.elencoMappaLista,
+                "Non è stato possibile caricare l’elenco dei luoghi."
+            );
+        }
+    }
+
+    function mapFeatureCategory(feature) {
+        const category = feature.properties?.categoria;
+
+        if (category === "corso_d_acqua") {
+            return "Corso d’acqua";
+        }
+
+        if (category === "cava") {
+            return "Cava";
+        }
+
+        if (category === "percorso") {
+            return "Percorso";
+        }
+
+        return feature.geometry?.type === "Point"
+            ? "Luogo rilevante"
+            : "Paesaggio significativo";
+    }
+
+    function focusMapFeature(feature) {
+        const coordinates = feature.geometry?.coordinates;
+
+        if (
+            feature.geometry?.type === "Point" &&
+            Array.isArray(coordinates) &&
+            Number.isFinite(coordinates[0]) &&
+            Number.isFinite(coordinates[1])
+        ) {
+            map.setView([coordinates[1], coordinates[0]], 16);
+        } else {
+            const bounds = L.geoJSON(feature).getBounds();
+
+            if (bounds.isValid()) {
+                map.fitBounds(bounds, {
+                    padding: [30, 30],
+                    maxZoom: 16
+                });
+            }
+        }
+
+        elements.map.scrollIntoView({
+            behavior: "smooth",
+            block: "center"
+        });
     }
 
     async function loadLandscapes() {
@@ -268,7 +722,56 @@
         elements.poesiaClose.addEventListener("click", closePoem);
         elements.messaggioClose.addEventListener("click", closeMessage);
         elements.messaggioTesto.addEventListener("input", updateMessageCounter);
+        elements.messaggioForm.addEventListener(
+            "change",
+            syncArchiveConsentAvailability
+        );
         elements.messaggioForm.addEventListener("submit", sendMessage);
+        elements.mappaGuidaClose.addEventListener("click", dismissMapGuide);
+        elements.confrontoMappaButton.addEventListener(
+            "click",
+            () => setComparisonMode(!comparisonActive)
+        );
+        elements.confrontoMappaRange.addEventListener(
+            "input",
+            updateComparisonPosition
+        );
+        elements.geolocalizzaButton.addEventListener("click", locateVisitor);
+        elements.legendaMappaButton.addEventListener("click", () => {
+            toggleMapPanel(elements.legendaMappaButton, elements.legendaMappa);
+        });
+        elements.elencoMappaButton.addEventListener("click", async () => {
+            toggleMapPanel(elements.elencoMappaButton, elements.elencoMappa);
+
+            if (!elements.elencoMappa.hidden && !mapListLoaded) {
+                await loadMapTextList();
+            }
+        });
+        elements.esploraPoesiaButton.addEventListener("click", () => {
+            if (elements.percorsoNarrativo.hidden) {
+                openNarrativeJourney();
+            } else {
+                closeNarrativeJourney();
+            }
+        });
+        elements.percorsoNarrativoClose.addEventListener(
+            "click",
+            closeNarrativeJourney
+        );
+        elements.percorsoNarrativoIndietro.addEventListener("click", () => {
+            showNarrativeStep(narrativeStepIndex - 1);
+        });
+        elements.percorsoNarrativoAvanti.addEventListener("click", () => {
+            if (narrativeStepIndex === NARRATIVE_STEPS.length - 1) {
+                closeNarrativeJourney();
+            } else {
+                showNarrativeStep(narrativeStepIndex + 1);
+            }
+        });
+
+        restoreMapGuidePreference();
+        syncArchiveConsentAvailability();
+        buildNarrativeTimeline();
 
         document.addEventListener("keydown", (event) => {
             if (event.key !== "Escape") {
@@ -279,6 +782,8 @@
                 closeMessage();
             } else if (!elements.poesiaOverlay.hidden) {
                 closePoem();
+            } else if (!elements.percorsoNarrativo.hidden) {
+                closeNarrativeJourney();
             } else if (!elements.destinatariPanel.hidden) {
                 closeRecipientPanel(true);
             }
@@ -884,6 +1389,11 @@
             meta.textContent = new Date(message.createdAt).toLocaleString("it-IT");
 
             article.append(title, body, meta);
+
+            if (message.senderPublicConsent) {
+                article.appendChild(createArchiveConsentControl(message));
+            }
+
             elements.postaLista.appendChild(article);
 
             if (message.status === "approved") {
@@ -893,6 +1403,49 @@
                 }).catch(() => {});
             }
         });
+    }
+
+    function createArchiveConsentControl(message) {
+        const section = document.createElement("div");
+        const description = document.createElement("p");
+        const button = document.createElement("button");
+
+        section.className = "messaggio-archivio-controllo";
+        description.className = "messaggio-meta";
+        description.textContent = message.isPublic
+            ? "Questo messaggio è pubblicato anonimamente nell’archivio."
+            : message.recipientPublicConsent
+                ? "Hai autorizzato la pubblicazione. L’admin deve ancora confermarla."
+                : "Il mittente propone la pubblicazione anonima nell’archivio.";
+
+        button.type = "button";
+        button.className = "messaggio-archivio-button";
+        button.textContent = message.recipientPublicConsent
+            ? "Revoca autorizzazione"
+            : "Autorizza pubblicazione";
+        button.addEventListener("click", async () => {
+            button.disabled = true;
+            description.textContent = "Aggiornamento…";
+
+            try {
+                await api(`/api/messages/${message.id}`, {
+                    method: "PATCH",
+                    body: JSON.stringify({
+                        action: message.recipientPublicConsent
+                            ? "revoke_public"
+                            : "allow_public"
+                    })
+                });
+                await loadInbox();
+            } catch (error) {
+                description.textContent =
+                    error.message || "Non è stato possibile aggiornare il consenso.";
+                button.disabled = false;
+            }
+        });
+
+        section.append(description, button);
+        return section;
     }
 
     function openMessage(location) {
@@ -910,6 +1463,7 @@
         elements.messaggioForm.reset();
         elements.messaggioTesto.value = "";
         elements.messaggioStatus.textContent = "";
+        syncArchiveConsentAvailability();
         updateMessageCounter();
 
         elements.messaggioOverlay.hidden = false;
@@ -950,6 +1504,18 @@
             `${elements.messaggioTesto.value.length} / ${MAX_MESSAGE_LENGTH}`;
     }
 
+    function syncArchiveConsentAvailability() {
+        const delivery = new FormData(elements.messaggioForm).get("consegna");
+        const physical = delivery === "physical";
+
+        elements.messaggioArchivioLabel.hidden = physical;
+        elements.messaggioArchivio.disabled = physical;
+
+        if (physical) {
+            elements.messaggioArchivio.checked = false;
+        }
+    }
+
     async function sendMessage(event) {
         event.preventDefault();
 
@@ -971,6 +1537,9 @@
             formData.get("consegna") === "physical"
                 ? "physical"
                 : "online";
+        const publicConsent =
+            deliveryType === "online" &&
+            formData.get("archivioPubblico") === "on";
 
         const originalRecipients = [...currentRecipients];
         const failedRecipients = [];
@@ -993,7 +1562,8 @@
                         recipientId: recipient.id,
                         text,
                         revealSender,
-                        deliveryType
+                        deliveryType,
+                        publicConsent
                     })
                 });
                 sentCount += 1;
