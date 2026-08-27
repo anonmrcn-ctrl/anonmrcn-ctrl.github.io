@@ -16,6 +16,15 @@ visibilità della location. Aggiunge inoltre, senza cancellare dati, i campi per
 il consenso e la pubblicazione nell’archivio. La stessa modifica è disponibile
 come migrazione in `worker/migrations/0001_public_archive.sql`.
 
+La tabella delle memorie degli abitanti è definita nello schema ed è disponibile
+come migrazione non distruttiva in `worker/migrations/0002_memories.sql`. Il
+Worker la crea anche automaticamente al primo utilizzo. Per mantenere allineata
+la cronologia D1, dalla cartella `worker/` applica le migrazioni pendenti:
+
+```sh
+npx wrangler d1 migrations apply nnmrcn-rete --remote
+```
+
 Se le location non sono ancora presenti, esegui successivamente il contenuto del
 file privato `nnmrcn_seed_private_d1_20260823.sql` aggiornato. Contiene le 20
 location, ma cancella prima messaggi, sessioni e location esistenti: usalo
@@ -138,6 +147,17 @@ messaggi diretti con username, indirizzo e, se selezionato, un collegamento al
 punto sulla mappa. Al momento della registrazione la location è visibile per
 impostazione predefinita; l’utente può nasconderla o mostrarla dal menu.
 
+Nello stesso pannello è presente la moderazione delle memorie. Ogni contributo
+parte nello stato `pending` e compare in `memorie.html` soltanto dopo
+**Approva e pubblica**. Può contenere testo, un punto geografico e un solo
+allegato JPEG, PNG, WebP, MP3, OGG, WebM o M4A, limitato a 900 KB. Le fotografie
+vengono ridimensionate nel browser prima dell’invio.
+
+Il consenso alla pubblicazione è obbligatorio. Dopo l’invio il browser conserva
+un codice di ritiro con cui l’autore può controllare lo stato e cancellare la
+memoria anche se è già pubblicata. Il codice non viene inviato all’admin e non
+compare negli endpoint pubblici.
+
 ## 6. Attiva le notifiche push
 
 Nella pagina `admin.html`, dopo l'accesso, seleziona **Attiva notifiche** per
@@ -150,6 +170,9 @@ Il Worker crea automaticamente le tabelle necessarie e le chiavi VAPID. La
 chiave privata viene conservata cifrata nel database D1 mediante il segreto
 `PASSWORD_PEPPER` già esistente: non occorre aggiungere segreti, dipendenze o
 servizi esterni. Il contenuto dei messaggi non compare nelle notifiche.
+
+Le notifiche amministratore segnalano anche l’arrivo di una nuova memoria da
+controllare; testo, coordinate e allegati non compaiono nella notifica.
 
 Su iPhone e iPad occorre prima aggiungere il sito alla schermata Home tramite
 **Condividi** → **Aggiungi alla schermata Home**, aprirlo dalla Home e solo

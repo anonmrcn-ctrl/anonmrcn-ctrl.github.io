@@ -1354,6 +1354,7 @@ body.poesia-aperta {
 
 .percorso-narrativo-azioni {
     display: flex;
+    flex-wrap: wrap;
     gap: 0.55rem;
     justify-content: flex-end;
     margin-top: 0.9rem;
@@ -1371,7 +1372,31 @@ body.poesia-aperta {
 }
 
 .percorso-narrativo-azioni button:hover,
-.percorso-narrativo-azioni button:focus-visible {
+.percorso-narrativo-azioni button:focus-visible,
+.percorso-narrativo-azioni button[aria-pressed="true"] {
+    background: var(--ink);
+    color: var(--paper);
+}
+
+.taccuino-salva {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 2.5rem;
+    box-sizing: border-box;
+    margin-top: 0.65rem;
+    padding: 0.5rem 0.7rem;
+    border: 1px solid var(--ink);
+    background: transparent;
+    color: var(--ink);
+    font-family: var(--font-serif);
+    font-size: 0.76rem;
+    cursor: pointer;
+}
+
+.taccuino-salva:hover,
+.taccuino-salva:focus-visible,
+.taccuino-salva[aria-pressed="true"] {
     background: var(--ink);
     color: var(--paper);
 }
@@ -1628,6 +1653,25 @@ body.poesia-aperta {
     margin: 0 0 3rem;
 }
 
+.admin-memorie {
+    margin: 0 0 3rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--line);
+}
+
+.admin-memorie > h2 {
+    margin: 0 0 1rem;
+    font-size: 1.2rem;
+}
+
+.admin-memory-media {
+    display: block;
+    width: min(100%, 560px);
+    max-height: 420px;
+    margin: 1rem 0;
+    object-fit: contain;
+}
+
 .admin-riepilogo,
 .admin-strumenti {
     margin: 0 0 2.5rem;
@@ -1641,7 +1685,7 @@ body.poesia-aperta {
 
 .admin-riepilogo-griglia {
     display: grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
     gap: 0.65rem;
 }
 
@@ -2013,10 +2057,6 @@ body.poesia-aperta {
 
     .admin-riepilogo-griglia {
         grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-
-    .admin-riepilogo-griglia > :last-child {
-        grid-column: 1 / -1;
     }
 
     .admin-export-actions {

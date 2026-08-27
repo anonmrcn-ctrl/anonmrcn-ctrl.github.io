@@ -2,6 +2,7 @@
     "use strict";
 
     const api = window.NNMRCN_API;
+    const notebook = window.NNMRCN_TACCUINO;
     const list = document.getElementById("archivioLista");
     const status = document.getElementById("archivioStatus");
     const search = document.getElementById("archivioRicerca");
@@ -60,6 +61,8 @@
             const body = document.createElement("p");
             const date = document.createElement("time");
 
+            article.id = `messaggio-${message.id}`;
+
             title.textContent = "Messaggio anonimo";
             body.textContent = message.text;
             date.dateTime = new Date(message.publishedAt).toISOString();
@@ -69,6 +72,16 @@
             );
 
             article.append(title, body, date);
+
+            if (notebook) {
+                article.appendChild(notebook.createButton({
+                    id: `messaggio:${message.id}`,
+                    type: "messaggio",
+                    title: `Messaggio del ${date.textContent}`,
+                    text: message.text,
+                    url: `/archivio.html#messaggio-${message.id}`
+                }));
+            }
             list.appendChild(article);
         });
 
@@ -81,6 +94,18 @@
         }
 
         loadMore.hidden = !nextCursor || Boolean(query);
+
+        if (window.location.hash && !query) {
+            try {
+                document.getElementById(
+                    decodeURIComponent(window.location.hash.slice(1))
+                )?.scrollIntoView({
+                    block: "center"
+                });
+            } catch (_) {
+                // Un frammento non valido non deve interrompere l'archivio.
+            }
+        }
     }
 
     search.addEventListener("input", renderMessages);

@@ -1,0 +1,277 @@
+.memorie {
+    width: min(980px, calc(100% - 4rem));
+    margin: 0 auto;
+    padding: 8vh 0 15vh;
+}
+
+.memorie-intro {
+    width: min(680px, 100%);
+    margin: 0 auto 3.5rem;
+    font-size: 1.08rem;
+    line-height: 1.75;
+}
+
+.memorie-mappa-sezione,
+.memorie-contribuisci,
+.memorie-proprie {
+    margin-top: 3.5rem;
+}
+
+.memorie h2 {
+    margin: 0 0 1rem;
+    font-size: clamp(1.4rem, 3vw, 2rem);
+}
+
+.memorie-sezione-titolo {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.memorie-sezione-titolo p {
+    margin: 0;
+    font-size: 0.82rem;
+}
+
+.memorie-mappa {
+    width: 100%;
+    height: min(65vh, 620px);
+    min-height: 440px;
+    border: 1px solid rgba(23, 23, 23, 0.3);
+}
+
+.memorie-mappa.selezione-attiva {
+    cursor: crosshair;
+    box-shadow: inset 0 0 0 3px rgba(23, 23, 23, 0.45);
+}
+
+.memoria-popup {
+    max-width: 280px;
+    font-family: var(--font-serif);
+    line-height: 1.45;
+}
+
+.memoria-popup h3 {
+    margin: 0 0 0.45rem;
+    font-size: 1.08rem;
+}
+
+.memoria-popup p {
+    margin: 0 0 0.55rem;
+    white-space: pre-wrap;
+}
+
+.memoria-popup-meta {
+    font-size: 0.75rem;
+    opacity: 0.72;
+}
+
+.memoria-popup img,
+.memoria-card img {
+    display: block;
+    width: 100%;
+    max-height: 320px;
+    margin: 0.75rem 0;
+    object-fit: contain;
+    background: rgba(23, 23, 23, 0.04);
+}
+
+.memoria-popup audio,
+.memoria-card audio {
+    display: block;
+    width: 100%;
+    margin: 0.75rem 0;
+}
+
+.memorie-lista {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.memoria-card,
+.memoria-propria-card {
+    padding: 1rem;
+    border: 1px solid var(--line);
+    background: rgba(244, 241, 232, 0.72);
+}
+
+.memoria-card h3,
+.memoria-propria-card h3 {
+    margin: 0 0 0.5rem;
+    font-size: 1.15rem;
+}
+
+.memoria-card p,
+.memoria-propria-card p {
+    margin: 0 0 0.7rem;
+    line-height: 1.55;
+    white-space: pre-wrap;
+}
+
+.memoria-card-meta,
+.memoria-propria-meta {
+    font-size: 0.78rem;
+    opacity: 0.72;
+}
+
+.memoria-card-azioni,
+.memoria-posizione-azioni,
+.memoria-propria-azioni {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.55rem;
+    margin-top: 0.9rem;
+}
+
+.memoria-card button,
+.memoria-form button,
+.memoria-propria-card button {
+    min-height: 2.75rem;
+    padding: 0.55rem 0.75rem;
+    border: 1px solid var(--ink);
+    background: transparent;
+    color: var(--ink);
+    font-family: var(--font-serif);
+    cursor: pointer;
+}
+
+.memoria-card button:hover,
+.memoria-card button:focus-visible,
+.memoria-form button:hover,
+.memoria-form button:focus-visible,
+.memoria-propria-card button:hover,
+.memoria-propria-card button:focus-visible,
+.memoria-form button[aria-pressed="true"],
+.taccuino-salva[aria-pressed="true"] {
+    background: var(--ink);
+    color: var(--paper);
+}
+
+.memorie-contribuisci,
+.memorie-proprie {
+    padding-top: 2rem;
+    border-top: 1px solid var(--line);
+}
+
+.memorie-contribuisci > p,
+.memorie-proprie > p {
+    max-width: 700px;
+    line-height: 1.6;
+}
+
+.memoria-form {
+    display: grid;
+    gap: 0.7rem;
+    margin-top: 1.5rem;
+}
+
+.memoria-form > input[type="text"],
+.memoria-form > textarea,
+.memoria-form > input[type="file"] {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 0.8rem;
+    border: 1px solid var(--ink);
+    border-radius: 0;
+    background: transparent;
+    color: var(--ink);
+    font: inherit;
+}
+
+.memoria-form textarea {
+    min-height: 11rem;
+    resize: vertical;
+}
+
+.memoria-contatore,
+.memoria-media-nota,
+.memoria-form-status,
+.memoria-posizione p {
+    margin: 0;
+    font-size: 0.8rem;
+}
+
+.memoria-contatore {
+    text-align: right;
+}
+
+.memoria-posizione {
+    margin: 0.7rem 0;
+    padding: 1rem;
+    border: 1px solid var(--line);
+}
+
+.memoria-posizione legend {
+    padding: 0 0.35rem;
+}
+
+.memoria-consenso {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    align-items: start;
+    gap: 0.7rem;
+    margin: 0.8rem 0;
+    line-height: 1.45;
+}
+
+.memoria-consenso input {
+    width: 1.25rem;
+    height: 1.25rem;
+    margin: 0.1rem 0 0;
+}
+
+.memoria-form > button[type="submit"] {
+    justify-self: start;
+    min-width: 12rem;
+}
+
+.memoria-form button:disabled {
+    cursor: wait;
+    opacity: 0.55;
+}
+
+.memoria-form-status {
+    min-height: 1.2em;
+}
+
+.memorie-proprie-lista {
+    display: grid;
+    gap: 0.75rem;
+}
+
+@media (max-width: 700px) {
+    .memorie {
+        width: calc(100% - 2rem);
+        padding-top: 7rem;
+    }
+
+    .memorie .titolo-pagina {
+        margin-bottom: 3rem;
+    }
+
+    .memorie-sezione-titolo {
+        display: block;
+    }
+
+    .memorie-sezione-titolo p {
+        margin-bottom: 0.75rem;
+    }
+
+    .memorie-mappa {
+        height: 58vh;
+        min-height: 400px;
+    }
+
+    .memorie-lista {
+        grid-template-columns: 1fr;
+    }
+
+    .memoria-card button,
+    .memoria-form button,
+    .memoria-propria-card button {
+        min-height: 44px;
+    }
+}

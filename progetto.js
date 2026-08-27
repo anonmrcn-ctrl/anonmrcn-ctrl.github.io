@@ -3,6 +3,7 @@
 
     const apiClient = window.NNMRCN_API;
     const mapExtensions = window.NNMRCN_MAP;
+    const notebook = window.NNMRCN_TACCUINO;
     const SESSION_KEY = "nnmrcn_session";
     const MAX_MESSAGE_LENGTH = 1500;
     const MAX_BATCH_RECIPIENTS = 5;
@@ -106,6 +107,7 @@
         percorsoNarrativoVerso: document.getElementById("percorsoNarrativoVerso"),
         percorsoNarrativoTitolo: document.getElementById("percorsoNarrativoTitolo"),
         percorsoNarrativoTesto: document.getElementById("percorsoNarrativoTesto"),
+        percorsoNarrativoSalva: document.getElementById("percorsoNarrativoSalva"),
         percorsoNarrativoIndietro: document.getElementById("percorsoNarrativoIndietro"),
         percorsoNarrativoAvanti: document.getElementById("percorsoNarrativoAvanti")
     };
@@ -124,6 +126,8 @@
     let mapListLoaded = false;
     let narrativeStepIndex = 0;
     let narrativeMarker = null;
+    let comparisonFrame = 0;
+    let comparisonRetryTimers = [];
 
     const pushNotifications = window.NNMRCN_NOTIFICHE.create({
         button: elements.locationPushButton,
@@ -140,6 +144,7 @@
     loadLandscapes();
     bindInterface();
     restoreSession();
+    applyRequestedMapView();
 
     function createMap() {
         const instance = L.map("map", {
@@ -149,6 +154,7 @@
         instance.createPane("historicalRaster");
         instance.getPane("historicalRaster").style.zIndex = "250";
         instance.getPane("historicalRaster").style.pointerEvents = "none";
+        instance.getPane("historicalRaster").style.willChange = "clip-path";
 
         const satelliteUrl =
             "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}";
@@ -195,6 +201,12 @@
                 );
             });
 
+            historical1975Layer.on("add load tileload", () => {
+                if (comparisonActive) {
+                    scheduleComparisonPositionUpdate();
+                }
+            });
+
             year1975Layers.push(historical1975Layer);
         } else {
             console.error("PMTiles non è disponibile: il livello 1975 non può essere caricato.");
@@ -221,10 +233,34 @@
             }
         });
 
-        instance.on("move zoom resize", () => {
+        instance.on("popupopen", addPopupNotebookControl);
+
+        instance.on("move zoom resize viewreset", () => {
             if (comparisonActive) {
-                updateComparisonPosition();
+                scheduleComparisonPositionUpdate({ retry: false });
             }
+        });
+
+        if (typeof ResizeObserver === "function") {
+            const mapResizeObserver = new ResizeObserver(() => {
+                if (!comparisonActive) {
+                    return;
+                }
+
+                instance.invalidateSize({ pan: false });
+                scheduleComparisonPositionUpdate();
+            });
+
+            mapResizeObserver.observe(elements.map);
+        }
+
+        window.visualViewport?.addEventListener?.("resize", () => {
+            if (!comparisonActive) {
+                return;
+            }
+
+            instance.invalidateSize({ pan: false });
+            scheduleComparisonPositionUpdate();
         });
 
         return instance;
@@ -261,7 +297,8 @@
                 historical1975Layer.addTo(map);
             }
 
-            updateComparisonPosition();
+            map.invalidateSize({ pan: false });
+            scheduleComparisonPositionUpdate();
             elements.mappaStrumentiStatus.textContent =
                 "Confronto attivo: 1975 a sinistra, oggi a destra.";
             return;
@@ -279,14 +316,62 @@
 
         if (historicalContainer) {
             historicalContainer.style.clip = "";
+            historicalContainer.style.clipPath = "";
+            historicalContainer.style.webkitClipPath = "";
         }
 
+        cancelComparisonPositionUpdates();
+
         elements.mappaStrumentiStatus.textContent = "";
+    }
+
+    function cancelComparisonPositionUpdates() {
+        if (comparisonFrame) {
+            window.cancelAnimationFrame(comparisonFrame);
+            comparisonFrame = 0;
+        }
+
+        comparisonRetryTimers.forEach((timer) => window.clearTimeout(timer));
+        comparisonRetryTimers = [];
+    }
+
+    function scheduleComparisonPositionUpdate({ retry = true } = {}) {
+        if (!comparisonActive) {
+            return;
+        }
+
+        if (comparisonFrame) {
+            window.cancelAnimationFrame(comparisonFrame);
+        }
+
+        comparisonFrame = window.requestAnimationFrame(() => {
+            comparisonFrame = 0;
+            updateComparisonPosition();
+        });
+
+        if (!retry) {
+            return;
+        }
+
+        comparisonRetryTimers.forEach((timer) => window.clearTimeout(timer));
+        comparisonRetryTimers = [80, 250, 700].map((delay) =>
+            window.setTimeout(() => {
+                if (comparisonActive) {
+                    updateComparisonPosition();
+                }
+            }, delay)
+        );
     }
 
     function updateComparisonPosition() {
         const position = Number(elements.confrontoMappaRange.value);
         const historicalContainer = historical1975Layer?.getContainer?.();
+
+        elements.confrontoMappaDivisore.style.left = `${position}%`;
+        elements.confrontoMappaRange.setAttribute(
+            "aria-valuetext",
+            `${position}% mappa del 1975 e ${100 - position}% mappa attuale`
+        );
 
         if (!historicalContainer) {
             return;
@@ -300,14 +385,20 @@
             mapSize.y
         ]);
 
-        historicalContainer.style.clip =
+        const clipRectangle =
             `rect(${northWest.y}px, ${southEast.x}px, ` +
             `${southEast.y}px, ${northWest.x}px)`;
-        elements.confrontoMappaDivisore.style.left = `${position}%`;
-        elements.confrontoMappaRange.setAttribute(
-            "aria-valuetext",
-            `${position}% mappa del 1975 e ${100 - position}% mappa attuale`
-        );
+        const clipPolygon =
+            `polygon(${northWest.x}px ${northWest.y}px, ` +
+            `${southEast.x}px ${northWest.y}px, ` +
+            `${southEast.x}px ${southEast.y}px, ` +
+            `${northWest.x}px ${southEast.y}px)`;
+
+        // `clip` resta il fallback per WebView meno recenti; `clip-path`
+        // rende stabile il confronto durante pinch-zoom e rotazione su mobile.
+        historicalContainer.style.clip = clipRectangle;
+        historicalContainer.style.clipPath = clipPolygon;
+        historicalContainer.style.webkitClipPath = clipPolygon;
     }
 
     function toggleMapPanel(button, panel) {
@@ -406,6 +497,7 @@
             boundedIndex === NARRATIVE_STEPS.length - 1
                 ? "Fine"
                 : "Successivo";
+        syncNarrativeNotebookButton(step, boundedIndex);
 
         elements.percorsoNarrativoLinea
             .querySelectorAll("button")
@@ -446,6 +538,139 @@
             behavior: "smooth",
             block: "center"
         });
+    }
+
+    function narrativeNotebookItem(step, index) {
+        return {
+            id: `verso:${index}:${step.label.toLocaleLowerCase("it")}`,
+            type: "verso",
+            title: `${step.verse} — ${step.label}`,
+            text: step.text,
+            lat: step.lat,
+            lon: step.lon,
+            url:
+                `/progetto.html?narrative=${index}&lat=${step.lat}` +
+                `&lon=${step.lon}&zoom=${step.zoom}`
+        };
+    }
+
+    function syncNarrativeNotebookButton(step, index) {
+        if (!elements.percorsoNarrativoSalva || !notebook) {
+            if (elements.percorsoNarrativoSalva) {
+                elements.percorsoNarrativoSalva.hidden = true;
+            }
+            return;
+        }
+
+        const item = narrativeNotebookItem(step, index);
+        const saved = notebook.has(item.id);
+        elements.percorsoNarrativoSalva.hidden = false;
+        elements.percorsoNarrativoSalva.textContent = saved
+            ? "Rimuovi dal taccuino"
+            : "Salva nel taccuino";
+        elements.percorsoNarrativoSalva.setAttribute(
+            "aria-pressed",
+            String(saved)
+        );
+    }
+
+    function toggleNarrativeNotebookItem() {
+        if (!notebook) {
+            return;
+        }
+
+        const step = NARRATIVE_STEPS[narrativeStepIndex];
+        notebook.toggle(narrativeNotebookItem(step, narrativeStepIndex));
+        syncNarrativeNotebookButton(step, narrativeStepIndex);
+    }
+
+    function addPopupNotebookControl(event) {
+        if (!notebook) {
+            return;
+        }
+
+        const popupElement = event.popup.getElement?.();
+        const content = popupElement?.querySelector(".leaflet-popup-content");
+
+        if (!content || content.querySelector(".taccuino-popup-azione")) {
+            return;
+        }
+
+        const plainText = content.textContent.replace(/\s+/gu, " ").trim();
+
+        if (!plainText || plainText === "Sei qui") {
+            return;
+        }
+
+        const properties = event.popup._source?.feature?.properties || {};
+        const heading = content.querySelector("h2, h3, strong");
+        const title = String(
+            properties.nome || heading?.textContent || plainText.slice(0, 80)
+        ).trim();
+        const latLng = event.popup.getLatLng?.();
+        const route = properties.categoria === "percorso" ||
+            content.querySelector(".popup-percorso");
+        const item = {
+            id: notebook.itemIdentifier({
+                type: route ? "percorso" : "luogo",
+                title,
+                lat: latLng?.lat,
+                lon: latLng?.lng
+            }),
+            type: route ? "percorso" : "luogo",
+            title,
+            text: plainText.slice(0, 1000),
+            lat: latLng?.lat,
+            lon: latLng?.lng,
+            url: latLng
+                ? `/progetto.html?lat=${latLng.lat.toFixed(6)}` +
+                    `&lon=${latLng.lng.toFixed(6)}&zoom=16`
+                : "/progetto.html"
+        };
+        const button = notebook.createButton(item, {
+            className: "taccuino-salva taccuino-popup-azione"
+        });
+        content.appendChild(button);
+        event.popup.update();
+    }
+
+    function applyRequestedMapView() {
+        const parameters = new URLSearchParams(window.location.search);
+        const narrative = Number(parameters.get("narrative"));
+        const lat = Number(parameters.get("lat"));
+        const lon = Number(parameters.get("lon"));
+        const zoom = Number(parameters.get("zoom"));
+
+        if (
+            parameters.has("narrative") &&
+            Number.isInteger(narrative) &&
+            narrative >= 0 &&
+            narrative < NARRATIVE_STEPS.length
+        ) {
+            window.setTimeout(() => {
+                openNarrativeJourney();
+                showNarrativeStep(narrative);
+            }, 120);
+            return;
+        }
+
+        if (
+            parameters.has("lat") &&
+            parameters.has("lon") &&
+            Number.isFinite(lat) &&
+            Number.isFinite(lon) &&
+            lat >= -90 &&
+            lat <= 90 &&
+            lon >= -180 &&
+            lon <= 180
+        ) {
+            map.setView(
+                [lat, lon],
+                Number.isFinite(zoom)
+                    ? Math.min(Math.max(zoom, 10), 19)
+                    : 16
+            );
+        }
     }
 
     function locateVisitor() {
@@ -734,7 +959,11 @@
         );
         elements.confrontoMappaRange.addEventListener(
             "input",
-            updateComparisonPosition
+            () => scheduleComparisonPositionUpdate({ retry: false })
+        );
+        elements.confrontoMappaRange.addEventListener(
+            "change",
+            () => scheduleComparisonPositionUpdate()
         );
         elements.geolocalizzaButton.addEventListener("click", locateVisitor);
         elements.legendaMappaButton.addEventListener("click", () => {
@@ -760,6 +989,18 @@
         );
         elements.percorsoNarrativoIndietro.addEventListener("click", () => {
             showNarrativeStep(narrativeStepIndex - 1);
+        });
+        elements.percorsoNarrativoSalva?.addEventListener(
+            "click",
+            toggleNarrativeNotebookItem
+        );
+        document.addEventListener("nnmrcn:taccuinochange", () => {
+            if (!elements.percorsoNarrativo.hidden) {
+                syncNarrativeNotebookButton(
+                    NARRATIVE_STEPS[narrativeStepIndex],
+                    narrativeStepIndex
+                );
+            }
         });
         elements.percorsoNarrativoAvanti.addEventListener("click", () => {
             if (narrativeStepIndex === NARRATIVE_STEPS.length - 1) {

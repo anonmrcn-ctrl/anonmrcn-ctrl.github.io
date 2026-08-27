@@ -10,6 +10,10 @@
     const panel = document.getElementById("adminPanel");
     const list = document.getElementById("adminList");
     const contactList = document.getElementById("adminContactList");
+    const memorySection = document.getElementById("adminMemorie");
+    const memoryList = document.getElementById("adminMemoryList");
+    const memoryFilter = document.getElementById("adminMemoryStatusFilter");
+    const memoryRefresh = document.getElementById("adminMemoryRefresh");
     const filter = document.getElementById("adminStatusFilter");
     const refresh = document.getElementById("adminRefresh");
     const pushButton = document.getElementById("adminPushButton");
@@ -23,9 +27,14 @@
     const countPublishable = document.getElementById("adminCountPublishable");
     const countPublic = document.getElementById("adminCountPublic");
     const countContacts = document.getElementById("adminCountContacts");
+    const countMemories = document.getElementById("adminCountMemories");
+    const countPublicMemories = document.getElementById(
+        "adminCountPublicMemories"
+    );
 
     let adminToken = sessionStorage.getItem(TOKEN_KEY) || "";
     let loadedMessages = [];
+    let memoryObjectUrls = [];
 
     const pushNotifications = window.NNMRCN_NOTIFICHE.create({
         button: pushButton,
@@ -64,6 +73,7 @@
             statusText.textContent = "";
             await Promise.all([
                 loadContactMessages(),
+                loadMemories(),
                 loadSummary(),
                 pushNotifications.sync()
             ]);
@@ -105,13 +115,17 @@
             countPublishable.textContent = String(data.publishable || 0);
             countPublic.textContent = String(data.public || 0);
             countContacts.textContent = String(data.unreadContacts || 0);
+            countMemories.textContent = String(data.pendingMemories || 0);
+            countPublicMemories.textContent = String(data.publicMemories || 0);
         } catch (_) {
             [
                 countPending,
                 countDelivery,
                 countPublishable,
                 countPublic,
-                countContacts
+                countContacts,
+                countMemories,
+                countPublicMemories
             ].forEach((element) => {
                 element.textContent = "–";
             });
@@ -237,6 +251,168 @@
             } catch (_) {
                 statusText.textContent =
                     "Non è stato possibile aggiornare il messaggio diretto.";
+                button.disabled = false;
+            }
+        });
+
+        return button;
+    }
+
+    function showMemoryListMessage(message) {
+        const paragraph = document.createElement("p");
+        paragraph.textContent = message;
+        memoryList.replaceChildren(paragraph);
+    }
+
+    async function loadMemories() {
+        showMemoryListMessage("Caricamento…");
+
+        try {
+            const data = await request(
+                `/api/admin/memories?status=${encodeURIComponent(memoryFilter.value)}`
+            );
+            renderMemories(data.memories || []);
+        } catch (_) {
+            showMemoryListMessage(
+                "Le memorie non sono momentaneamente disponibili."
+            );
+        }
+    }
+
+    function renderMemories(memories) {
+        memoryObjectUrls.forEach((url) => URL.revokeObjectURL(url));
+        memoryObjectUrls = [];
+        memoryList.replaceChildren();
+
+        if (!memories.length) {
+            showMemoryListMessage("Nessuna memoria in questa sezione.");
+            return;
+        }
+
+        memories.forEach((memory) => {
+            const article = document.createElement("article");
+            article.className = "admin-message admin-memory";
+            const title = document.createElement("h2");
+            title.textContent = memory.title;
+            const author = document.createElement("p");
+            author.className = "admin-meta";
+            author.textContent = `Firma: ${memory.authorName || "anonima"}`;
+            const state = document.createElement("p");
+            state.className = "admin-meta";
+            state.textContent = `Stato: ${memory.status}`;
+            const date = document.createElement("p");
+            date.className = "admin-meta";
+            date.textContent = new Date(memory.createdAt).toLocaleString("it-IT");
+            const location = document.createElement("p");
+            location.className = "admin-meta";
+            const locationLink = document.createElement("a");
+            locationLink.href =
+                `https://www.google.com/maps?q=${memory.lat},${memory.lon}`;
+            locationLink.target = "_blank";
+            locationLink.rel = "noopener noreferrer";
+            locationLink.textContent = "Apri il punto sulla mappa";
+            location.appendChild(locationLink);
+            const text = document.createElement("p");
+            text.className = "admin-contact-text";
+            text.textContent = memory.text;
+
+            article.append(title, author, state, date, location, text);
+
+            if (memory.mediaUrl) {
+                article.appendChild(memoryMediaButton(memory));
+            }
+
+            const actions = document.createElement("div");
+            actions.className = "admin-actions";
+
+            if (memory.status !== "approved") {
+                actions.appendChild(
+                    memoryActionButton(memory.id, "approve", "Approva e pubblica")
+                );
+            }
+
+            if (memory.status !== "rejected") {
+                actions.appendChild(
+                    memoryActionButton(
+                        memory.id,
+                        "reject",
+                        memory.status === "approved"
+                            ? "Rimuovi dalla mappa"
+                            : "Non approvare"
+                    )
+                );
+            }
+
+            article.appendChild(actions);
+            memoryList.appendChild(article);
+        });
+    }
+
+    function memoryMediaButton(memory) {
+        const button = document.createElement("button");
+        button.className = "admin-action admin-memory-media-button";
+        button.type = "button";
+        button.textContent = memory.mediaType.startsWith("image/")
+            ? "Mostra fotografia"
+            : "Carica registrazione";
+
+        button.addEventListener("click", async () => {
+            button.disabled = true;
+
+            try {
+                const response = await fetch(`${api.baseUrl}${memory.mediaUrl}`, {
+                    headers: {
+                        "X-Admin-Token": adminToken,
+                        "Accept": memory.mediaType
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error("Allegato non disponibile.");
+                }
+
+                const objectUrl = URL.createObjectURL(await response.blob());
+                memoryObjectUrls.push(objectUrl);
+                let media;
+
+                if (memory.mediaType.startsWith("image/")) {
+                    media = document.createElement("img");
+                    media.alt = `Fotografia associata a «${memory.title}»`;
+                } else {
+                    media = document.createElement("audio");
+                    media.controls = true;
+                }
+
+                media.className = "admin-memory-media";
+                media.src = objectUrl;
+                button.replaceWith(media);
+            } catch (_) {
+                button.disabled = false;
+                button.textContent = "Allegato non disponibile";
+            }
+        });
+
+        return button;
+    }
+
+    function memoryActionButton(id, action, label) {
+        const button = document.createElement("button");
+        button.className = "admin-action";
+        button.type = "button";
+        button.textContent = label;
+
+        button.addEventListener("click", async () => {
+            button.disabled = true;
+
+            try {
+                await request(`/api/admin/memories/${id}`, {
+                    method: "PATCH",
+                    body: JSON.stringify({ action })
+                });
+                await Promise.all([loadMemories(), loadSummary()]);
+            } catch (_) {
+                statusText.textContent =
+                    "Non è stato possibile aggiornare la memoria.";
                 button.disabled = false;
             }
         });
@@ -460,6 +636,8 @@
 
     refresh.addEventListener("click", loadMessages);
     filter.addEventListener("change", loadMessages);
+    memoryRefresh.addEventListener("click", loadMemories);
+    memoryFilter.addEventListener("change", loadMemories);
     search.addEventListener("input", renderCurrentMessages);
     exportCsv.addEventListener("click", () => downloadExport("csv"));
     exportJson.addEventListener("click", () => downloadExport("json"));
@@ -468,6 +646,14 @@
         button.addEventListener("click", () => {
             filter.value = button.dataset.adminFilter;
             loadMessages();
+        });
+    });
+
+    document.querySelectorAll("[data-admin-memory-filter]").forEach((button) => {
+        button.addEventListener("click", () => {
+            memoryFilter.value = button.dataset.adminMemoryFilter;
+            loadMemories();
+            memorySection.scrollIntoView({ behavior: "smooth", block: "start" });
         });
     });
 

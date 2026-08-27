@@ -54,6 +54,8 @@
             <a href="./autore.html">L’autore</a>
             <a href="./progetto.html" class="voce-attiva" aria-current="page">Il progetto</a>
             <a href="./archivio.html">Archivio</a>
+            <a href="./memorie.html">Memorie</a>
+            <a href="./taccuino.html">Taccuino (<span data-taccuino-count>0</span>)</a>
         </div>
 
         <section class="accesso-rete menu-accesso" id="accessoLocations" aria-labelledby="accessoTitolo">
@@ -66,7 +68,7 @@
                         id="loginPassword"
                         name="password"
                         type="password"
-                        autocomplete="off"
+                        autocomplete="current-password"
                         placeholder="Password della poesia"
                         required
                     >
@@ -186,7 +188,7 @@
                         id="richiestaIndirizzo"
                         name="address"
                         type="text"
-                        autocomplete="street-address"
+                        autocomplete="address-line1"
                         maxlength="240"
                         placeholder="Via, numero civico, località"
                     >
@@ -362,7 +364,7 @@
                 </section>
             </div>
 
-            <div class="mappa-strumenti" aria-label="Strumenti della mappa">
+            <div class="mappa-strumenti" role="toolbar" aria-label="Strumenti della mappa">
                 <button
                     id="esploraPoesiaButton"
                     type="button"
@@ -432,11 +434,10 @@
             </section>
 
             <div class="mappa-contenitore">
-                <div
+                <section
                     id="map"
-                    role="region"
                     aria-label="Mappa interattiva dei luoghi del progetto"
-                ></div>
+                ></section>
                 <div class="confronto-mappa-divisore" id="confrontoMappaDivisore" hidden aria-hidden="true">
                     <span></span>
                 </div>
@@ -444,7 +445,7 @@
                 <section
                     class="percorso-narrativo"
                     id="percorsoNarrativo"
-                    aria-labelledby="percorsoNarrativoTitolo"
+                    aria-label="Percorso narrativo della poesia"
                     hidden
                 >
                     <button
@@ -462,10 +463,15 @@
 
                     <article class="percorso-narrativo-scheda" aria-live="polite">
                         <p class="percorso-narrativo-verso" id="percorsoNarrativoVerso"></p>
-                        <h2 id="percorsoNarrativoTitolo"></h2>
+                        <h2 id="percorsoNarrativoTitolo">Percorso poetico</h2>
                         <p id="percorsoNarrativoTesto"></p>
 
                         <div class="percorso-narrativo-azioni">
+                            <button
+                                id="percorsoNarrativoSalva"
+                                type="button"
+                                aria-pressed="false"
+                            >Salva nel taccuino</button>
                             <button id="percorsoNarrativoIndietro" type="button">Precedente</button>
                             <button id="percorsoNarrativoAvanti" type="button">Successivo</button>
                         </div>
@@ -577,6 +583,7 @@
     <script src="./percorsi.js"></script>
     <script src="./cave-rilevanti.js"></script>
     <script src="./fiumi-wikipedia.js"></script>
+    <script src="./taccuino.js"></script>
     <script src="./progetto.js"></script>
 </body>
 </html>

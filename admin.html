@@ -20,7 +20,7 @@
                 <input
                     id="adminToken"
                     type="password"
-                    autocomplete="off"
+                    autocomplete="current-password"
                     placeholder="Token amministratore"
                     aria-label="Token amministratore"
                     required
@@ -72,6 +72,14 @@
                         <strong id="adminCountContacts">0</strong>
                         <span>Contatti non letti</span>
                     </div>
+                    <button type="button" data-admin-memory-filter="pending">
+                        <strong id="adminCountMemories">0</strong>
+                        <span>Memorie da controllare</span>
+                    </button>
+                    <button type="button" data-admin-memory-filter="approved">
+                        <strong id="adminCountPublicMemories">0</strong>
+                        <span>Memorie pubblicate</span>
+                    </button>
                 </div>
             </section>
 
@@ -94,6 +102,21 @@
             <section class="admin-contatti" aria-labelledby="adminContattiTitolo">
                 <h2 id="adminContattiTitolo">Messaggi diretti</h2>
                 <div class="admin-list" id="adminContactList"></div>
+            </section>
+
+            <section class="admin-memorie" id="adminMemorie" aria-labelledby="adminMemorieTitolo">
+                <h2 id="adminMemorieTitolo">Memorie degli abitanti</h2>
+                <div class="admin-filter">
+                    <label for="adminMemoryStatusFilter">Mostra:</label>
+                    <select id="adminMemoryStatusFilter">
+                        <option value="pending">Da controllare</option>
+                        <option value="approved">Pubblicate</option>
+                        <option value="rejected">Non approvate</option>
+                        <option value="all">Tutte</option>
+                    </select>
+                    <button id="adminMemoryRefresh" type="button">Aggiorna</button>
+                </div>
+                <div class="admin-list" id="adminMemoryList"></div>
             </section>
 
             <div class="admin-filter">

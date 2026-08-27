@@ -8,6 +8,8 @@ Sito GitHub Pages del progetto nnMrcn.
 - `autore.html` — autore
 - `progetto.html` — progetto, confronto 1975–oggi, percorso narrativo, mappa, accesso e messaggi
 - `archivio.html` — archivio anonimo dei messaggi pubblicati con doppio consenso
+- `memorie.html` — mappa dei ricordi degli abitanti e invio di testo, fotografie o audio
+- `taccuino.html` — raccolta personale locale con mappa ed esportazione GeoJSON/JSON
 - `admin.html` — moderazione, riepilogo, ricerca ed esportazione dei messaggi
 - `style.css` — stili comuni del sito
 - `messaggistica.css` — selezione dei destinatari e messaggi sulla mappa
@@ -17,6 +19,9 @@ Sito GitHub Pages del progetto nnMrcn.
 - `mappa.js` — dati geografici condivisi ed estensioni della mappa
 - `progetto.js` — mappa, paesaggi, login e messaggistica
 - `archivio.js` — caricamento, ricerca e paginazione dell’archivio pubblico
+- `memorie.js` — mappa pubblica, invio, consenso e ritiro delle memorie
+- `taccuino.js` — salvataggio locale condiviso tra le pagine
+- `taccuino-pagina.js` — visualizzazione ed esportazione del taccuino
 - `analytics.js` — attivazione facoltativa di Cloudflare Web Analytics
 - `percorsi.js` — percorsi, luoghi rilevanti e livelli paesaggistici
 - `marcon-da-sud.js` — percorso aggiuntivo Marcon da sud
@@ -24,6 +29,7 @@ Sito GitHub Pages del progetto nnMrcn.
 - `fiumi-wikipedia.js` — informazioni e collegamenti sui corsi d’acqua
 - `admin.js` — interfaccia amministratore
 - `config.js` — URL del backend
+- `memorie.css` e `taccuino.css` — stili delle nuove sezioni
 - `pmtiles-overzoom.js` — visualizzazione delle mappe storiche oltre lo zoom nativo
 - `logo.webp` — logo ottimizzato senza perdita di qualità
 - `logo.PNG` — versione originale del logo

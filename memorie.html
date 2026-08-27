@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="apple-mobile-web-app-title" content="anonMrcn">
+    <meta name="description" content="Memorie degli abitanti legate ai luoghi di Marcon">
+    <meta name="theme-color" content="#f4f1e8">
+    <title>Memorie — nnMrcn</title>
+
+    <link rel="manifest" href="./manifest.webmanifest">
+    <link rel="apple-touch-icon" href="./icona-app-192.png?v=logo-png">
+    <link rel="preconnect" href="https://server.arcgisonline.com">
+    <link rel="stylesheet" href="./style.css">
+    <link rel="stylesheet" href="./memorie.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+</head>
+
+<body class="pagina-memorie">
+    <button
+        class="menu-button"
+        id="menuButton"
+        type="button"
+        aria-label="Apri il menu"
+        aria-expanded="false"
+        aria-controls="menuPrincipale"
+    >MENU</button>
+
+    <div class="menu-overlay" id="menuOverlay"></div>
+
+    <nav class="menu-principale" id="menuPrincipale" aria-label="Menu principale">
+        <button class="menu-close" id="menuClose" type="button" aria-label="Chiudi il menu">×</button>
+
+        <a
+            class="menu-donazioni"
+            href="https://www.produzionidalbasso.com/project/fondi-necessari-per-portare-avanti-anonmrcn/"
+            target="_blank"
+            rel="noopener noreferrer"
+        >Sostieni il progetto</a>
+
+        <div class="menu-contenuto">
+            <a href="./index.html">La poesia</a>
+            <a href="./autore.html">L’autore</a>
+            <a href="./progetto.html">Il progetto</a>
+            <a href="./archivio.html">Archivio</a>
+            <a href="./memorie.html" class="voce-attiva" aria-current="page">Memorie</a>
+            <a href="./taccuino.html">Taccuino (<span data-taccuino-count>0</span>)</a>
+        </div>
+
+        <section class="accesso-rete menu-accesso" id="accessoLocations" aria-labelledby="accessoTitolo">
+            <h2 id="accessoTitolo">Accesso alle locations</h2>
+
+            <div id="loginLoggedOut">
+                <form class="accesso-form" id="loginForm">
+                    <label for="loginPassword">Password della poesia</label>
+                    <input
+                        id="loginPassword"
+                        name="password"
+                        type="password"
+                        autocomplete="current-password"
+                        placeholder="Password della poesia"
+                        required
+                    >
+                    <button id="loginButton" type="submit">Accedi</button>
+                </form>
+                <p class="login-message" id="loginMessage" aria-live="polite"></p>
+            </div>
+
+            <div class="login-attivo" id="loginLoggedIn" hidden>
+                <p>Accesso riconosciuto: <strong id="loginLocation"></strong></p>
+                <div class="rete-azioni">
+                    <button class="rete-button" id="postaButton" type="button">Messaggi ricevuti</button>
+                    <button
+                        class="rete-button notifiche-button"
+                        id="locationPushButton"
+                        type="button"
+                        aria-pressed="false"
+                    >Attiva notifiche</button>
+                    <button class="logout-button" id="logoutButton" type="button">Esci</button>
+                </div>
+                <p class="notifiche-status" id="locationPushStatus" aria-live="polite"></p>
+
+                <div class="location-visibility-control">
+                    <button
+                        class="location-visibility-toggle"
+                        id="locationVisibilityToggle"
+                        type="button"
+                        aria-pressed="false"
+                    >Nascondi la mia location sulla mappa</button>
+                    <p class="location-visibility-status" id="locationVisibilityStatus" aria-live="polite"></p>
+                </div>
+            </div>
+        </section>
+
+        <section class="menu-installazione" id="installazioneApp">
+            <button
+                class="menu-installa"
+                id="installaAppButton"
+                type="button"
+                aria-describedby="installazioneIstruzioni"
+            >Installa come app</button>
+            <p
+                class="installazione-istruzioni"
+                id="installazioneIstruzioni"
+                aria-live="polite"
+                hidden
+            ></p>
+        </section>
+
+        <a class="menu-admin-link" href="./admin.html">admin space</a>
+    </nav>
+
+    <main class="memorie">
+        <h1 class="titolo-pagina">Memorie</h1>
+
+        <div class="memorie-intro">
+            <p>
+                Ricordi, immagini e suoni legati ai luoghi di Marcon. Ogni contributo
+                compare soltanto dopo il controllo dell’amministratore.
+            </p>
+        </div>
+
+        <section class="memorie-mappa-sezione" aria-labelledby="memorieMappaTitolo">
+            <div class="memorie-sezione-titolo">
+                <h2 id="memorieMappaTitolo">La mappa delle memorie</h2>
+                <p id="memorieMapStatus" aria-live="polite">Caricamento…</p>
+            </div>
+
+            <div
+                class="memorie-mappa"
+                id="memorieMap"
+                role="application"
+                aria-label="Mappa delle memorie pubblicate"
+            ></div>
+
+            <div class="memorie-lista" id="memorieLista"></div>
+        </section>
+
+        <section class="memorie-contribuisci" aria-labelledby="memoriaFormTitolo">
+            <h2 id="memoriaFormTitolo">Aggiungi una memoria</h2>
+            <p>
+                Puoi firmarla con un nome o uno username, oppure lasciarla anonima.
+                Il punto sulla mappa è obbligatorio; fotografia e registrazione sono facoltative.
+            </p>
+
+            <form class="memoria-form" id="memoriaForm">
+                <label for="memoriaTitolo">Titolo</label>
+                <input
+                    id="memoriaTitolo"
+                    name="title"
+                    type="text"
+                    minlength="3"
+                    maxlength="100"
+                    required
+                >
+
+                <label for="memoriaAutore">Nome o username (facoltativo)</label>
+                <input
+                    id="memoriaAutore"
+                    name="authorName"
+                    type="text"
+                    maxlength="80"
+                    autocomplete="nickname"
+                >
+
+                <label for="memoriaTesto">Ricordo</label>
+                <textarea
+                    id="memoriaTesto"
+                    name="text"
+                    maxlength="3000"
+                    required
+                ></textarea>
+                <p class="memoria-contatore" id="memoriaContatore">0 / 3000</p>
+
+                <fieldset class="memoria-posizione">
+                    <legend>Luogo della memoria</legend>
+                    <div class="memoria-posizione-azioni">
+                        <button id="memoriaSelezionaPunto" type="button" aria-pressed="false">
+                            Seleziona sulla mappa
+                        </button>
+                        <button id="memoriaPosizioneAttuale" type="button">
+                            Usa la mia posizione
+                        </button>
+                        <button id="memoriaRimuoviPunto" type="button" hidden>
+                            Rimuovi il punto
+                        </button>
+                    </div>
+                    <p id="memoriaPuntoStatus" aria-live="polite">
+                        Nessun punto selezionato.
+                    </p>
+                    <p>
+                        Se la memoria viene approvata, questo punto sarà visibile pubblicamente.
+                    </p>
+                </fieldset>
+
+                <input id="memoriaLat" name="lat" type="hidden">
+                <input id="memoriaLon" name="lon" type="hidden">
+
+                <label for="memoriaMedia">Fotografia o registrazione (facoltativa)</label>
+                <input
+                    id="memoriaMedia"
+                    name="media"
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,audio/mpeg,audio/ogg,audio/webm,audio/mp4"
+                    aria-describedby="memoriaMediaNota"
+                >
+                <p class="memoria-media-nota" id="memoriaMediaNota">
+                    Un solo file, massimo 900 KB. Le fotografie vengono ridimensionate prima dell’invio.
+                </p>
+
+                <label class="memoria-consenso">
+                    <input id="memoriaConsenso" name="consent" type="checkbox" required>
+                    Confermo di poter condividere questo contenuto e ne autorizzo la
+                    possibile pubblicazione sul sito dopo il controllo dell’amministratore.
+                </label>
+
+                <div class="contatto-antispam" aria-hidden="true">
+                    <label for="memoriaSito">Lascia questo campo vuoto</label>
+                    <input id="memoriaSito" name="website" type="text" tabindex="-1" autocomplete="off">
+                </div>
+
+                <button id="memoriaInvia" type="submit">Invia la memoria</button>
+                <p class="memoria-form-status" id="memoriaFormStatus" aria-live="polite"></p>
+            </form>
+        </section>
+
+        <section class="memorie-proprie" id="memorieProprie" aria-labelledby="memorieProprieTitolo" hidden>
+            <h2 id="memorieProprieTitolo">Le mie memorie inviate</h2>
+            <p>
+                I codici di ritiro sono conservati soltanto su questo dispositivo.
+            </p>
+            <div id="memorieProprieLista"></div>
+        </section>
+    </main>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="./config.js"></script>
+    <script src="./analytics.js"></script>
+    <script src="./api.js"></script>
+    <script src="./notifiche.js"></script>
+    <script src="./site.js"></script>
+    <script src="./accesso-menu.js"></script>
+    <script src="./taccuino.js"></script>
+    <script src="./memorie.js"></script>
+</body>
+</html>

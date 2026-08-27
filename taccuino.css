@@ -1,0 +1,157 @@
+.taccuino-pagina {
+    width: min(980px, calc(100% - 4rem));
+    margin: 0 auto;
+    padding: 8vh 0 15vh;
+}
+
+.taccuino-intro {
+    width: min(680px, 100%);
+    margin: 0 auto 3.5rem;
+    font-size: 1.08rem;
+    line-height: 1.75;
+}
+
+.taccuino-pagina h2 {
+    margin: 0 0 1rem;
+    font-size: clamp(1.4rem, 3vw, 2rem);
+}
+
+.taccuino-mappa {
+    width: 100%;
+    height: min(58vh, 560px);
+    min-height: 400px;
+    border: 1px solid rgba(23, 23, 23, 0.3);
+}
+
+.taccuino-contenuti {
+    margin-top: 3rem;
+    padding-top: 2rem;
+    border-top: 1px solid var(--line);
+}
+
+.taccuino-intestazione {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.taccuino-intestazione p {
+    margin: 0;
+    font-size: 0.82rem;
+}
+
+.taccuino-strumenti,
+.taccuino-card-azioni {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.55rem;
+}
+
+.taccuino-strumenti button,
+.taccuino-card button,
+.taccuino-card a,
+.taccuino-salva {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 2.75rem;
+    box-sizing: border-box;
+    padding: 0.55rem 0.75rem;
+    border: 1px solid var(--ink);
+    background: transparent;
+    color: var(--ink);
+    font-family: var(--font-serif);
+    font-size: 0.82rem;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.taccuino-strumenti button:hover,
+.taccuino-strumenti button:focus-visible,
+.taccuino-card button:hover,
+.taccuino-card button:focus-visible,
+.taccuino-card a:hover,
+.taccuino-card a:focus-visible,
+.taccuino-salva:hover,
+.taccuino-salva:focus-visible,
+.taccuino-salva[aria-pressed="true"] {
+    background: var(--ink);
+    color: var(--paper);
+}
+
+.taccuino-lista {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+    margin-top: 1.25rem;
+}
+
+.taccuino-card {
+    padding: 1rem;
+    border: 1px solid var(--line);
+    background: rgba(244, 241, 232, 0.72);
+}
+
+.taccuino-card h3 {
+    margin: 0 0 0.5rem;
+    font-size: 1.15rem;
+}
+
+.taccuino-card p {
+    margin: 0 0 0.8rem;
+    line-height: 1.5;
+    white-space: pre-wrap;
+}
+
+.taccuino-card-tipo,
+.taccuino-card-data {
+    font-size: 0.76rem;
+    opacity: 0.7;
+}
+
+.taccuino-popup {
+    font-family: var(--font-serif);
+}
+
+.taccuino-popup h3 {
+    margin: 0 0 0.4rem;
+    font-size: 1rem;
+}
+
+.taccuino-popup a {
+    color: inherit;
+}
+
+@media (max-width: 700px) {
+    .taccuino-pagina {
+        width: calc(100% - 2rem);
+        padding-top: 7rem;
+    }
+
+    .taccuino-pagina .titolo-pagina {
+        margin-bottom: 3rem;
+    }
+
+    .taccuino-mappa {
+        height: 52vh;
+        min-height: 380px;
+    }
+
+    .taccuino-intestazione {
+        display: block;
+    }
+
+    .taccuino-strumenti {
+        margin-top: 1rem;
+    }
+
+    .taccuino-strumenti button {
+        flex: 1 1 9rem;
+        min-height: 44px;
+    }
+
+    .taccuino-lista {
+        grid-template-columns: 1fr;
+    }
+}

@@ -4,15 +4,18 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="apple-mobile-web-app-title" content="anonMrcn">
-    <meta name="description" content="Archivio pubblico dei messaggi del progetto nnMrcn">
+    <meta name="description" content="Taccuino personale dei luoghi e dei contenuti salvati su nnMrcn">
     <meta name="theme-color" content="#f4f1e8">
-    <title>Archivio — nnMrcn</title>
+    <title>Taccuino — nnMrcn</title>
+
     <link rel="manifest" href="./manifest.webmanifest">
     <link rel="apple-touch-icon" href="./icona-app-192.png?v=logo-png">
     <link rel="stylesheet" href="./style.css">
+    <link rel="stylesheet" href="./taccuino.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 </head>
 
-<body class="pagina-archivio">
+<body class="pagina-taccuino">
     <button
         class="menu-button"
         id="menuButton"
@@ -38,9 +41,9 @@
             <a href="./index.html">La poesia</a>
             <a href="./autore.html">L’autore</a>
             <a href="./progetto.html">Il progetto</a>
-            <a href="./archivio.html" class="voce-attiva" aria-current="page">Archivio</a>
+            <a href="./archivio.html">Archivio</a>
             <a href="./memorie.html">Memorie</a>
-            <a href="./taccuino.html">Taccuino (<span data-taccuino-count>0</span>)</a>
+            <a href="./taccuino.html" class="voce-attiva" aria-current="page">Taccuino (<span data-taccuino-count>0</span>)</a>
         </div>
 
         <section class="accesso-rete menu-accesso" id="accessoLocations" aria-labelledby="accessoTitolo">
@@ -106,34 +109,45 @@
         <a class="menu-admin-link" href="./admin.html">admin space</a>
     </nav>
 
-    <main class="archivio">
-        <h1 class="titolo-pagina">Archivio</h1>
+    <main class="taccuino-pagina">
+        <h1 class="titolo-pagina">Taccuino</h1>
 
-        <div class="archivio-intro">
+        <div class="taccuino-intro">
             <p>
-                Qui vengono raccolti anonimamente i messaggi che il mittente e
-                il destinatario hanno autorizzato e che l’amministratore ha
-                scelto di pubblicare.
+                Qui ritrovi luoghi, versi, memorie e messaggi salvati durante
+                l’esplorazione. Il contenuto resta su questo dispositivo e non
+                viene inviato al server.
             </p>
         </div>
 
-        <div class="archivio-strumenti">
-            <label for="archivioRicerca">Cerca nei messaggi caricati</label>
-            <input
-                id="archivioRicerca"
-                type="search"
-                autocomplete="off"
-                placeholder="Parola o frase"
-            >
-        </div>
+        <section class="taccuino-mappa-sezione" aria-labelledby="taccuinoMappaTitolo">
+            <h2 id="taccuinoMappaTitolo">La mia mappa</h2>
+            <div
+                class="taccuino-mappa"
+                id="taccuinoMap"
+                role="application"
+                aria-label="Mappa degli elementi salvati nel taccuino"
+            ></div>
+        </section>
 
-        <p class="archivio-status" id="archivioStatus" aria-live="polite">Caricamento…</p>
-        <div class="archivio-lista" id="archivioLista"></div>
-        <button class="archivio-altro" id="archivioAltro" type="button" hidden>
-            Carica altri messaggi
-        </button>
+        <section class="taccuino-contenuti" aria-labelledby="taccuinoContenutiTitolo">
+            <div class="taccuino-intestazione">
+                <div>
+                    <h2 id="taccuinoContenutiTitolo">Elementi salvati</h2>
+                    <p id="taccuinoStatus" aria-live="polite"></p>
+                </div>
+                <div class="taccuino-strumenti">
+                    <button id="taccuinoEsportaGeojson" type="button">Esporta la mappa</button>
+                    <button id="taccuinoEsportaJson" type="button">Esporta tutto</button>
+                    <button id="taccuinoSvuota" type="button">Svuota</button>
+                </div>
+            </div>
+
+            <div class="taccuino-lista" id="taccuinoLista"></div>
+        </section>
     </main>
 
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="./config.js"></script>
     <script src="./analytics.js"></script>
     <script src="./api.js"></script>
@@ -141,6 +155,6 @@
     <script src="./site.js"></script>
     <script src="./accesso-menu.js"></script>
     <script src="./taccuino.js"></script>
-    <script src="./archivio.js"></script>
+    <script src="./taccuino-pagina.js"></script>
 </body>
 </html>

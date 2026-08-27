@@ -15,6 +15,26 @@ const MAX_CONTACT_NAME_LENGTH = 80;
 const MAX_CONTACT_EMAIL_LENGTH = 254;
 const MAX_LOCATION_ADDRESS_LENGTH = 240;
 const MAX_CONTACT_REQUEST_BYTES = 8192;
+const MEMORY_LIMIT_PER_DAY = 3;
+const MAX_MEMORY_TITLE_LENGTH = 100;
+const MAX_MEMORY_AUTHOR_LENGTH = 80;
+const MAX_MEMORY_TEXT_LENGTH = 3000;
+const MAX_MEMORY_MEDIA_BYTES = 900000;
+const MAX_MEMORY_REQUEST_BYTES = 1400000;
+const MEMORY_STATUSES = Object.freeze([
+    "pending",
+    "approved",
+    "rejected"
+]);
+const MEMORY_MEDIA_TYPES = new Set([
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+    "audio/mpeg",
+    "audio/ogg",
+    "audio/webm",
+    "audio/mp4"
+]);
 const MESSAGE_STATUSES = Object.freeze([
     "pending",
     "pending_delivery",
@@ -39,6 +59,31 @@ const CONTACT_STORAGE_STATEMENTS = Object.freeze([
         ON contact_messages(sender_hash, created_at)`,
     `CREATE INDEX IF NOT EXISTS idx_contact_messages_admin
         ON contact_messages(status, created_at)`
+]);
+const MEMORY_STORAGE_STATEMENTS = Object.freeze([
+    `CREATE TABLE IF NOT EXISTS memories (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT NOT NULL CHECK (length(title) BETWEEN 3 AND 100),
+        author_name TEXT NOT NULL DEFAULT '' CHECK (length(author_name) <= 80),
+        text TEXT NOT NULL CHECK (length(text) BETWEEN 1 AND 3000),
+        lat REAL NOT NULL CHECK (lat BETWEEN -90 AND 90),
+        lon REAL NOT NULL CHECK (lon BETWEEN -180 AND 180),
+        media_type TEXT NOT NULL DEFAULT '',
+        media_name TEXT NOT NULL DEFAULT '',
+        media_data TEXT,
+        status TEXT NOT NULL DEFAULT 'pending'
+            CHECK (status IN ('pending', 'approved', 'rejected')),
+        consent INTEGER NOT NULL CHECK (consent = 1),
+        withdrawal_hash TEXT NOT NULL UNIQUE,
+        sender_hash TEXT NOT NULL,
+        created_at INTEGER NOT NULL,
+        updated_at INTEGER NOT NULL,
+        published_at INTEGER
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_memories_public
+        ON memories(status, published_at, id)`,
+    `CREATE INDEX IF NOT EXISTS idx_memories_sender_rate
+        ON memories(sender_hash, created_at)`
 ]);
 const LOCATION_PROFILE_COLUMNS = Object.freeze([
     {
@@ -116,6 +161,38 @@ export default {
                 return await listPublicMessages(request, env, url);
             }
 
+            if (request.method === "GET" && path === "/api/public/memories") {
+                return await listPublicMemories(request, env);
+            }
+
+            if (request.method === "POST" && path === "/api/memories") {
+                return await createMemory(request, env, ctx);
+            }
+
+            if (
+                request.method === "GET" &&
+                /^\/api\/memories\/\d+\/media$/.test(path)
+            ) {
+                const id = Number(path.split("/")[3]);
+                return await getMemoryMedia(request, env, id);
+            }
+
+            if (
+                request.method === "GET" &&
+                /^\/api\/memories\/\d+\/status$/.test(path)
+            ) {
+                const id = Number(path.split("/")[3]);
+                return await getMemoryStatus(request, env, id);
+            }
+
+            if (
+                request.method === "DELETE" &&
+                /^\/api\/memories\/\d+$/.test(path)
+            ) {
+                const id = Number(path.split("/").pop());
+                return await withdrawMemory(request, env, id);
+            }
+
             if (request.method === "POST" && path === "/api/messages") {
                 return await createMessage(request, env, ctx);
             }
@@ -144,6 +221,10 @@ export default {
                 return await adminListMessages(request, env, url);
             }
 
+            if (request.method === "GET" && path === "/api/admin/memories") {
+                return await adminListMemories(request, env, url);
+            }
+
             if (request.method === "GET" && path === "/api/admin/summary") {
                 return await adminSummary(request, env);
             }
@@ -167,6 +248,14 @@ export default {
             if (request.method === "PATCH" && /^\/api\/admin\/messages\/\d+$/.test(path)) {
                 const id = Number(path.split("/").pop());
                 return await adminUpdateMessage(request, env, ctx, id);
+            }
+
+            if (
+                request.method === "PATCH" &&
+                /^\/api\/admin\/memories\/\d+$/.test(path)
+            ) {
+                const id = Number(path.split("/").pop());
+                return await adminUpdateMemory(request, env, id);
             }
 
             if (request.method === "GET" && path === "/api/push/config") {
@@ -564,6 +653,390 @@ function parsePublicArchiveCursor(value) {
     }
 
     return { publishedAt, id };
+}
+
+async function listPublicMemories(request, env) {
+    await ensureMemoryStorage(env);
+
+    const result = await env.DB.prepare(`
+        SELECT
+            id,
+            title,
+            author_name,
+            text,
+            lat,
+            lon,
+            media_type,
+            created_at,
+            published_at
+        FROM memories
+        WHERE
+            status = 'approved'
+            AND published_at IS NOT NULL
+        ORDER BY published_at DESC, id DESC
+        LIMIT 250
+    `).all();
+
+    return json(request, env, {
+        memories: (result.results || []).map((row) => ({
+            id: row.id,
+            title: row.title,
+            authorName: row.author_name,
+            text: row.text,
+            lat: row.lat,
+            lon: row.lon,
+            mediaType: row.media_type,
+            mediaUrl: row.media_type
+                ? `/api/memories/${row.id}/media`
+                : null,
+            createdAt: row.created_at,
+            publishedAt: row.published_at
+        }))
+    });
+}
+
+async function createMemory(request, env, ctx) {
+    const contentLength = Number(request.headers.get("Content-Length") || 0);
+
+    if (contentLength > MAX_MEMORY_REQUEST_BYTES) {
+        return json(request, env, {
+            error: "Il contenuto allegato è troppo grande."
+        }, 413);
+    }
+
+    const body = await readJson(request);
+
+    if (!body || typeof body !== "object" || Array.isArray(body)) {
+        return json(request, env, {
+            error: "Memoria non valida."
+        }, 400);
+    }
+
+    if (String(body.website || "").trim()) {
+        return json(request, env, { ok: true }, 201);
+    }
+
+    const title = String(body.title || "").trim();
+    const authorName = String(body.authorName || "").trim();
+    const text = String(body.text || "").trim();
+    const lat = Number(body.lat);
+    const lon = Number(body.lon);
+
+    if (title.length < 3 || title.length > MAX_MEMORY_TITLE_LENGTH) {
+        return json(request, env, {
+            error: `Il titolo deve contenere da 3 a ${MAX_MEMORY_TITLE_LENGTH} caratteri.`
+        }, 400);
+    }
+
+    if (authorName.length > MAX_MEMORY_AUTHOR_LENGTH) {
+        return json(request, env, {
+            error: "Il nome o lo username è troppo lungo."
+        }, 400);
+    }
+
+    if (!text || text.length > MAX_MEMORY_TEXT_LENGTH) {
+        return json(request, env, {
+            error: `Il testo deve contenere da 1 a ${MAX_MEMORY_TEXT_LENGTH} caratteri.`
+        }, 400);
+    }
+
+    if (
+        !Number.isFinite(lat) ||
+        !Number.isFinite(lon) ||
+        lat < -90 ||
+        lat > 90 ||
+        lon < -180 ||
+        lon > 180
+    ) {
+        return json(request, env, {
+            error: "Seleziona un punto valido sulla mappa."
+        }, 400);
+    }
+
+    if (body.consent !== true) {
+        return json(request, env, {
+            error: "Per inviare la memoria è necessaria l’autorizzazione alla pubblicazione."
+        }, 400);
+    }
+
+    const media = validateMemoryMedia(body.media);
+
+    if (media.error) {
+        return json(request, env, { error: media.error }, 400);
+    }
+
+    if (!env.PASSWORD_PEPPER) {
+        throw new Error("PASSWORD_PEPPER secret missing.");
+    }
+
+    await ensureMemoryStorage(env);
+
+    const sender = request.headers.get("CF-Connecting-IP") || "unknown";
+    const senderHash = await hmacHex(
+        env.PASSWORD_PEPPER,
+        `memory:${sender}`
+    );
+    const now = Date.now();
+    const previous = await env.DB.prepare(`
+        SELECT COUNT(*) AS count
+        FROM memories
+        WHERE
+            sender_hash = ?
+            AND created_at >= ?
+    `).bind(
+        senderHash,
+        now - 24 * 60 * 60 * 1000
+    ).first();
+
+    if (Number(previous?.count || 0) >= MEMORY_LIMIT_PER_DAY) {
+        return json(request, env, {
+            error: "Hai inviato troppe memorie. Riprova domani."
+        }, 429);
+    }
+
+    const withdrawalToken = randomToken(24);
+    const withdrawalHash = await sha256Hex(withdrawalToken);
+    const result = await env.DB.prepare(`
+        INSERT INTO memories (
+            title,
+            author_name,
+            text,
+            lat,
+            lon,
+            media_type,
+            media_name,
+            media_data,
+            status,
+            consent,
+            withdrawal_hash,
+            sender_hash,
+            created_at,
+            updated_at,
+            published_at
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending', 1, ?, ?, ?, ?, NULL)
+    `).bind(
+        title,
+        authorName,
+        text,
+        lat,
+        lon,
+        media.type,
+        media.name,
+        media.data,
+        withdrawalHash,
+        senderHash,
+        now,
+        now
+    ).run();
+
+    const memoryId = result.meta?.last_row_id ?? null;
+
+    queuePushNotification(
+        ctx,
+        env,
+        "admin",
+        null,
+        {
+            title: "nnMrcn — nuova memoria",
+            body: "Hai ricevuto una memoria da controllare.",
+            url: "/admin.html",
+            tag: `nnmrcn-memory-${memoryId || now}`
+        }
+    );
+
+    return json(request, env, {
+        ok: true,
+        id: memoryId,
+        status: "pending",
+        withdrawalToken
+    }, 201);
+}
+
+function validateMemoryMedia(value) {
+    if (!value || typeof value !== "object" || !value.data) {
+        return { type: "", name: "", data: null, error: "" };
+    }
+
+    const type = String(value.type || "").toLowerCase();
+    const name = String(value.name || "allegato").trim().slice(0, 160);
+    const data = String(value.data || "").replace(/\s+/gu, "");
+    const maxBase64Length = Math.ceil(MAX_MEMORY_MEDIA_BYTES / 3) * 4 + 4;
+
+    if (!MEMORY_MEDIA_TYPES.has(type)) {
+        return {
+            error: "Formato non supportato. Usa JPEG, PNG, WebP, MP3, OGG, WebM o M4A."
+        };
+    }
+
+    if (!data || data.length > maxBase64Length || !/^[A-Za-z0-9+/]*={0,2}$/u.test(data)) {
+        return { error: "L’allegato è troppo grande o non è valido." };
+    }
+
+    let bytes;
+
+    try {
+        bytes = fromBase64(data);
+    } catch (_) {
+        return { error: "L’allegato non è valido." };
+    }
+
+    if (
+        !bytes.length ||
+        bytes.length > MAX_MEMORY_MEDIA_BYTES ||
+        !memoryMediaSignatureMatches(type, bytes)
+    ) {
+        return { error: "Il contenuto dell’allegato non corrisponde al formato indicato." };
+    }
+
+    return { type, name, data, error: "" };
+}
+
+function memoryMediaSignatureMatches(type, bytes) {
+    const startsWith = (...values) =>
+        values.every((value, index) => bytes[index] === value);
+    const ascii = (offset, value) =>
+        Array.from(value).every(
+            (character, index) =>
+                bytes[offset + index] === character.charCodeAt(0)
+        );
+
+    if (type === "image/jpeg") {
+        return startsWith(0xff, 0xd8, 0xff);
+    }
+
+    if (type === "image/png") {
+        return startsWith(0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a);
+    }
+
+    if (type === "image/webp") {
+        return ascii(0, "RIFF") && ascii(8, "WEBP");
+    }
+
+    if (type === "audio/ogg") {
+        return ascii(0, "OggS");
+    }
+
+    if (type === "audio/webm") {
+        return startsWith(0x1a, 0x45, 0xdf, 0xa3);
+    }
+
+    if (type === "audio/mpeg") {
+        return ascii(0, "ID3") || (bytes[0] === 0xff && (bytes[1] & 0xe0) === 0xe0);
+    }
+
+    if (type === "audio/mp4") {
+        return ascii(4, "ftyp");
+    }
+
+    return false;
+}
+
+async function getMemoryStatus(request, env, memoryId) {
+    const memory = await memoryForWithdrawal(request, env, memoryId);
+
+    if (!memory) {
+        return unauthorized(request, env);
+    }
+
+    return json(request, env, {
+        id: memory.id,
+        title: memory.title,
+        status: memory.status,
+        createdAt: memory.created_at,
+        publishedAt: memory.published_at
+    });
+}
+
+async function withdrawMemory(request, env, memoryId) {
+    const memory = await memoryForWithdrawal(request, env, memoryId);
+
+    if (!memory) {
+        return unauthorized(request, env);
+    }
+
+    await env.DB.prepare(`
+        DELETE FROM memories
+        WHERE id = ?
+    `).bind(memoryId).run();
+
+    return json(request, env, { ok: true });
+}
+
+async function memoryForWithdrawal(request, env, memoryId) {
+    if (!Number.isInteger(memoryId) || memoryId <= 0) {
+        return null;
+    }
+
+    const token = request.headers.get("X-Memory-Token") || "";
+
+    if (!token) {
+        return null;
+    }
+
+    await ensureMemoryStorage(env);
+    const withdrawalHash = await sha256Hex(token);
+
+    return await env.DB.prepare(`
+        SELECT id, title, status, created_at, published_at
+        FROM memories
+        WHERE
+            id = ?
+            AND withdrawal_hash = ?
+        LIMIT 1
+    `).bind(memoryId, withdrawalHash).first();
+}
+
+async function getMemoryMedia(request, env, memoryId) {
+    if (!Number.isInteger(memoryId) || memoryId <= 0) {
+        return json(request, env, { error: "Memoria non valida." }, 400);
+    }
+
+    await ensureMemoryStorage(env);
+
+    const memory = await env.DB.prepare(`
+        SELECT id, media_type, media_data, status
+        FROM memories
+        WHERE id = ?
+        LIMIT 1
+    `).bind(memoryId).first();
+
+    if (!memory || !memory.media_type || !memory.media_data) {
+        return json(request, env, { error: "Allegato non disponibile." }, 404);
+    }
+
+    const publicMemory = memory.status === "approved";
+
+    if (!publicMemory && !(await adminAuthorized(request, env))) {
+        return unauthorized(request, env);
+    }
+
+    const bytes = fromBase64(memory.media_data);
+    const extension = memoryMediaExtension(memory.media_type);
+
+    return new Response(bytes, {
+        headers: {
+            "Content-Type": memory.media_type,
+            "Content-Length": String(bytes.byteLength),
+            "Content-Disposition":
+                `inline; filename="memoria-${memoryId}.${extension}"`,
+            "Cache-Control": "no-store",
+            "X-Content-Type-Options": "nosniff",
+            ...corsHeaders(request, env)
+        }
+    });
+}
+
+function memoryMediaExtension(type) {
+    return {
+        "image/jpeg": "jpg",
+        "image/png": "png",
+        "image/webp": "webp",
+        "audio/mpeg": "mp3",
+        "audio/ogg": "ogg",
+        "audio/webm": "webm",
+        "audio/mp4": "m4a"
+    }[type] || "bin";
 }
 
 async function createMessage(request, env, ctx) {
@@ -1139,6 +1612,14 @@ async function ensureContactStorage(env) {
     );
 }
 
+async function ensureMemoryStorage(env) {
+    await env.DB.batch(
+        MEMORY_STORAGE_STATEMENTS.map((statement) =>
+            env.DB.prepare(statement)
+        )
+    );
+}
+
 async function ensureLocationProfileStorage(env) {
     const result = await env.DB.prepare("PRAGMA table_info(locations)").all();
     const columns = new Set(
@@ -1193,6 +1674,7 @@ async function adminSummary(request, env) {
 
     await ensureContactStorage(env);
     await ensureMessageArchiveStorage(env);
+    await ensureMemoryStorage(env);
 
     const summary = await env.DB.prepare(`
         SELECT
@@ -1227,6 +1709,15 @@ async function adminSummary(request, env) {
         FROM messages
     `).first();
 
+    const memorySummary = await env.DB.prepare(`
+        SELECT
+            COALESCE(SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END), 0)
+                AS pending_memories,
+            COALESCE(SUM(CASE WHEN status = 'approved' THEN 1 ELSE 0 END), 0)
+                AS public_memories
+        FROM memories
+    `).first();
+
     return json(request, env, {
         pendingOnline: Number(summary?.pending_online || 0),
         pendingDelivery: Number(summary?.pending_delivery || 0),
@@ -1236,7 +1727,9 @@ async function adminSummary(request, env) {
         rejected: Number(summary?.rejected || 0),
         publishable: Number(summary?.publishable || 0),
         public: Number(summary?.public_count || 0),
-        unreadContacts: Number(summary?.unread_contacts || 0)
+        unreadContacts: Number(summary?.unread_contacts || 0),
+        pendingMemories: Number(memorySummary?.pending_memories || 0),
+        publicMemories: Number(memorySummary?.public_memories || 0)
     });
 }
 
@@ -1349,6 +1842,114 @@ function csvCell(value) {
     }
 
     return `"${text.replaceAll('"', '""')}"`;
+}
+
+async function adminListMemories(request, env, url) {
+    if (!(await adminAuthorized(request, env))) {
+        return unauthorized(request, env);
+    }
+
+    await ensureMemoryStorage(env);
+
+    const requestedStatus = url.searchParams.get("status") || "pending";
+    const status = MEMORY_STATUSES.includes(requestedStatus)
+        ? requestedStatus
+        : "pending";
+    const showAll = requestedStatus === "all";
+    let statement = env.DB.prepare(`
+        SELECT
+            id,
+            title,
+            author_name,
+            text,
+            lat,
+            lon,
+            media_type,
+            media_name,
+            status,
+            created_at,
+            updated_at,
+            published_at
+        FROM memories
+        ${showAll ? "" : "WHERE status = ?"}
+        ORDER BY created_at DESC
+        LIMIT 250
+    `);
+
+    if (!showAll) {
+        statement = statement.bind(status);
+    }
+
+    const result = await statement.all();
+
+    return json(request, env, {
+        memories: (result.results || []).map((row) => ({
+            id: row.id,
+            title: row.title,
+            authorName: row.author_name,
+            text: row.text,
+            lat: row.lat,
+            lon: row.lon,
+            mediaType: row.media_type,
+            mediaName: row.media_name,
+            mediaUrl: row.media_type
+                ? `/api/memories/${row.id}/media`
+                : null,
+            status: row.status,
+            createdAt: row.created_at,
+            updatedAt: row.updated_at,
+            publishedAt: row.published_at
+        }))
+    });
+}
+
+async function adminUpdateMemory(request, env, memoryId) {
+    if (!(await adminAuthorized(request, env))) {
+        return unauthorized(request, env);
+    }
+
+    const body = await readJson(request);
+    const action = body?.action;
+
+    if (!["approve", "reject"].includes(action)) {
+        return json(request, env, { error: "Azione non valida." }, 400);
+    }
+
+    await ensureMemoryStorage(env);
+
+    const memory = await env.DB.prepare(`
+        SELECT id, status
+        FROM memories
+        WHERE id = ?
+        LIMIT 1
+    `).bind(memoryId).first();
+
+    if (!memory) {
+        return json(request, env, { error: "Memoria non trovata." }, 404);
+    }
+
+    const nextStatus = action === "approve" ? "approved" : "rejected";
+    const now = Date.now();
+
+    await env.DB.prepare(`
+        UPDATE memories
+        SET
+            status = ?,
+            updated_at = ?,
+            published_at = ?
+        WHERE id = ?
+    `).bind(
+        nextStatus,
+        now,
+        nextStatus === "approved" ? now : null,
+        memoryId
+    ).run();
+
+    return json(request, env, {
+        ok: true,
+        status: nextStatus,
+        publishedAt: nextStatus === "approved" ? now : null
+    });
 }
 
 async function adminListMessages(request, env, url) {
@@ -1863,9 +2464,9 @@ function corsHeaders(request, env) {
         "https://anonmrcn-ctrl.github.io";
 
     const headers = {
-        "Access-Control-Allow-Methods": "GET,POST,PATCH,OPTIONS",
+        "Access-Control-Allow-Methods": "GET,POST,PATCH,DELETE,OPTIONS",
         "Access-Control-Allow-Headers":
-            "Authorization,Content-Type,X-Admin-Token",
+            "Authorization,Content-Type,X-Admin-Token,X-Memory-Token",
         "Access-Control-Max-Age": "86400",
         "Vary": "Origin"
     };
