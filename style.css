@@ -84,6 +84,30 @@ select {
     max-width: calc(100% - 15rem);
 }
 
+.verso-linea {
+    position: relative;
+    display: block;
+}
+
+.verso-linea[data-numero-verso]::after {
+    position: absolute;
+    top: 0.25em;
+    right: clamp(-2.2rem, -4vw, -1.2rem);
+    width: clamp(1rem, 3vw, 1.75rem);
+    color: var(--ink);
+    content: attr(data-numero-verso);
+    font-family: var(--font-serif);
+    font-size: clamp(0.62rem, 1.3vw, 0.68rem);
+    font-style: normal;
+    font-variant-numeric: tabular-nums;
+    font-weight: 400;
+    letter-spacing: 0;
+    line-height: 1;
+    pointer-events: none;
+    text-align: right;
+    opacity: 0.5;
+}
+
 .isolato {
     margin-top: 4.5rem !important;
     margin-bottom: 4.5rem !important;
