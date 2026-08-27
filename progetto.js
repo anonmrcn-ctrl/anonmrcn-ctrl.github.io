@@ -589,49 +589,72 @@
             return;
         }
 
-        const popupElement = event.popup.getElement?.();
-        const content = popupElement?.querySelector(".leaflet-popup-content");
+        const popup = event.popup;
+        let attempts = 0;
 
-        if (!content || content.querySelector(".taccuino-popup-azione")) {
-            return;
-        }
+        const mountButton = () => {
+            const popupElement = popup.getElement?.();
+            const content = popupElement?.querySelector(
+                ".leaflet-popup-content"
+            );
 
-        const plainText = content.textContent.replace(/\s+/gu, " ").trim();
+            if (!content) {
+                return false;
+            }
 
-        if (!plainText || plainText === "Sei qui") {
-            return;
-        }
+            if (content.querySelector(".taccuino-popup-azione")) {
+                return true;
+            }
 
-        const properties = event.popup._source?.feature?.properties || {};
-        const heading = content.querySelector("h2, h3, strong");
-        const title = String(
-            properties.nome || heading?.textContent || plainText.slice(0, 80)
-        ).trim();
-        const latLng = event.popup.getLatLng?.();
-        const route = properties.categoria === "percorso" ||
-            content.querySelector(".popup-percorso");
-        const item = {
-            id: notebook.itemIdentifier({
+            const plainText = content.textContent.replace(/\s+/gu, " ").trim();
+
+            if (!plainText || plainText === "Sei qui") {
+                return true;
+            }
+
+            const properties = popup._source?.feature?.properties || {};
+            const heading = content.querySelector("h2, h3, strong");
+            const title = String(
+                properties.nome || heading?.textContent || plainText.slice(0, 80)
+            ).trim();
+            const latLng = popup.getLatLng?.();
+            const route = properties.categoria === "percorso" ||
+                content.querySelector(".popup-percorso");
+            const item = {
+                id: notebook.itemIdentifier({
+                    type: route ? "percorso" : "luogo",
+                    title,
+                    lat: latLng?.lat,
+                    lon: latLng?.lng
+                }),
                 type: route ? "percorso" : "luogo",
                 title,
+                text: plainText.slice(0, 1000),
                 lat: latLng?.lat,
-                lon: latLng?.lng
-            }),
-            type: route ? "percorso" : "luogo",
-            title,
-            text: plainText.slice(0, 1000),
-            lat: latLng?.lat,
-            lon: latLng?.lng,
-            url: latLng
-                ? `/progetto.html?lat=${latLng.lat.toFixed(6)}` +
-                    `&lon=${latLng.lng.toFixed(6)}&zoom=16`
-                : "/progetto.html"
+                lon: latLng?.lng,
+                url: latLng
+                    ? `/progetto.html?lat=${latLng.lat.toFixed(6)}` +
+                        `&lon=${latLng.lng.toFixed(6)}&zoom=16`
+                    : "/progetto.html"
+            };
+            const button = notebook.createButton(item, {
+                className: "taccuino-salva taccuino-popup-azione"
+            });
+            content.appendChild(button);
+            popup.update();
+            return true;
         };
-        const button = notebook.createButton(item, {
-            className: "taccuino-salva taccuino-popup-azione"
-        });
-        content.appendChild(button);
-        event.popup.update();
+
+        const mountWhenReady = () => {
+            if (mountButton() || attempts >= 5) {
+                return;
+            }
+
+            attempts += 1;
+            window.setTimeout(mountWhenReady, attempts * 30);
+        };
+
+        window.requestAnimationFrame(mountWhenReady);
     }
 
     function applyRequestedMapView() {
