@@ -19,6 +19,10 @@
     }
 
     let keepAccessVisible = false;
+    let previouslyFocusedElement = null;
+
+    menu.setAttribute("aria-hidden", "true");
+    menu.setAttribute("inert", "");
 
     function fitMenuToViewport() {
         const visualViewport = window.visualViewport;
@@ -42,19 +46,31 @@
     }
 
     function openMenu() {
+        previouslyFocusedElement = document.activeElement;
+        menu.removeAttribute("inert");
+        menu.setAttribute("aria-hidden", "false");
         menu.classList.add("aperto");
         overlay.classList.add("aperto");
         button.setAttribute("aria-expanded", "true");
         document.body.classList.add("menu-aperto");
         fitMenuToViewport();
+        closeButton.focus({ preventScroll: true });
     }
 
     function closeMenu() {
+        const wasOpen = menu.classList.contains("aperto");
+
         keepAccessVisible = false;
         menu.classList.remove("aperto");
         overlay.classList.remove("aperto");
+        menu.setAttribute("aria-hidden", "true");
+        menu.setAttribute("inert", "");
         button.setAttribute("aria-expanded", "false");
         document.body.classList.remove("menu-aperto");
+
+        if (wasOpen && previouslyFocusedElement?.focus) {
+            previouslyFocusedElement.focus({ preventScroll: true });
+        }
     }
 
     button.addEventListener("click", openMenu);
@@ -90,8 +106,37 @@
     }
 
     document.addEventListener("keydown", (event) => {
-        if (event.key === "Escape") {
+        if (event.key === "Escape" && menu.classList.contains("aperto")) {
             closeMenu();
+        }
+    });
+
+    menu.addEventListener("keydown", (event) => {
+        if (event.key !== "Tab" || !menu.classList.contains("aperto")) {
+            return;
+        }
+
+        const focusableElements = Array.from(menu.querySelectorAll(
+            "a[href], button:not([disabled]), input:not([disabled]), " +
+            "select:not([disabled]), textarea:not([disabled]), " +
+            '[tabindex]:not([tabindex="-1"])'
+        ));
+
+        if (!focusableElements.length) {
+            event.preventDefault();
+            closeButton.focus();
+            return;
+        }
+
+        const firstElement = focusableElements[0];
+        const lastElement = focusableElements[focusableElements.length - 1];
+
+        if (event.shiftKey && document.activeElement === firstElement) {
+            event.preventDefault();
+            lastElement.focus();
+        } else if (!event.shiftKey && document.activeElement === lastElement) {
+            event.preventDefault();
+            firstElement.focus();
         }
     });
 

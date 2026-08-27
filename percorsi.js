@@ -446,45 +446,47 @@
             fallbackLayers.set(feature, layer);
         }
 
-        fetchOsmGeometry(features)
-            .then((elements) => {
-                let usedOsmGeometry = false;
+        layerGroup.once("add", () => {
+            fetchOsmGeometry(features)
+                .then((elements) => {
+                    let usedOsmGeometry = false;
 
-                for (const feature of features) {
-                    const element = findBestOsmElement(feature, elements);
-                    if (!element) {
-                        continue;
+                    for (const feature of features) {
+                        const element = findBestOsmElement(feature, elements);
+                        if (!element) {
+                            continue;
+                        }
+
+                        const exactLayer = createExactOsmLayer(element, feature);
+                        if (!exactLayer) {
+                            continue;
+                        }
+
+                        const fallback = fallbackLayers.get(feature);
+                        if (fallback) {
+                            layerGroup.removeLayer(fallback);
+                        }
+
+                        exactLayer.addTo(layerGroup);
+                        usedOsmGeometry = true;
                     }
 
-                    const exactLayer = createExactOsmLayer(element, feature);
-                    if (!exactLayer) {
-                        continue;
+                    if (
+                        usedOsmGeometry &&
+                        window.__nnmrcnMap?.attributionControl
+                    ) {
+                        window.__nnmrcnMap.attributionControl.addAttribution(
+                            '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap contributors</a>'
+                        );
                     }
-
-                    const fallback = fallbackLayers.get(feature);
-                    if (fallback) {
-                        layerGroup.removeLayer(fallback);
-                    }
-
-                    exactLayer.addTo(layerGroup);
-                    usedOsmGeometry = true;
-                }
-
-                if (
-                    usedOsmGeometry &&
-                    window.__nnmrcnMap?.attributionControl
-                ) {
-                    window.__nnmrcnMap.attributionControl.addAttribution(
-                        '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap contributors</a>'
+                })
+                .catch((error) => {
+                    console.warn(
+                        "Perimetri OpenStreetMap non disponibili: uso le posizioni locali.",
+                        error
                     );
-                }
-            })
-            .catch((error) => {
-                console.warn(
-                    "Perimetri OpenStreetMap non disponibili: uso le posizioni locali.",
-                    error
-                );
-            });
+                });
+        });
 
         return layerGroup;
     }

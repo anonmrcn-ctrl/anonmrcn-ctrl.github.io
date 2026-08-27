@@ -15,12 +15,16 @@ const MAX_CONTACT_NAME_LENGTH = 80;
 const MAX_CONTACT_EMAIL_LENGTH = 254;
 const MAX_LOCATION_ADDRESS_LENGTH = 240;
 const MAX_CONTACT_REQUEST_BYTES = 8192;
+const MAX_JSON_REQUEST_BYTES = 16384;
 const MEMORY_LIMIT_PER_DAY = 3;
 const MAX_MEMORY_TITLE_LENGTH = 100;
 const MAX_MEMORY_AUTHOR_LENGTH = 80;
 const MAX_MEMORY_TEXT_LENGTH = 3000;
 const MAX_MEMORY_MEDIA_BYTES = 900000;
 const MAX_MEMORY_REQUEST_BYTES = 1400000;
+
+class RequestBodyTooLargeError extends Error {}
+
 const MEMORY_STATUSES = Object.freeze([
     "pending",
     "approved",
@@ -281,6 +285,12 @@ export default {
                 error: "Not found."
             }, 404);
         } catch (error) {
+            if (error instanceof RequestBodyTooLargeError) {
+                return json(request, env, {
+                    error: "Richiesta troppo grande."
+                }, 413);
+            }
+
             console.error(JSON.stringify({
                 event: "worker_request_failed",
                 method: request.method,
@@ -704,7 +714,7 @@ async function createMemory(request, env, ctx) {
         }, 413);
     }
 
-    const body = await readJson(request);
+    const body = await readJson(request, MAX_MEMORY_REQUEST_BYTES);
 
     if (!body || typeof body !== "object" || Array.isArray(body)) {
         return json(request, env, {
@@ -1299,7 +1309,7 @@ async function createContactMessage(request, env, ctx) {
         }, 413);
     }
 
-    const body = await readJson(request);
+    const body = await readJson(request, MAX_CONTACT_REQUEST_BYTES);
 
     if (!body || typeof body !== "object" || Array.isArray(body)) {
         return json(request, env, {
@@ -1351,7 +1361,7 @@ async function createAccessRequest(request, env, ctx) {
         }, 413);
     }
 
-    const body = await readJson(request);
+    const body = await readJson(request, MAX_CONTACT_REQUEST_BYTES);
 
     if (!body || typeof body !== "object" || Array.isArray(body)) {
         return json(request, env, {
@@ -2449,9 +2459,52 @@ function toHex(bytes) {
         .join("");
 }
 
-async function readJson(request) {
+async function readJson(request, maximumBytes = MAX_JSON_REQUEST_BYTES) {
+    const contentLength = Number(request.headers.get("Content-Length"));
+
+    if (Number.isFinite(contentLength) && contentLength > maximumBytes) {
+        throw new RequestBodyTooLargeError();
+    }
+
+    if (!request.body) {
+        return null;
+    }
+
+    const reader = request.body.getReader();
+    const chunks = [];
+    let totalBytes = 0;
+
     try {
-        return await request.json();
+        while (true) {
+            const { done, value } = await reader.read();
+
+            if (done) {
+                break;
+            }
+
+            totalBytes += value.byteLength;
+
+            if (totalBytes > maximumBytes) {
+                await reader.cancel().catch(() => {});
+                throw new RequestBodyTooLargeError();
+            }
+
+            chunks.push(value);
+        }
+    } finally {
+        reader.releaseLock();
+    }
+
+    const data = new Uint8Array(totalBytes);
+    let offset = 0;
+
+    for (const chunk of chunks) {
+        data.set(chunk, offset);
+        offset += chunk.byteLength;
+    }
+
+    try {
+        return JSON.parse(new TextDecoder().decode(data));
     } catch (_) {
         return null;
     }
@@ -2490,6 +2543,7 @@ function json(request, env, body, status = 200) {
             headers: {
                 "Content-Type": "application/json; charset=utf-8",
                 "Cache-Control": "no-store",
+                "X-Content-Type-Options": "nosniff",
                 ...corsHeaders(request, env)
             }
         }
@@ -2509,6 +2563,7 @@ function downloadResponse(
             "Content-Type": contentType,
             "Content-Disposition": `attachment; filename="${fileName}"`,
             "Cache-Control": "no-store",
+            "X-Content-Type-Options": "nosniff",
             "X-Export-Truncated": truncated ? "1" : "0",
             ...corsHeaders(request, env)
         }
