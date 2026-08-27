@@ -92,8 +92,8 @@ select {
 .verso-linea[data-numero-verso]::after {
     position: absolute;
     top: 0.25em;
-    right: clamp(-2.2rem, -4vw, -1.2rem);
-    width: clamp(1rem, 3vw, 1.75rem);
+    right: -1.2rem;
+    width: 1.1rem;
     color: var(--ink);
     content: attr(data-numero-verso);
     font-family: var(--font-serif);
@@ -106,6 +106,13 @@ select {
     pointer-events: none;
     text-align: right;
     opacity: 0.5;
+}
+
+@media (min-width: 1101px) {
+    .verso-linea[data-numero-verso]::after {
+        right: -2.2rem;
+        width: 1.75rem;
+    }
 }
 
 .isolato {
