@@ -766,9 +766,23 @@
     }
 
     function populateAsyncGroup(group, loader, errorMessage) {
-        loader()
-            .then((layer) => group.addLayer(layer))
-            .catch((error) => console.error(errorMessage, error));
+        let started = false;
+        const load = () => {
+            if (started) {
+                return;
+            }
+
+            started = true;
+            loader()
+                .then((layer) => group.addLayer(layer))
+                .catch((error) => console.error(errorMessage, error));
+        };
+
+        if (window.NNMRCN_SETTINGS?.isLightMapEnabled?.()) {
+            group.once("add", load);
+        } else {
+            load();
+        }
     }
 
     L.control.layers = function (baseLayers, overlays, options) {

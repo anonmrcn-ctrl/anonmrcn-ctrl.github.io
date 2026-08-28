@@ -6,6 +6,15 @@
     --surface: #ffffff;
     --line: rgba(var(--ink-rgb), 0.25);
     --font-serif: Georgia, "Times New Roman", serif;
+    --body-font-size: 18px;
+}
+
+html[data-text-size="large"] {
+    --body-font-size: 20.25px;
+}
+
+html[data-text-size="xlarge"] {
+    --body-font-size: 22.5px;
 }
 
 html[data-theme="dark"] {
@@ -31,7 +40,7 @@ body {
     background: var(--paper);
     color: var(--ink);
     font-family: var(--font-serif);
-    font-size: 18px;
+    font-size: var(--body-font-size);
     line-height: 1.55;
 }
 
@@ -373,6 +382,10 @@ select {
     border-top: 1px solid var(--line);
 }
 
+.impostazioni-gruppo + .impostazioni-gruppo {
+    margin-top: 1.75rem;
+}
+
 .impostazioni-gruppo > p,
 .impostazioni-pannello .installazione-istruzioni {
     margin: 0.75rem 0 0;
@@ -381,32 +394,68 @@ select {
     opacity: 0.72;
 }
 
-.impostazioni-temi {
+.impostazioni-gruppo > .impostazioni-etichetta {
+    margin: 1rem 0 0.45rem;
+    font-size: 0.78rem;
+    font-weight: 700;
+    opacity: 1;
+}
+
+.impostazioni-scelte {
     display: grid;
+    gap: 0.35rem;
+}
+
+.impostazioni-scelte-2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.impostazioni-scelte-3 {
     grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
-.impostazioni-temi button {
+.impostazioni-scelte-4 {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.impostazioni-scelte button,
+.impostazioni-azione {
     min-height: 2.75rem;
     padding: 0.55rem 0.4rem;
     border: 1px solid var(--ink);
-    border-right: 0;
     background: transparent;
     color: var(--ink);
+    font-family: var(--font-serif);
     font-size: 0.8rem;
     cursor: pointer;
 }
 
-.impostazioni-temi button:last-child {
-    border-right: 1px solid var(--ink);
-}
-
-.impostazioni-temi button:hover,
-.impostazioni-temi button:focus-visible,
-.impostazioni-temi button[aria-pressed="true"] {
+.impostazioni-scelte button:hover,
+.impostazioni-scelte button:focus-visible,
+.impostazioni-scelte button[aria-pressed="true"],
+.impostazioni-azione:hover,
+.impostazioni-azione:focus-visible,
+.impostazioni-azione[aria-pressed="true"] {
     outline: none;
     background: var(--ink);
     color: var(--paper);
+}
+
+.impostazioni-azione:disabled {
+    cursor: default;
+    opacity: 0.42;
+}
+
+.impostazioni-azioni-locali {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.55rem;
+    margin-top: 0.65rem;
+}
+
+.impostazioni-gruppo > .impostazioni-esito {
+    min-height: 1.4em;
+    opacity: 1;
 }
 
 .impostazioni-pannello .menu-installazione {
@@ -2111,8 +2160,19 @@ html[data-theme="dark"] .leaflet-control-layers label {
 }
 
 @media (max-width: 700px) {
+    :root {
+        --body-font-size: 16.5px;
+    }
+
+    html[data-text-size="large"] {
+        --body-font-size: 18.5px;
+    }
+
+    html[data-text-size="xlarge"] {
+        --body-font-size: 20.5px;
+    }
+
     body {
-        font-size: 16.5px;
         line-height: 1.52;
     }
 
@@ -2135,6 +2195,11 @@ html[data-theme="dark"] .leaflet-control-layers label {
 
     .impostazioni-pannello {
         padding: 1.5rem;
+    }
+
+    .impostazioni-scelte-4,
+    .impostazioni-azioni-locali {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
     .menu-principale {
@@ -2417,17 +2482,30 @@ html[data-theme="dark"] .leaflet-control-layers label {
     }
 }
 
+html[data-motion="reduce"] {
+    scroll-behavior: auto;
+}
+
+html[data-motion="reduce"] *,
+html[data-motion="reduce"] *::before,
+html[data-motion="reduce"] *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+}
+
 @media (prefers-reduced-motion: reduce) {
-    html {
+    html:not([data-motion="full"]) {
         scroll-behavior: auto;
     }
 
-    .indice a,
-    .controlli-fissi,
-    .menu-button,
-    .menu-overlay,
-    .menu-principale,
-    .menu-contenuto a {
-        transition: none;
+    html:not([data-motion="full"]) *,
+    html:not([data-motion="full"]) *::before,
+    html:not([data-motion="full"]) *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        scroll-behavior: auto !important;
+        transition-duration: 0.01ms !important;
     }
 }

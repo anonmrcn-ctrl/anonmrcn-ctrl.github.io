@@ -2,6 +2,7 @@
     "use strict";
 
     const notebook = window.NNMRCN_TACCUINO;
+    const settingsManager = window.NNMRCN_SETTINGS;
     const elements = {
         map: document.getElementById("taccuinoMap"),
         list: document.getElementById("taccuinoLista"),
@@ -15,12 +16,22 @@
         return;
     }
 
-    const map = L.map(elements.map).setView([45.5515, 12.3278], 13);
+    const lightMap = settingsManager?.isLightMapEnabled?.() || false;
+    const reduceMotion = Boolean(
+        settingsManager?.shouldReduceMotion?.() || lightMap
+    );
+    const map = L.map(elements.map, {
+        fadeAnimation: !lightMap,
+        markerZoomAnimation: !lightMap,
+        zoomAnimation: !lightMap
+    }).setView([45.5515, 12.3278], 13);
     const markersLayer = L.layerGroup().addTo(map);
     const markers = new Map();
 
     L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
         maxZoom: 19,
+        keepBuffer: lightMap ? 1 : 2,
+        updateWhenIdle: lightMap,
         attribution: "&copy; OpenStreetMap contributors"
     }).addTo(map);
 
@@ -76,6 +87,7 @@
                 coordinateItems.map((item) => [item.lat, item.lon])
             );
             map.fitBounds(bounds, {
+                animate: !reduceMotion,
                 padding: [35, 35],
                 maxZoom: 16
             });
@@ -125,9 +137,14 @@
             locate.textContent = "Mostra sulla mappa";
             locate.addEventListener("click", () => {
                 const marker = markers.get(item.id);
-                map.setView(marker.getLatLng(), 16, { animate: true });
+                map.setView(marker.getLatLng(), 16, {
+                    animate: !reduceMotion
+                });
                 marker.openPopup();
-                elements.map.scrollIntoView({ behavior: "smooth", block: "center" });
+                elements.map.scrollIntoView({
+                    behavior: settingsManager?.scrollBehavior?.() || "smooth",
+                    block: "center"
+                });
             });
             actions.appendChild(locate);
         }

@@ -3,6 +3,7 @@
 
     const api = window.NNMRCN_API;
     const notebook = window.NNMRCN_TACCUINO;
+    const settingsManager = window.NNMRCN_SETTINGS;
     const SUBMISSIONS_KEY = "nnmrcn_memorie_inviate_v1";
     const MAX_MEDIA_BYTES = 900000;
 
@@ -34,8 +35,15 @@
         return;
     }
 
+    const lightMap = settingsManager?.isLightMapEnabled?.() || false;
+    const reduceMotion = Boolean(
+        settingsManager?.shouldReduceMotion?.() || lightMap
+    );
     const map = L.map(elements.map, {
-        scrollWheelZoom: true
+        scrollWheelZoom: true,
+        fadeAnimation: !lightMap,
+        markerZoomAnimation: !lightMap,
+        zoomAnimation: !lightMap
     }).setView([45.5515, 12.3278], 13);
     const memoriesLayer = L.layerGroup().addTo(map);
     const markers = new Map();
@@ -46,6 +54,8 @@
         "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
         {
             maxZoom: 19,
+            keepBuffer: lightMap ? 1 : 2,
+            updateWhenIdle: lightMap,
             attribution:
                 "Tiles &copy; Esri — Sources: Esri, Maxar, Earthstar Geographics, and the GIS User Community"
         }
@@ -56,7 +66,10 @@
         setSelectionMode(!selectionMode);
 
         if (selectionMode) {
-            elements.map.scrollIntoView({ behavior: "smooth", block: "center" });
+            elements.map.scrollIntoView({
+                behavior: settingsManager?.scrollBehavior?.() || "smooth",
+                block: "center"
+            });
         }
     });
     elements.currentPosition.addEventListener("click", useCurrentPosition);
@@ -240,9 +253,14 @@
             return;
         }
 
-        map.setView(marker.getLatLng(), 16, { animate: true });
+        map.setView(marker.getLatLng(), 16, {
+            animate: !reduceMotion
+        });
         marker.openPopup();
-        elements.map.scrollIntoView({ behavior: "smooth", block: "center" });
+        elements.map.scrollIntoView({
+            behavior: settingsManager?.scrollBehavior?.() || "smooth",
+            block: "center"
+        });
     }
 
     function handleMapClick(event) {

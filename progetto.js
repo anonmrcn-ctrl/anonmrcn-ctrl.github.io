@@ -4,7 +4,9 @@
     const apiClient = window.NNMRCN_API;
     const mapExtensions = window.NNMRCN_MAP;
     const notebook = window.NNMRCN_TACCUINO;
+    const settingsManager = window.NNMRCN_SETTINGS;
     const SESSION_KEY = "nnmrcn_session";
+    const MAP_STATE_KEY = "nnmrcn_map_state_v1";
     const MAX_MESSAGE_LENGTH = 1500;
     const MAX_BATCH_RECIPIENTS = 5;
     const MOBILE_COMPARISON_QUERY = "(max-width: 700px)";
@@ -348,6 +350,9 @@
     let narrativeMoveHandler = null;
     let comparisonFrame = 0;
     let comparisonRetryTimers = [];
+    let mapStateReady = false;
+    let mapStateSaveTimer = 0;
+    const mapLayerRegistry = new Map();
     const mobileComparisonMedia = window.matchMedia(MOBILE_COMPARISON_QUERY);
 
     const pushNotifications = window.NNMRCN_NOTIFICHE.create({
@@ -364,13 +369,19 @@
     const locationsLayer = L.layerGroup().addTo(map);
 
     loadLandscapes();
+    applyMapStartupPreference();
+    mapStateReady = true;
     bindInterface();
     restoreSession();
     applyRequestedMapView();
 
     function createMap() {
+        const lightMap = settingsManager?.isLightMapEnabled?.() || false;
         const instance = L.map("map", {
-            scrollWheelZoom: true
+            scrollWheelZoom: true,
+            fadeAnimation: !lightMap,
+            markerZoomAnimation: !lightMap,
+            zoomAnimation: !lightMap
         }).setView([45.5515, 12.3278], 13);
 
         instance.createPane("historicalRaster");
@@ -383,6 +394,8 @@
 
         const satelliteOptions = {
             maxZoom: 19,
+            keepBuffer: lightMap ? 1 : 2,
+            updateWhenIdle: lightMap,
             attribution:
                 "Tiles &copy; Esri — Sources: Esri, Maxar, Earthstar Geographics, and the GIS User Community"
         };
@@ -414,6 +427,8 @@
                     pane: "historicalRaster",
                     opacity: 1,
                     noWrap: true,
+                    keepBuffer: lightMap ? 1 : 2,
+                    updateWhenIdle: lightMap,
                     attribution: "Aerofototeca Veneta — 1975"
                 }
             );
@@ -438,9 +453,7 @@
 
         year1975Layer = L.layerGroup(year1975Layers);
 
-        todayLayer.addTo(instance);
-
-        L.control.layers(
+        const baseControl = L.control.layers(
             {
                 "Oggi": todayLayer,
                 "1975": year1975Layer
@@ -450,12 +463,17 @@
                 collapsed: false
             }
         ).addTo(instance);
+        registerMapControl(baseControl);
 
         instance.on("baselayerchange", () => {
             if (comparisonActive) {
                 setComparisonMode(false);
             }
+
+            scheduleMapStateSave();
         });
+        instance.on("overlayadd overlayremove", scheduleMapStateSave);
+        instance.on("moveend zoomend", scheduleMapStateSave);
 
         instance.on("popupopen", addPopupNotebookControl);
 
@@ -488,6 +506,145 @@
         });
 
         return instance;
+    }
+
+    function registerMapControl(control) {
+        (control?._layers || []).forEach((entry) => {
+            mapLayerRegistry.set(entry.name, {
+                layer: entry.layer,
+                overlay: Boolean(entry.overlay)
+            });
+        });
+    }
+
+    function readMapState() {
+        try {
+            const state = JSON.parse(localStorage.getItem(MAP_STATE_KEY) || "null");
+
+            if (!state || typeof state !== "object") {
+                return null;
+            }
+
+            return state;
+        } catch (_) {
+            return null;
+        }
+    }
+
+    function currentBaseLayerName() {
+        if (year1975Layer && map.hasLayer(year1975Layer)) {
+            return "1975";
+        }
+
+        if (todayLayer && map.hasLayer(todayLayer)) {
+            return "Oggi";
+        }
+
+        return "";
+    }
+
+    function scheduleMapStateSave() {
+        if (!mapStateReady) {
+            return;
+        }
+
+        window.clearTimeout(mapStateSaveTimer);
+        mapStateSaveTimer = window.setTimeout(saveMapState, 120);
+    }
+
+    function saveMapState() {
+        const center = map.getCenter();
+        const overlays = [];
+
+        mapLayerRegistry.forEach((entry, name) => {
+            if (entry.overlay && map.hasLayer(entry.layer)) {
+                overlays.push(name);
+            }
+        });
+
+        const state = {
+            base: currentBaseLayerName(),
+            overlays,
+            center: [center.lat, center.lng],
+            zoom: map.getZoom()
+        };
+
+        try {
+            localStorage.setItem(MAP_STATE_KEY, JSON.stringify(state));
+        } catch (_) {
+            // L’ultima vista resta disponibile solo per la pagina corrente.
+        }
+    }
+
+    function clearBaseLayers() {
+        [todayLayer, year1975Layer].forEach((layer) => {
+            if (layer && map.hasLayer(layer)) {
+                map.removeLayer(layer);
+            }
+        });
+
+        if (
+            historical1975Layer &&
+            map.hasLayer(historical1975Layer) &&
+            (!year1975Layer || !map.hasLayer(year1975Layer))
+        ) {
+            map.removeLayer(historical1975Layer);
+        }
+    }
+
+    function addBaseLayer(name) {
+        if (name === "1975") {
+            year1975Layer?.addTo(map);
+        } else if (name === "Oggi") {
+            todayLayer?.addTo(map);
+        }
+    }
+
+    function applyMapStartupPreference() {
+        const startup = settingsManager?.get?.("mapStartup") || "empty";
+
+        clearBaseLayers();
+
+        if (startup === "today") {
+            addBaseLayer("Oggi");
+            return;
+        }
+
+        if (startup === "1975") {
+            addBaseLayer("1975");
+            return;
+        }
+
+        if (startup !== "last") {
+            return;
+        }
+
+        const state = readMapState();
+
+        if (!state) {
+            return;
+        }
+
+        addBaseLayer(state.base);
+
+        if (Array.isArray(state.overlays)) {
+            state.overlays.forEach((name) => {
+                const entry = mapLayerRegistry.get(name);
+
+                if (entry?.overlay && !map.hasLayer(entry.layer)) {
+                    entry.layer.addTo(map);
+                }
+            });
+        }
+
+        if (
+            Array.isArray(state.center) &&
+            state.center.length === 2 &&
+            state.center.every(Number.isFinite) &&
+            Number.isFinite(state.zoom)
+        ) {
+            map.setView(state.center, state.zoom, { animate: false });
+        }
     }
 
     function usesMobileComparison() {
@@ -914,7 +1071,7 @@
 
         focusNarrativeStep(step);
         elements.map.scrollIntoView({
-            behavior: "smooth",
+            behavior: settingsManager?.scrollBehavior?.() || "smooth",
             block: "center"
         });
     }
@@ -928,9 +1085,10 @@
     });
 
     function focusNarrativeStep(step) {
-        const reduceMotion = window.matchMedia(
-            "(prefers-reduced-motion: reduce)"
-        ).matches;
+        const reduceMotion = Boolean(
+            settingsManager?.shouldReduceMotion?.() ||
+            settingsManager?.isLightMapEnabled?.()
+        );
 
         if (narrativeMoveHandler) {
             map.off("moveend", narrativeMoveHandler);
@@ -1292,7 +1450,7 @@
         }
 
         elements.map.scrollIntoView({
-            behavior: "smooth",
+            behavior: settingsManager?.scrollBehavior?.() || "smooth",
             block: "center"
         });
     }
@@ -1300,7 +1458,7 @@
     async function loadLandscapes() {
         const landscapeLayer = L.layerGroup();
 
-        L.control.layers(
+        const overlayControl = L.control.layers(
             null,
             {
                 "Paesaggi significativi": landscapeLayer
@@ -1309,6 +1467,13 @@
                 collapsed: true
             }
         ).addTo(map);
+        registerMapControl(overlayControl);
+
+        if (settingsManager?.isLightMapEnabled?.()) {
+            await new Promise((resolve) => {
+                map.once("overlayadd", resolve);
+            });
+        }
 
         try {
             const data = await mapExtensions.loadGeoJSON(
@@ -1646,7 +1811,7 @@
             if (window.location.hash === "#postaSection") {
                 elements.postaSection.hidden = false;
                 elements.postaSection.scrollIntoView({
-                    behavior: "smooth",
+                    behavior: settingsManager?.scrollBehavior?.() || "smooth",
                     block: "start"
                 });
             }
@@ -1985,7 +2150,7 @@
 
         if (mapRecipientSelectionMode) {
             elements.map.scrollIntoView({
-                behavior: "smooth",
+                behavior: settingsManager?.scrollBehavior?.() || "smooth",
                 block: "center"
             });
         }
@@ -2061,7 +2226,7 @@
         document.getElementById("menuClose")?.click();
         await loadInbox();
         elements.postaSection.scrollIntoView({
-            behavior: "smooth",
+            behavior: settingsManager?.scrollBehavior?.() || "smooth",
             block: "start"
         });
     }

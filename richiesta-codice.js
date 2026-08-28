@@ -2,6 +2,7 @@
     "use strict";
 
     const api = window.NNMRCN_API;
+    const settingsManager = window.NNMRCN_SETTINGS;
     const toggle = document.getElementById("richiestaCodiceToggle");
     const form = document.getElementById("richiestaCodiceForm");
     const username = document.getElementById("richiestaUsername");
@@ -64,7 +65,10 @@
 
         initializeMap();
         window.requestAnimationFrame(() => pickerMap?.invalidateSize());
-        mapPanel.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        mapPanel.scrollIntoView({
+            behavior: settingsManager?.scrollBehavior?.() || "smooth",
+            block: "nearest"
+        });
     });
 
     mapClear.addEventListener("click", () => clearSelectedPoint(true));
@@ -117,14 +121,21 @@
             return;
         }
 
+        const lightMap = settingsManager?.isLightMapEnabled?.() || false;
+
         pickerMap = window.L.map(mapElement, {
-            scrollWheelZoom: true
+            scrollWheelZoom: true,
+            fadeAnimation: !lightMap,
+            markerZoomAnimation: !lightMap,
+            zoomAnimation: !lightMap
         }).setView([45.5515, 12.3278], 14);
 
         window.L.tileLayer(
             "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
             {
                 maxZoom: 19,
+                keepBuffer: lightMap ? 1 : 2,
+                updateWhenIdle: lightMap,
                 attribution: "&copy; OpenStreetMap contributors"
             }
         ).addTo(pickerMap);
