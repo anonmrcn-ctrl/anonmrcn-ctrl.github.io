@@ -198,7 +198,7 @@
 
         if (
             window.pmtiles?.PMTiles &&
-            typeof window.pmtiles.leafletRasterLayer === "function"
+            typeof window.NNMRCN_PM_TILES_LAYER === "function"
         ) {
             const archive1975 = new window.pmtiles.PMTiles(
                 new URL(
@@ -207,7 +207,7 @@
                 ).href
             );
 
-            historical1975Layer = window.pmtiles.leafletRasterLayer(
+            historical1975Layer = window.NNMRCN_PM_TILES_LAYER(
                 archive1975,
                 {
                     pane: "historicalRaster",

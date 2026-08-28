@@ -1,7 +1,7 @@
 (() => {
     "use strict";
 
-    if (!window.L || !window.pmtiles?.leafletRasterLayer) {
+    if (!window.L || !window.pmtiles?.PMTiles) {
         console.error("Leaflet o PMTiles non sono disponibili: overzoom 1975 non attivato.");
         return;
     }
@@ -14,7 +14,7 @@
         return "application/octet-stream";
     }
 
-    window.pmtiles.leafletRasterLayer = function (source, options = {}) {
+    window.NNMRCN_PM_TILES_LAYER = function (source, options = {}) {
         let headerPromise;
         const headerRetryDelays = [250, 750, 1500];
 
