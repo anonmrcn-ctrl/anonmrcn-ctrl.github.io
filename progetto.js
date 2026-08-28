@@ -108,6 +108,36 @@
             zoom: 16,
             text:
                 "Corso d’acqua minore il cui nome deriva dalla tortuosità del suo percorso, evidentissima nell’ultimo tratto prima della foce nel Dese. Questo canale presenta un elevato tasso di inquinamento, con alte concentrazioni di fosfati, legato al fatto che gran parte del suo bacino è urbanizzato."
+        },
+        {
+            verse: "v. 104 — «A57, A27, A4»",
+            label: "A57",
+            title: "A57 — Tangenziale di Mestre",
+            lat: 45.557929,
+            lon: 12.316476,
+            zoom: 15,
+            text:
+                "La Tangenziale di Mestre, censita come autostrada A57 dal 2009, fu costruita, all’interno del territorio comunale, tra il 1970 e il 1972. La sua costruzione ha diviso via Pialoi, via Alta e via Trento-Trieste — cesure risolte con la costruzione di cavalcavia —, via Perosi — risolta con un sottopasso —, via Venier e l’asse via Fornace/via Matteotti. Inoltre divide informalmente le frazioni di Gaggio e Marcon."
+        },
+        {
+            verse: "v. 104 — «A57, A27, A4»",
+            label: "A27",
+            title: "A27 — Autostrada d’Alemagna",
+            lat: 45.565509,
+            lon: 12.274594,
+            zoom: 15,
+            text:
+                "Il tratto dell’autostrada A27 d’Alemagna che attraversa il territorio di Marcon fu aperto nel 1972. La sua costruzione ha diviso via Mazzocco e via Bonisiolo — cesure risolte con la costruzione di cavalcavia —, via Torni, via Cortellazzo e via Bonfadini — quest’ultima risolta con un sottopasso. Inoltre divide informalmente il comune di Marcon da quello di Mogliano Veneto."
+        },
+        {
+            verse: "v. 104 — «A57, A27, A4»",
+            label: "A4",
+            title: "A4 — Autostrada Serenissima",
+            lat: 45.5735,
+            lon: 12.3348,
+            zoom: 15,
+            text:
+                "Il tratto dell’A4 che attraversa il comune di Marcon fu inaugurato nel 2006. La sua costruzione ha diviso una strada privata tra Bonisiolo e Marcon, via Grigoletto e via Pasqualato — cesura risolta con un cavalcavia — e via Prati — risolta con un sottopasso. Inoltre divide informalmente il comune di Marcon da quelli di Casale sul Sile e Mogliano Veneto."
         }
     ]);
 
@@ -197,6 +227,8 @@
     let mapListLoaded = false;
     let narrativeStepIndex = 0;
     let narrativeMarker = null;
+    let narrativeFocusTimer = 0;
+    let narrativeMoveHandler = null;
     let comparisonFrame = 0;
     let comparisonRetryTimers = [];
     const mobileComparisonMedia = window.matchMedia(MOBILE_COMPARISON_QUERY);
@@ -616,6 +648,13 @@
         elements.esploraPoesiaButton.setAttribute("aria-pressed", "false");
         elements.esploraPoesiaButton.textContent = "Esplora la poesia";
 
+        if (narrativeMoveHandler) {
+            map.off("moveend", narrativeMoveHandler);
+            narrativeMoveHandler = null;
+        }
+
+        window.clearTimeout(narrativeFocusTimer);
+
         if (narrativeMarker) {
             map.removeLayer(narrativeMarker);
             narrativeMarker = null;
@@ -671,14 +710,65 @@
             })
             .addTo(map);
 
-        map.flyTo([step.lat, step.lon], step.zoom, {
-            animate: !window.matchMedia("(prefers-reduced-motion: reduce)").matches,
-            duration: 1.1
-        });
+        focusNarrativeStep(step);
         elements.map.scrollIntoView({
             behavior: "smooth",
             block: "center"
         });
+    }
+
+    function focusNarrativeStep(step) {
+        const reduceMotion = window.matchMedia(
+            "(prefers-reduced-motion: reduce)"
+        ).matches;
+
+        if (narrativeMoveHandler) {
+            map.off("moveend", narrativeMoveHandler);
+        }
+
+        window.clearTimeout(narrativeFocusTimer);
+
+        let adjusted = false;
+        const revealMarker = () => {
+            if (adjusted) {
+                return;
+            }
+
+            adjusted = true;
+            map.off("moveend", revealMarker);
+            narrativeMoveHandler = null;
+            window.clearTimeout(narrativeFocusTimer);
+
+            if (elements.percorsoNarrativo.hidden) {
+                return;
+            }
+
+            const mapSize = map.getSize();
+            const panelWidth = elements.percorsoNarrativo.offsetWidth;
+            const panelHeight = elements.percorsoNarrativo.offsetHeight;
+            const compactLayout = window.matchMedia(
+                "(max-width: 1100px)"
+            ).matches;
+            const offset = compactLayout
+                ? [0, Math.min(panelHeight / 2, mapSize.y * 0.4)]
+                : [Math.min(panelWidth / 2, mapSize.x * 0.4), 0];
+
+            map.panBy(offset, {
+                animate: !reduceMotion,
+                duration: reduceMotion ? 0 : 0.35
+            });
+        };
+
+        narrativeMoveHandler = revealMarker;
+        map.once("moveend", revealMarker);
+        map.flyTo([step.lat, step.lon], step.zoom, {
+            animate: !reduceMotion,
+            duration: reduceMotion ? 0 : 1.1
+        });
+        narrativeFocusTimer = window.setTimeout(
+            revealMarker,
+            reduceMotion ? 50 : 1300
+        );
     }
 
     function narrativeNotebookItem(step, index) {
