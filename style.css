@@ -1062,6 +1062,8 @@ body.poesia-aperta {
     margin: 0;
     accent-color: var(--ink);
     cursor: ew-resize;
+    touch-action: none;
+    -webkit-tap-highlight-color: transparent;
 }
 
 .confronto-mappa-etichette {

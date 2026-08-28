@@ -7,6 +7,7 @@
     const SESSION_KEY = "nnmrcn_session";
     const MAX_MESSAGE_LENGTH = 1500;
     const MAX_BATCH_RECIPIENTS = 5;
+    const MOBILE_COMPARISON_QUERY = "(max-width: 700px)";
     const NARRATIVE_STEPS = Object.freeze([
         {
             verse: "v. 2 — «Il Gajo tra i Praelli»",
@@ -37,6 +38,26 @@
             zoom: 15,
             text:
                 "Via Alta è una delle strade storiche di Marcon, un tempo associata alla «Via Bassa», oggi Via Monte Grappa. Quest’ultima aveva la nomea di diventare impraticabile alla minima pioggia, a differenza di Via Alta."
+        },
+        {
+            verse: "v. 24 — «via Fornace»",
+            label: "Via Fornace",
+            title: "Via Fornace",
+            lat: 45.565121,
+            lon: 12.323637,
+            zoom: 17,
+            text:
+                "Il toponimo deriva dalla presenza di una vera e propria fornace, risalente all’inizio del secolo scorso ed oggi in disuso, alla fine della via. L’ho inserita all’interno della poesia poiché è una di quelle strade che è stata visibilmente tagliata dalla costruzione della A57 (Tangenziale di Mestre). In particolare, si può visibilmente notare come la fornace sia stata divisa dalle sue cave, oggi divenute area protetta."
+        },
+        {
+            verse: "v. 24 — «via Bosco Berizzi»",
+            label: "Via Bosco Berizzi",
+            title: "Via Bosco Berizzi",
+            lat: 45.538066,
+            lon: 12.301308,
+            zoom: 17,
+            text:
+                "Il toponimo si riferisce ad un antico proprietario terriero, Berizzi, che aveva, alla fine dell’Ottocento, acquistato delle terre ricoperte di boschi tra Dese e Marcon, esattamente dove ora si trova la via. È stata scelta poiché evidentemente divisa dalla ferrovia; è inoltre ricavabile dalla mappa del 1975 che era qui presente un passaggio a livello per Praello, oggi non più attivo."
         }
     ]);
 
@@ -128,6 +149,7 @@
     let narrativeMarker = null;
     let comparisonFrame = 0;
     let comparisonRetryTimers = [];
+    const mobileComparisonMedia = window.matchMedia(MOBILE_COMPARISON_QUERY);
 
     const pushNotifications = window.NNMRCN_NOTIFICHE.create({
         button: elements.locationPushButton,
@@ -139,6 +161,7 @@
     });
 
     const map = createMap();
+    window.__nnmrcnMap = map;
     const locationsLayer = L.layerGroup().addTo(map);
 
     loadLandscapes();
@@ -266,6 +289,28 @@
         return instance;
     }
 
+    function usesMobileComparison() {
+        return mobileComparisonMedia.matches;
+    }
+
+    function clearHistoricalClip() {
+        const historicalContainer = historical1975Layer?.getContainer?.();
+
+        if (!historicalContainer) {
+            return;
+        }
+
+        historicalContainer.style.clip = "";
+        historicalContainer.style.clipPath = "";
+        historicalContainer.style.webkitClipPath = "";
+    }
+
+    function comparisonStatusText() {
+        return usesMobileComparison()
+            ? "Confronto attivo: sposta il cursore per sovrapporre il 1975 alla mappa attuale."
+            : "Confronto attivo: 1975 a sinistra, oggi a destra.";
+    }
+
     function setComparisonMode(enabled) {
         if (enabled && !historical1975Layer) {
             elements.mappaStrumentiStatus.textContent =
@@ -282,7 +327,8 @@
             ? "Chiudi il confronto"
             : "Confronta 1975–oggi";
         elements.confrontoMappaPanel.hidden = !enabled;
-        elements.confrontoMappaDivisore.hidden = !enabled;
+        elements.confrontoMappaDivisore.hidden =
+            !enabled || usesMobileComparison();
 
         if (enabled) {
             if (year1975Layer && map.hasLayer(year1975Layer)) {
@@ -297,12 +343,16 @@
                 historical1975Layer.addTo(map);
             }
 
+            historical1975Layer.redraw?.();
             map.invalidateSize({ pan: false });
             scheduleComparisonPositionUpdate();
             elements.mappaStrumentiStatus.textContent =
-                "Confronto attivo: 1975 a sinistra, oggi a destra.";
+                comparisonStatusText();
             return;
         }
+
+        clearHistoricalClip();
+        historical1975Layer?.setOpacity?.(1);
 
         if (
             historical1975Layer &&
@@ -312,15 +362,8 @@
             map.removeLayer(historical1975Layer);
         }
 
-        const historicalContainer = historical1975Layer?.getContainer?.();
-
-        if (historicalContainer) {
-            historicalContainer.style.clip = "";
-            historicalContainer.style.clipPath = "";
-            historicalContainer.style.webkitClipPath = "";
-        }
-
         cancelComparisonPositionUpdates();
+        delete elements.confrontoMappaPanel.dataset.mode;
 
         elements.mappaStrumentiStatus.textContent = "";
     }
@@ -366,12 +409,25 @@
     function updateComparisonPosition() {
         const position = Number(elements.confrontoMappaRange.value);
         const historicalContainer = historical1975Layer?.getContainer?.();
+        const mobileComparison = usesMobileComparison();
 
         elements.confrontoMappaDivisore.style.left = `${position}%`;
+        elements.confrontoMappaDivisore.hidden = mobileComparison;
+        elements.confrontoMappaPanel.dataset.mode = mobileComparison
+            ? "opacity"
+            : "split";
         elements.confrontoMappaRange.setAttribute(
             "aria-valuetext",
             `${position}% mappa del 1975 e ${100 - position}% mappa attuale`
         );
+
+        if (mobileComparison) {
+            clearHistoricalClip();
+            historical1975Layer?.setOpacity?.(position / 100);
+            return;
+        }
+
+        historical1975Layer?.setOpacity?.(1);
 
         if (!historicalContainer) {
             return;
@@ -412,6 +468,39 @@
             otherPanel.hidden = !open;
             otherButton.setAttribute("aria-expanded", String(open));
         });
+    }
+
+    function updateComparisonFromTouch(event) {
+        const touch = event.touches?.[0];
+
+        if (!touch) {
+            return;
+        }
+
+        const bounds = elements.confrontoMappaRange.getBoundingClientRect();
+
+        if (!bounds.width) {
+            return;
+        }
+
+        event.preventDefault();
+        const percentage = Math.round(
+            ((touch.clientX - bounds.left) / bounds.width) * 100
+        );
+        elements.confrontoMappaRange.value = String(
+            Math.min(100, Math.max(0, percentage))
+        );
+        scheduleComparisonPositionUpdate({ retry: false });
+    }
+
+    function handleComparisonLayoutChange() {
+        if (!comparisonActive) {
+            return;
+        }
+
+        elements.mappaStrumentiStatus.textContent = comparisonStatusText();
+        map.invalidateSize({ pan: false });
+        scheduleComparisonPositionUpdate();
     }
 
     function restoreMapGuidePreference() {
@@ -857,7 +946,7 @@
     }
 
     async function loadLandscapes() {
-        const landscapeLayer = L.layerGroup().addTo(map);
+        const landscapeLayer = L.layerGroup();
 
         L.control.layers(
             null,
@@ -988,6 +1077,24 @@
             "change",
             () => scheduleComparisonPositionUpdate()
         );
+        elements.confrontoMappaRange.addEventListener(
+            "touchstart",
+            updateComparisonFromTouch,
+            { passive: false }
+        );
+        elements.confrontoMappaRange.addEventListener(
+            "touchmove",
+            updateComparisonFromTouch,
+            { passive: false }
+        );
+        if (typeof mobileComparisonMedia.addEventListener === "function") {
+            mobileComparisonMedia.addEventListener(
+                "change",
+                handleComparisonLayoutChange
+            );
+        } else {
+            mobileComparisonMedia.addListener?.(handleComparisonLayoutChange);
+        }
         elements.geolocalizzaButton.addEventListener("click", locateVisitor);
         elements.legendaMappaButton.addEventListener("click", () => {
             toggleMapPanel(elements.legendaMappaButton, elements.legendaMappa);
