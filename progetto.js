@@ -314,8 +314,6 @@
         confrontoMappaRange: document.getElementById("confrontoMappaRange"),
         confrontoMappaDivisore: document.getElementById("confrontoMappaDivisore"),
         geolocalizzaButton: document.getElementById("geolocalizzaButton"),
-        legendaMappaButton: document.getElementById("legendaMappaButton"),
-        legendaMappa: document.getElementById("legendaMappa"),
         elencoMappaButton: document.getElementById("elencoMappaButton"),
         elencoMappa: document.getElementById("elencoMappa"),
         elencoMappaLista: document.getElementById("elencoMappaLista"),
@@ -664,7 +662,6 @@
         const willOpen = panel.hidden;
 
         [
-            [elements.legendaMappaButton, elements.legendaMappa],
             [elements.elencoMappaButton, elements.elencoMappa]
         ].forEach(([otherButton, otherPanel]) => {
             const open = willOpen && otherPanel === panel;
@@ -752,9 +749,7 @@
 
     function openNarrativeJourney() {
         dismissMapGuide();
-        elements.legendaMappa.hidden = true;
         elements.elencoMappa.hidden = true;
-        elements.legendaMappaButton.setAttribute("aria-expanded", "false");
         elements.elencoMappaButton.setAttribute("aria-expanded", "false");
         elements.percorsoNarrativo.hidden = false;
         elements.esploraPoesiaButton.setAttribute("aria-pressed", "true");
@@ -1453,9 +1448,6 @@
             mobileComparisonMedia.addListener?.(handleComparisonLayoutChange);
         }
         elements.geolocalizzaButton.addEventListener("click", locateVisitor);
-        elements.legendaMappaButton.addEventListener("click", () => {
-            toggleMapPanel(elements.legendaMappaButton, elements.legendaMappa);
-        });
         elements.elencoMappaButton.addEventListener("click", async () => {
             toggleMapPanel(elements.elencoMappaButton, elements.elencoMappa);
 

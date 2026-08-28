@@ -233,14 +233,26 @@ select {
 
 /* Menu */
 
-.menu-button {
+.controlli-fissi {
     position: fixed;
     top: 2rem;
     right: 2rem;
     z-index: 1900;
+    display: flex;
+    align-items: stretch;
+    gap: 0.35rem;
+    padding: 0.3rem;
+    border: 1px solid rgba(var(--ink-rgb), 0.28);
+    background: rgba(var(--paper-rgb), 0.98);
+    box-shadow: 0 0.35rem 1.2rem rgba(0, 0, 0, 0.16);
+    isolation: isolate;
+}
+
+.menu-button {
+    position: static;
     padding: 0.7rem 1rem;
     border: 1px solid var(--ink);
-    background: transparent;
+    background: var(--paper);
     color: var(--ink);
     font-family: var(--font-serif);
     font-size: 0.8rem;
@@ -258,10 +270,7 @@ select {
 }
 
 .impostazioni-button {
-    position: fixed;
-    top: 2rem;
-    right: 9rem;
-    z-index: 1900;
+    position: static;
     width: 2.9rem;
     height: 2.9rem;
     padding: 0;
@@ -1256,62 +1265,9 @@ body.poesia-aperta {
     font-weight: 700;
 }
 
-.legenda-mappa h2,
 .elenco-mappa h2 {
     margin: 0 0 0.7rem;
     font-size: 1.05rem;
-}
-
-.legenda-mappa ul {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0.55rem 1rem;
-    margin: 0;
-    padding: 0;
-    list-style: none;
-    font-size: 0.84rem;
-}
-
-.legenda-mappa li {
-    display: flex;
-    align-items: center;
-    gap: 0.55rem;
-}
-
-.legenda-segno {
-    display: inline-block;
-    width: 1.5rem;
-    height: 0.65rem;
-    flex: 0 0 auto;
-    border: 1px solid var(--ink);
-}
-
-.legenda-1975 {
-    background: #a8a28d;
-}
-
-.legenda-acqua {
-    height: 0.25rem;
-    border: 0;
-    background: #00b8ff;
-}
-
-.legenda-cava {
-    border-color: #006e8a;
-    background: rgba(44, 200, 239, 0.6);
-}
-
-.legenda-percorso {
-    height: 0.25rem;
-    border: 0;
-    background: #222;
-}
-
-.legenda-luogo {
-    width: 0.8rem;
-    height: 0.8rem;
-    border-radius: 50%;
-    background: var(--paper);
 }
 
 .elenco-mappa-intestazione p {
@@ -2160,16 +2116,19 @@ html[data-theme="dark"] .leaflet-control-layers label {
         line-height: 1.52;
     }
 
-    .menu-button {
+    .controlli-fissi {
         top: 1rem;
         right: 1rem;
+        gap: 0.25rem;
+        padding: 0.25rem;
+    }
+
+    .menu-button {
         padding: 0.6rem 0.8rem;
         font-size: 0.7rem;
     }
 
     .impostazioni-button {
-        top: 1rem;
-        right: 6.15rem;
         width: 2.55rem;
         height: 2.55rem;
     }
@@ -2369,7 +2328,6 @@ html[data-theme="dark"] .leaflet-control-layers label {
         grid-template-columns: 1fr 1fr;
     }
 
-    .legenda-mappa ul,
     .elenco-mappa-lista {
         grid-template-columns: 1fr;
     }
@@ -2465,6 +2423,7 @@ html[data-theme="dark"] .leaflet-control-layers label {
     }
 
     .indice a,
+    .controlli-fissi,
     .menu-button,
     .menu-overlay,
     .menu-principale,

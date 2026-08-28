@@ -26,6 +26,11 @@
     const settingsButton = document.createElement("button");
     const settingsOverlay = document.createElement("div");
     const settingsPanel = document.createElement("section");
+    const fixedControls = document.createElement("div");
+
+    fixedControls.className = "controlli-fissi";
+    fixedControls.setAttribute("role", "group");
+    fixedControls.setAttribute("aria-label", "Comandi del sito");
 
     settingsButton.type = "button";
     settingsButton.className = "impostazioni-button";
@@ -64,7 +69,8 @@
         settingsPanel.appendChild(installSection);
     }
 
-    document.body.append(settingsButton, settingsOverlay, settingsPanel);
+    fixedControls.append(settingsButton, button);
+    document.body.append(fixedControls, settingsOverlay, settingsPanel);
 
     const settingsClose = settingsPanel.querySelector(".impostazioni-close");
     const themeButtons = Array.from(settingsPanel.querySelectorAll(
