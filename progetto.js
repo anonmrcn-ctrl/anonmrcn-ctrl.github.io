@@ -687,6 +687,10 @@
 
                 if (active) {
                     button.setAttribute("aria-current", "step");
+                    button.scrollIntoView({
+                        block: "nearest",
+                        inline: "nearest"
+                    });
                 } else {
                     button.removeAttribute("aria-current");
                 }
