@@ -58,6 +58,56 @@
             zoom: 17,
             text:
                 "Il toponimo si riferisce ad un antico proprietario terriero, Berizzi, che aveva, alla fine dell’Ottocento, acquistato delle terre ricoperte di boschi tra Dese e Marcon, esattamente dove ora si trova la via. È stata scelta poiché evidentemente divisa dalla ferrovia; è inoltre ricavabile dalla mappa del 1975 che era qui presente un passaggio a livello per Praello, oggi non più attivo."
+        },
+        {
+            verse: "v. 34 — «fra il Colmello e il Pojanon»",
+            label: "Colmello",
+            title: "Colmello",
+            lat: 45.55898,
+            lon: 12.27717,
+            zoom: 16,
+            text:
+                "Il Colmello è una delle frazioni più piccole del comune, quella più a occidente del territorio. Il toponimo deriva da un vecchio termine veneto che in passato indicava una suddivisione amministrativa del territorio. Probabilmente la località era chiamata così fino agli anni Sessanta del secolo scorso."
+        },
+        {
+            verse: "v. 34 — «fra il Colmello e il Pojanon»",
+            label: "Pojanon",
+            title: "Pojanon",
+            lat: 45.56197,
+            lon: 12.34999,
+            zoom: 16,
+            text:
+                "Pojanon è una località minore del comune, all’estremo est del territorio. Il suo nome deriva da Povegliano, una sede abbaziale tardo-antica soppressa nel 1432 dal vescovo di Treviso, poiché ormai quasi abbandonata. I fedeli rimasti furono accomunati, insieme a quelli di Gaggio, alla parrocchia di Marcon."
+        },
+        {
+            verse: "v. 47 — «Zero!»",
+            label: "Zero",
+            title: "Lo Zero",
+            lat: 45.56687,
+            lon: 12.29865,
+            zoom: 16,
+            text:
+                "Lo Zero è uno dei fiumi più importanti per il territorio di Marcon: almeno un quarto del suo corso è all’interno del territorio comunale, dall’ingresso nella frazione di Colmello alla foce nel Dese, in località Zuccarello. Il toponimo deriverebbe dal nome personale di un colono romano a cui erano affidate le terre circostanti. Originariamente sfociava nel Sile, ma dal 1532 il tratto finale fu modificato artificialmente, portando all’attuale situazione. Nella poesia il protagonista confonde un altro personaggio con lo Zero, poiché ai suoi occhi sono molto simili."
+        },
+        {
+            verse: "v. 88 — «via della Costituzione»",
+            label: "Via della Costituzione",
+            title: "Via della Costituzione",
+            lat: 45.5481,
+            lon: 12.2971,
+            zoom: 16,
+            text:
+                "Via di recente costruzione, nella poesia è comparata alle ginocchia del personaggio. Le ginocchia sono quella parte del corpo che ci consente di correre, azione che poi il protagonista compie. Via della Costituzione è la rappresentazione delle ginocchia di Marcon: ciò che gli consente di correre."
+        },
+        {
+            verse: "v. 103 — «Zero, Fossa Storta»",
+            label: "Fossa Storta",
+            title: "Fossa Storta",
+            lat: 45.536454,
+            lon: 12.333278,
+            zoom: 16,
+            text:
+                "Corso d’acqua minore il cui nome deriva dalla tortuosità del suo percorso, evidentissima nell’ultimo tratto prima della foce nel Dese. Questo canale presenta un elevato tasso di inquinamento, con alte concentrazioni di fosfati, legato al fatto che gran parte del suo bacino è urbanizzato."
         }
     ]);
 
