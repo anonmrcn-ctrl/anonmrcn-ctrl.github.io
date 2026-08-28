@@ -198,13 +198,15 @@
 
         if (
             window.pmtiles?.PMTiles &&
+            typeof window.NNMRCN_PM_TILES_SOURCE === "function" &&
             typeof window.NNMRCN_PM_TILES_LAYER === "function"
         ) {
+            const archive1975Url = new URL(
+                "./mappe/marcon_1975.pmtiles",
+                window.location.href
+            ).href;
             const archive1975 = new window.pmtiles.PMTiles(
-                new URL(
-                    "./mappe/marcon_1975.pmtiles",
-                    window.location.href
-                ).href
+                window.NNMRCN_PM_TILES_SOURCE(archive1975Url)
             );
 
             historical1975Layer = window.NNMRCN_PM_TILES_LAYER(

@@ -14,6 +14,74 @@
         return "application/octet-stream";
     }
 
+    window.NNMRCN_PM_TILES_SOURCE = function (url) {
+        let fullArchivePromise;
+
+        function archiveSlice(data, offset, length) {
+            const end = offset + length;
+
+            if (end > data.byteLength) {
+                throw new Error("La risposta PMTiles è più corta del previsto.");
+            }
+
+            return data.slice(offset, end);
+        }
+
+        return {
+            getKey() {
+                return url;
+            },
+
+            async getBytes(offset, length, signal, etag) {
+                if (fullArchivePromise) {
+                    const archive = await fullArchivePromise;
+                    return { data: archiveSlice(archive, offset, length) };
+                }
+
+                const headers = new Headers({
+                    Range: `bytes=${offset}-${offset + length - 1}`
+                });
+
+                if (etag) {
+                    headers.set("If-Match", etag);
+                }
+
+                const response = await fetch(url, { headers, signal });
+
+                if (!response.ok) {
+                    throw new Error(
+                        `Richiesta PMTiles non riuscita: HTTP ${response.status}.`
+                    );
+                }
+
+                const metadata = {
+                    etag: response.headers.get("etag") || undefined,
+                    expires: response.headers.get("expires") || undefined,
+                    cacheControl:
+                        response.headers.get("cache-control") || undefined
+                };
+
+                if (response.status === 206) {
+                    return {
+                        data: await response.arrayBuffer(),
+                        ...metadata
+                    };
+                }
+
+                fullArchivePromise = response.arrayBuffer().catch((error) => {
+                    fullArchivePromise = undefined;
+                    throw error;
+                });
+
+                const archive = await fullArchivePromise;
+                return {
+                    data: archiveSlice(archive, offset, length),
+                    ...metadata
+                };
+            }
+        };
+    };
+
     window.NNMRCN_PM_TILES_LAYER = function (source, options = {}) {
         let headerPromise;
         const headerRetryDelays = [250, 750, 1500];
@@ -200,10 +268,6 @@
             }).catch((error) => {
                 console.error("Impossibile preparare la mappa del 1975.", error);
             });
-        });
-
-        getHeader().catch((error) => {
-            console.error("Impossibile precaricare la mappa del 1975.", error);
         });
 
         return layer;
