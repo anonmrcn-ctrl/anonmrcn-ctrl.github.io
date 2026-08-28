@@ -260,7 +260,7 @@ select {
 .impostazioni-button {
     position: fixed;
     top: 2rem;
-    right: 8rem;
+    right: 9rem;
     z-index: 1900;
     width: 2.9rem;
     height: 2.9rem;
@@ -2169,7 +2169,7 @@ html[data-theme="dark"] .leaflet-control-layers label {
 
     .impostazioni-button {
         top: 1rem;
-        right: 5.65rem;
+        right: 6.15rem;
         width: 2.55rem;
         height: 2.55rem;
     }
