@@ -11,7 +11,7 @@
     const SETTINGS_DEFAULTS = Object.freeze({
         textSize: "normal",
         motion: "system",
-        mapStartup: "empty",
+        mapStartup: "today",
         mapLite: "off"
     });
     const SETTINGS_VALUES = Object.freeze({
