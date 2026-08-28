@@ -79,6 +79,7 @@ select {
 }
 
 .canto p {
+    position: relative;
     max-width: 100%;
     margin: 0 0 2.3rem;
 }
@@ -126,10 +127,6 @@ select {
     pointer-events: none;
     text-align: right;
     opacity: 0.5;
-}
-
-.canto p {
-    position: relative;
 }
 
 .canto p[data-numero-rigo-vuoto]::after {

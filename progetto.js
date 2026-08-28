@@ -601,7 +601,7 @@
     }
 
     function applyMapStartupPreference() {
-        const startup = settingsManager?.get?.("mapStartup") || "empty";
+        const startup = settingsManager?.get?.("mapStartup") || "today";
 
         clearBaseLayers();
 
@@ -1470,9 +1470,26 @@
         registerMapControl(overlayControl);
 
         if (settingsManager?.isLightMapEnabled?.()) {
-            await new Promise((resolve) => {
-                map.once("overlayadd", resolve);
-            });
+            const landscapeLayers = new Set(
+                ["Paesaggi significativi", "Fiumi", "Cave"]
+                    .map((name) => mapLayerRegistry.get(name)?.layer)
+                    .filter(Boolean)
+            );
+
+            if (landscapeLayers.size) {
+                await new Promise((resolve) => {
+                    const handleOverlayAdd = (event) => {
+                        if (!landscapeLayers.has(event.layer)) {
+                            return;
+                        }
+
+                        map.off("overlayadd", handleOverlayAdd);
+                        resolve();
+                    };
+
+                    map.on("overlayadd", handleOverlayAdd);
+                });
+            }
         }
 
         try {

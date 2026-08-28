@@ -14,7 +14,9 @@ Sito GitHub Pages del progetto nnMrcn.
 - `style.css` — stili comuni del sito
 - `messaggistica.css` — selezione dei destinatari e messaggi sulla mappa
 - `percorsi.css` — controlli della mappa, percorsi e schede dei luoghi
-- `site.js` — comportamento comune del menu
+- `site.js` — comportamento comune del menu e pannello delle impostazioni
+- `tema.js` — tema, lettura e preferenze tecniche della mappa
+- `poesia-metrica.js` — riferimenti condivisi alle righe della poesia
 - `api.js` — richieste HTTP condivise verso il backend
 - `mappa.js` — dati geografici condivisi ed estensioni della mappa
 - `progetto.js` — mappa, paesaggi, login e messaggistica
