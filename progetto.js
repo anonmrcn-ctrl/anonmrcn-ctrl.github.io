@@ -540,7 +540,7 @@
             point.className = "percorso-narrativo-nodo";
             point.setAttribute("aria-hidden", "true");
             label.textContent = step.label;
-            verse.textContent = index < 2 ? "v. 2" : "v. 22";
+            verse.textContent = step.verse.split(" — ")[0];
             button.append(point, label, verse);
             button.addEventListener("click", () => showNarrativeStep(index));
             elements.percorsoNarrativoLinea.appendChild(button);
