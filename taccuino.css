@@ -20,7 +20,7 @@
     width: 100%;
     height: min(58vh, 560px);
     min-height: 400px;
-    border: 1px solid rgba(23, 23, 23, 0.3);
+    border: 1px solid rgba(var(--ink-rgb), 0.3);
 }
 
 .taccuino-contenuti {
@@ -90,7 +90,7 @@
 .taccuino-card {
     padding: 1rem;
     border: 1px solid var(--line);
-    background: rgba(244, 241, 232, 0.72);
+    background: rgba(var(--paper-rgb), 0.72);
 }
 
 .taccuino-card h3 {

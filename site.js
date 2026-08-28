@@ -13,6 +13,7 @@
     const installInstructions = document.getElementById(
         "installazioneIstruzioni"
     );
+    const themeManager = window.NNMRCN_THEME;
 
     if (!button || !closeButton || !menu || !overlay) {
         return;
@@ -20,6 +21,111 @@
 
     let keepAccessVisible = false;
     let previouslyFocusedElement = null;
+    let settingsPreviouslyFocusedElement = null;
+
+    const settingsButton = document.createElement("button");
+    const settingsOverlay = document.createElement("div");
+    const settingsPanel = document.createElement("section");
+
+    settingsButton.type = "button";
+    settingsButton.className = "impostazioni-button";
+    settingsButton.setAttribute("aria-label", "Apri le impostazioni");
+    settingsButton.setAttribute("aria-expanded", "false");
+    settingsButton.setAttribute("aria-controls", "impostazioniPanel");
+
+    settingsOverlay.className = "impostazioni-overlay";
+
+    settingsPanel.className = "impostazioni-pannello";
+    settingsPanel.id = "impostazioniPanel";
+    settingsPanel.setAttribute("role", "dialog");
+    settingsPanel.setAttribute("aria-modal", "true");
+    settingsPanel.setAttribute("aria-labelledby", "impostazioniTitolo");
+    settingsPanel.setAttribute("aria-hidden", "true");
+    settingsPanel.setAttribute("inert", "");
+    settingsPanel.innerHTML = `
+        <button class="impostazioni-close" type="button" aria-label="Chiudi le impostazioni">×</button>
+        <h2 id="impostazioniTitolo">Impostazioni</h2>
+        <section class="impostazioni-gruppo" aria-labelledby="impostazioniTemaTitolo">
+            <h3 id="impostazioniTemaTitolo">Aspetto</h3>
+            <div class="impostazioni-temi" role="group" aria-label="Tema del sito">
+                <button type="button" data-theme-preference="system">Automatico</button>
+                <button type="button" data-theme-preference="light">Chiaro</button>
+                <button type="button" data-theme-preference="dark">Scuro</button>
+            </div>
+            <p>La modalità automatica segue le impostazioni del dispositivo.</p>
+        </section>
+    `;
+
+    if (installSection) {
+        const installTitle = document.createElement("h3");
+
+        installTitle.textContent = "Applicazione";
+        installSection.prepend(installTitle);
+        settingsPanel.appendChild(installSection);
+    }
+
+    document.body.append(settingsButton, settingsOverlay, settingsPanel);
+
+    const settingsClose = settingsPanel.querySelector(".impostazioni-close");
+    const themeButtons = Array.from(settingsPanel.querySelectorAll(
+        "[data-theme-preference]"
+    ));
+
+    function syncThemeButtons() {
+        const preference = themeManager?.getPreference?.() || "system";
+
+        themeButtons.forEach((themeButton) => {
+            const active = themeButton.dataset.themePreference === preference;
+
+            themeButton.setAttribute("aria-pressed", String(active));
+        });
+    }
+
+    function openSettings() {
+        if (menu.classList.contains("aperto")) {
+            closeMenu();
+        }
+
+        settingsPreviouslyFocusedElement = document.activeElement;
+        settingsPanel.removeAttribute("inert");
+        settingsPanel.setAttribute("aria-hidden", "false");
+        settingsPanel.classList.add("aperto");
+        settingsOverlay.classList.add("aperto");
+        settingsButton.setAttribute("aria-expanded", "true");
+        document.body.classList.add("impostazioni-aperte");
+        settingsClose.focus({ preventScroll: true });
+    }
+
+    function closeSettings() {
+        const wasOpen = settingsPanel.classList.contains("aperto");
+
+        settingsPanel.classList.remove("aperto");
+        settingsOverlay.classList.remove("aperto");
+        settingsPanel.setAttribute("aria-hidden", "true");
+        settingsPanel.setAttribute("inert", "");
+        settingsButton.setAttribute("aria-expanded", "false");
+        document.body.classList.remove("impostazioni-aperte");
+
+        if (wasOpen && settingsPreviouslyFocusedElement?.focus) {
+            settingsPreviouslyFocusedElement.focus({ preventScroll: true });
+        }
+    }
+
+    settingsButton.addEventListener("click", openSettings);
+    settingsClose.addEventListener("click", closeSettings);
+    settingsOverlay.addEventListener("click", closeSettings);
+
+    themeButtons.forEach((themeButton) => {
+        themeButton.addEventListener("click", () => {
+            themeManager?.setPreference?.(
+                themeButton.dataset.themePreference
+            );
+            syncThemeButtons();
+        });
+    });
+
+    window.addEventListener("nnmrcn:themechange", syncThemeButtons);
+    syncThemeButtons();
 
     menu.setAttribute("aria-hidden", "true");
     menu.setAttribute("inert", "");
@@ -106,7 +212,13 @@
     }
 
     document.addEventListener("keydown", (event) => {
-        if (event.key === "Escape" && menu.classList.contains("aperto")) {
+        if (event.key !== "Escape") {
+            return;
+        }
+
+        if (settingsPanel.classList.contains("aperto")) {
+            closeSettings();
+        } else if (menu.classList.contains("aperto")) {
             closeMenu();
         }
     });
@@ -130,6 +242,33 @@
 
         const firstElement = focusableElements[0];
         const lastElement = focusableElements[focusableElements.length - 1];
+
+        if (event.shiftKey && document.activeElement === firstElement) {
+            event.preventDefault();
+            lastElement.focus();
+        } else if (!event.shiftKey && document.activeElement === lastElement) {
+            event.preventDefault();
+            firstElement.focus();
+        }
+    });
+
+    settingsPanel.addEventListener("keydown", (event) => {
+        if (event.key !== "Tab" || !settingsPanel.classList.contains("aperto")) {
+            return;
+        }
+
+        const focusableElements = Array.from(settingsPanel.querySelectorAll(
+            "button:not([disabled]), input:not([disabled]), " +
+            "select:not([disabled]), textarea:not([disabled]), " +
+            'a[href], [tabindex]:not([tabindex="-1"])'
+        ));
+
+        const firstElement = focusableElements[0];
+        const lastElement = focusableElements[focusableElements.length - 1];
+
+        if (!firstElement || !lastElement) {
+            return;
+        }
 
         if (event.shiftKey && document.activeElement === firstElement) {
             event.preventDefault();

@@ -2,14 +2,30 @@
     "use strict";
 
     const poem = document.querySelector("main.poesia");
+    const metric = window.NNMRCN_POEM_METRIC;
 
     if (!poem || poem.dataset.versiNumerati === "true") {
         return;
     }
 
-    const verses = [];
+    const blankRowsBetweenStanzas = Number(
+        metric?.blankRowsBetweenStanzas ?? 1
+    );
+    const paragraphs = Array.from(poem.querySelectorAll(".canto p"));
+    let rowNumber = 0;
 
-    poem.querySelectorAll(".canto p").forEach((paragraph) => {
+    paragraphs.forEach((paragraph, paragraphIndex) => {
+        if (paragraphIndex > 0) {
+            for (let index = 0; index < blankRowsBetweenStanzas; index += 1) {
+                rowNumber += 1;
+
+                if (rowNumber % 5 === 0) {
+                    paragraphs[paragraphIndex - 1].dataset.numeroRigoVuoto =
+                        String(rowNumber);
+                }
+            }
+        }
+
         Array.from(paragraph.childNodes).forEach((node) => {
             if (node.nodeType === Node.TEXT_NODE) {
                 if (!node.textContent.trim()) {
@@ -20,28 +36,24 @@
                 line.className = "verso-linea";
                 node.replaceWith(line);
                 line.appendChild(node);
-                verses.push(line);
-                return;
-            }
-
-            if (
+                node = line;
+            } else if (
                 node.nodeType === Node.ELEMENT_NODE &&
                 node.tagName === "SPAN"
             ) {
                 node.classList.add("verso-linea");
-                verses.push(node);
+            } else {
+                return;
+            }
+
+            rowNumber += 1;
+
+            if (rowNumber % 5 === 0) {
+                node.dataset.numeroVerso = String(rowNumber);
             }
         });
     });
 
-    verses.forEach((verse, index) => {
-        const number = index + 1;
-
-        if (number % 5 === 0) {
-            verse.dataset.numeroVerso = String(number);
-        }
-    });
-
     poem.dataset.versiNumerati = "true";
-    poem.dataset.totaleVersi = String(verses.length);
+    poem.dataset.totaleRighi = String(rowNumber);
 })();

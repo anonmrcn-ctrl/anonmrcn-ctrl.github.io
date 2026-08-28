@@ -44,7 +44,7 @@
     margin: 0 0 1rem;
     padding: 1.25rem;
     border: 1px solid var(--line);
-    background: rgba(244, 241, 232, 0.97);
+    background: rgba(var(--paper-rgb), 0.97);
 }
 
 .destinatari-intestazione {
@@ -120,11 +120,11 @@
 }
 
 .destinatario-opzione:hover {
-    background: rgba(23, 23, 23, 0.05);
+    background: rgba(var(--ink-rgb), 0.05);
 }
 
 .destinatario-opzione.selezionato {
-    background: rgba(23, 23, 23, 0.11);
+    background: rgba(var(--ink-rgb), 0.11);
 }
 
 .destinatario-opzione input {
