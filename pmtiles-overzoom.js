@@ -32,7 +32,7 @@
                 return url;
             },
 
-            async getBytes(offset, length, signal, etag) {
+            async getBytes(offset, length, signal) {
                 if (fullArchivePromise) {
                     const archive = await fullArchivePromise;
                     return { data: archiveSlice(archive, offset, length) };
@@ -41,10 +41,6 @@
                 const headers = new Headers({
                     Range: `bytes=${offset}-${offset + length - 1}`
                 });
-
-                if (etag) {
-                    headers.set("If-Match", etag);
-                }
 
                 const response = await fetch(url, { headers, signal });
 
@@ -55,7 +51,6 @@
                 }
 
                 const metadata = {
-                    etag: response.headers.get("etag") || undefined,
                     expires: response.headers.get("expires") || undefined,
                     cacheControl:
                         response.headers.get("cache-control") || undefined
