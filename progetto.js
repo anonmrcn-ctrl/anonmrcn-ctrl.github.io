@@ -909,6 +909,7 @@
         elements.elencoMappa.hidden = true;
         elements.elencoMappaButton.setAttribute("aria-expanded", "false");
         elements.percorsoNarrativo.hidden = false;
+        elements.map.classList.add("percorso-narrativo-aperto");
         elements.esploraPoesiaButton.setAttribute("aria-pressed", "true");
         elements.esploraPoesiaButton.textContent = "Chiudi l’esplorazione";
         showNarrativeStep(0);
@@ -916,6 +917,7 @@
 
     function closeNarrativeJourney() {
         elements.percorsoNarrativo.hidden = true;
+        elements.map.classList.remove("percorso-narrativo-aperto");
         elements.esploraPoesiaButton.setAttribute("aria-pressed", "false");
         elements.esploraPoesiaButton.textContent = "Esplora la poesia";
 
@@ -1583,7 +1585,7 @@
             "click",
             toggleLocationVisibility
         );
-        elements.postaButton.addEventListener("click", toggleInbox);
+        elements.postaButton?.addEventListener("click", toggleInbox);
         elements.postaRefresh.addEventListener("click", loadInbox);
         elements.nuovoMessaggioButton.addEventListener("click", toggleRecipientPanel);
         elements.selezioneMappaButton.addEventListener("click", toggleMapRecipientSelection);
@@ -1674,6 +1676,17 @@
         restoreMapGuidePreference();
         syncArchiveConsentAvailability();
         buildNarrativeTimeline();
+
+        [
+            elements.percorsoNarrativo,
+            elements.percorsoNarrativoLinea,
+            elements.percorsoNarrativo.querySelector(
+                ".percorso-narrativo-scheda"
+            )
+        ].forEach((element) => {
+            L.DomEvent.disableClickPropagation(element);
+            L.DomEvent.disableScrollPropagation(element);
+        });
 
         document.addEventListener("keydown", (event) => {
             if (event.key !== "Escape") {
@@ -1825,13 +1838,6 @@
             setLoggedIn(data.location);
             await loadNetwork();
 
-            if (window.location.hash === "#postaSection") {
-                elements.postaSection.hidden = false;
-                elements.postaSection.scrollIntoView({
-                    behavior: settingsManager?.scrollBehavior?.() || "smooth",
-                    block: "start"
-                });
-            }
         } catch (_) {
             clearSession();
         }
@@ -1842,7 +1848,6 @@
         elements.loginLocation.textContent = location.username || location.address;
         elements.loginLoggedOut.hidden = true;
         elements.loginLoggedIn.hidden = false;
-        elements.messaggisticaMappa.hidden = false;
         elements.loginMessage.textContent = "";
         elements.locationVisibilityStatus.textContent = "";
         syncLocationVisibility();
@@ -1994,18 +1999,6 @@
                     }
                 )
             );
-        }
-
-        if (!isOwn) {
-            const messageButton = createPopupButton(
-                "Invia un messaggio",
-                () => {
-                    map.closePopup();
-                    openMessage(location);
-                }
-            );
-            messageButton.classList.add("invia-messaggio");
-            actions.appendChild(messageButton);
         }
 
         root.appendChild(actions);

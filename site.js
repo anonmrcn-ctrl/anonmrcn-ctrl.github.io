@@ -20,6 +20,7 @@
     const locationVisibilityStatus = document.getElementById(
         "locationVisibilityStatus"
     );
+    const menuContent = menu?.querySelector(".menu-contenuto");
     const themeManager = window.NNMRCN_THEME;
     const settingsManager = window.NNMRCN_SETTINGS;
 
@@ -225,11 +226,55 @@
                 : "La tua location è visibile sulla mappa pubblica.");
     }
 
+    function syncPersonalSpaceLink() {
+        if (!menuContent) {
+            return;
+        }
+
+        const loggedIn = Boolean(loginLoggedIn && !loginLoggedIn.hidden);
+        let link = menuContent.querySelector("[data-spazio-personale-link]");
+
+        if (!loggedIn) {
+            link?.remove();
+            return;
+        }
+
+        if (!link) {
+            link = document.createElement("a");
+            link.href = "./spazio-personale.html";
+            link.textContent = "Spazio personale";
+            link.dataset.spazioPersonaleLink = "";
+
+            const publicLink = menuContent.querySelector(
+                "[data-spazio-pubblico-link]"
+            );
+
+            if (publicLink) {
+                publicLink.insertAdjacentElement("afterend", link);
+            } else {
+                menuContent.appendChild(link);
+            }
+        }
+
+        const personalPage = document.body.classList.contains(
+            "pagina-spazio-personale"
+        ) || document.body.classList.contains("pagina-taccuino");
+
+        link.classList.toggle("voce-attiva", personalPage);
+
+        if (personalPage) {
+            link.setAttribute("aria-current", "page");
+        } else {
+            link.removeAttribute("aria-current");
+        }
+    }
+
     function syncAllSettings() {
         syncThemeButtons();
         syncSettingButtons();
         syncLocationSettings();
         syncLocalDataStatus();
+        syncPersonalSpaceLink();
     }
 
     function openSettings() {
@@ -340,7 +385,10 @@
     document.addEventListener("nnmrcn:taccuinochange", syncLocalDataStatus);
 
     if (loginLoggedIn && locationVisibilityToggle) {
-        const locationObserver = new MutationObserver(syncLocationSettings);
+        const locationObserver = new MutationObserver(() => {
+            syncLocationSettings();
+            syncPersonalSpaceLink();
+        });
 
         locationObserver.observe(loginLoggedIn, {
             attributes: true,

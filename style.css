@@ -1368,6 +1368,10 @@ body.poesia-aperta {
     border: 1px solid rgba(var(--ink-rgb), 0.3);
 }
 
+#map.percorso-narrativo-aperto {
+    touch-action: pan-y !important;
+}
+
 .confronto-mappa-divisore {
     position: absolute;
     z-index: 800;
@@ -1432,6 +1436,7 @@ body.poesia-aperta {
     background: rgba(var(--paper-rgb), 0.96);
     box-shadow: 0 0.45rem 1.4rem rgba(var(--ink-rgb), 0.2);
     backdrop-filter: blur(8px);
+    touch-action: pan-y;
 }
 
 .percorso-narrativo-close {
@@ -1455,6 +1460,10 @@ body.poesia-aperta {
     gap: 0.55rem;
     min-height: 0;
     overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    touch-action: pan-y;
+    -webkit-overflow-scrolling: touch;
     padding: 0.25rem 0;
 }
 
@@ -1532,6 +1541,10 @@ body.poesia-aperta {
 .percorso-narrativo-scheda {
     min-height: 0;
     overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    touch-action: pan-y;
+    -webkit-overflow-scrolling: touch;
     padding-right: 0.25rem;
 }
 
@@ -2370,13 +2383,13 @@ html[data-theme="dark"] .leaflet-control-layers label {
 
     .percorso-narrativo {
         top: auto;
-        right: 0.55rem;
-        bottom: 1.9rem;
-        left: 0.55rem;
+        right: 0.75rem;
+        bottom: 0.75rem;
+        left: 0.75rem;
         width: auto;
         grid-template-columns: minmax(6.8rem, 0.35fr) minmax(0, 1fr);
         gap: 0.75rem;
-        max-height: 58%;
+        max-height: 46%;
         padding: 0.85rem 2.85rem 0.85rem 0.85rem;
     }
 
@@ -2458,6 +2471,7 @@ html[data-theme="dark"] .leaflet-control-layers label {
     .percorso-narrativo {
         grid-template-columns: minmax(5.4rem, 0.34fr) minmax(0, 1fr);
         gap: 0.5rem;
+        max-height: 48%;
         padding-left: 0.65rem;
     }
 

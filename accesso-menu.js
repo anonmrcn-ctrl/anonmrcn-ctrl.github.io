@@ -14,7 +14,6 @@
         loginLoggedIn: document.getElementById("loginLoggedIn"),
         loginLocation: document.getElementById("loginLocation"),
         logoutButton: document.getElementById("logoutButton"),
-        postaButton: document.getElementById("postaButton"),
         locationPushButton: document.getElementById("locationPushButton"),
         locationPushStatus: document.getElementById("locationPushStatus"),
         locationVisibilityToggle: document.getElementById(
@@ -51,10 +50,7 @@
         "click",
         toggleLocationVisibility
     );
-    elements.postaButton.addEventListener("click", () => {
-        window.location.assign("./progetto.html#postaSection");
-    });
-
+    document.addEventListener("nnmrcn:sessioninvalid", clearSession);
     restoreSession();
 
     async function api(path, options = {}) {
@@ -175,6 +171,10 @@
         elements.loginMessage.textContent = "";
         elements.locationVisibilityStatus.textContent = "";
         syncLocationVisibility();
+        syncProtectedContent(true);
+        document.dispatchEvent(new CustomEvent("nnmrcn:sessionchange", {
+            detail: { authenticated: true, location }
+        }));
 
         pushNotifications.sync().catch((error) => {
             console.error("Impossibile controllare le notifiche.", error);
@@ -201,6 +201,25 @@
         elements.loginLocation.textContent = "";
         elements.locationVisibilityToggle.setAttribute("aria-pressed", "false");
         elements.locationVisibilityStatus.textContent = "";
+        syncProtectedContent(false);
+        document.dispatchEvent(new CustomEvent("nnmrcn:sessionchange", {
+            detail: { authenticated: false, location: null }
+        }));
         pushNotifications.reset();
+    }
+
+    function syncProtectedContent(authenticated) {
+        document.querySelectorAll("[data-spazio-personale-contenuto]")
+            .forEach((element) => {
+                element.hidden = !authenticated;
+            });
+        document.querySelectorAll("[data-spazio-personale-blocco]")
+            .forEach((element) => {
+                element.hidden = authenticated;
+            });
+    }
+
+    if (!sessionToken) {
+        syncProtectedContent(false);
     }
 })();

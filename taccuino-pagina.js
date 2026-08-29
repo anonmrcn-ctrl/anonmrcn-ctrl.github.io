@@ -16,7 +16,26 @@
         return;
     }
 
-    const lightMap = settingsManager?.isLightMapEnabled?.() || false;
+    let started = false;
+
+    document.addEventListener("nnmrcn:sessionchange", (event) => {
+        if (event.detail?.authenticated) {
+            start();
+        }
+    });
+
+    if (!elements.map.closest("[data-spazio-personale-contenuto]")?.hidden) {
+        start();
+    }
+
+    function start() {
+        if (started) {
+            return;
+        }
+
+        started = true;
+
+        const lightMap = settingsManager?.isLightMapEnabled?.() || false;
     const reduceMotion = Boolean(
         settingsManager?.shouldReduceMotion?.() || lightMap
     );
@@ -39,7 +58,7 @@
     elements.exportJson.addEventListener("click", exportJson);
     elements.clear.addEventListener("click", clearNotebook);
     document.addEventListener("nnmrcn:taccuinochange", render);
-    render();
+        render();
 
     function render() {
         const items = notebook.list();
@@ -218,5 +237,6 @@
         if (window.confirm("Vuoi rimuovere tutti gli elementi dal taccuino?")) {
             notebook.clear();
         }
+    }
     }
 })();

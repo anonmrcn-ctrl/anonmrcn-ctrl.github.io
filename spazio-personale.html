@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="apple-mobile-web-app-title" content="anonMrcn">
+    <meta name="description" content="Spazio personale di nnMrcn: messaggi e taccuino">
+    <meta name="theme-color" content="#f4f1e8">
+    <title>Spazio personale — nnMrcn</title>
+
+    <link rel="manifest" href="./manifest.webmanifest">
+    <link rel="apple-touch-icon" href="./icona-app-192.png?v=logo-png">
+    <link rel="preconnect" href="https://server.arcgisonline.com">
+    <script src="./tema.js?v=20260828-settings2"></script>
+    <link rel="stylesheet" href="./style.css?v=20260829-spazi1">
+    <link rel="stylesheet" href="./messaggistica.css?v=20260829-spazi1">
+    <link rel="stylesheet" href="./spazi.css?v=20260829-spazi1">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha384-sHL9NAb7lN7rfvG5lfHpm643Xkcjzp4jFvuavGOndn6pjVqS6ny56CAt3nsEVT4H" crossorigin="anonymous">
+</head>
+
+<body class="pagina-spazio-personale">
+    <button class="menu-button" id="menuButton" type="button" aria-label="Apri il menu" aria-expanded="false" aria-controls="menuPrincipale">MENU</button>
+    <div class="menu-overlay" id="menuOverlay"></div>
+
+    <nav class="menu-principale" id="menuPrincipale" aria-label="Menu principale">
+        <button class="menu-close" id="menuClose" type="button" aria-label="Chiudi il menu">×</button>
+
+        <a class="menu-donazioni" href="https://www.produzionidalbasso.com/project/fondi-necessari-per-portare-avanti-anonmrcn/" target="_blank" rel="noopener noreferrer">Sostieni il progetto</a>
+
+        <div class="menu-contenuto">
+            <a href="./index.html">La poesia</a>
+            <a href="./autore.html">L’autore</a>
+            <a href="./progetto.html">Il progetto</a>
+            <a href="./spazio-pubblico.html" data-spazio-pubblico-link>Spazio pubblico</a>
+        </div>
+
+        <section class="accesso-rete menu-accesso" id="accessoLocations" aria-labelledby="accessoTitolo">
+            <h2 id="accessoTitolo">Accesso alle locations</h2>
+
+            <div id="loginLoggedOut">
+                <form class="accesso-form" id="loginForm">
+                    <label for="loginPassword">Password della poesia</label>
+                    <input id="loginPassword" name="password" type="password" autocomplete="current-password" placeholder="Password della poesia" required>
+                    <button id="loginButton" type="submit">Accedi</button>
+                </form>
+                <p class="login-message" id="loginMessage" aria-live="polite"></p>
+            </div>
+
+            <div class="login-attivo" id="loginLoggedIn" hidden>
+                <p>Accesso riconosciuto: <strong id="loginLocation"></strong></p>
+                <div class="rete-azioni">
+                    <button class="rete-button notifiche-button" id="locationPushButton" type="button" aria-pressed="false">Attiva notifiche</button>
+                    <button class="logout-button" id="logoutButton" type="button">Esci</button>
+                </div>
+                <p class="notifiche-status" id="locationPushStatus" aria-live="polite"></p>
+                <div class="location-visibility-control">
+                    <button class="location-visibility-toggle" id="locationVisibilityToggle" type="button" aria-pressed="false">Nascondi la mia location sulla mappa</button>
+                    <p class="location-visibility-status" id="locationVisibilityStatus" aria-live="polite"></p>
+                </div>
+            </div>
+        </section>
+
+        <section class="menu-installazione" id="installazioneApp">
+            <button class="menu-installa" id="installaAppButton" type="button" aria-describedby="installazioneIstruzioni">Installa come app</button>
+            <p class="installazione-istruzioni" id="installazioneIstruzioni" aria-live="polite" hidden></p>
+        </section>
+
+        <a class="menu-admin-link" href="./admin.html">admin space</a>
+    </nav>
+
+    <section class="spazio-accesso-richiesto" data-spazio-personale-blocco aria-labelledby="spazioPersonaleBloccoTitolo">
+        <h1 id="spazioPersonaleBloccoTitolo">Spazio personale</h1>
+        <p>Questa sezione compare dopo l’accesso con la password della poesia.</p>
+        <a class="spazio-azione" href="#accessoLocations" id="accessoPasswordLink">Completa l’accesso</a>
+    </section>
+
+    <main class="spazio-personale" data-spazio-personale-contenuto hidden>
+        <header class="spazio-intestazione">
+            <h1>Spazio personale</h1>
+            <p id="spazioPersonaleIdentita" class="spazio-sessione-stato"></p>
+        </header>
+
+        <div class="spazio-griglia spazio-personale-riepilogo">
+            <a class="spazio-carta" href="#messaggi">
+                <h2>Messaggi</h2>
+                <p>Scrivi alle altre locations e leggi i messaggi ricevuti.</p>
+            </a>
+            <a class="spazio-carta" href="./taccuino.html">
+                <h2>Taccuino</h2>
+                <p><span data-taccuino-count>0</span> elementi salvati in questo dispositivo.</p>
+            </a>
+        </div>
+
+        <section class="spazio-messaggi" id="messaggi" aria-labelledby="messaggiTitolo">
+            <div class="spazio-sezione-intestazione">
+                <div>
+                    <h2 id="messaggiTitolo">Messaggi</h2>
+                    <p>Scegli una o più locations, fino a un massimo di cinque.</p>
+                </div>
+                <button id="nuovoMessaggioButton" type="button" aria-expanded="false" aria-controls="destinatariPanel">Invia un messaggio</button>
+            </div>
+
+            <section class="destinatari-panel" id="destinatariPanel" aria-labelledby="destinatariTitolo" hidden>
+                <div class="destinatari-intestazione">
+                    <div>
+                        <h3 id="destinatariTitolo">A chi vuoi scrivere?</h3>
+                        <p id="destinatariIstruzioni">Scegli i destinatari dall’elenco o dalla mappa.</p>
+                    </div>
+                    <p class="destinatari-conteggio" id="destinatariConteggio">Nessun destinatario selezionato</p>
+                </div>
+                <div class="destinatari-strumenti">
+                    <button id="destinatariPulisci" type="button" disabled>Deseleziona tutti</button>
+                </div>
+                <div class="destinatari-lista" id="destinatariLista" role="group" aria-label="Destinatari del messaggio"></div>
+                <div class="destinatari-azioni">
+                    <button id="destinatariAnnulla" type="button">Annulla</button>
+                    <button id="destinatariContinua" type="button" disabled>Continua</button>
+                </div>
+            </section>
+
+            <div class="spazio-messaggi-layout">
+                <div class="spazio-messaggi-mappa" id="spazioPersonaleMap" role="application" aria-label="Mappa delle locations a cui inviare messaggi"></div>
+
+                <section class="spazio-posta" aria-labelledby="postaTitolo">
+                    <div class="posta-intestazione">
+                        <h2 id="postaTitolo">In arrivo</h2>
+                        <button class="posta-refresh" id="postaRefresh" type="button">Aggiorna</button>
+                    </div>
+                    <div class="posta-lista" id="postaLista">
+                        <p>Caricamento…</p>
+                    </div>
+                </section>
+            </div>
+        </section>
+    </main>
+
+    <div class="messaggio-overlay" id="messaggioOverlay" hidden>
+        <article class="messaggio-dialogo" role="dialog" aria-modal="true" aria-labelledby="messaggioTitolo">
+            <button class="messaggio-close" id="messaggioClose" type="button" aria-label="Chiudi">×</button>
+            <h2 id="messaggioTitolo">Invia un messaggio</h2>
+            <p class="messaggio-destinatari" id="messaggioDestinatari"></p>
+
+            <form class="messaggio-form" id="messaggioForm">
+                <label for="messaggioTesto">Messaggio</label>
+                <textarea id="messaggioTesto" name="testo" maxlength="1500" required placeholder="Scrivi qui..."></textarea>
+                <p class="messaggio-contatore" id="messaggioContatore">0 / 1500</p>
+
+                <fieldset class="messaggio-opzioni">
+                    <legend>Mittente</legend>
+                    <label><input type="radio" name="mittente" value="anonimo" checked> Anonimo</label>
+                    <label><input type="radio" name="mittente" value="location"> Mostra la mia location</label>
+                </fieldset>
+
+                <fieldset class="messaggio-opzioni">
+                    <legend>Consegna</legend>
+                    <label><input type="radio" name="consegna" value="online" checked> Online</label>
+                    <label><input type="radio" name="consegna" value="physical"> Lettera fisica</label>
+                </fieldset>
+
+                <label class="messaggio-archivio" id="messaggioArchivioLabel">
+                    <input id="messaggioArchivio" type="checkbox" name="archivioPubblico">
+                    Autorizzo la possibile pubblicazione anonima del messaggio nell’archivio pubblico. Serviranno anche il consenso del destinatario e l’approvazione dell’admin.
+                </label>
+
+                <button id="messaggioInvia" type="submit">Invia</button>
+                <p class="messaggio-status" id="messaggioStatus" aria-live="polite"></p>
+            </form>
+        </article>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH" crossorigin="anonymous"></script>
+    <script src="./config.js"></script>
+    <script src="./analytics.js"></script>
+    <script src="./api.js"></script>
+    <script src="./notifiche.js"></script>
+    <script src="./site.js?v=20260829-spazi1"></script>
+    <script src="./accesso-menu.js?v=20260829-spazi1"></script>
+    <script src="./taccuino.js"></script>
+    <script src="./spazio-personale.js?v=20260829-spazi1"></script>
+</body>
+</html>

@@ -1,0 +1,227 @@
+.spazio-pubblico,
+.spazio-personale,
+.spazio-accesso-richiesto {
+    width: min(100% - 3rem, 980px);
+    margin: 0 auto;
+    padding: 7rem 0 5rem;
+}
+
+.spazio-accesso-richiesto {
+    min-height: 70vh;
+    display: grid;
+    align-content: center;
+    justify-items: start;
+}
+
+.spazio-accesso-richiesto[hidden] {
+    display: none;
+}
+
+.spazio-accesso-richiesto h1,
+.spazio-intestazione h1 {
+    margin: 0 0 1rem;
+    font-size: clamp(2.4rem, 7vw, 5.2rem);
+    line-height: 0.95;
+    font-weight: 400;
+}
+
+.spazio-accesso-richiesto p,
+.spazio-intestazione p {
+    max-width: 720px;
+    font-size: 1.15rem;
+    line-height: 1.6;
+}
+
+.spazio-azione,
+.spazio-carta,
+.spazio-messaggi button {
+    border: 1px solid var(--ink);
+    background: transparent;
+    color: var(--ink);
+    font: inherit;
+}
+
+.spazio-azione {
+    display: inline-block;
+    margin-top: 1rem;
+    padding: 0.85rem 1.1rem;
+    text-decoration: none;
+}
+
+.spazio-azione:hover,
+.spazio-azione:focus-visible,
+.spazio-carta:hover,
+.spazio-carta:focus-visible,
+.spazio-messaggi button:hover,
+.spazio-messaggi button:focus-visible {
+    outline: none;
+    background: var(--ink);
+    color: var(--paper);
+}
+
+.spazio-griglia {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+    margin-top: 3rem;
+}
+
+.spazio-carta {
+    min-height: 220px;
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    text-decoration: none;
+}
+
+.spazio-carta h2 {
+    margin: 0;
+    font-size: clamp(1.8rem, 4vw, 3rem);
+    font-weight: 400;
+}
+
+.spazio-carta p {
+    margin: 2rem 0 0;
+    max-width: 38ch;
+    line-height: 1.5;
+}
+
+.spazio-personale-riepilogo {
+    margin: 2.5rem 0 3.5rem;
+}
+
+.spazio-personale-riepilogo .spazio-carta {
+    min-height: 150px;
+}
+
+.spazio-messaggi {
+    padding-top: 1rem;
+    border-top: 1px solid var(--line);
+}
+
+.spazio-sezione-intestazione,
+.posta-intestazione {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.spazio-sezione-intestazione h2,
+.posta-intestazione h2 {
+    margin: 0;
+    font-size: clamp(1.8rem, 4vw, 2.8rem);
+    font-weight: 400;
+}
+
+.spazio-messaggi button {
+    padding: 0.75rem 1rem;
+    cursor: pointer;
+}
+
+.spazio-messaggi button:disabled {
+    opacity: 0.4;
+    cursor: default;
+}
+
+.spazio-messaggi button:disabled:hover,
+.spazio-messaggi button:disabled:focus-visible {
+    background: transparent;
+    color: var(--ink);
+}
+
+.spazio-messaggi-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1.15fr) minmax(280px, 0.85fr);
+    gap: 1.25rem;
+    margin-top: 1.5rem;
+}
+
+.spazio-messaggi-mappa {
+    min-height: 520px;
+    border: 1px solid var(--line);
+    background: rgba(var(--ink-rgb), 0.04);
+}
+
+.spazio-posta {
+    min-width: 0;
+    max-height: 520px;
+    overflow-y: auto;
+    padding: 1rem;
+    border: 1px solid var(--line);
+}
+
+.spazio-posta .posta-intestazione {
+    position: sticky;
+    top: -1rem;
+    z-index: 2;
+    margin: -1rem -1rem 0;
+    padding: 1rem;
+    background: var(--paper);
+    border-bottom: 1px solid var(--line);
+}
+
+.spazio-posta .posta-lista {
+    margin-top: 0;
+}
+
+.spazio-posta .messaggio-ricevuto:first-child {
+    border-top: 0;
+}
+
+.spazio-sessione-stato {
+    margin: 0.5rem 0 0;
+    opacity: 0.72;
+}
+
+.spazio-personale .destinatari-panel {
+    margin-top: 1.25rem;
+}
+
+.spazio-personale .leaflet-container {
+    color: #171717;
+}
+
+@media (max-width: 760px) {
+    .spazio-pubblico,
+    .spazio-personale,
+    .spazio-accesso-richiesto {
+        width: min(100% - 2rem, 980px);
+        padding-top: 6rem;
+    }
+
+    .spazio-griglia,
+    .spazio-messaggi-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .spazio-carta {
+        min-height: 170px;
+    }
+
+    .spazio-messaggi-mappa {
+        min-height: 420px;
+    }
+
+    .spazio-posta {
+        max-height: none;
+    }
+
+    .spazio-sezione-intestazione {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .spazio-sezione-intestazione button {
+        width: 100%;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .spazio-azione,
+    .spazio-carta,
+    .spazio-messaggi button {
+        transition: none;
+    }
+}
