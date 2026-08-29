@@ -323,6 +323,7 @@
         esploraPoesiaButton: document.getElementById("esploraPoesiaButton"),
         percorsoNarrativo: document.getElementById("percorsoNarrativo"),
         percorsoNarrativoClose: document.getElementById("percorsoNarrativoClose"),
+        percorsoNarrativoSelect: document.getElementById("percorsoNarrativoSelect"),
         percorsoNarrativoLinea: document.getElementById("percorsoNarrativoLinea"),
         percorsoNarrativoVerso: document.getElementById("percorsoNarrativoVerso"),
         percorsoNarrativoTitolo: document.getElementById("percorsoNarrativoTitolo"),
@@ -881,6 +882,7 @@
 
     function buildNarrativeTimeline() {
         elements.percorsoNarrativoLinea.replaceChildren();
+        elements.percorsoNarrativoSelect.replaceChildren();
 
         NARRATIVE_STEPS.forEach((step, index) => {
             const button = document.createElement("button");
@@ -901,6 +903,11 @@
             button.append(point, label, verse);
             button.addEventListener("click", () => showNarrativeStep(index));
             elements.percorsoNarrativoLinea.appendChild(button);
+
+            const option = document.createElement("option");
+            option.value = String(index);
+            option.textContent = `${step.verse.split(" — ")[0]} — ${step.label}`;
+            elements.percorsoNarrativoSelect.appendChild(option);
         });
     }
 
@@ -1020,6 +1027,7 @@
         const step = NARRATIVE_STEPS[boundedIndex];
 
         narrativeStepIndex = boundedIndex;
+        elements.percorsoNarrativoSelect.value = String(boundedIndex);
         elements.percorsoNarrativoVerso.textContent = step.verse;
         renderNarrativeTitle(step);
         appendLinkedNarrativeText(
@@ -1650,6 +1658,9 @@
             "click",
             closeNarrativeJourney
         );
+        elements.percorsoNarrativoSelect.addEventListener("change", () => {
+            showNarrativeStep(Number(elements.percorsoNarrativoSelect.value));
+        });
         elements.percorsoNarrativoIndietro.addEventListener("click", () => {
             showNarrativeStep(narrativeStepIndex - 1);
         });

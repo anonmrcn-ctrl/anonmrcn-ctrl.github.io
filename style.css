@@ -1421,7 +1421,7 @@ body.poesia-aperta {
 .percorso-narrativo {
     position: absolute;
     top: 1rem;
-    z-index: 900;
+    z-index: 1200;
     right: 1rem;
     bottom: 1rem;
     left: auto;
@@ -1437,6 +1437,10 @@ body.poesia-aperta {
     box-shadow: 0 0.45rem 1.4rem rgba(var(--ink-rgb), 0.2);
     backdrop-filter: blur(8px);
     touch-action: pan-y;
+}
+
+.percorso-narrativo-selettore {
+    display: none;
 }
 
 .percorso-narrativo-close {
@@ -2386,11 +2390,49 @@ html[data-theme="dark"] .leaflet-control-layers label {
         right: 0.75rem;
         bottom: 0.75rem;
         left: 0.75rem;
+        display: block;
+        box-sizing: border-box;
         width: auto;
-        grid-template-columns: minmax(6.8rem, 0.35fr) minmax(0, 1fr);
-        gap: 0.75rem;
-        max-height: 46%;
-        padding: 0.85rem 2.85rem 0.85rem 0.85rem;
+        max-height: min(31dvh, 15rem);
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        scrollbar-gutter: stable;
+        scrollbar-width: thin;
+        padding: 0.75rem 2.85rem 0.85rem 0.85rem;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .percorso-narrativo-selettore {
+        position: sticky;
+        z-index: 2;
+        top: -0.75rem;
+        display: grid;
+        gap: 0.35rem;
+        margin: -0.1rem -1.9rem 0.85rem 0;
+        padding: 0.65rem 2.2rem 0.65rem 0;
+        background: var(--paper);
+        font-size: 0.75rem;
+    }
+
+    .percorso-narrativo-selettore select {
+        width: 100%;
+        min-height: 2.75rem;
+        padding: 0.55rem 2rem 0.55rem 0.65rem;
+        border: 1px solid var(--ink);
+        border-radius: 0;
+        background: var(--paper);
+        color: var(--ink);
+        font: inherit;
+        font-size: 0.86rem;
+    }
+
+    .percorso-narrativo-linea {
+        display: none;
+    }
+
+    .percorso-narrativo-scheda {
+        overflow: visible;
+        padding-right: 0;
     }
 
     .percorso-narrativo-scheda > p:not(.percorso-narrativo-verso) {
@@ -2469,23 +2511,8 @@ html[data-theme="dark"] .leaflet-control-layers label {
     }
 
     .percorso-narrativo {
-        grid-template-columns: minmax(5.4rem, 0.34fr) minmax(0, 1fr);
-        gap: 0.5rem;
-        max-height: 48%;
-        padding-left: 0.65rem;
-    }
-
-    .percorso-narrativo-linea {
-        gap: 0.35rem;
-    }
-
-    .percorso-narrativo-punto {
-        padding-right: 0.15rem;
-        font-size: 0.74rem;
-    }
-
-    .percorso-narrativo-punto small {
-        font-size: 0.64rem;
+        max-height: min(33dvh, 15rem);
+        padding-left: 0.75rem;
     }
 
     .percorso-narrativo-azioni {
