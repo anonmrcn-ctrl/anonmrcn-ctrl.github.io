@@ -51,7 +51,14 @@
         toggleLocationVisibility
     );
     document.addEventListener("nnmrcn:sessioninvalid", clearSession);
-    restoreSession();
+
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", restoreSession, {
+            once: true
+        });
+    } else {
+        restoreSession();
+    }
 
     async function api(path, options = {}) {
         const headers = new Headers(options.headers || {});

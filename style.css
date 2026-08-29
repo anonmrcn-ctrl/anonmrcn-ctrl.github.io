@@ -981,16 +981,14 @@ body.poesia-aperta {
     opacity: 0.55;
 }
 
-.accesso-rete,
-.posta {
+.accesso-rete {
     width: min(650px, calc(100% - 4rem));
     margin: 3rem auto 0;
     padding-top: 2rem;
     border-top: 1px solid var(--line);
 }
 
-.accesso-rete h2,
-.posta h2 {
+.accesso-rete h2 {
     margin: 0 0 1.25rem;
     font-size: 1.35rem;
 }
@@ -2335,8 +2333,7 @@ html[data-theme="dark"] .leaflet-control-layers label {
         font-size: 0.8rem;
     }
 
-    .accesso-rete,
-    .posta {
+    .accesso-rete {
         width: calc(100% - 2rem);
         margin-top: 2rem;
     }

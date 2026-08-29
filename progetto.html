@@ -12,8 +12,7 @@
     <link rel="apple-touch-icon" href="./icona-app-192.png?v=logo-png">
     <link rel="preconnect" href="https://server.arcgisonline.com">
     <script src="./tema.js?v=20260828-settings2"></script>
-    <link rel="stylesheet" href="./style.css?v=20260829-narrativa2">
-    <link rel="stylesheet" href="./messaggistica.css?v=20260828-theme1">
+    <link rel="stylesheet" href="./style.css?v=20260830-clean1">
     <link rel="stylesheet" href="./percorsi.css?v=20260828-theme1">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha384-sHL9NAb7lN7rfvG5lfHpm643Xkcjzp4jFvuavGOndn6pjVqS6ny56CAt3nsEVT4H" crossorigin="anonymous">
 </head>
@@ -265,23 +264,6 @@
                     ></p>
                 </form>
             </div>
-
-
-
-
-
-            <section class="posta" id="postaSection" hidden aria-labelledby="postaTitolo">
-                <div class="posta-intestazione">
-                    <h2 id="postaTitolo">Messaggi ricevuti</h2>
-                    <button class="posta-refresh" id="postaRefresh" type="button">
-                        Aggiorna
-                    </button>
-                </div>
-
-                <div class="posta-lista" id="postaLista">
-                    <p>Nessun messaggio.</p>
-                </div>
-            </section>
         </section>
 
         <section class="sezione-mappa">
@@ -299,66 +281,6 @@
                     <li>Tocca un elemento della mappa per leggerne informazioni e collegamenti.</li>
                 </ol>
             </aside>
-
-            <div class="messaggistica-mappa" id="messaggisticaMappa" hidden>
-                <button
-                    class="mappa-messaggio-button"
-                    id="nuovoMessaggioButton"
-                    type="button"
-                    aria-expanded="false"
-                    aria-controls="destinatariPanel"
-                >
-                    Invia messaggio
-                </button>
-
-                <section
-                    class="destinatari-panel"
-                    id="destinatariPanel"
-                    aria-labelledby="destinatariTitolo"
-                    hidden
-                >
-                    <div class="destinatari-intestazione">
-                        <div>
-                            <h3 id="destinatariTitolo">A chi vuoi scrivere?</h3>
-                            <p id="destinatariIstruzioni">
-                                Scegli i destinatari dall’elenco oppure direttamente dalla mappa.
-                            </p>
-                        </div>
-                        <p class="destinatari-conteggio" id="destinatariConteggio">
-                            Nessun destinatario selezionato
-                        </p>
-                    </div>
-
-                    <div class="destinatari-strumenti">
-                        <button
-                            id="selezioneMappaButton"
-                            type="button"
-                            aria-pressed="false"
-                        >
-                            Seleziona dalla mappa
-                        </button>
-                        <button id="destinatariPulisci" type="button" disabled>
-                            Deseleziona tutti
-                        </button>
-                    </div>
-
-                    <div
-                        class="destinatari-lista"
-                        id="destinatariLista"
-                        role="group"
-                        aria-label="Destinatari del messaggio"
-                    ></div>
-
-                    <div class="destinatari-azioni">
-                        <button id="destinatariAnnulla" type="button">
-                            Annulla
-                        </button>
-                        <button id="destinatariContinua" type="button" disabled>
-                            Continua
-                        </button>
-                    </div>
-                </section>
-            </div>
 
             <div class="mappa-strumenti" role="toolbar" aria-label="Strumenti della mappa">
                 <button
@@ -485,74 +407,6 @@
         </article>
     </div>
 
-    <div class="messaggio-overlay" id="messaggioOverlay" hidden>
-        <article
-            class="messaggio-dialogo"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="messaggioTitolo"
-        >
-            <button
-                class="messaggio-close"
-                id="messaggioClose"
-                type="button"
-                aria-label="Chiudi"
-            >
-                ×
-            </button>
-
-            <h2 id="messaggioTitolo">Invia un messaggio</h2>
-            <p class="messaggio-destinatari" id="messaggioDestinatari"></p>
-
-            <form class="messaggio-form" id="messaggioForm">
-                <label for="messaggioTesto">Messaggio</label>
-                <textarea
-                    id="messaggioTesto"
-                    name="testo"
-                    maxlength="1500"
-                    required
-                    placeholder="Scrivi qui..."
-                ></textarea>
-
-                <p class="messaggio-contatore" id="messaggioContatore">0 / 1500</p>
-
-                <fieldset class="messaggio-opzioni">
-                    <legend>Mittente</legend>
-                    <label>
-                        <input type="radio" name="mittente" value="anonimo" checked>
-                        Anonimo
-                    </label>
-                    <label>
-                        <input type="radio" name="mittente" value="location">
-                        Mostra la mia location
-                    </label>
-                </fieldset>
-
-                <fieldset class="messaggio-opzioni">
-                    <legend>Consegna</legend>
-                    <label>
-                        <input type="radio" name="consegna" value="online" checked>
-                        Online
-                    </label>
-                    <label>
-                        <input type="radio" name="consegna" value="physical">
-                        Lettera fisica
-                    </label>
-                </fieldset>
-
-                <label class="messaggio-archivio" id="messaggioArchivioLabel">
-                    <input id="messaggioArchivio" type="checkbox" name="archivioPubblico">
-                    Autorizzo la possibile pubblicazione anonima del messaggio
-                    nell’archivio pubblico. Serviranno anche il consenso del
-                    destinatario e l’approvazione dell’admin.
-                </label>
-
-                <button id="messaggioInvia" type="submit">Invia</button>
-                <p class="messaggio-status" id="messaggioStatus" aria-live="polite"></p>
-            </form>
-        </article>
-    </div>
-
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH" crossorigin="anonymous"></script>
     <script src="https://unpkg.com/pmtiles@4.4.1/dist/pmtiles.js" integrity="sha384-iS2/cbFYol4NsEeda4mW6N/8wPMOT6pv2eY+GNYSJRqVC4nbJECP1+mg6D2T8wT/" crossorigin="anonymous"></script>
     <script src="./pmtiles-overzoom.js?v=20260828-mobile-source2"></script>
@@ -569,6 +423,6 @@
     <script src="./fiumi-wikipedia.js"></script>
     <script src="./taccuino.js"></script>
     <script src="./poesia-metrica.js?v=20260828-righe1"></script>
-    <script src="./progetto.js?v=20260829-lite-narrativa2"></script>
+    <script src="./progetto.js?v=20260830-clean1"></script>
 </body>
 </html>

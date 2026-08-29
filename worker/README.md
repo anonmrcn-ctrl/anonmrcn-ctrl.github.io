@@ -94,8 +94,8 @@ Verifica il Worker aprendo:
 https://nnmrcn-rete.TUO-SOTTODOMINIO.workers.dev/api/health
 ```
 
-Deve comparire una risposta JSON con `"ok": true`. A quel punto accedi alla
-pagina `progetto.html` con uno dei codici privati delle 20 location.
+Deve comparire una risposta JSON con `"ok": true`. A quel punto completa
+l’accesso dal menu del sito con uno dei codici privati delle 20 location.
 
 ## 5. Modera i messaggi
 
@@ -110,7 +110,7 @@ Per accedere usa il valore di `ADMIN_TOKEN`.
 I messaggi online entrano nello stato `pending` e diventano visibili al
 destinatario solo dopo l'approvazione. Le lettere fisiche entrano nello stato
 `pending_delivery` e possono essere segnate come consegnate. Ogni location può
-inviare al massimo cinque messaggi ogni ora.
+inviare al massimo cinque messaggi ogni ora dallo spazio personale.
 
 La pubblicazione nell’archivio richiede tre passaggi separati: consenso del
 mittente durante l’invio, consenso del destinatario dalla propria posta e
@@ -162,9 +162,8 @@ compare negli endpoint pubblici.
 
 Nella pagina `admin.html`, dopo l'accesso, seleziona **Attiva notifiche** per
 ricevere un avviso quando arriva un messaggio da moderare o una lettera da
-gestire. Nella pagina `progetto.html`, ogni location può attivare lo stesso
-pulsante dopo l'accesso per ricevere una notifica quando un messaggio viene
-approvato.
+gestire. Nello spazio personale, ogni location può attivare lo stesso pulsante
+per ricevere una notifica quando un messaggio viene approvato.
 
 Il Worker crea automaticamente le tabelle necessarie e le chiavi VAPID. La
 chiave privata viene conservata cifrata nel database D1 mediante il segreto

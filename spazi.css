@@ -217,11 +217,3 @@
         width: 100%;
     }
 }
-
-@media (prefers-reduced-motion: reduce) {
-    .spazio-azione,
-    .spazio-carta,
-    .spazio-messaggi button {
-        transition: none;
-    }
-}

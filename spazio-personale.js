@@ -59,10 +59,6 @@
         unlockSpace(event.detail.location);
     });
 
-    if (sessionToken) {
-        restorePersonalSession();
-    }
-
     function bindInterface() {
         elements.newMessage.addEventListener("click", toggleRecipientPanel);
         elements.recipientClear.addEventListener("click", clearRecipientSelection);
@@ -98,20 +94,6 @@
             }
 
             throw error;
-        }
-    }
-
-    async function restorePersonalSession() {
-        try {
-            const data = await api("/api/session");
-            await unlockSpace(data.location);
-        } catch (error) {
-            if (error.status !== 401) {
-                showMessage(
-                    elements.inbox,
-                    "Non è stato possibile caricare lo Spazio personale."
-                );
-            }
         }
     }
 
@@ -362,13 +344,7 @@
     }
 
     function openMessageComposer() {
-        const count = currentRecipients.length;
-        elements.messageTitle.textContent = count === 1
-            ? `Invia un messaggio a ${currentRecipients[0].address}`
-            : `Invia un messaggio a ${count} locations`;
-        elements.messageRecipients.textContent = count === 1
-            ? `Destinatario: ${currentRecipients[0].address}`
-            : `Destinatari (${count}): ${currentRecipients.map((location) => location.address).join(", ")}`;
+        updateMessageRecipientSummary();
         elements.messageForm.reset();
         elements.messageStatus.textContent = "";
         updateMessageCounter();
@@ -418,13 +394,17 @@
         const deliveryType = formData.get("consegna") === "physical" ? "physical" : "online";
         const revealSender = formData.get("mittente") === "location";
         const publicConsent = deliveryType === "online" && formData.get("archivioPubblico") === "on";
+        const originalRecipients = [...currentRecipients];
         const failed = [];
         let sent = 0;
+        let rateLimited = false;
 
         elements.messageSend.disabled = true;
         elements.messageStatus.textContent = "Invio in corso…";
 
-        for (const recipient of currentRecipients) {
+        for (let index = 0; index < originalRecipients.length; index += 1) {
+            const recipient = originalRecipients[index];
+
             try {
                 await api("/api/messages", {
                     method: "POST",
@@ -441,12 +421,14 @@
                 failed.push(recipient);
 
                 if (error.status === 429) {
+                    rateLimited = true;
+                    failed.push(...originalRecipients.slice(index + 1));
                     break;
                 }
             }
         }
 
-        if (!failed.length && sent === currentRecipients.length) {
+        if (!failed.length && sent === originalRecipients.length) {
             elements.messageStatus.textContent = deliveryType === "physical"
                 ? sent === 1
                     ? "Richiesta inviata. La lettera verrà consegnata dopo la verifica."
@@ -457,12 +439,37 @@
             elements.messageText.value = "";
             updateMessageCounter();
         } else {
-            elements.messageStatus.textContent = sent
-                ? `${sent} invii completati; gli altri non sono andati a buon fine.`
-                : "Non è stato possibile inviare il messaggio.";
+            currentRecipients = failed;
+            selectedRecipientIds = new Set(
+                failed.map((location) => Number(location.id))
+            );
+            updateMessageRecipientSummary();
+
+            if (sent) {
+                elements.messageStatus.textContent = rateLimited
+                    ? `${sent} invii completati. Per i restanti ${failed.length} hai raggiunto il limite temporaneo: il testo resta qui per poter riprovare più tardi.`
+                    : `${sent} invii completati; ${failed.length} non sono andati a buon fine. Il testo resta qui per riprovare.`;
+            } else {
+                elements.messageStatus.textContent = rateLimited
+                    ? "Hai raggiunto il limite temporaneo di invio. Riprova più tardi."
+                    : "Non è stato possibile inviare il messaggio.";
+            }
         }
 
         elements.messageSend.disabled = false;
+    }
+
+    function updateMessageRecipientSummary() {
+        const count = currentRecipients.length;
+
+        elements.messageTitle.textContent = count === 1
+            ? `Invia un messaggio a ${currentRecipients[0].address}`
+            : `Invia un messaggio a ${count} locations`;
+        elements.messageRecipients.textContent = count === 1
+            ? `Destinatario: ${currentRecipients[0].address}`
+            : `Destinatari (${count}): ${currentRecipients
+                .map((location) => location.address)
+                .join(", ")}`;
     }
 
     async function loadInbox() {

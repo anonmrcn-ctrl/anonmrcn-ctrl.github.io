@@ -1,10 +1,5 @@
-/* Messaggistica sulla mappa */
+/* Destinatari e messaggi */
 
-.messaggistica-mappa {
-    margin: 0 0 1rem;
-}
-
-.mappa-messaggio-button,
 .destinatari-panel button {
     padding: 0.75rem 1rem;
     border: 1px solid var(--ink);
@@ -15,13 +10,6 @@
     cursor: pointer;
 }
 
-.mappa-messaggio-button {
-    display: block;
-    margin: 0 auto 1rem;
-}
-
-.mappa-messaggio-button:hover,
-.mappa-messaggio-button:focus-visible,
 .destinatari-panel button:hover,
 .destinatari-panel button:focus-visible {
     outline: none;
@@ -143,14 +131,6 @@
     opacity: 0.5;
 }
 
-#map.selezione-destinatari-attiva {
-    cursor: crosshair;
-}
-
-#map.selezione-destinatari-attiva .leaflet-interactive {
-    cursor: pointer;
-}
-
 .messaggio-destinatari {
     margin: -1rem 0 1.5rem;
     padding-left: 0.85rem;
@@ -180,14 +160,7 @@
         grid-template-columns: 1fr;
     }
 
-    .destinatari-panel button,
-    .mappa-messaggio-button {
+    .destinatari-panel button {
         width: 100%;
-    }
-}
-
-@media (prefers-reduced-motion: reduce) {
-    .destinatario-opzione {
-        transition: none;
     }
 }
