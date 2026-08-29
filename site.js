@@ -233,16 +233,14 @@
 
         const loggedIn = Boolean(loginLoggedIn && !loginLoggedIn.hidden);
         let link = menuContent.querySelector("[data-spazio-personale-link]");
-
-        if (!loggedIn) {
-            link?.remove();
-            return;
-        }
+        let error = menuContent.querySelector(
+            "[data-spazio-personale-errore]"
+        );
 
         if (!link) {
             link = document.createElement("a");
             link.href = "./spazio-personale.html";
-            link.textContent = "Spazio personale";
+            link.textContent = "Spazio privato";
             link.dataset.spazioPersonaleLink = "";
 
             const publicLink = menuContent.querySelector(
@@ -254,6 +252,45 @@
             } else {
                 menuContent.appendChild(link);
             }
+
+            link.addEventListener("click", (event) => {
+                if (loginLoggedIn && !loginLoggedIn.hidden) {
+                    return;
+                }
+
+                event.preventDefault();
+
+                const currentError = menuContent.querySelector(
+                    "[data-spazio-personale-errore]"
+                );
+
+                if (currentError) {
+                    currentError.hidden = false;
+                    link.setAttribute(
+                        "aria-describedby",
+                        currentError.id
+                    );
+                }
+            });
+        }
+
+        if (!error) {
+            error = document.createElement("p");
+            error.id = "spazioPersonaleErrore";
+            error.className = "login-message";
+            error.dataset.spazioPersonaleErrore = "";
+            error.setAttribute("role", "alert");
+            error.textContent =
+                "Accesso richiesto: completa prima l’accesso con la password della poesia.";
+            error.hidden = true;
+            link.insertAdjacentElement("afterend", error);
+        }
+
+        link.dataset.accesso = loggedIn ? "completato" : "richiesto";
+
+        if (loggedIn) {
+            error.hidden = true;
+            link.removeAttribute("aria-describedby");
         }
 
         const personalPage = document.body.classList.contains(
@@ -383,6 +420,7 @@
     window.addEventListener("nnmrcn:themechange", syncThemeButtons);
     window.addEventListener("nnmrcn:settingschange", syncSettingButtons);
     document.addEventListener("nnmrcn:taccuinochange", syncLocalDataStatus);
+    document.addEventListener("nnmrcn:sessionchange", syncPersonalSpaceLink);
 
     if (loginLoggedIn && locationVisibilityToggle) {
         const locationObserver = new MutationObserver(() => {
