@@ -66,6 +66,10 @@
     margin-top: 3rem;
 }
 
+.spazio-griglia-pubblica {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 .spazio-carta {
     min-height: 220px;
     padding: 1.5rem;
