@@ -91,6 +91,11 @@
     line-height: 1.5;
 }
 
+.voci-elenco {
+    min-height: 40vh;
+    margin-top: 3rem;
+}
+
 .spazio-personale-riepilogo {
     margin: 2.5rem 0 3.5rem;
 }
