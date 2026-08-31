@@ -293,14 +293,19 @@
             link.removeAttribute("aria-describedby");
         }
 
-        const personalPage = document.body.classList.contains(
+        const personalSpacePage = document.body.classList.contains(
             "pagina-spazio-personale"
-        ) || document.body.classList.contains("pagina-taccuino");
+        );
+        const personalAreaPage = personalSpacePage ||
+            document.body.classList.contains("pagina-taccuino");
 
-        link.classList.toggle("voce-attiva", personalPage);
+        link.classList.toggle("voce-attiva", personalAreaPage);
 
-        if (personalPage) {
-            link.setAttribute("aria-current", "page");
+        if (personalAreaPage) {
+            link.setAttribute(
+                "aria-current",
+                personalSpacePage ? "page" : "location"
+            );
         } else {
             link.removeAttribute("aria-current");
         }
