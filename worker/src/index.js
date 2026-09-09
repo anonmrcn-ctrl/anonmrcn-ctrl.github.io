@@ -22,6 +22,11 @@ const MAX_MEMORY_AUTHOR_LENGTH = 80;
 const MAX_MEMORY_TEXT_LENGTH = 3000;
 const MAX_MEMORY_MEDIA_BYTES = 900000;
 const MAX_MEMORY_REQUEST_BYTES = 1400000;
+const MAX_WIKI_TITLE_LENGTH = 160;
+const MAX_WIKI_SLUG_LENGTH = 160;
+const MAX_WIKI_SUMMARY_LENGTH = 500;
+const MAX_WIKI_BODY_LENGTH = 50000;
+const MAX_WIKI_REQUEST_BYTES = 70000;
 
 class RequestBodyTooLargeError extends Error {}
 
@@ -39,6 +44,7 @@ const MEMORY_MEDIA_TYPES = new Set([
     "audio/webm",
     "audio/mp4"
 ]);
+const WIKI_STATUSES = new Set(["draft", "published"]);
 const MESSAGE_STATUSES = Object.freeze([
     "pending",
     "pending_delivery",
@@ -88,6 +94,44 @@ const MEMORY_STORAGE_STATEMENTS = Object.freeze([
         ON memories(status, published_at, id)`,
     `CREATE INDEX IF NOT EXISTS idx_memories_sender_rate
         ON memories(sender_hash, created_at)`
+]);
+const WIKI_STORAGE_STATEMENTS = Object.freeze([
+    `CREATE TABLE IF NOT EXISTS wiki_entries (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        slug TEXT NOT NULL UNIQUE
+            CHECK (length(slug) BETWEEN 1 AND 160),
+        title TEXT NOT NULL
+            CHECK (length(title) BETWEEN 2 AND 160),
+        summary TEXT NOT NULL DEFAULT ''
+            CHECK (length(summary) <= 500),
+        body TEXT NOT NULL DEFAULT ''
+            CHECK (length(body) <= 50000),
+        status TEXT NOT NULL DEFAULT 'draft'
+            CHECK (status IN ('draft', 'published')),
+        created_at INTEGER NOT NULL,
+        updated_at INTEGER NOT NULL,
+        published_at INTEGER
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_wiki_entries_public
+        ON wiki_entries(status, title, id)`,
+    `CREATE TABLE IF NOT EXISTS wiki_entry_revisions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        entry_id INTEGER NOT NULL,
+        revision_number INTEGER NOT NULL,
+        slug TEXT NOT NULL,
+        title TEXT NOT NULL,
+        summary TEXT NOT NULL DEFAULT '',
+        body TEXT NOT NULL DEFAULT '',
+        status TEXT NOT NULL
+            CHECK (status IN ('draft', 'published')),
+        created_at INTEGER NOT NULL,
+        UNIQUE (entry_id, revision_number),
+        FOREIGN KEY (entry_id)
+            REFERENCES wiki_entries(id)
+            ON DELETE CASCADE
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_wiki_revisions_entry
+        ON wiki_entry_revisions(entry_id, revision_number DESC)`
 ]);
 const LOCATION_PROFILE_COLUMNS = Object.freeze([
     {
@@ -169,6 +213,18 @@ export default {
                 return await listPublicMemories(request, env);
             }
 
+            if (request.method === "GET" && path === "/api/public/wiki") {
+                return await listPublicWikiEntries(request, env);
+            }
+
+            if (
+                request.method === "GET" &&
+                /^\/api\/public\/wiki\/[a-z0-9]+(?:-[a-z0-9]+)*$/.test(path)
+            ) {
+                const slug = path.split("/").pop();
+                return await getPublicWikiEntry(request, env, slug);
+            }
+
             if (request.method === "POST" && path === "/api/memories") {
                 return await createMemory(request, env, ctx);
             }
@@ -227,6 +283,22 @@ export default {
 
             if (request.method === "GET" && path === "/api/admin/memories") {
                 return await adminListMemories(request, env, url);
+            }
+
+            if (request.method === "GET" && path === "/api/admin/wiki") {
+                return await adminListWikiEntries(request, env);
+            }
+
+            if (request.method === "POST" && path === "/api/admin/wiki") {
+                return await adminCreateWikiEntry(request, env);
+            }
+
+            if (
+                request.method === "PATCH" &&
+                /^\/api\/admin\/wiki\/\d+$/.test(path)
+            ) {
+                const id = Number(path.split("/").pop());
+                return await adminUpdateWikiEntry(request, env, id);
             }
 
             if (request.method === "GET" && path === "/api/admin/summary") {
@@ -1612,6 +1684,378 @@ async function adminUpdateContactMessage(request, env, messageId) {
         ok: true,
         status: "read"
     });
+}
+
+async function listPublicWikiEntries(request, env) {
+    await ensureWikiStorage(env);
+
+    const result = await env.DB.prepare(`
+        SELECT
+            id,
+            slug,
+            title,
+            summary,
+            updated_at,
+            published_at
+        FROM wiki_entries
+        WHERE status = 'published'
+        ORDER BY title COLLATE NOCASE, id
+    `).all();
+
+    return json(request, env, {
+        entries: (result.results || []).map((row) =>
+            wikiEntryPayload(row, false)
+        )
+    });
+}
+
+async function getPublicWikiEntry(request, env, slug) {
+    await ensureWikiStorage(env);
+
+    const entry = await env.DB.prepare(`
+        SELECT
+            id,
+            slug,
+            title,
+            summary,
+            body,
+            updated_at,
+            published_at
+        FROM wiki_entries
+        WHERE slug = ? AND status = 'published'
+        LIMIT 1
+    `).bind(slug).first();
+
+    if (!entry) {
+        return json(request, env, {
+            error: "Voce non trovata."
+        }, 404);
+    }
+
+    return json(request, env, {
+        entry: wikiEntryPayload(entry, true)
+    });
+}
+
+async function adminListWikiEntries(request, env) {
+    if (!(await adminAuthorized(request, env))) {
+        return unauthorized(request, env);
+    }
+
+    await ensureWikiStorage(env);
+
+    const result = await env.DB.prepare(`
+        SELECT
+            entry.id,
+            entry.slug,
+            entry.title,
+            entry.summary,
+            entry.body,
+            entry.status,
+            entry.created_at,
+            entry.updated_at,
+            entry.published_at,
+            COALESCE((
+                SELECT MAX(revision_number)
+                FROM wiki_entry_revisions revision
+                WHERE revision.entry_id = entry.id
+            ), 0) AS revision_number
+        FROM wiki_entries entry
+        ORDER BY entry.updated_at DESC, entry.id DESC
+    `).all();
+
+    return json(request, env, {
+        entries: (result.results || []).map((row) =>
+            wikiEntryPayload(row, true)
+        )
+    });
+}
+
+async function adminCreateWikiEntry(request, env) {
+    if (!(await adminAuthorized(request, env))) {
+        return unauthorized(request, env);
+    }
+
+    await ensureWikiStorage(env);
+
+    const input = normalizeWikiEntryInput(
+        await readJson(request, MAX_WIKI_REQUEST_BYTES)
+    );
+
+    if (input.error) {
+        return json(request, env, { error: input.error }, 400);
+    }
+
+    if (await wikiSlugExists(env, input.slug)) {
+        return json(request, env, {
+            error: "Esiste già una voce con questo indirizzo."
+        }, 409);
+    }
+
+    const now = Date.now();
+    const publishedAt = input.status === "published" ? now : null;
+    const result = await env.DB.prepare(`
+        INSERT INTO wiki_entries (
+            slug,
+            title,
+            summary,
+            body,
+            status,
+            created_at,
+            updated_at,
+            published_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `).bind(
+        input.slug,
+        input.title,
+        input.summary,
+        input.body,
+        input.status,
+        now,
+        now,
+        publishedAt
+    ).run();
+
+    const entryId = Number(result.meta?.last_row_id);
+
+    if (!Number.isInteger(entryId) || entryId <= 0) {
+        throw new Error("Wiki entry id missing after insert.");
+    }
+
+    await saveWikiRevision(env, entryId, 1, input, now);
+
+    return json(request, env, {
+        ok: true,
+        entry: await getAdminWikiEntry(env, entryId)
+    }, 201);
+}
+
+async function adminUpdateWikiEntry(request, env, entryId) {
+    if (!(await adminAuthorized(request, env))) {
+        return unauthorized(request, env);
+    }
+
+    if (!Number.isInteger(entryId) || entryId <= 0) {
+        return json(request, env, {
+            error: "Voce non valida."
+        }, 400);
+    }
+
+    await ensureWikiStorage(env);
+
+    const existing = await getAdminWikiEntry(env, entryId);
+
+    if (!existing) {
+        return json(request, env, {
+            error: "Voce non trovata."
+        }, 404);
+    }
+
+    const input = normalizeWikiEntryInput(
+        await readJson(request, MAX_WIKI_REQUEST_BYTES)
+    );
+
+    if (input.error) {
+        return json(request, env, { error: input.error }, 400);
+    }
+
+    if (await wikiSlugExists(env, input.slug, entryId)) {
+        return json(request, env, {
+            error: "Esiste già una voce con questo indirizzo."
+        }, 409);
+    }
+
+    const now = Date.now();
+    const publishedAt = input.status === "published"
+        ? existing.publishedAt || now
+        : null;
+    const revisionNumber = Number(existing.revisionNumber || 0) + 1;
+
+    await env.DB.batch([
+        env.DB.prepare(`
+            UPDATE wiki_entries
+            SET
+                slug = ?,
+                title = ?,
+                summary = ?,
+                body = ?,
+                status = ?,
+                updated_at = ?,
+                published_at = ?
+            WHERE id = ?
+        `).bind(
+            input.slug,
+            input.title,
+            input.summary,
+            input.body,
+            input.status,
+            now,
+            publishedAt,
+            entryId
+        ),
+        wikiRevisionStatement(
+            env,
+            entryId,
+            revisionNumber,
+            input,
+            now
+        )
+    ]);
+
+    return json(request, env, {
+        ok: true,
+        entry: await getAdminWikiEntry(env, entryId)
+    });
+}
+
+function normalizeWikiEntryInput(value) {
+    const title = String(value?.title || "").trim();
+    const slug = String(value?.slug || slugifyWikiTitle(title))
+        .trim()
+        .toLowerCase();
+    const summary = String(value?.summary || "").trim();
+    const body = String(value?.body || "").trim();
+    const status = String(value?.status || "draft").trim();
+
+    if (title.length < 2 || title.length > MAX_WIKI_TITLE_LENGTH) {
+        return { error: "Il titolo deve contenere da 2 a 160 caratteri." };
+    }
+
+    if (
+        !slug ||
+        slug.length > MAX_WIKI_SLUG_LENGTH ||
+        !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)
+    ) {
+        return {
+            error: "L’indirizzo può contenere solo lettere minuscole, numeri e trattini."
+        };
+    }
+
+    if (summary.length > MAX_WIKI_SUMMARY_LENGTH) {
+        return { error: "Il sommario non può superare 500 caratteri." };
+    }
+
+    if (body.length > MAX_WIKI_BODY_LENGTH) {
+        return { error: "Il testo non può superare 50.000 caratteri." };
+    }
+
+    if (!WIKI_STATUSES.has(status)) {
+        return { error: "Stato della voce non valido." };
+    }
+
+    if (status === "published" && !body) {
+        return { error: "Una voce pubblicata deve contenere del testo." };
+    }
+
+    return { title, slug, summary, body, status };
+}
+
+function slugifyWikiTitle(title) {
+    return String(title || "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "")
+        .slice(0, MAX_WIKI_SLUG_LENGTH);
+}
+
+async function wikiSlugExists(env, slug, excludedId = 0) {
+    const row = await env.DB.prepare(`
+        SELECT id
+        FROM wiki_entries
+        WHERE slug = ? AND id <> ?
+        LIMIT 1
+    `).bind(slug, excludedId).first();
+
+    return Boolean(row);
+}
+
+async function getAdminWikiEntry(env, entryId) {
+    const row = await env.DB.prepare(`
+        SELECT
+            entry.id,
+            entry.slug,
+            entry.title,
+            entry.summary,
+            entry.body,
+            entry.status,
+            entry.created_at,
+            entry.updated_at,
+            entry.published_at,
+            COALESCE((
+                SELECT MAX(revision_number)
+                FROM wiki_entry_revisions revision
+                WHERE revision.entry_id = entry.id
+            ), 0) AS revision_number
+        FROM wiki_entries entry
+        WHERE entry.id = ?
+        LIMIT 1
+    `).bind(entryId).first();
+
+    return row ? wikiEntryPayload(row, true) : null;
+}
+
+function wikiRevisionStatement(env, entryId, revisionNumber, input, now) {
+    return env.DB.prepare(`
+        INSERT INTO wiki_entry_revisions (
+            entry_id,
+            revision_number,
+            slug,
+            title,
+            summary,
+            body,
+            status,
+            created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `).bind(
+        entryId,
+        revisionNumber,
+        input.slug,
+        input.title,
+        input.summary,
+        input.body,
+        input.status,
+        now
+    );
+}
+
+async function saveWikiRevision(env, entryId, revisionNumber, input, now) {
+    await wikiRevisionStatement(
+        env,
+        entryId,
+        revisionNumber,
+        input,
+        now
+    ).run();
+}
+
+function wikiEntryPayload(row, includeBody) {
+    const entry = {
+        id: Number(row.id),
+        slug: row.slug,
+        title: row.title,
+        summary: row.summary || "",
+        status: row.status,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at,
+        publishedAt: row.published_at,
+        revisionNumber: Number(row.revision_number || 0)
+    };
+
+    if (includeBody) {
+        entry.body = row.body || "";
+    }
+
+    return entry;
+}
+
+async function ensureWikiStorage(env) {
+    await env.DB.batch(
+        WIKI_STORAGE_STATEMENTS.map((statement) =>
+            env.DB.prepare(statement)
+        )
+    );
 }
 
 async function ensureContactStorage(env) {

@@ -13,6 +13,7 @@
     <script src="./tema.js?v=20260828-settings2"></script>
     <link rel="stylesheet" href="./style.css?v=20260830-clean1">
     <link rel="stylesheet" href="./spazi.css?v=20260830-voci2">
+    <link rel="stylesheet" href="./voci.css?v=20260909-editor1">
 </head>
 
 <body class="pagina-voci">
@@ -65,12 +66,80 @@
         <a class="menu-admin-link" href="./admin.html">admin space</a>
     </nav>
 
-    <main class="spazio-pubblico">
+    <main class="spazio-pubblico voci-pagina">
         <header class="spazio-intestazione">
             <h1>Voci</h1>
         </header>
 
-        <section class="voci-elenco" aria-label="Voci disponibili"></section>
+        <section class="voci-pubbliche" aria-labelledby="vociIndiceTitolo">
+            <div class="voci-strumenti">
+                <h2 id="vociIndiceTitolo">Indice</h2>
+                <label for="vociRicerca">Cerca nelle voci</label>
+                <input id="vociRicerca" type="search" autocomplete="off" placeholder="Titolo o parola">
+            </div>
+            <p class="voci-stato" id="vociStato" aria-live="polite">Caricamento…</p>
+            <div class="voci-layout">
+                <nav class="voci-indice" id="vociIndice" aria-label="Indice delle voci"></nav>
+                <article class="voce-articolo" id="voceArticolo" tabindex="-1" hidden></article>
+            </div>
+        </section>
+
+        <section class="voci-admin" id="vociAdmin" aria-labelledby="vociAdminTitolo" hidden>
+            <header class="voci-admin-intestazione">
+                <div>
+                    <p class="voci-sopratitolo">Amministrazione</p>
+                    <h2 id="vociAdminTitolo">Editor delle voci</h2>
+                </div>
+                <button id="vociNuova" type="button">Nuova voce</button>
+            </header>
+            <p class="voci-stato" id="vociAdminStato" aria-live="polite"></p>
+
+            <div class="voci-editor-layout">
+                <nav class="voci-editor-indice" id="vociAdminIndice" aria-label="Voci modificabili"></nav>
+
+                <form class="voci-editor-form" id="vociEditorForm">
+                    <input id="vociEditorId" type="hidden">
+
+                    <label for="vociEditorTitolo">Titolo</label>
+                    <input id="vociEditorTitolo" type="text" minlength="2" maxlength="160" required>
+
+                    <label for="vociEditorSlug">Indirizzo della voce</label>
+                    <div class="voci-slug-riga">
+                        <span>voci.html#</span>
+                        <input id="vociEditorSlug" type="text" maxlength="160" pattern="[a-z0-9]+(?:-[a-z0-9]+)*" required>
+                    </div>
+
+                    <label for="vociEditorSommario">Sommario</label>
+                    <textarea id="vociEditorSommario" maxlength="500" rows="3"></textarea>
+
+                    <div class="voci-editor-testo-titolo">
+                        <label for="vociEditorTesto">Testo</label>
+                        <span id="vociEditorContatore">0 / 50.000</span>
+                    </div>
+                    <div class="voci-editor-toolbar" role="toolbar" aria-label="Formattazione del testo">
+                        <button type="button" data-wiki-insert="\n## Titolo della sezione\n">Sezione</button>
+                        <button type="button" data-wiki-before="**" data-wiki-after="**" data-wiki-placeholder="testo">Grassetto</button>
+                        <button type="button" data-wiki-before="*" data-wiki-after="*" data-wiki-placeholder="testo">Corsivo</button>
+                        <button type="button" data-wiki-before="[" data-wiki-after="](https://)" data-wiki-placeholder="testo">Link</button>
+                        <button type="button" data-wiki-before="[[" data-wiki-after="]]" data-wiki-placeholder="altra-voce|testo">Altra voce</button>
+                    </div>
+                    <textarea id="vociEditorTesto" maxlength="50000" rows="18" spellcheck="true"></textarea>
+
+                    <label for="vociEditorStato">Stato</label>
+                    <select id="vociEditorStato">
+                        <option value="draft">Bozza</option>
+                        <option value="published">Pubblicata</option>
+                    </select>
+
+                    <div class="voci-editor-azioni">
+                        <button id="vociAnteprimaButton" type="button">Anteprima</button>
+                        <button id="vociSalvaButton" type="submit">Salva voce</button>
+                    </div>
+                </form>
+            </div>
+
+            <article class="voce-articolo voci-anteprima" id="vociAnteprima" hidden></article>
+        </section>
     </main>
 
     <script src="./config.js"></script>
@@ -80,5 +149,6 @@
     <script src="./site.js?v=20260831-current1"></script>
     <script src="./accesso-menu.js?v=20260830-clean1"></script>
     <script src="./taccuino.js"></script>
+    <script src="./voci.js?v=20260909-editor1"></script>
 </body>
 </html>

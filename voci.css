@@ -1,0 +1,323 @@
+.voci-pagina {
+    width: min(100% - 3rem, 1160px);
+}
+
+.voci-pubbliche {
+    margin-top: 3rem;
+}
+
+.voci-strumenti {
+    display: grid;
+    grid-template-columns: 1fr minmax(220px, 340px);
+    align-items: end;
+    gap: 0.75rem 1rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--line);
+}
+
+.voci-strumenti h2,
+.voci-admin h2 {
+    margin: 0;
+    font-size: clamp(1.8rem, 4vw, 3rem);
+    font-weight: 400;
+}
+
+.voci-strumenti label {
+    grid-column: 2;
+    font-size: 0.8rem;
+}
+
+.voci-strumenti input,
+.voci-editor-form input,
+.voci-editor-form textarea,
+.voci-editor-form select {
+    width: 100%;
+    box-sizing: border-box;
+    border: 1px solid var(--line);
+    border-radius: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font: inherit;
+}
+
+.voci-strumenti input,
+.voci-editor-form input,
+.voci-editor-form select {
+    min-height: 2.8rem;
+    padding: 0.65rem 0.75rem;
+}
+
+.voci-strumenti input {
+    grid-column: 2;
+}
+
+.voci-stato {
+    min-height: 1.5em;
+    margin: 0.85rem 0;
+    opacity: 0.7;
+}
+
+.voci-layout {
+    display: grid;
+    grid-template-columns: minmax(200px, 0.32fr) minmax(0, 1fr);
+    gap: 2.5rem;
+    align-items: start;
+}
+
+.voci-indice,
+.voci-editor-indice {
+    display: grid;
+    align-content: start;
+}
+
+.voci-indice a,
+.voci-editor-indice button {
+    padding: 0.8rem 0;
+    border: 0;
+    border-bottom: 1px solid var(--line);
+    background: transparent;
+    color: var(--ink);
+    font: inherit;
+    text-align: left;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.voci-indice a:hover,
+.voci-indice a:focus-visible,
+.voci-editor-indice button:hover,
+.voci-editor-indice button:focus-visible,
+.voci-editor-indice button[aria-current="true"] {
+    outline: none;
+    padding-left: 0.6rem;
+    background: rgba(var(--ink-rgb), 0.08);
+}
+
+.voci-indice small,
+.voci-editor-indice small {
+    display: block;
+    margin-top: 0.25rem;
+    opacity: 0.65;
+}
+
+.voce-articolo {
+    min-width: 0;
+    padding-left: 2rem;
+    border-left: 1px solid var(--line);
+}
+
+.voce-articolo h1 {
+    margin: 0 0 0.75rem;
+    padding-bottom: 0.7rem;
+    border-bottom: 1px solid var(--line);
+    font-size: clamp(2.2rem, 6vw, 4rem);
+    font-weight: 400;
+    line-height: 1;
+}
+
+.voce-articolo h2,
+.voce-articolo h3 {
+    margin: 2rem 0 0.75rem;
+    padding-bottom: 0.35rem;
+    border-bottom: 1px solid var(--line);
+    font-weight: 400;
+}
+
+.voce-articolo h2 {
+    font-size: clamp(1.6rem, 3vw, 2.2rem);
+}
+
+.voce-articolo h3 {
+    font-size: 1.35rem;
+}
+
+.voce-articolo p,
+.voce-articolo li {
+    max-width: 72ch;
+    font-size: 1.05rem;
+    line-height: 1.7;
+}
+
+.voce-sommario {
+    font-size: 1.15rem !important;
+    font-style: italic;
+}
+
+.voce-articolo a {
+    color: inherit;
+    text-underline-offset: 0.15em;
+}
+
+.voce-metadati {
+    margin-top: 3rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--line);
+    font-size: 0.78rem !important;
+    opacity: 0.65;
+}
+
+.voci-admin {
+    margin-top: 6rem;
+    padding-top: 2rem;
+    border-top: 2px solid var(--ink);
+}
+
+.voci-admin-intestazione {
+    display: flex;
+    align-items: end;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.voci-sopratitolo {
+    margin: 0 0 0.35rem;
+    font-size: 0.72rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+.voci-admin button,
+.voci-editor-form button {
+    padding: 0.65rem 0.85rem;
+    border: 1px solid var(--ink);
+    background: transparent;
+    color: var(--ink);
+    font: inherit;
+    cursor: pointer;
+}
+
+.voci-admin button:hover,
+.voci-admin button:focus-visible,
+.voci-editor-form button:hover,
+.voci-editor-form button:focus-visible {
+    outline: none;
+    background: var(--ink);
+    color: var(--paper);
+}
+
+.voci-admin button:disabled {
+    cursor: wait;
+    opacity: 0.5;
+}
+
+.voci-editor-layout {
+    display: grid;
+    grid-template-columns: minmax(190px, 0.28fr) minmax(0, 1fr);
+    gap: 2rem;
+    margin-top: 1rem;
+}
+
+.voci-editor-form {
+    display: grid;
+    gap: 0.65rem;
+}
+
+.voci-editor-form label {
+    margin-top: 0.5rem;
+    font-weight: 700;
+}
+
+.voci-editor-form textarea {
+    min-height: 6rem;
+    padding: 0.75rem;
+    resize: vertical;
+    line-height: 1.55;
+}
+
+#vociEditorTesto {
+    min-height: 25rem;
+    font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+    font-size: 0.92rem;
+}
+
+.voci-slug-riga {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.voci-slug-riga span {
+    opacity: 0.6;
+}
+
+.voci-editor-testo-titolo {
+    display: flex;
+    align-items: end;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.voci-editor-testo-titolo span {
+    font-size: 0.75rem;
+    opacity: 0.65;
+}
+
+.voci-editor-toolbar,
+.voci-editor-azioni {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+}
+
+.voci-editor-toolbar button {
+    padding: 0.45rem 0.6rem;
+    font-size: 0.78rem;
+}
+
+.voci-editor-azioni {
+    justify-content: flex-end;
+    margin-top: 0.75rem;
+}
+
+.voci-editor-azioni button:last-child {
+    background: var(--ink);
+    color: var(--paper);
+}
+
+.voci-anteprima {
+    margin-top: 2rem;
+    padding: 2rem;
+    border: 1px solid var(--line);
+}
+
+@media (max-width: 760px) {
+    .voci-pagina {
+        width: min(100% - 2rem, 1160px);
+    }
+
+    .voci-strumenti,
+    .voci-layout,
+    .voci-editor-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .voci-strumenti label,
+    .voci-strumenti input {
+        grid-column: 1;
+    }
+
+    .voce-articolo {
+        padding: 1.5rem 0 0;
+        border-top: 1px solid var(--line);
+        border-left: 0;
+    }
+
+    .voci-admin-intestazione {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .voci-admin-intestazione button,
+    .voci-editor-azioni button {
+        width: 100%;
+    }
+
+    #vociEditorTesto {
+        min-height: 20rem;
+    }
+
+    .voci-anteprima {
+        padding: 1.25rem;
+    }
+}
