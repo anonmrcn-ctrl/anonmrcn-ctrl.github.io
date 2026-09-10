@@ -10,6 +10,8 @@
         publicIndex: document.getElementById("vociIndice"),
         publicLayout: document.getElementById("vociLayout"),
         articleIndex: document.getElementById("voceIndiceLaterale"),
+        mobileIndexBackdrop: document.getElementById("voceIndiceMobileSfondo"),
+        mobileIndexButton: document.getElementById("voceIndiceMobilePulsante"),
         article: document.getElementById("voceArticolo"),
         admin: document.getElementById("vociAdmin"),
         adminStatus: document.getElementById("vociAdminStato"),
@@ -62,6 +64,7 @@
     const adminImageUrls = new Map();
     const MAX_IMAGES = 8;
     const MAX_IMAGE_BYTES = 700000;
+    const mobileIndexMedia = window.matchMedia("(max-width: 760px)");
 
     elements.search.addEventListener("input", renderPublicIndex);
     elements.newButton.addEventListener("click", resetEditor);
@@ -111,8 +114,30 @@
     elements.form.addEventListener("submit", saveEntry);
     elements.article.addEventListener("click", handleInternalLink);
     elements.articleIndex.addEventListener("click", handleInternalLink);
+    elements.mobileIndexButton.addEventListener("click", openMobileIndex);
+    elements.mobileIndexBackdrop.addEventListener("click", () => {
+        closeMobileIndex(true);
+    });
     elements.preview.addEventListener("click", handleInternalLink);
     window.addEventListener("hashchange", loadEntryFromHash);
+    document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape" && document.body.classList.contains(
+            "voce-indice-mobile-aperto"
+        )) {
+            event.preventDefault();
+            closeMobileIndex(true);
+        }
+    });
+
+    if (typeof mobileIndexMedia.addEventListener === "function") {
+        mobileIndexMedia.addEventListener("change", () => {
+            syncMobileIndexMode();
+        });
+    } else {
+        mobileIndexMedia.addListener(() => {
+            syncMobileIndexMode();
+        });
+    }
 
     document.querySelectorAll("[data-wiki-insert], [data-wiki-before]")
         .forEach((button) => {
@@ -252,6 +277,15 @@
     }
 
     function handleInternalLink(event) {
+        const mobileIndexClose = event.target.closest(
+            "[data-wiki-mobile-index-close]"
+        );
+
+        if (mobileIndexClose) {
+            closeMobileIndex(true);
+            return;
+        }
+
         const indexToggle = event.target.closest("[data-wiki-index-toggle]");
 
         if (indexToggle) {
@@ -302,6 +336,7 @@
             );
 
             if (heading) {
+                closeMobileIndex(false);
                 heading.scrollIntoView({ block: "start" });
                 heading.focus({ preventScroll: true });
             }
@@ -1135,6 +1170,7 @@
                 "voce-con-indice",
                 hasArticleIndex
             );
+            syncMobileIndexMode(hasArticleIndex);
         }
 
         if (citations.items.length) {
@@ -1179,8 +1215,7 @@
 
             if (shouldShowIndex) {
                 indexContainer.appendChild(renderInternalIndex(
-                    headings,
-                    window.matchMedia("(max-width: 760px)").matches
+                    headings
                 ));
             }
         }
@@ -1320,7 +1355,13 @@
         toggle.dataset.wikiIndexToggle = "";
         toggle.setAttribute("aria-expanded", String(!collapsed));
         toggle.textContent = collapsed ? "mostra" : "nascondi";
-        header.append(title, toggle);
+        const mobileClose = document.createElement("button");
+        mobileClose.type = "button";
+        mobileClose.className = "voce-indice-mobile-chiudi";
+        mobileClose.dataset.wikiMobileIndexClose = "";
+        mobileClose.setAttribute("aria-label", "Chiudi l’indice");
+        mobileClose.textContent = "×";
+        header.append(title, toggle, mobileClose);
         navigation.appendChild(header);
 
         const content = document.createElement("div");
@@ -1395,6 +1436,62 @@
         content.appendChild(list);
         navigation.appendChild(content);
         return navigation;
+    }
+
+    function openMobileIndex() {
+        if (!mobileIndexMedia.matches || elements.articleIndex.hidden) {
+            return;
+        }
+
+        document.body.classList.add("voce-indice-mobile-aperto");
+        elements.mobileIndexBackdrop.hidden = false;
+        elements.mobileIndexButton.setAttribute("aria-expanded", "true");
+        elements.articleIndex.inert = false;
+        elements.articleIndex.removeAttribute("aria-hidden");
+
+        window.requestAnimationFrame(() => {
+            elements.articleIndex.querySelector(
+                "[data-wiki-mobile-index-close]"
+            )?.focus();
+        });
+    }
+
+    function closeMobileIndex(returnFocus = false) {
+        const wasOpen = document.body.classList.contains(
+            "voce-indice-mobile-aperto"
+        );
+        document.body.classList.remove("voce-indice-mobile-aperto");
+        elements.mobileIndexBackdrop.hidden = true;
+        elements.mobileIndexButton.setAttribute("aria-expanded", "false");
+
+        if (mobileIndexMedia.matches) {
+            elements.articleIndex.inert = true;
+            elements.articleIndex.setAttribute("aria-hidden", "true");
+        } else {
+            elements.articleIndex.inert = false;
+            elements.articleIndex.removeAttribute("aria-hidden");
+        }
+
+        if (returnFocus && wasOpen) {
+            elements.mobileIndexButton.focus();
+        }
+    }
+
+    function syncMobileIndexMode(hasIndex = !elements.articleIndex.hidden) {
+        const mobile = mobileIndexMedia.matches;
+        elements.mobileIndexButton.hidden = !mobile || !hasIndex;
+
+        if (!mobile || !hasIndex) {
+            closeMobileIndex(false);
+            elements.articleIndex.inert = false;
+            elements.articleIndex.removeAttribute("aria-hidden");
+            return;
+        }
+
+        if (!document.body.classList.contains("voce-indice-mobile-aperto")) {
+            elements.articleIndex.inert = true;
+            elements.articleIndex.setAttribute("aria-hidden", "true");
+        }
     }
 
     function renderPhoto(photo, citations) {

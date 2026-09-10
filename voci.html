@@ -13,7 +13,7 @@
     <script src="./tema.js?v=20260828-settings2"></script>
     <link rel="stylesheet" href="./style.css?v=20260830-clean1">
     <link rel="stylesheet" href="./spazi.css?v=20260830-voci2">
-    <link rel="stylesheet" href="./voci.css?v=20260910-indice-sezioni1">
+    <link rel="stylesheet" href="./voci.css?v=20260910-indice-mobile1">
 </head>
 
 <body class="pagina-voci">
@@ -79,7 +79,7 @@
             <p class="voci-stato" id="vociStato" aria-live="polite">Caricamento…</p>
             <div class="voci-layout" id="vociLayout">
                 <nav class="voci-indice" id="vociIndice" aria-label="Indice delle voci"></nav>
-                <aside class="voce-indice-laterale" id="voceIndiceLaterale" hidden></aside>
+                <aside class="voce-indice-laterale" id="voceIndiceLaterale" aria-label="Indice dell’articolo" hidden></aside>
                 <article class="voce-articolo" id="voceArticolo" tabindex="-1" hidden></article>
             </div>
         </section>
@@ -201,6 +201,9 @@
         </section>
     </main>
 
+    <div class="voce-indice-mobile-sfondo" id="voceIndiceMobileSfondo" aria-hidden="true" hidden></div>
+    <button class="voce-indice-mobile-pulsante" id="voceIndiceMobilePulsante" type="button" aria-controls="voceIndiceLaterale" aria-expanded="false" hidden>Indice</button>
+
     <script src="./config.js"></script>
     <script src="./analytics.js"></script>
     <script src="./api.js"></script>
@@ -208,6 +211,6 @@
     <script src="./site.js?v=20260831-current1"></script>
     <script src="./accesso-menu.js?v=20260830-clean1"></script>
     <script src="./taccuino.js"></script>
-    <script src="./voci.js?v=20260910-indice-sezioni1"></script>
+    <script src="./voci.js?v=20260910-indice-mobile1"></script>
 </body>
 </html>
