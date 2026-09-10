@@ -6,6 +6,16 @@
     margin-top: 3rem;
 }
 
+.voci-home-link {
+    color: inherit;
+    text-decoration: none;
+}
+
+.voci-home-link:focus-visible {
+    outline: 1px solid currentColor;
+    outline-offset: 0.15em;
+}
+
 .voci-strumenti {
     display: grid;
     grid-template-columns: 1fr minmax(220px, 340px);
@@ -15,7 +25,6 @@
     border-bottom: 1px solid var(--line);
 }
 
-.voci-strumenti h2,
 .voci-admin h2 {
     margin: 0;
     font-size: clamp(1.8rem, 4vw, 3rem);
