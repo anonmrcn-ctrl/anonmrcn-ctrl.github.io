@@ -271,6 +271,28 @@
             return;
         }
 
+        const sectionToggle = event.target.closest("[data-wiki-section-toggle]");
+
+        if (sectionToggle) {
+            const subsectionList = document.getElementById(
+                sectionToggle.getAttribute("aria-controls")
+            );
+
+            if (subsectionList) {
+                const expanded = sectionToggle.getAttribute("aria-expanded") === "true";
+                const sectionTitle = sectionToggle.dataset.wikiSectionTitle || "la sezione";
+                subsectionList.hidden = expanded;
+                sectionToggle.setAttribute("aria-expanded", String(!expanded));
+                sectionToggle.setAttribute(
+                    "aria-label",
+                    `${expanded ? "Apri" : "Chiudi"} le sottosezioni di ${sectionTitle}`
+                );
+                sectionToggle.textContent = expanded ? "+" : "−";
+            }
+
+            return;
+        }
+
         const headingLink = event.target.closest("[data-wiki-heading]");
 
         if (headingLink) {
@@ -1316,6 +1338,7 @@
 
         const list = document.createElement("ol");
         let currentSection = null;
+        let currentSectionHeading = null;
         let subsectionList = null;
 
         headings.forEach((heading) => {
@@ -1330,6 +1353,24 @@
                 if (!subsectionList) {
                     subsectionList = document.createElement("ol");
                     subsectionList.className = "voce-indice-interno-sottosezioni";
+                    subsectionList.id = `${currentSectionHeading.id}-sottosezioni`;
+                    subsectionList.hidden = true;
+
+                    const toggle = document.createElement("button");
+                    toggle.type = "button";
+                    toggle.className = "voce-indice-sezione-toggle";
+                    toggle.dataset.wikiSectionToggle = "";
+                    toggle.dataset.wikiSectionTitle = currentSectionHeading.title;
+                    toggle.setAttribute("aria-controls", subsectionList.id);
+                    toggle.setAttribute("aria-expanded", "false");
+                    toggle.setAttribute(
+                        "aria-label",
+                        `Apri le sottosezioni di ${currentSectionHeading.title}`
+                    );
+                    toggle.textContent = "+";
+                    currentSection.querySelector(
+                        ".voce-indice-sezione-riga"
+                    ).appendChild(toggle);
                     currentSection.appendChild(subsectionList);
                 }
 
@@ -1337,8 +1378,17 @@
                 return;
             }
 
+            if (heading.level === 2) {
+                item.className = "voce-indice-sezione";
+                const row = document.createElement("div");
+                row.className = "voce-indice-sezione-riga";
+                row.appendChild(link);
+                item.replaceChildren(row);
+            }
+
             list.appendChild(item);
             currentSection = heading.level === 2 ? item : null;
+            currentSectionHeading = heading.level === 2 ? heading : null;
             subsectionList = null;
         });
 

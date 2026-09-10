@@ -280,6 +280,42 @@
     margin-top: 0.25rem !important;
 }
 
+.voce-indice-interno-sottosezioni[hidden] {
+    display: none;
+}
+
+.voce-indice-sezione-riga {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.5rem;
+}
+
+.voce-indice-sezione-riga > [data-wiki-heading] {
+    min-width: 0;
+}
+
+.voce-indice-interno .voce-indice-sezione-toggle {
+    display: inline-grid;
+    flex: 0 0 1.4rem;
+    width: 1.4rem;
+    height: 1.4rem;
+    padding: 0;
+    border: 1px solid var(--line);
+    background: rgba(var(--ink-rgb), 0.04);
+    place-items: center;
+    font-size: 1rem;
+    line-height: 1;
+    text-decoration: none;
+}
+
+.voce-indice-interno .voce-indice-sezione-toggle:hover,
+.voce-indice-interno .voce-indice-sezione-toggle:focus-visible {
+    outline: 1px solid currentColor;
+    outline-offset: 0.1rem;
+    background: rgba(var(--ink-rgb), 0.1);
+}
+
 .voce-indice-interno-vuoto {
     margin: 0;
     opacity: 0.65;
