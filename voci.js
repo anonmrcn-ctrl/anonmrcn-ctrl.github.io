@@ -1380,6 +1380,8 @@
         const list = document.createElement("ol");
         let currentSection = null;
         let currentSectionHeading = null;
+        let sectionNumber = 0;
+        let subsectionNumber = 0;
         let subsectionList = null;
 
         headings.forEach((heading) => {
@@ -1391,6 +1393,18 @@
             item.appendChild(link);
 
             if (heading.level === 3 && currentSection) {
+                subsectionNumber += 1;
+                const number = document.createElement("span");
+                number.className = "voce-indice-numero";
+                number.setAttribute("aria-hidden", "true");
+                number.textContent = `${sectionNumber}.${subsectionNumber}`;
+                link.setAttribute(
+                    "aria-label",
+                    `${sectionNumber}.${subsectionNumber}, ${heading.title}`
+                );
+                item.className = "voce-indice-sottosezione";
+                item.prepend(number);
+
                 if (!subsectionList) {
                     subsectionList = document.createElement("ol");
                     subsectionList.className = "voce-indice-interno-sottosezioni";
@@ -1420,10 +1434,20 @@
             }
 
             if (heading.level === 2) {
+                sectionNumber += 1;
+                subsectionNumber = 0;
                 item.className = "voce-indice-sezione";
                 const row = document.createElement("div");
                 row.className = "voce-indice-sezione-riga";
-                row.appendChild(link);
+                const number = document.createElement("span");
+                number.className = "voce-indice-numero";
+                number.setAttribute("aria-hidden", "true");
+                number.textContent = `${sectionNumber}.`;
+                link.setAttribute(
+                    "aria-label",
+                    `${sectionNumber}, ${heading.title}`
+                );
+                row.append(number, link);
                 item.replaceChildren(row);
             }
 
