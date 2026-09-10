@@ -13,7 +13,7 @@
     <script src="./tema.js?v=20260828-settings2"></script>
     <link rel="stylesheet" href="./style.css?v=20260830-clean1">
     <link rel="stylesheet" href="./spazi.css?v=20260830-voci2">
-    <link rel="stylesheet" href="./voci.css?v=20260910-fonti-riuso1">
+    <link rel="stylesheet" href="./voci.css?v=20260910-collegamenti1">
 </head>
 
 <body class="pagina-voci">
@@ -123,11 +123,25 @@
                         <button type="button" data-wiki-before="**" data-wiki-after="**" data-wiki-placeholder="testo">Grassetto</button>
                         <button type="button" data-wiki-before="*" data-wiki-after="*" data-wiki-placeholder="testo">Corsivo</button>
                         <button type="button" data-wiki-before="[" data-wiki-after="](https://)" data-wiki-placeholder="testo">Link</button>
-                        <button type="button" data-wiki-before="[[" data-wiki-after="]]" data-wiki-placeholder="altra-voce|testo">Altra voce</button>
+                        <button id="vociAltraVoceButton" type="button" aria-expanded="false" aria-controls="vociAltraVocePannello">Altra voce</button>
                         <button id="vociFonteButton" type="button" aria-expanded="false" aria-controls="vociFontePannello">Fonte</button>
                         <button id="vociFotoButton" type="button">Foto</button>
                         <input id="vociFotoInput" type="file" accept="image/jpeg,image/png,image/webp" multiple hidden>
                     </div>
+
+                    <fieldset class="voci-collegamento-pannello" id="vociAltraVocePannello" hidden>
+                        <legend>Collegamento a un’altra voce</legend>
+                        <label for="vociAltraVoceDestinazione">Voce di destinazione</label>
+                        <select id="vociAltraVoceDestinazione"></select>
+
+                        <label for="vociAltraVoceTesto">Testo visibile</label>
+                        <input id="vociAltraVoceTesto" type="text" maxlength="500" placeholder="Testo del collegamento">
+
+                        <div class="voci-collegamento-azioni">
+                            <button id="vociAltraVoceAnnulla" type="button">Annulla</button>
+                            <button id="vociAltraVoceInserisci" type="button">Inserisci collegamento</button>
+                        </div>
+                    </fieldset>
 
                     <fieldset class="voci-fonte-pannello" id="vociFontePannello" hidden>
                         <legend>Fonti</legend>
@@ -194,6 +208,6 @@
     <script src="./site.js?v=20260831-current1"></script>
     <script src="./accesso-menu.js?v=20260830-clean1"></script>
     <script src="./taccuino.js"></script>
-    <script src="./voci.js?v=20260910-fonti-riuso1"></script>
+    <script src="./voci.js?v=20260910-collegamenti1"></script>
 </body>
 </html>

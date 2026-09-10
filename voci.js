@@ -20,6 +20,12 @@
         summary: document.getElementById("vociEditorSommario"),
         body: document.getElementById("vociEditorTesto"),
         bodyCounter: document.getElementById("vociEditorContatore"),
+        wikiLinkButton: document.getElementById("vociAltraVoceButton"),
+        wikiLinkPanel: document.getElementById("vociAltraVocePannello"),
+        wikiLinkTarget: document.getElementById("vociAltraVoceDestinazione"),
+        wikiLinkLabel: document.getElementById("vociAltraVoceTesto"),
+        wikiLinkInsert: document.getElementById("vociAltraVoceInserisci"),
+        wikiLinkCancel: document.getElementById("vociAltraVoceAnnulla"),
         sourceButton: document.getElementById("vociFonteButton"),
         sourcePanel: document.getElementById("vociFontePannello"),
         sourceTitle: document.getElementById("vociFonteTitolo"),
@@ -48,6 +54,7 @@
     let publicEntries = [];
     let adminEntries = [];
     let editorImages = [];
+    let wikiLinkInsertionRange = { start: 0, end: 0 };
     let sourceInsertionRange = { start: 0, end: 0 };
     let slugEdited = false;
     const adminImageUrls = new Map();
@@ -65,6 +72,20 @@
 
         if (!elements.sourcePanel.hidden) {
             renderSourceReuseList();
+        }
+    });
+    elements.wikiLinkButton.addEventListener("click", openWikiLinkPanel);
+    elements.wikiLinkTarget.addEventListener("change", syncWikiLinkLabel);
+    elements.wikiLinkInsert.addEventListener("click", insertWikiLink);
+    elements.wikiLinkCancel.addEventListener("click", closeWikiLinkPanel);
+    elements.wikiLinkPanel.addEventListener("keydown", (event) => {
+        if (event.key === "Escape") {
+            event.preventDefault();
+            closeWikiLinkPanel();
+            elements.wikiLinkButton.focus();
+        } else if (event.key === "Enter") {
+            event.preventDefault();
+            insertWikiLink();
         }
     });
     elements.sourceButton.addEventListener("click", openSourcePanel);
@@ -318,6 +339,7 @@
 
     function fillEditor(entry) {
         clearEditorImageUrls();
+        closeWikiLinkPanel();
         closeSourcePanel();
         elements.id.value = String(entry.id);
         elements.title.value = entry.title || "";
@@ -342,6 +364,7 @@
 
     function resetEditor() {
         clearEditorImageUrls();
+        closeWikiLinkPanel();
         closeSourcePanel();
         elements.form.reset();
         elements.id.value = "";
@@ -405,12 +428,118 @@
         return value === undefined ? undefined : value.replace(/\\n/g, "\n");
     }
 
+    function openWikiLinkPanel() {
+        if (!elements.wikiLinkPanel.hidden) {
+            closeWikiLinkPanel();
+            return;
+        }
+
+        wikiLinkInsertionRange = {
+            start: elements.body.selectionStart,
+            end: elements.body.selectionEnd
+        };
+        const selectedText = elements.body.value
+            .slice(wikiLinkInsertionRange.start, wikiLinkInsertionRange.end)
+            .trim();
+
+        closeSourcePanel();
+        elements.wikiLinkTarget.replaceChildren();
+        const currentId = Number(elements.id.value || 0);
+        const availableEntries = publicEntries.filter(
+            (entry) => Number(entry.id) !== currentId
+        );
+
+        availableEntries.forEach((entry) => {
+            const option = document.createElement("option");
+            option.value = entry.slug;
+            option.textContent = entry.title;
+            elements.wikiLinkTarget.appendChild(option);
+        });
+
+        const matchingEntry = availableEntries.find((entry) =>
+            entry.title.toLocaleLowerCase("it") ===
+                selectedText.toLocaleLowerCase("it") ||
+            entry.slug === slugify(selectedText)
+        );
+
+        if (matchingEntry) {
+            elements.wikiLinkTarget.value = matchingEntry.slug;
+        }
+
+        if (!availableEntries.length) {
+            const empty = document.createElement("option");
+            empty.textContent = "Nessun’altra voce pubblicata";
+            empty.value = "";
+            elements.wikiLinkTarget.appendChild(empty);
+        }
+
+        elements.wikiLinkLabel.value = selectedText ||
+            elements.wikiLinkTarget.selectedOptions[0]?.textContent || "";
+        elements.wikiLinkInsert.disabled = !availableEntries.length;
+        elements.wikiLinkPanel.hidden = false;
+        elements.wikiLinkButton.setAttribute("aria-expanded", "true");
+        elements.wikiLinkTarget.focus();
+    }
+
+    function syncWikiLinkLabel() {
+        elements.wikiLinkLabel.value =
+            elements.wikiLinkTarget.selectedOptions[0]?.textContent || "";
+        elements.wikiLinkLabel.setCustomValidity("");
+    }
+
+    function closeWikiLinkPanel() {
+        elements.wikiLinkPanel.hidden = true;
+        elements.wikiLinkButton.setAttribute("aria-expanded", "false");
+        elements.wikiLinkTarget.replaceChildren();
+        elements.wikiLinkLabel.value = "";
+        elements.wikiLinkLabel.setCustomValidity("");
+    }
+
+    function insertWikiLink() {
+        const slug = elements.wikiLinkTarget.value;
+        const label = elements.wikiLinkLabel.value.trim();
+        elements.wikiLinkLabel.setCustomValidity("");
+
+        if (!slug) {
+            return;
+        }
+
+        if (!label) {
+            elements.wikiLinkLabel.setCustomValidity(
+                "Inserisci il testo visibile del collegamento."
+            );
+            elements.wikiLinkLabel.reportValidity();
+            return;
+        }
+
+        if (/[\[\]|]/.test(label)) {
+            elements.wikiLinkLabel.setCustomValidity(
+                "Il testo non può contenere parentesi quadre o il carattere |."
+            );
+            elements.wikiLinkLabel.reportValidity();
+            return;
+        }
+
+        elements.body.setRangeText(
+            `[[${slug}|${label}]]`,
+            wikiLinkInsertionRange.start,
+            wikiLinkInsertionRange.end,
+            "end"
+        );
+        closeWikiLinkPanel();
+        elements.body.focus();
+        updateBodyCounter();
+        elements.adminStatus.textContent =
+            `Collegamento inserito verso «${label}».`;
+    }
+
     function openSourcePanel() {
         if (!elements.sourcePanel.hidden) {
             closeSourcePanel();
             return;
         }
 
+        closeWikiLinkPanel();
         sourceInsertionRange = {
             start: elements.body.selectionEnd,
             end: elements.body.selectionEnd
@@ -1199,16 +1328,21 @@
 
         if (token.startsWith("[[")) {
             const [rawSlug, label] = token.slice(2, -2).split("|", 2);
-            const slug = slugify(rawSlug);
+            const linkText = label || rawSlug;
+            const target = resolveWikiTarget(rawSlug, linkText);
 
-            if (!slug) {
-                return document.createTextNode(label || rawSlug);
+            if (!target) {
+                const missing = document.createElement("span");
+                missing.className = "voce-collegamento-mancante";
+                missing.textContent = linkText;
+                missing.title = "Voce non ancora disponibile";
+                return missing;
             }
 
             const link = document.createElement("a");
-            link.href = `#${slug}`;
-            link.dataset.wikiSlug = slug;
-            link.textContent = label || rawSlug;
+            link.href = `#${target.slug}`;
+            link.dataset.wikiSlug = target.slug;
+            link.textContent = linkText;
             return link;
         }
 
@@ -1224,6 +1358,27 @@
         }
 
         return document.createTextNode(token);
+    }
+
+    function resolveWikiTarget(rawSlug, label) {
+        const requestedSlug = slugify(rawSlug);
+        const exactMatch = publicEntries.find(
+            (entry) => entry.slug === requestedSlug
+        );
+
+        if (exactMatch) {
+            return exactMatch;
+        }
+
+        const normalizedLabel = String(label || "")
+            .trim()
+            .toLocaleLowerCase("it");
+        const labelSlug = slugify(label);
+
+        return publicEntries.find((entry) =>
+            entry.title.trim().toLocaleLowerCase("it") === normalizedLabel ||
+            entry.slug === labelSlug
+        ) || null;
     }
 
     function createCitationContext(scope) {

@@ -371,7 +371,8 @@
     font-size: 0.78rem;
 }
 
-.voci-fonte-pannello {
+.voci-fonte-pannello,
+.voci-collegamento-pannello {
     display: grid;
     gap: 0.55rem;
     margin: 0;
@@ -379,16 +380,19 @@
     border: 1px solid var(--line);
 }
 
-.voci-fonte-pannello[hidden] {
+.voci-fonte-pannello[hidden],
+.voci-collegamento-pannello[hidden] {
     display: none;
 }
 
-.voci-fonte-pannello legend {
+.voci-fonte-pannello legend,
+.voci-collegamento-pannello legend {
     padding: 0 0.4rem;
     font-weight: 700;
 }
 
-.voci-fonte-pannello label {
+.voci-fonte-pannello label,
+.voci-collegamento-pannello label {
     margin: 0.25rem 0 0;
     font-size: 0.82rem;
 }
@@ -462,9 +466,23 @@
     margin-top: 0.45rem;
 }
 
-.voci-fonte-azioni button:last-child {
+.voci-collegamento-azioni {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.45rem;
+    margin-top: 0.45rem;
+}
+
+.voci-fonte-azioni button:last-child,
+.voci-collegamento-azioni button:last-child {
     background: var(--ink);
     color: var(--paper);
+}
+
+.voce-collegamento-mancante {
+    text-decoration: underline dotted;
+    text-underline-offset: 0.15em;
+    opacity: 0.65;
 }
 
 .voci-foto {
@@ -634,11 +652,13 @@
         grid-template-columns: 1fr;
     }
 
-    .voci-fonte-azioni {
+    .voci-fonte-azioni,
+    .voci-collegamento-azioni {
         flex-direction: column-reverse;
     }
 
-    .voci-fonte-azioni button {
+    .voci-fonte-azioni button,
+    .voci-collegamento-azioni button {
         width: 100%;
     }
 
