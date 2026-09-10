@@ -1103,9 +1103,17 @@
         const lines = String(source || "").split(/\r?\n/);
         const imagesById = new Map(images.map((image) => [image.id, image]));
         const headings = collectHeadings(lines, scope);
+        const hasIndexMarker = lines.some(
+            (line) => line.trim().toLocaleLowerCase("it") === "[indice]"
+        );
         const headingsByLine = new Map(
             headings.map((heading) => [heading.lineIndex, heading])
         );
+
+        if (!hasIndexMarker && headings.length >= 2) {
+            container.appendChild(renderInternalIndex(headings));
+        }
+
         let paragraphLines = [];
         let currentList = null;
 
