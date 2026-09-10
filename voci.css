@@ -62,12 +62,14 @@
     grid-template-columns: minmax(200px, 0.32fr) minmax(0, 1fr);
     gap: 2.5rem;
     align-items: start;
+    min-width: 0;
 }
 
 .voci-indice,
 .voci-editor-indice {
     display: grid;
     align-content: start;
+    min-width: 0;
 }
 
 .voci-indice a,
@@ -81,6 +83,10 @@
     text-align: left;
     text-decoration: none;
     cursor: pointer;
+    box-sizing: border-box;
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
 }
 
 .voci-indice a:hover,
@@ -98,6 +104,19 @@
     display: block;
     margin-top: 0.25rem;
     opacity: 0.65;
+}
+
+.voci-indice span,
+.voci-indice small {
+    overflow-wrap: anywhere;
+}
+
+.voci-indice small {
+    display: -webkit-box;
+    overflow: hidden;
+    line-height: 1.45;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 4;
 }
 
 .voce-articolo {

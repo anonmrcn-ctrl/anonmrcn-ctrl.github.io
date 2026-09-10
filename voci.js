@@ -158,14 +158,32 @@
             title.textContent = entry.title;
             link.appendChild(title);
 
-            if (entry.summary) {
+            const preview = publicSummaryPreview(entry.summary);
+
+            if (preview) {
                 const summary = document.createElement("small");
-                summary.textContent = entry.summary;
+                summary.textContent = preview;
                 link.appendChild(summary);
             }
 
             elements.publicIndex.appendChild(link);
         });
+    }
+
+    function publicSummaryPreview(value) {
+        return String(value || "")
+            .replace(/\[fonte:[^\]\n]+\]/gi, "")
+            .replace(/\[foto:[0-9a-f-]{36}\]/gi, "")
+            .replace(/\[\[([^\]\n|]+)\|([^\]\n]+)\]\]/g, "$2")
+            .replace(/\[\[([^\]\n]+)\]\]/g, "$1")
+            .replace(/\[\d+\]\(https?:\/\/[^)\s]+\)/gi, "")
+            .replace(/\[([^\]\n]+)\]\(https?:\/\/[^)\s]+\)/gi, "$1")
+            .replace(/\*\*([^*\n]+)\*\*/g, "$1")
+            .replace(/\*([^*\n]+)\*/g, "$1")
+            .replace(/^#{2,3}\s+/gm, "")
+            .replace(/^[-*]\s+/gm, "")
+            .replace(/\s+/g, " ")
+            .trim();
     }
 
     function loadEntryFromHash() {
