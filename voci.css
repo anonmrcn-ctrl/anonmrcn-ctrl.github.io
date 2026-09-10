@@ -65,6 +65,23 @@
     min-width: 0;
 }
 
+.voci-layout.voce-aperta.voce-con-indice {
+    grid-template-columns: minmax(190px, 0.28fr) minmax(0, 1fr);
+}
+
+.voci-layout.voce-aperta:not(.voce-con-indice) {
+    grid-template-columns: minmax(0, 1fr);
+}
+
+.voci-layout.voce-aperta .voci-indice {
+    display: none;
+}
+
+.voci-layout.voce-aperta:not(.voce-con-indice) .voce-articolo {
+    padding-left: 0;
+    border-left: 0;
+}
+
 .voci-indice,
 .voci-editor-indice {
     display: grid;
@@ -169,9 +186,58 @@
     border: 1px solid var(--line);
 }
 
+.voce-indice-laterale[hidden] {
+    display: none;
+}
+
+.voce-indice-laterale {
+    position: sticky;
+    top: 1.25rem;
+    align-self: start;
+    max-height: calc(100vh - 2.5rem);
+    overflow-y: auto;
+    scrollbar-width: thin;
+}
+
+.voce-indice-laterale .voce-indice-interno {
+    max-width: none;
+    margin: 0;
+    padding: 0 1rem 1rem 0;
+    border: 0;
+}
+
+.voce-indice-interno-intestazione {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.55rem;
+    border-bottom: 1px solid var(--line);
+}
+
 .voce-indice-interno-titolo {
-    margin: 0 0 0.55rem;
+    margin: 0;
     font-weight: 700;
+}
+
+.voce-indice-interno-toggle {
+    padding: 0.2rem 0.4rem !important;
+    border: 0 !important;
+    background: rgba(var(--ink-rgb), 0.07) !important;
+    color: inherit !important;
+    font-size: 0.75rem !important;
+    text-decoration: none !important;
+}
+
+.voce-indice-interno-toggle:hover,
+.voce-indice-interno-toggle:focus-visible {
+    outline: 1px solid currentColor;
+    outline-offset: 0.1rem;
+}
+
+.voce-indice-interno-contenuto[hidden] {
+    display: none;
 }
 
 .voce-indice-interno ol {
@@ -611,6 +677,8 @@
 
     .voci-strumenti,
     .voci-layout,
+    .voci-layout.voce-aperta.voce-con-indice,
+    .voci-layout.voce-aperta:not(.voce-con-indice),
     .voci-editor-layout {
         grid-template-columns: 1fr;
     }
@@ -624,6 +692,28 @@
         padding: 1.5rem 0 0;
         border-top: 1px solid var(--line);
         border-left: 0;
+    }
+
+    .voce-indice-laterale {
+        position: static;
+        max-height: none;
+        overflow: visible;
+    }
+
+    .voce-indice-laterale .voce-indice-interno {
+        padding: 0;
+        border: 1px solid var(--line);
+    }
+
+    .voce-indice-laterale .voce-indice-interno-intestazione {
+        margin: 0;
+        padding: 0.75rem 1rem;
+        border: 0;
+    }
+
+    .voce-indice-laterale .voce-indice-interno-contenuto {
+        padding: 0 1rem 0.9rem;
+        border-top: 1px solid var(--line);
     }
 
     .voci-admin-intestazione {

@@ -8,6 +8,8 @@
         search: document.getElementById("vociRicerca"),
         publicStatus: document.getElementById("vociStato"),
         publicIndex: document.getElementById("vociIndice"),
+        publicLayout: document.getElementById("vociLayout"),
+        articleIndex: document.getElementById("voceIndiceLaterale"),
         article: document.getElementById("voceArticolo"),
         admin: document.getElementById("vociAdmin"),
         adminStatus: document.getElementById("vociAdminStato"),
@@ -108,6 +110,7 @@
     elements.previewButton.addEventListener("click", showEditorPreview);
     elements.form.addEventListener("submit", saveEntry);
     elements.article.addEventListener("click", handleInternalLink);
+    elements.articleIndex.addEventListener("click", handleInternalLink);
     elements.preview.addEventListener("click", handleInternalLink);
     window.addEventListener("hashchange", loadEntryFromHash);
 
@@ -249,6 +252,25 @@
     }
 
     function handleInternalLink(event) {
+        const indexToggle = event.target.closest("[data-wiki-index-toggle]");
+
+        if (indexToggle) {
+            const navigation = indexToggle.closest(".voce-indice-interno");
+            const content = navigation?.querySelector(
+                ".voce-indice-interno-contenuto"
+            );
+
+            if (navigation && content) {
+                const collapsed = !content.hidden;
+                content.hidden = collapsed;
+                navigation.classList.toggle("is-collapsed", collapsed);
+                indexToggle.setAttribute("aria-expanded", String(!collapsed));
+                indexToggle.textContent = collapsed ? "mostra" : "nascondi";
+            }
+
+            return;
+        }
+
         const headingLink = event.target.closest("[data-wiki-heading]");
 
         if (headingLink) {
@@ -1075,14 +1097,23 @@
 
         const body = document.createElement("div");
         body.className = "voce-corpo";
-        appendBodyMarkup(
+        const hasArticleIndex = appendBodyMarkup(
             body,
             entry.body || "",
             entry.images || [],
             citations,
-            container.id || "voce"
+            container.id || "voce",
+            showMetadata ? elements.articleIndex : null
         );
         container.appendChild(body);
+
+        if (showMetadata) {
+            elements.publicLayout.classList.add("voce-aperta");
+            elements.publicLayout.classList.toggle(
+                "voce-con-indice",
+                hasArticleIndex
+            );
+        }
 
         if (citations.items.length) {
             appendReferences(container, citations);
@@ -1099,7 +1130,14 @@
         }
     }
 
-    function appendBodyMarkup(container, source, images, citations, scope) {
+    function appendBodyMarkup(
+        container,
+        source,
+        images,
+        citations,
+        scope,
+        indexContainer = null
+    ) {
         const lines = String(source || "").split(/\r?\n/);
         const imagesById = new Map(images.map((image) => [image.id, image]));
         const headings = collectHeadings(lines, scope);
@@ -1109,8 +1147,23 @@
         const headingsByLine = new Map(
             headings.map((heading) => [heading.lineIndex, heading])
         );
+        const shouldShowIndex = headings.length >= 2 || (
+            hasIndexMarker && headings.length > 0
+        );
 
-        if (!hasIndexMarker && headings.length >= 2) {
+        if (indexContainer) {
+            indexContainer.replaceChildren();
+            indexContainer.hidden = !shouldShowIndex;
+
+            if (shouldShowIndex) {
+                indexContainer.appendChild(renderInternalIndex(
+                    headings,
+                    window.matchMedia("(max-width: 760px)").matches
+                ));
+            }
+        }
+
+        if (!indexContainer && !hasIndexMarker && headings.length >= 2) {
             container.appendChild(renderInternalIndex(headings));
         }
 
@@ -1162,7 +1215,11 @@
             if (indexMarker) {
                 flushParagraph();
                 currentList = null;
-                container.appendChild(renderInternalIndex(headings));
+
+                if (!indexContainer) {
+                    container.appendChild(renderInternalIndex(headings));
+                }
+
                 return;
             }
 
@@ -1197,6 +1254,7 @@
         });
 
         flushParagraph();
+        return shouldShowIndex;
     }
 
     function collectHeadings(lines, scope) {
@@ -1224,20 +1282,35 @@
         });
     }
 
-    function renderInternalIndex(headings) {
+    function renderInternalIndex(headings, collapsed = false) {
         const navigation = document.createElement("nav");
         navigation.className = "voce-indice-interno";
         navigation.setAttribute("aria-label", "Indice della voce");
+        navigation.classList.toggle("is-collapsed", collapsed);
+        const header = document.createElement("div");
+        header.className = "voce-indice-interno-intestazione";
         const title = document.createElement("p");
         title.className = "voce-indice-interno-titolo";
         title.textContent = "Indice";
-        navigation.appendChild(title);
+        const toggle = document.createElement("button");
+        toggle.type = "button";
+        toggle.className = "voce-indice-interno-toggle";
+        toggle.dataset.wikiIndexToggle = "";
+        toggle.setAttribute("aria-expanded", String(!collapsed));
+        toggle.textContent = collapsed ? "mostra" : "nascondi";
+        header.append(title, toggle);
+        navigation.appendChild(header);
+
+        const content = document.createElement("div");
+        content.className = "voce-indice-interno-contenuto";
+        content.hidden = collapsed;
 
         if (!headings.length) {
             const empty = document.createElement("p");
             empty.className = "voce-indice-interno-vuoto";
             empty.textContent = "Nessuna sezione presente.";
-            navigation.appendChild(empty);
+            content.appendChild(empty);
+            navigation.appendChild(content);
             return navigation;
         }
 
@@ -1269,7 +1342,8 @@
             subsectionList = null;
         });
 
-        navigation.appendChild(list);
+        content.appendChild(list);
+        navigation.appendChild(content);
         return navigation;
     }
 
