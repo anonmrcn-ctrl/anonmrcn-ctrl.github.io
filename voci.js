@@ -20,6 +20,14 @@
         summary: document.getElementById("vociEditorSommario"),
         body: document.getElementById("vociEditorTesto"),
         bodyCounter: document.getElementById("vociEditorContatore"),
+        sourceButton: document.getElementById("vociFonteButton"),
+        sourcePanel: document.getElementById("vociFontePannello"),
+        sourceTitle: document.getElementById("vociFonteTitolo"),
+        sourceAuthor: document.getElementById("vociFonteAutore"),
+        sourceDate: document.getElementById("vociFonteData"),
+        sourceUrl: document.getElementById("vociFonteUrl"),
+        sourceInsert: document.getElementById("vociFonteInserisci"),
+        sourceCancel: document.getElementById("vociFonteAnnulla"),
         photoButton: document.getElementById("vociFotoButton"),
         photoInput: document.getElementById("vociFotoInput"),
         photoSection: document.getElementById("vociFotoSezione"),
@@ -38,6 +46,7 @@
     let publicEntries = [];
     let adminEntries = [];
     let editorImages = [];
+    let sourceInsertionRange = { start: 0, end: 0 };
     let slugEdited = false;
     const adminImageUrls = new Map();
     const MAX_IMAGES = 8;
@@ -50,6 +59,19 @@
         slugEdited = true;
     });
     elements.body.addEventListener("input", updateBodyCounter);
+    elements.sourceButton.addEventListener("click", openSourcePanel);
+    elements.sourceInsert.addEventListener("click", insertSource);
+    elements.sourceCancel.addEventListener("click", closeSourcePanel);
+    elements.sourcePanel.addEventListener("keydown", (event) => {
+        if (event.key === "Escape") {
+            event.preventDefault();
+            closeSourcePanel();
+            elements.sourceButton.focus();
+        } else if (event.key === "Enter") {
+            event.preventDefault();
+            insertSource();
+        }
+    });
     elements.photoButton.addEventListener("click", () => {
         elements.photoInput.click();
     });
@@ -254,6 +276,7 @@
 
     function fillEditor(entry) {
         clearEditorImageUrls();
+        closeSourcePanel();
         elements.id.value = String(entry.id);
         elements.title.value = entry.title || "";
         elements.slug.value = entry.slug || "";
@@ -277,6 +300,7 @@
 
     function resetEditor() {
         clearEditorImageUrls();
+        closeSourcePanel();
         elements.form.reset();
         elements.id.value = "";
         elements.state.value = "draft";
@@ -333,6 +357,85 @@
 
         textarea.focus();
         updateBodyCounter();
+    }
+
+    function openSourcePanel() {
+        if (!elements.sourcePanel.hidden) {
+            closeSourcePanel();
+            return;
+        }
+
+        sourceInsertionRange = {
+            start: elements.body.selectionEnd,
+            end: elements.body.selectionEnd
+        };
+        elements.sourcePanel.hidden = false;
+        elements.sourceButton.setAttribute("aria-expanded", "true");
+        elements.sourceTitle.focus();
+    }
+
+    function closeSourcePanel() {
+        elements.sourcePanel.hidden = true;
+        elements.sourceButton.setAttribute("aria-expanded", "false");
+        elements.sourceTitle.value = "";
+        elements.sourceAuthor.value = "";
+        elements.sourceDate.value = "";
+        elements.sourceUrl.value = "";
+        elements.sourceTitle.setCustomValidity("");
+        elements.sourceUrl.setCustomValidity("");
+    }
+
+    function insertSource() {
+        const title = elements.sourceTitle.value.trim();
+        const author = elements.sourceAuthor.value.trim();
+        const date = elements.sourceDate.value.trim();
+        let url = elements.sourceUrl.value.trim();
+
+        elements.sourceTitle.setCustomValidity("");
+        elements.sourceUrl.setCustomValidity("");
+
+        if (!title) {
+            elements.sourceTitle.setCustomValidity("Inserisci il titolo della fonte.");
+            elements.sourceTitle.reportValidity();
+            return;
+        }
+
+        if (url && !/^https?:\/\//i.test(url)) {
+            url = `https://${url}`;
+        }
+
+        if (url) {
+            try {
+                const parsed = new URL(url);
+
+                if (!["http:", "https:"].includes(parsed.protocol)) {
+                    throw new Error("protocol");
+                }
+
+                url = parsed.href;
+            } catch (_) {
+                elements.sourceUrl.setCustomValidity(
+                    "Inserisci un collegamento web valido."
+                );
+                elements.sourceUrl.reportValidity();
+                return;
+            }
+        }
+
+        const token = `[fonte:${[url, title, author, date]
+            .map((part) => encodeURIComponent(part))
+            .join("|")}]`;
+        elements.body.setRangeText(
+            token,
+            sourceInsertionRange.start,
+            sourceInsertionRange.end,
+            "end"
+        );
+        closeSourcePanel();
+        elements.body.focus();
+        updateBodyCounter();
+        elements.adminStatus.textContent =
+            "Fonte inserita. La numerazione e l’elenco finale saranno creati automaticamente.";
     }
 
     async function addSelectedPhotos() {
@@ -713,6 +816,7 @@
     }
 
     function renderEntry(entry, container, showMetadata) {
+        const citations = createCitationContext(container.id || "voce");
         const title = document.createElement("h1");
         title.textContent = entry.title || "Senza titolo";
         container.replaceChildren(title);
@@ -720,14 +824,18 @@
         if (entry.summary) {
             const summary = document.createElement("p");
             summary.className = "voce-sommario";
-            appendInlineMarkup(summary, entry.summary);
+            appendInlineMarkup(summary, entry.summary, citations);
             container.appendChild(summary);
         }
 
         const body = document.createElement("div");
         body.className = "voce-corpo";
-        appendBodyMarkup(body, entry.body || "", entry.images || []);
+        appendBodyMarkup(body, entry.body || "", entry.images || [], citations);
         container.appendChild(body);
+
+        if (citations.items.length) {
+            appendReferences(container, citations);
+        }
 
         if (showMetadata && entry.updatedAt) {
             const metadata = document.createElement("p");
@@ -740,7 +848,7 @@
         }
     }
 
-    function appendBodyMarkup(container, source, images) {
+    function appendBodyMarkup(container, source, images, citations) {
         const lines = String(source || "").split(/\r?\n/);
         const imagesById = new Map(images.map((image) => [image.id, image]));
         let paragraphLines = [];
@@ -752,7 +860,7 @@
             }
 
             const paragraph = document.createElement("p");
-            appendInlineMarkup(paragraph, paragraphLines.join(" "));
+            appendInlineMarkup(paragraph, paragraphLines.join(" "), citations);
             container.appendChild(paragraph);
             paragraphLines = [];
         };
@@ -775,7 +883,7 @@
                 const element = document.createElement(
                     heading[1].length === 2 ? "h2" : "h3"
                 );
-                appendInlineMarkup(element, heading[2]);
+                appendInlineMarkup(element, heading[2], citations);
                 container.appendChild(element);
                 return;
             }
@@ -786,7 +894,7 @@
                 const image = imagesById.get(photo[1]);
 
                 if (image) {
-                    container.appendChild(renderPhoto(image));
+                    container.appendChild(renderPhoto(image, citations));
                 }
 
                 return;
@@ -801,7 +909,7 @@
                 }
 
                 const item = document.createElement("li");
-                appendInlineMarkup(item, listItem[1]);
+                appendInlineMarkup(item, listItem[1], citations);
                 currentList.appendChild(item);
                 return;
             }
@@ -813,7 +921,7 @@
         flushParagraph();
     }
 
-    function renderPhoto(photo) {
+    function renderPhoto(photo, citations) {
         const figure = document.createElement("figure");
         figure.className = "voce-foto";
         const image = document.createElement("img");
@@ -831,29 +939,29 @@
 
         if (photo.caption) {
             const caption = document.createElement("figcaption");
-            appendInlineMarkup(caption, photo.caption);
+            appendInlineMarkup(caption, photo.caption, citations);
             figure.appendChild(caption);
         }
 
         return figure;
     }
 
-    function appendInlineMarkup(container, source) {
-        const pattern = /(\*\*[^*\n]+\*\*|\*[^*\n]+\*|\[\[[^\]\n]+\]\]|\[[^\]\n]+\]\(https?:\/\/[^)\s]+\))/g;
+    function appendInlineMarkup(container, source, citations) {
+        const pattern = /(\*\*[^*\n]+\*\*|\*[^*\n]+\*|\[fonte:[^\]\n]+\]|\[\[[^\]\n]+\]\]|\[[^\]\n]+\]\(https?:\/\/[^)\s]+\))/g;
         let cursor = 0;
 
         for (const match of String(source || "").matchAll(pattern)) {
             container.appendChild(document.createTextNode(
                 source.slice(cursor, match.index)
             ));
-            container.appendChild(inlineToken(match[0]));
+            container.appendChild(inlineToken(match[0], citations));
             cursor = match.index + match[0].length;
         }
 
         container.appendChild(document.createTextNode(source.slice(cursor)));
     }
 
-    function inlineToken(token) {
+    function inlineToken(token, citations) {
         if (token.startsWith("**")) {
             const strong = document.createElement("strong");
             strong.textContent = token.slice(2, -2);
@@ -864,6 +972,14 @@
             const emphasis = document.createElement("em");
             emphasis.textContent = token.slice(1, -1);
             return emphasis;
+        }
+
+        if (token.startsWith("[fonte:") && citations) {
+            const source = parseSourceToken(token);
+
+            if (source) {
+                return renderSourceCall(source, citations);
+            }
         }
 
         if (token.startsWith("[[")) {
@@ -893,5 +1009,134 @@
         }
 
         return document.createTextNode(token);
+    }
+
+    function createCitationContext(scope) {
+        return {
+            scope: String(scope).replace(/[^a-z0-9-]+/gi, "-").toLowerCase(),
+            items: [],
+            byKey: new Map(),
+            occurrences: 0
+        };
+    }
+
+    function parseSourceToken(token) {
+        const parts = token.slice(7, -1).split("|");
+
+        if (parts.length !== 4) {
+            return null;
+        }
+
+        let decoded;
+
+        try {
+            decoded = parts.map((part) => decodeURIComponent(part));
+        } catch (_) {
+            return null;
+        }
+
+        const [url, title, author, date] = decoded;
+
+        if (!title) {
+            return null;
+        }
+
+        if (url) {
+            try {
+                const parsed = new URL(url);
+
+                if (!["http:", "https:"].includes(parsed.protocol)) {
+                    return null;
+                }
+            } catch (_) {
+                return null;
+            }
+        }
+
+        return { url, title, author, date };
+    }
+
+    function renderSourceCall(source, citations) {
+        const key = JSON.stringify(source);
+        let reference = citations.byKey.get(key);
+
+        if (!reference) {
+            reference = {
+                ...source,
+                number: citations.items.length + 1,
+                backlinks: []
+            };
+            citations.byKey.set(key, reference);
+            citations.items.push(reference);
+        }
+
+        citations.occurrences += 1;
+        const callId = `richiamo-${citations.scope}-${citations.occurrences}`;
+        reference.backlinks.push(callId);
+
+        const superscript = document.createElement("sup");
+        superscript.className = "voce-richiamo-fonte";
+        const link = document.createElement("a");
+        link.id = callId;
+        link.href = `#fonte-${citations.scope}-${reference.number}`;
+        link.textContent = `[${reference.number}]`;
+        link.setAttribute(
+            "aria-label",
+            `Fonte ${reference.number}: ${reference.title}`
+        );
+        superscript.appendChild(link);
+        return superscript;
+    }
+
+    function appendReferences(container, citations) {
+        const section = document.createElement("section");
+        section.className = "voce-fonti";
+        section.setAttribute("aria-labelledby", `fonti-${citations.scope}`);
+        const title = document.createElement("h2");
+        title.id = `fonti-${citations.scope}`;
+        title.textContent = "Fonti";
+        const list = document.createElement("ol");
+
+        citations.items.forEach((source) => {
+            const item = document.createElement("li");
+            item.id = `fonte-${citations.scope}-${source.number}`;
+
+            if (source.url) {
+                const link = document.createElement("a");
+                link.href = source.url;
+                link.target = "_blank";
+                link.rel = "noopener noreferrer";
+                link.textContent = source.title;
+                item.appendChild(link);
+            } else {
+                item.appendChild(document.createTextNode(source.title));
+            }
+
+            const details = [source.author, source.date].filter(Boolean);
+
+            if (details.length) {
+                const metadata = document.createElement("span");
+                metadata.className = "voce-fonte-dettagli";
+                metadata.textContent = ` — ${details.join(", ")}.`;
+                item.appendChild(metadata);
+            }
+
+            source.backlinks.forEach((backlink, index) => {
+                const back = document.createElement("a");
+                back.className = "voce-fonte-ritorno";
+                back.href = `#${backlink}`;
+                back.textContent = "↑";
+                back.setAttribute(
+                    "aria-label",
+                    `Torna al richiamo ${index + 1} della fonte ${source.number}`
+                );
+                item.appendChild(back);
+            });
+
+            list.appendChild(item);
+        });
+
+        section.append(title, list);
+        container.appendChild(section);
     }
 })();

@@ -30,6 +30,11 @@ const MAX_WIKI_IMAGES = 8;
 const MAX_WIKI_IMAGE_BYTES = 700000;
 const MAX_WIKI_IMAGE_ALT_LENGTH = 300;
 const MAX_WIKI_IMAGE_CAPTION_LENGTH = 500;
+const MAX_WIKI_SOURCES = 200;
+const MAX_WIKI_SOURCE_URL_LENGTH = 2048;
+const MAX_WIKI_SOURCE_TITLE_LENGTH = 500;
+const MAX_WIKI_SOURCE_AUTHOR_LENGTH = 300;
+const MAX_WIKI_SOURCE_DATE_LENGTH = 100;
 const MAX_WIKI_REQUEST_BYTES = 8000000;
 
 class RequestBodyTooLargeError extends Error {}
@@ -2028,6 +2033,12 @@ function normalizeWikiEntryInput(value) {
         return { error: "Una voce pubblicata deve contenere del testo." };
     }
 
+    const sourcesError = validateWikiSources(body);
+
+    if (sourcesError) {
+        return { error: sourcesError };
+    }
+
     const images = normalizeWikiImages(value?.images, body);
 
     if (images.error) {
@@ -2035,6 +2046,67 @@ function normalizeWikiEntryInput(value) {
     }
 
     return { title, slug, summary, body, status, images };
+}
+
+function validateWikiSources(body) {
+    const sourcePattern = /\[fonte:([^\]\n]+)\]/g;
+    const matches = Array.from(String(body || "").matchAll(sourcePattern));
+
+    if (matches.length > MAX_WIKI_SOURCES) {
+        return `Una voce può contenere al massimo ${MAX_WIKI_SOURCES} richiami alle fonti.`;
+    }
+
+    if (String(body || "").replace(sourcePattern, "").includes("[fonte:")) {
+        return "Una fonte nel testo è incompleta o non valida.";
+    }
+
+    for (const match of matches) {
+        const parts = match[1].split("|");
+
+        if (parts.length !== 4) {
+            return "Una fonte nel testo non ha tutti i campi previsti.";
+        }
+
+        let decoded;
+
+        try {
+            decoded = parts.map((part) => decodeURIComponent(part));
+        } catch (_) {
+            return "Una fonte nel testo contiene dati non validi.";
+        }
+
+        const [url, title, author, date] = decoded.map((part) => part.trim());
+
+        if (!title || title.length > MAX_WIKI_SOURCE_TITLE_LENGTH) {
+            return `Il titolo di ogni fonte deve contenere da 1 a ${MAX_WIKI_SOURCE_TITLE_LENGTH} caratteri.`;
+        }
+
+        if (author.length > MAX_WIKI_SOURCE_AUTHOR_LENGTH) {
+            return `L’autore o ente della fonte non può superare ${MAX_WIKI_SOURCE_AUTHOR_LENGTH} caratteri.`;
+        }
+
+        if (date.length > MAX_WIKI_SOURCE_DATE_LENGTH) {
+            return `La data della fonte non può superare ${MAX_WIKI_SOURCE_DATE_LENGTH} caratteri.`;
+        }
+
+        if (url.length > MAX_WIKI_SOURCE_URL_LENGTH) {
+            return "Il collegamento della fonte è troppo lungo.";
+        }
+
+        if (url) {
+            try {
+                const parsed = new URL(url);
+
+                if (!["http:", "https:"].includes(parsed.protocol)) {
+                    return "Il collegamento della fonte deve iniziare con http:// o https://.";
+                }
+            } catch (_) {
+                return "Il collegamento della fonte non è valido.";
+            }
+        }
+    }
+
+    return "";
 }
 
 function normalizeWikiImages(value, body) {

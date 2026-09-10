@@ -156,6 +156,45 @@
     opacity: 0.65;
 }
 
+.voce-richiamo-fonte {
+    margin-left: 0.12em;
+    font-size: 0.72em;
+    vertical-align: super;
+    line-height: 0;
+}
+
+.voce-richiamo-fonte a {
+    text-decoration: none;
+}
+
+.voce-fonti {
+    margin-top: 3rem;
+}
+
+.voce-fonti h2 {
+    margin-bottom: 0.75rem;
+}
+
+.voce-fonti ol {
+    padding-left: 1.7rem;
+}
+
+.voce-fonti li {
+    max-width: 78ch;
+    margin-bottom: 0.65rem;
+    overflow-wrap: anywhere;
+}
+
+.voce-fonte-dettagli {
+    opacity: 0.76;
+}
+
+.voce-fonte-ritorno {
+    margin-left: 0.45rem;
+    font-size: 0.82em;
+    text-decoration: none !important;
+}
+
 .voci-admin {
     margin-top: 6rem;
     padding-top: 2rem;
@@ -263,6 +302,51 @@
 .voci-editor-toolbar button {
     padding: 0.45rem 0.6rem;
     font-size: 0.78rem;
+}
+
+.voci-fonte-pannello {
+    display: grid;
+    gap: 0.55rem;
+    margin: 0;
+    padding: 1rem;
+    border: 1px solid var(--line);
+}
+
+.voci-fonte-pannello[hidden] {
+    display: none;
+}
+
+.voci-fonte-pannello legend {
+    padding: 0 0.4rem;
+    font-weight: 700;
+}
+
+.voci-fonte-pannello label {
+    margin: 0.25rem 0 0;
+    font-size: 0.82rem;
+}
+
+.voci-fonte-riga {
+    display: grid;
+    grid-template-columns: 1fr minmax(140px, 0.45fr);
+    gap: 0.75rem;
+}
+
+.voci-fonte-riga > div {
+    display: grid;
+    gap: 0.55rem;
+}
+
+.voci-fonte-azioni {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.45rem;
+    margin-top: 0.45rem;
+}
+
+.voci-fonte-azioni button:last-child {
+    background: var(--ink);
+    color: var(--paper);
 }
 
 .voci-foto {
@@ -426,6 +510,18 @@
 
     .voci-foto-scheda {
         grid-template-columns: 1fr;
+    }
+
+    .voci-fonte-riga {
+        grid-template-columns: 1fr;
+    }
+
+    .voci-fonte-azioni {
+        flex-direction: column-reverse;
+    }
+
+    .voci-fonte-azioni button {
+        width: 100%;
     }
 
     .voci-foto-immagine {

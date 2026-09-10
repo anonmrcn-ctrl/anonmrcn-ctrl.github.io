@@ -13,7 +13,7 @@
     <script src="./tema.js?v=20260828-settings2"></script>
     <link rel="stylesheet" href="./style.css?v=20260830-clean1">
     <link rel="stylesheet" href="./spazi.css?v=20260830-voci2">
-    <link rel="stylesheet" href="./voci.css?v=20260910-foto1">
+    <link rel="stylesheet" href="./voci.css?v=20260910-fonti1">
 </head>
 
 <body class="pagina-voci">
@@ -122,9 +122,35 @@
                         <button type="button" data-wiki-before="*" data-wiki-after="*" data-wiki-placeholder="testo">Corsivo</button>
                         <button type="button" data-wiki-before="[" data-wiki-after="](https://)" data-wiki-placeholder="testo">Link</button>
                         <button type="button" data-wiki-before="[[" data-wiki-after="]]" data-wiki-placeholder="altra-voce|testo">Altra voce</button>
+                        <button id="vociFonteButton" type="button" aria-expanded="false" aria-controls="vociFontePannello">Fonte</button>
                         <button id="vociFotoButton" type="button">Foto</button>
                         <input id="vociFotoInput" type="file" accept="image/jpeg,image/png,image/webp" multiple hidden>
                     </div>
+
+                    <fieldset class="voci-fonte-pannello" id="vociFontePannello" hidden>
+                        <legend>Aggiungi una fonte</legend>
+                        <label for="vociFonteTitolo">Titolo della fonte</label>
+                        <input id="vociFonteTitolo" type="text" maxlength="500" placeholder="Titolo della pagina, del libro o del documento">
+
+                        <div class="voci-fonte-riga">
+                            <div>
+                                <label for="vociFonteAutore">Autore o ente (facoltativo)</label>
+                                <input id="vociFonteAutore" type="text" maxlength="300">
+                            </div>
+                            <div>
+                                <label for="vociFonteData">Data o anno (facoltativo)</label>
+                                <input id="vociFonteData" type="text" maxlength="100" placeholder="es. 1972">
+                            </div>
+                        </div>
+
+                        <label for="vociFonteUrl">Collegamento (facoltativo)</label>
+                        <input id="vociFonteUrl" type="url" maxlength="2048" inputmode="url" placeholder="https://…">
+
+                        <div class="voci-fonte-azioni">
+                            <button id="vociFonteAnnulla" type="button">Annulla</button>
+                            <button id="vociFonteInserisci" type="button">Inserisci fonte</button>
+                        </div>
+                    </fieldset>
                     <textarea id="vociEditorTesto" maxlength="50000" rows="18" spellcheck="true"></textarea>
 
                     <section class="voci-foto" id="vociFotoSezione" aria-labelledby="vociFotoTitolo" hidden>
@@ -160,6 +186,6 @@
     <script src="./site.js?v=20260831-current1"></script>
     <script src="./accesso-menu.js?v=20260830-clean1"></script>
     <script src="./taccuino.js"></script>
-    <script src="./voci.js?v=20260910-foto1"></script>
+    <script src="./voci.js?v=20260910-fonti1"></script>
 </body>
 </html>

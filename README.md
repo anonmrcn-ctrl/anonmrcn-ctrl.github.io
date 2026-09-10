@@ -14,7 +14,7 @@ Sito GitHub Pages del progetto nnMrcn.
 - `memorie.html` — mappa dei ricordi degli abitanti e invio di testo, fotografie o audio
 - `taccuino.html` — raccolta personale locale con mappa ed esportazione GeoJSON/JSON
 - `admin.html` — moderazione, riepilogo, ricerca ed esportazione dei messaggi
-- `voci.html` — indice pubblico ed editor amministrativo delle voci, con fotografie integrate
+- `voci.html` — indice pubblico ed editor amministrativo delle voci, con fotografie e fonti numerate
 - `style.css` — stili comuni del sito
 - `spazi.css` — spazi pubblico e personale
 - `voci.css` e `voci.js` — visualizzazione, formattazione e modifica delle voci
