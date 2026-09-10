@@ -28,6 +28,8 @@
         sourceUrl: document.getElementById("vociFonteUrl"),
         sourceInsert: document.getElementById("vociFonteInserisci"),
         sourceCancel: document.getElementById("vociFonteAnnulla"),
+        sourceReuse: document.getElementById("vociFontiRiuso"),
+        sourceReuseList: document.getElementById("vociFontiRiusoElenco"),
         photoButton: document.getElementById("vociFotoButton"),
         photoInput: document.getElementById("vociFotoInput"),
         photoSection: document.getElementById("vociFotoSezione"),
@@ -58,7 +60,13 @@
     elements.slug.addEventListener("input", () => {
         slugEdited = true;
     });
-    elements.body.addEventListener("input", updateBodyCounter);
+    elements.body.addEventListener("input", () => {
+        updateBodyCounter();
+
+        if (!elements.sourcePanel.hidden) {
+            renderSourceReuseList();
+        }
+    });
     elements.sourceButton.addEventListener("click", openSourcePanel);
     elements.sourceInsert.addEventListener("click", insertSource);
     elements.sourceCancel.addEventListener("click", closeSourcePanel);
@@ -409,6 +417,7 @@
         };
         elements.sourcePanel.hidden = false;
         elements.sourceButton.setAttribute("aria-expanded", "true");
+        renderSourceReuseList();
         elements.sourceTitle.focus();
     }
 
@@ -463,6 +472,13 @@
         const token = `[fonte:${[url, title, author, date]
             .map((part) => encodeURIComponent(part))
             .join("|")}]`;
+        insertSourceToken(
+            token,
+            "Fonte inserita. La numerazione e l’elenco finale saranno creati automaticamente."
+        );
+    }
+
+    function insertSourceToken(token, message) {
         elements.body.setRangeText(
             token,
             sourceInsertionRange.start,
@@ -472,8 +488,70 @@
         closeSourcePanel();
         elements.body.focus();
         updateBodyCounter();
-        elements.adminStatus.textContent =
-            "Fonte inserita. La numerazione e l’elenco finale saranno creati automaticamente.";
+        elements.adminStatus.textContent = message;
+    }
+
+    function renderSourceReuseList() {
+        const sources = sourceTokensInEditor();
+        elements.sourceReuseList.replaceChildren();
+        elements.sourceReuse.hidden = !sources.length;
+
+        sources.forEach(({ token, source, occurrences }) => {
+            const row = document.createElement("div");
+            row.className = "voci-fonte-riuso-scheda";
+            const description = document.createElement("div");
+            const title = document.createElement("strong");
+            title.textContent = source.title;
+            description.appendChild(title);
+            const details = [source.author, source.date]
+                .filter(Boolean)
+                .join(" · ");
+            const metadata = document.createElement("small");
+            metadata.textContent = [
+                details,
+                `${occurrences} ${occurrences === 1 ? "richiamo" : "richiami"}`
+            ].filter(Boolean).join(" · ");
+            description.appendChild(metadata);
+            const reuseButton = document.createElement("button");
+            reuseButton.type = "button";
+            reuseButton.textContent = "Cita di nuovo";
+            reuseButton.addEventListener("click", () => {
+                insertSourceToken(
+                    token,
+                    `Nuovo richiamo inserito per «${source.title}».`
+                );
+            });
+            row.append(description, reuseButton);
+            elements.sourceReuseList.appendChild(row);
+        });
+    }
+
+    function sourceTokensInEditor() {
+        const sources = new Map();
+        const pattern = /\[fonte:[^\]\n]+\]/g;
+
+        for (const match of elements.body.value.matchAll(pattern)) {
+            const source = parseSourceToken(match[0]);
+
+            if (!source) {
+                continue;
+            }
+
+            const key = JSON.stringify(source);
+            const existing = sources.get(key);
+
+            if (existing) {
+                existing.occurrences += 1;
+            } else {
+                sources.set(key, {
+                    token: match[0],
+                    source,
+                    occurrences: 1
+                });
+            }
+        }
+
+        return Array.from(sources.values());
     }
 
     async function addSelectedPhotos() {

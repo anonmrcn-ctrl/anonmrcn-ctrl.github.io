@@ -393,6 +393,57 @@
     font-size: 0.82rem;
 }
 
+.voci-fonti-riuso {
+    margin-bottom: 0.75rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--line);
+}
+
+.voci-fonti-riuso[hidden] {
+    display: none;
+}
+
+.voci-fonti-riuso h3,
+.voci-fonte-nuova-titolo {
+    margin: 0 0 0.65rem;
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+.voci-fonti-riuso-elenco {
+    display: grid;
+    gap: 0.55rem;
+}
+
+.voci-fonte-riuso-scheda {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 0.75rem;
+    padding-top: 0.55rem;
+    border-top: 1px solid var(--line);
+}
+
+.voci-fonte-riuso-scheda:first-child {
+    padding-top: 0;
+    border-top: 0;
+}
+
+.voci-fonte-riuso-scheda > div {
+    min-width: 0;
+}
+
+.voci-fonte-riuso-scheda strong,
+.voci-fonte-riuso-scheda small {
+    display: block;
+    overflow-wrap: anywhere;
+}
+
+.voci-fonte-riuso-scheda small {
+    margin-top: 0.2rem;
+    opacity: 0.65;
+}
+
 .voci-fonte-riga {
     display: grid;
     grid-template-columns: 1fr minmax(140px, 0.45fr);
@@ -588,6 +639,14 @@
     }
 
     .voci-fonte-azioni button {
+        width: 100%;
+    }
+
+    .voci-fonte-riuso-scheda {
+        grid-template-columns: 1fr;
+    }
+
+    .voci-fonte-riuso-scheda button {
         width: 100%;
     }
 
