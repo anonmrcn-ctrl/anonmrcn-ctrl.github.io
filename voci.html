@@ -117,7 +117,8 @@
                         <span id="vociEditorContatore">0 / 50.000</span>
                     </div>
                     <div class="voci-editor-toolbar" role="toolbar" aria-label="Formattazione del testo">
-                        <button type="button" data-wiki-insert="\n## Titolo della sezione\n">Sezione</button>
+                        <button type="button" data-wiki-before="\n## " data-wiki-after="\n" data-wiki-placeholder="Titolo della sezione">Sezione</button>
+                        <button type="button" data-wiki-before="\n### " data-wiki-after="\n" data-wiki-placeholder="Titolo della sottosezione">Sottosezione</button>
                         <button type="button" data-wiki-before="**" data-wiki-after="**" data-wiki-placeholder="testo">Grassetto</button>
                         <button type="button" data-wiki-before="*" data-wiki-after="*" data-wiki-placeholder="testo">Corsivo</button>
                         <button type="button" data-wiki-before="[" data-wiki-after="](https://)" data-wiki-placeholder="testo">Link</button>
@@ -186,6 +187,6 @@
     <script src="./site.js?v=20260831-current1"></script>
     <script src="./accesso-menu.js?v=20260830-clean1"></script>
     <script src="./taccuino.js"></script>
-    <script src="./voci.js?v=20260910-indice1"></script>
+    <script src="./voci.js?v=20260910-sezioni1"></script>
 </body>
 </html>

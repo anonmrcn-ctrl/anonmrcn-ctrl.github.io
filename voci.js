@@ -355,15 +355,15 @@
 
     function applyFormatting(button) {
         const textarea = elements.body;
-        const insertion = button.dataset.wikiInsert;
+        const insertion = toolbarValue(button.dataset.wikiInsert);
         const start = textarea.selectionStart;
         const end = textarea.selectionEnd;
 
         if (insertion !== undefined) {
             textarea.setRangeText(insertion, start, end, "end");
         } else {
-            const before = button.dataset.wikiBefore || "";
-            const after = button.dataset.wikiAfter || "";
+            const before = toolbarValue(button.dataset.wikiBefore) || "";
+            const after = toolbarValue(button.dataset.wikiAfter) || "";
             const selected = textarea.value.slice(start, end) ||
                 button.dataset.wikiPlaceholder || "";
             const replacement = `${before}${selected}${after}`;
@@ -375,6 +375,10 @@
 
         textarea.focus();
         updateBodyCounter();
+    }
+
+    function toolbarValue(value) {
+        return value === undefined ? undefined : value.replace(/\\n/g, "\n");
     }
 
     function openSourcePanel() {
