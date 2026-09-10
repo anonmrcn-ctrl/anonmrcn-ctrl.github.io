@@ -20,6 +20,11 @@
         summary: document.getElementById("vociEditorSommario"),
         body: document.getElementById("vociEditorTesto"),
         bodyCounter: document.getElementById("vociEditorContatore"),
+        photoButton: document.getElementById("vociFotoButton"),
+        photoInput: document.getElementById("vociFotoInput"),
+        photoSection: document.getElementById("vociFotoSezione"),
+        photoList: document.getElementById("vociFotoElenco"),
+        photoCounter: document.getElementById("vociFotoContatore"),
         state: document.getElementById("vociEditorStato"),
         previewButton: document.getElementById("vociAnteprimaButton"),
         saveButton: document.getElementById("vociSalvaButton"),
@@ -32,7 +37,11 @@
 
     let publicEntries = [];
     let adminEntries = [];
+    let editorImages = [];
     let slugEdited = false;
+    const adminImageUrls = new Map();
+    const MAX_IMAGES = 8;
+    const MAX_IMAGE_BYTES = 700000;
 
     elements.search.addEventListener("input", renderPublicIndex);
     elements.newButton.addEventListener("click", resetEditor);
@@ -41,6 +50,10 @@
         slugEdited = true;
     });
     elements.body.addEventListener("input", updateBodyCounter);
+    elements.photoButton.addEventListener("click", () => {
+        elements.photoInput.click();
+    });
+    elements.photoInput.addEventListener("change", addSelectedPhotos);
     elements.previewButton.addEventListener("click", showEditorPreview);
     elements.form.addEventListener("submit", saveEntry);
     elements.article.addEventListener("click", handleInternalLink);
@@ -240,6 +253,7 @@
     }
 
     function fillEditor(entry) {
+        clearEditorImageUrls();
         elements.id.value = String(entry.id);
         elements.title.value = entry.title || "";
         elements.slug.value = entry.slug || "";
@@ -248,20 +262,30 @@
         elements.state.value = entry.status || "draft";
         elements.preview.hidden = true;
         elements.adminStatus.textContent = `Modifica della revisione ${entry.revisionNumber || 1}.`;
+        editorImages = (entry.images || []).map((image) => ({
+            ...image,
+            data: "",
+            previewUrl: ""
+        }));
         slugEdited = true;
         updateBodyCounter();
+        renderPhotoManager();
+        loadEditorImagePreviews();
         renderAdminIndex();
         elements.title.focus({ preventScroll: true });
     }
 
     function resetEditor() {
+        clearEditorImageUrls();
         elements.form.reset();
         elements.id.value = "";
         elements.state.value = "draft";
         elements.preview.hidden = true;
         elements.adminStatus.textContent = "Nuova voce.";
+        editorImages = [];
         slugEdited = false;
         updateBodyCounter();
+        renderPhotoManager();
         renderAdminIndex();
         elements.title.focus();
     }
@@ -311,14 +335,324 @@
         updateBodyCounter();
     }
 
+    async function addSelectedPhotos() {
+        const files = Array.from(elements.photoInput.files || []);
+        elements.photoInput.value = "";
+
+        if (!files.length) {
+            return;
+        }
+
+        if (editorImages.length + files.length > MAX_IMAGES) {
+            elements.adminStatus.textContent =
+                `Ogni voce può contenere al massimo ${MAX_IMAGES} fotografie.`;
+            return;
+        }
+
+        elements.photoButton.disabled = true;
+        elements.adminStatus.textContent = files.length === 1
+            ? "Preparazione della fotografia…"
+            : "Preparazione delle fotografie…";
+
+        const photos = [];
+
+        try {
+
+            for (const file of files) {
+                photos.push(await preparePhoto(file));
+            }
+
+            editorImages.push(...photos);
+            insertPhotoTokens(photos.map((photo) => photo.id));
+            renderPhotoManager();
+            elements.adminStatus.textContent = files.length === 1
+                ? "Fotografia inserita. Aggiungi il testo alternativo prima di salvare."
+                : "Fotografie inserite. Aggiungi i testi alternativi prima di salvare.";
+
+            const firstAlt = elements.photoList.querySelector(
+                `[data-photo-id="${photos[0].id}"] input[data-photo-field="alt"]`
+            );
+            firstAlt?.focus();
+        } catch (error) {
+            photos.forEach((photo) => {
+                if (photo.previewUrl) {
+                    URL.revokeObjectURL(photo.previewUrl);
+                }
+            });
+            elements.adminStatus.textContent =
+                error.message || "Non è stato possibile preparare la fotografia.";
+        } finally {
+            elements.photoButton.disabled = editorImages.length >= MAX_IMAGES;
+        }
+    }
+
+    async function preparePhoto(file) {
+        if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+            throw new Error("Formato non supportato. Usa JPEG, PNG o WebP.");
+        }
+
+        let blob = await resizePhoto(file, 1600, 0.8);
+
+        if (blob.size > MAX_IMAGE_BYTES) {
+            blob = await resizePhoto(file, 1200, 0.66);
+        }
+
+        if (blob.size > MAX_IMAGE_BYTES) {
+            blob = await resizePhoto(file, 900, 0.55);
+        }
+
+        if (!blob.size || blob.size > MAX_IMAGE_BYTES) {
+            throw new Error("La fotografia resta troppo grande dopo la riduzione automatica.");
+        }
+
+        return {
+            id: photoId(),
+            name: file.name || "fotografia",
+            type: blob.type,
+            alt: "",
+            caption: "",
+            data: await blobToBase64(blob),
+            previewUrl: URL.createObjectURL(blob),
+            mediaUrl: "",
+            adminMediaUrl: ""
+        };
+    }
+
+    async function resizePhoto(file, maxDimension, quality) {
+        const image = await loadPhoto(file);
+        const scale = Math.min(
+            1,
+            maxDimension / Math.max(image.width, image.height)
+        );
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.max(1, Math.round(image.width * scale));
+        canvas.height = Math.max(1, Math.round(image.height * scale));
+        const context = canvas.getContext("2d", { alpha: true });
+
+        if (!context) {
+            throw new Error("Il browser non può elaborare questa fotografia.");
+        }
+
+        context.drawImage(image, 0, 0, canvas.width, canvas.height);
+        const webpSupported = canvas
+            .toDataURL("image/webp", 0.1)
+            .startsWith("data:image/webp");
+        const outputType = webpSupported ? "image/webp" : "image/jpeg";
+        const blob = await new Promise((resolve) => {
+            canvas.toBlob(resolve, outputType, quality);
+        });
+
+        if (!blob) {
+            throw new Error("Non è stato possibile preparare la fotografia.");
+        }
+
+        return blob;
+    }
+
+    function loadPhoto(file) {
+        return new Promise((resolve, reject) => {
+            const source = URL.createObjectURL(file);
+            const image = new Image();
+
+            image.onload = () => {
+                URL.revokeObjectURL(source);
+                resolve(image);
+            };
+            image.onerror = () => {
+                URL.revokeObjectURL(source);
+                reject(new Error("La fotografia selezionata non è leggibile."));
+            };
+            image.src = source;
+        });
+    }
+
+    function blobToBase64(blob) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => {
+                const value = String(reader.result || "");
+                resolve(value.slice(value.indexOf(",") + 1));
+            };
+            reader.onerror = () => reject(
+                new Error("Non è stato possibile leggere la fotografia.")
+            );
+            reader.readAsDataURL(blob);
+        });
+    }
+
+    function photoId() {
+        if (typeof crypto.randomUUID === "function") {
+            return crypto.randomUUID();
+        }
+
+        const bytes = crypto.getRandomValues(new Uint8Array(16));
+        bytes[6] = (bytes[6] & 0x0f) | 0x40;
+        bytes[8] = (bytes[8] & 0x3f) | 0x80;
+        const hex = Array.from(bytes, (byte) =>
+            byte.toString(16).padStart(2, "0")
+        ).join("");
+        return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+    }
+
+    function insertPhotoTokens(ids) {
+        const token = ids.map((id) => `[foto:${id}]`).join("\n\n");
+        const start = elements.body.selectionStart;
+        const end = elements.body.selectionEnd;
+        const before = start > 0 && elements.body.value[start - 1] !== "\n"
+            ? "\n\n"
+            : "";
+        const after = end < elements.body.value.length && elements.body.value[end] !== "\n"
+            ? "\n\n"
+            : "";
+        elements.body.setRangeText(`${before}${token}${after}`, start, end, "end");
+        updateBodyCounter();
+    }
+
+    function renderPhotoManager() {
+        elements.photoSection.hidden = !editorImages.length;
+        elements.photoCounter.textContent = `${editorImages.length} / ${MAX_IMAGES}`;
+        elements.photoButton.disabled = editorImages.length >= MAX_IMAGES;
+        elements.photoList.replaceChildren();
+
+        editorImages.forEach((photo) => {
+            const card = document.createElement("article");
+            card.className = "voci-foto-scheda";
+            card.dataset.photoId = photo.id;
+
+            const image = document.createElement("img");
+            image.className = "voci-foto-immagine";
+            image.alt = photo.alt || "Anteprima della fotografia";
+
+            if (photo.previewUrl) {
+                image.src = photo.previewUrl;
+            }
+
+            const fields = document.createElement("div");
+            fields.className = "voci-foto-campi";
+            const altLabel = document.createElement("label");
+            altLabel.textContent = "Testo alternativo";
+            const alt = document.createElement("input");
+            alt.id = `voci-foto-alt-${photo.id}`;
+            altLabel.htmlFor = alt.id;
+            alt.type = "text";
+            alt.required = true;
+            alt.maxLength = 300;
+            alt.value = photo.alt;
+            alt.dataset.photoField = "alt";
+            alt.addEventListener("input", () => {
+                photo.alt = alt.value;
+                image.alt = alt.value || "Anteprima della fotografia";
+            });
+
+            const captionLabel = document.createElement("label");
+            captionLabel.textContent = "Didascalia (facoltativa)";
+            const caption = document.createElement("input");
+            caption.id = `voci-foto-caption-${photo.id}`;
+            captionLabel.htmlFor = caption.id;
+            caption.type = "text";
+            caption.maxLength = 500;
+            caption.value = photo.caption;
+            caption.dataset.photoField = "caption";
+            caption.addEventListener("input", () => {
+                photo.caption = caption.value;
+            });
+
+            const actions = document.createElement("div");
+            actions.className = "voci-foto-azioni";
+            const insert = document.createElement("button");
+            insert.type = "button";
+            insert.textContent = "Inserisci nel testo";
+            insert.addEventListener("click", () => insertPhotoTokens([photo.id]));
+            const remove = document.createElement("button");
+            remove.type = "button";
+            remove.textContent = "Rimuovi";
+            remove.addEventListener("click", () => removePhoto(photo.id));
+            actions.append(insert, remove);
+            fields.append(altLabel, alt, captionLabel, caption, actions);
+            card.append(image, fields);
+            elements.photoList.appendChild(card);
+        });
+    }
+
+    function removePhoto(id) {
+        const photo = editorImages.find((item) => item.id === id);
+
+        if (photo?.previewUrl) {
+            URL.revokeObjectURL(photo.previewUrl);
+        }
+
+        adminImageUrls.delete(id);
+        editorImages = editorImages.filter((item) => item.id !== id);
+        elements.body.value = elements.body.value
+            .replace(new RegExp(`\\n?\\[foto:${id}\\]\\n?`, "g"), "\n")
+            .replace(/\n{3,}/g, "\n\n")
+            .trim();
+        updateBodyCounter();
+        renderPhotoManager();
+    }
+
+    async function loadEditorImagePreviews() {
+        await Promise.all(editorImages.map(async (photo) => {
+            if (photo.previewUrl || !photo.adminMediaUrl) {
+                return;
+            }
+
+            try {
+                const token = sessionStorage.getItem(ADMIN_TOKEN_KEY) || "";
+                const response = await fetch(`${api.baseUrl}${photo.adminMediaUrl}`, {
+                    headers: { "X-Admin-Token": token }
+                });
+
+                if (!response.ok) {
+                    return;
+                }
+
+                const url = URL.createObjectURL(await response.blob());
+                photo.previewUrl = url;
+                adminImageUrls.set(photo.id, url);
+            } catch (_) {
+                // The editor stays usable if a thumbnail cannot be loaded.
+            }
+        }));
+
+        renderPhotoManager();
+    }
+
+    function clearEditorImageUrls() {
+        const urls = new Set([
+            ...editorImages.map((photo) => photo.previewUrl),
+            ...adminImageUrls.values()
+        ]);
+
+        urls.forEach((url) => {
+            if (url) {
+                URL.revokeObjectURL(url);
+            }
+        });
+        adminImageUrls.clear();
+    }
+
     function editorEntry() {
+        const body = elements.body.value.trim();
+        const images = editorImages
+            .filter((photo) => body.includes(`[foto:${photo.id}]`))
+            .map((photo) => ({
+                id: photo.id,
+                name: photo.name,
+                type: photo.type,
+                alt: photo.alt.trim(),
+                caption: photo.caption.trim(),
+                data: photo.data || ""
+            }));
+
         return {
             id: Number(elements.id.value || 0),
             title: elements.title.value.trim(),
             slug: elements.slug.value.trim().toLowerCase(),
             summary: elements.summary.value.trim(),
-            body: elements.body.value.trim(),
-            status: elements.state.value
+            body,
+            status: elements.state.value,
+            images
         };
     }
 
@@ -358,7 +692,8 @@
                     slug: entry.slug,
                     summary: entry.summary,
                     body: entry.body,
-                    status: entry.status
+                    status: entry.status,
+                    images: entry.images
                 })
             });
 
@@ -391,7 +726,7 @@
 
         const body = document.createElement("div");
         body.className = "voce-corpo";
-        appendBodyMarkup(body, entry.body || "");
+        appendBodyMarkup(body, entry.body || "", entry.images || []);
         container.appendChild(body);
 
         if (showMetadata && entry.updatedAt) {
@@ -405,8 +740,9 @@
         }
     }
 
-    function appendBodyMarkup(container, source) {
+    function appendBodyMarkup(container, source, images) {
         const lines = String(source || "").split(/\r?\n/);
+        const imagesById = new Map(images.map((image) => [image.id, image]));
         let paragraphLines = [];
         let currentList = null;
 
@@ -425,6 +761,7 @@
             const trimmed = line.trim();
             const heading = /^(#{2,3})\s+(.+)$/.exec(trimmed);
             const listItem = /^[-*]\s+(.+)$/.exec(trimmed);
+            const photo = /^\[foto:([0-9a-f-]{36})\]$/.exec(trimmed);
 
             if (!trimmed) {
                 flushParagraph();
@@ -440,6 +777,18 @@
                 );
                 appendInlineMarkup(element, heading[2]);
                 container.appendChild(element);
+                return;
+            }
+
+            if (photo) {
+                flushParagraph();
+                currentList = null;
+                const image = imagesById.get(photo[1]);
+
+                if (image) {
+                    container.appendChild(renderPhoto(image));
+                }
+
                 return;
             }
 
@@ -462,6 +811,31 @@
         });
 
         flushParagraph();
+    }
+
+    function renderPhoto(photo) {
+        const figure = document.createElement("figure");
+        figure.className = "voce-foto";
+        const image = document.createElement("img");
+        image.alt = photo.alt || "";
+        image.loading = "lazy";
+        image.decoding = "async";
+
+        if (photo.previewUrl) {
+            image.src = photo.previewUrl;
+        } else if (photo.mediaUrl) {
+            image.src = `${api.baseUrl}${photo.mediaUrl}`;
+        }
+
+        figure.appendChild(image);
+
+        if (photo.caption) {
+            const caption = document.createElement("figcaption");
+            appendInlineMarkup(caption, photo.caption);
+            figure.appendChild(caption);
+        }
+
+        return figure;
     }
 
     function appendInlineMarkup(container, source) {

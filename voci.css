@@ -265,6 +265,109 @@
     font-size: 0.78rem;
 }
 
+.voci-foto {
+    margin-top: 0.5rem;
+    padding: 1rem;
+    border: 1px solid var(--line);
+}
+
+.voci-foto-intestazione {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.voci-foto-intestazione h3 {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 700;
+}
+
+.voci-foto-intestazione span,
+.voci-foto > p {
+    font-size: 0.78rem;
+    opacity: 0.7;
+}
+
+.voci-foto > p {
+    max-width: 70ch;
+    margin: 0.4rem 0 1rem;
+    line-height: 1.5;
+}
+
+.voci-foto-elenco {
+    display: grid;
+    gap: 1rem;
+}
+
+.voci-foto-scheda {
+    display: grid;
+    grid-template-columns: minmax(110px, 170px) minmax(0, 1fr);
+    gap: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--line);
+}
+
+.voci-foto-scheda:first-child {
+    padding-top: 0;
+    border-top: 0;
+}
+
+.voci-foto-immagine {
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    object-fit: cover;
+    background: rgba(var(--ink-rgb), 0.08);
+}
+
+.voci-foto-campi {
+    display: grid;
+    gap: 0.45rem;
+}
+
+.voci-foto-campi label {
+    margin: 0;
+    font-size: 0.78rem;
+}
+
+.voci-foto-campi input {
+    min-height: 2.45rem;
+}
+
+.voci-foto-azioni {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+    margin-top: 0.25rem;
+}
+
+.voci-foto-azioni button {
+    padding: 0.45rem 0.6rem;
+    font-size: 0.78rem;
+}
+
+.voce-foto {
+    max-width: min(100%, 48rem);
+    margin: 1.75rem 0;
+}
+
+.voce-foto img {
+    display: block;
+    width: 100%;
+    height: auto;
+    max-height: 70vh;
+    object-fit: contain;
+    background: rgba(var(--ink-rgb), 0.05);
+}
+
+.voce-foto figcaption {
+    margin-top: 0.45rem;
+    font-size: 0.82rem;
+    line-height: 1.45;
+    opacity: 0.72;
+}
+
 .voci-editor-azioni {
     justify-content: flex-end;
     margin-top: 0.75rem;
@@ -319,5 +422,13 @@
 
     .voci-anteprima {
         padding: 1.25rem;
+    }
+
+    .voci-foto-scheda {
+        grid-template-columns: 1fr;
+    }
+
+    .voci-foto-immagine {
+        max-height: 14rem;
     }
 }

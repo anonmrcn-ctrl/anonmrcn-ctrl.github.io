@@ -25,6 +25,11 @@ la cronologia D1, dalla cartella `worker/` applica le migrazioni pendenti:
 npx wrangler d1 migrations apply nnmrcn-rete --remote
 ```
 
+Le voci enciclopediche e la relativa cronologia sono definite nella migrazione
+`0003_wiki_entries.sql`; le fotografie inserite nelle voci sono aggiunte dalla
+migrazione non distruttiva `0004_wiki_images.sql`. Anche queste tabelle vengono
+create automaticamente dal Worker al primo utilizzo.
+
 Se le location non sono ancora presenti, esegui successivamente il contenuto del
 file privato `nnmrcn_seed_private_d1_20260823.sql` aggiornato. Contiene le 20
 location, ma cancella prima messaggi, sessioni e location esistenti: usalo

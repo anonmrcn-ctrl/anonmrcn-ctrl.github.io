@@ -26,7 +26,11 @@ const MAX_WIKI_TITLE_LENGTH = 160;
 const MAX_WIKI_SLUG_LENGTH = 160;
 const MAX_WIKI_SUMMARY_LENGTH = 500;
 const MAX_WIKI_BODY_LENGTH = 50000;
-const MAX_WIKI_REQUEST_BYTES = 70000;
+const MAX_WIKI_IMAGES = 8;
+const MAX_WIKI_IMAGE_BYTES = 700000;
+const MAX_WIKI_IMAGE_ALT_LENGTH = 300;
+const MAX_WIKI_IMAGE_CAPTION_LENGTH = 500;
+const MAX_WIKI_REQUEST_BYTES = 8000000;
 
 class RequestBodyTooLargeError extends Error {}
 
@@ -45,6 +49,11 @@ const MEMORY_MEDIA_TYPES = new Set([
     "audio/mp4"
 ]);
 const WIKI_STATUSES = new Set(["draft", "published"]);
+const WIKI_IMAGE_TYPES = new Set([
+    "image/jpeg",
+    "image/png",
+    "image/webp"
+]);
 const MESSAGE_STATUSES = Object.freeze([
     "pending",
     "pending_delivery",
@@ -131,7 +140,26 @@ const WIKI_STORAGE_STATEMENTS = Object.freeze([
             ON DELETE CASCADE
     )`,
     `CREATE INDEX IF NOT EXISTS idx_wiki_revisions_entry
-        ON wiki_entry_revisions(entry_id, revision_number DESC)`
+        ON wiki_entry_revisions(entry_id, revision_number DESC)`,
+    `CREATE TABLE IF NOT EXISTS wiki_entry_images (
+        id TEXT PRIMARY KEY,
+        entry_id INTEGER NOT NULL,
+        media_type TEXT NOT NULL
+            CHECK (media_type IN ('image/jpeg', 'image/png', 'image/webp')),
+        media_name TEXT NOT NULL DEFAULT '',
+        media_data TEXT NOT NULL,
+        alt_text TEXT NOT NULL
+            CHECK (length(alt_text) BETWEEN 1 AND 300),
+        caption TEXT NOT NULL DEFAULT ''
+            CHECK (length(caption) <= 500),
+        created_at INTEGER NOT NULL,
+        updated_at INTEGER NOT NULL,
+        FOREIGN KEY (entry_id)
+            REFERENCES wiki_entries(id)
+            ON DELETE CASCADE
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_wiki_images_entry
+        ON wiki_entry_images(entry_id, created_at, id)`
 ]);
 const LOCATION_PROFILE_COLUMNS = Object.freeze([
     {
@@ -225,6 +253,14 @@ export default {
                 return await getPublicWikiEntry(request, env, slug);
             }
 
+            if (
+                request.method === "GET" &&
+                /^\/api\/public\/wiki-images\/[0-9a-f-]{36}$/.test(path)
+            ) {
+                const imageId = path.split("/").pop();
+                return await getWikiImage(request, env, imageId, false);
+            }
+
             if (request.method === "POST" && path === "/api/memories") {
                 return await createMemory(request, env, ctx);
             }
@@ -299,6 +335,14 @@ export default {
             ) {
                 const id = Number(path.split("/").pop());
                 return await adminUpdateWikiEntry(request, env, id);
+            }
+
+            if (
+                request.method === "GET" &&
+                /^\/api\/admin\/wiki-images\/[0-9a-f-]{36}$/.test(path)
+            ) {
+                const imageId = path.split("/").pop();
+                return await getWikiImage(request, env, imageId, true);
             }
 
             if (request.method === "GET" && path === "/api/admin/summary") {
@@ -1733,7 +1777,7 @@ async function getPublicWikiEntry(request, env, slug) {
     }
 
     return json(request, env, {
-        entry: wikiEntryPayload(entry, true)
+        entry: await wikiEntryWithImages(env, entry, true)
     });
 }
 
@@ -1765,9 +1809,9 @@ async function adminListWikiEntries(request, env) {
     `).all();
 
     return json(request, env, {
-        entries: (result.results || []).map((row) =>
-            wikiEntryPayload(row, true)
-        )
+        entries: await Promise.all((result.results || []).map((row) =>
+            wikiEntryWithImages(env, row, true)
+        ))
     });
 }
 
@@ -1784,6 +1828,16 @@ async function adminCreateWikiEntry(request, env) {
 
     if (input.error) {
         return json(request, env, { error: input.error }, 400);
+    }
+
+    const imageValidation = await validateWikiImageOwnership(
+        env,
+        0,
+        input.images
+    );
+
+    if (imageValidation.error) {
+        return json(request, env, { error: imageValidation.error }, 400);
     }
 
     if (await wikiSlugExists(env, input.slug)) {
@@ -1822,7 +1876,16 @@ async function adminCreateWikiEntry(request, env) {
         throw new Error("Wiki entry id missing after insert.");
     }
 
-    await saveWikiRevision(env, entryId, 1, input, now);
+    await env.DB.batch([
+        wikiRevisionStatement(env, entryId, 1, input, now),
+        ...wikiImageStatements(
+            env,
+            entryId,
+            input.images,
+            imageValidation.existing,
+            now
+        )
+    ]);
 
     return json(request, env, {
         ok: true,
@@ -1857,6 +1920,16 @@ async function adminUpdateWikiEntry(request, env, entryId) {
 
     if (input.error) {
         return json(request, env, { error: input.error }, 400);
+    }
+
+    const imageValidation = await validateWikiImageOwnership(
+        env,
+        entryId,
+        input.images
+    );
+
+    if (imageValidation.error) {
+        return json(request, env, { error: imageValidation.error }, 400);
     }
 
     if (await wikiSlugExists(env, input.slug, entryId)) {
@@ -1899,7 +1972,15 @@ async function adminUpdateWikiEntry(request, env, entryId) {
             revisionNumber,
             input,
             now
-        )
+        ),
+        ...wikiImageStatements(
+            env,
+            entryId,
+            input.images,
+            imageValidation.existing,
+            now
+        ),
+        wikiImageCleanupStatement(env, entryId, input.images)
     ]);
 
     return json(request, env, {
@@ -1947,7 +2028,268 @@ function normalizeWikiEntryInput(value) {
         return { error: "Una voce pubblicata deve contenere del testo." };
     }
 
-    return { title, slug, summary, body, status };
+    const images = normalizeWikiImages(value?.images, body);
+
+    if (images.error) {
+        return images;
+    }
+
+    return { title, slug, summary, body, status, images };
+}
+
+function normalizeWikiImages(value, body) {
+    const imageIds = extractWikiImageIds(body);
+
+    if (imageIds.length > MAX_WIKI_IMAGES) {
+        return {
+            error: `Una voce può contenere al massimo ${MAX_WIKI_IMAGES} fotografie.`
+        };
+    }
+
+    if (!imageIds.length) {
+        return [];
+    }
+
+    if (!Array.isArray(value) || value.length > MAX_WIKI_IMAGES) {
+        return { error: "I dati delle fotografie non sono validi." };
+    }
+
+    const supplied = new Map();
+
+    for (const rawImage of value) {
+        const image = normalizeWikiImage(rawImage);
+
+        if (image.error) {
+            return image;
+        }
+
+        if (supplied.has(image.id)) {
+            return { error: "La stessa fotografia è stata inserita più volte." };
+        }
+
+        supplied.set(image.id, image);
+    }
+
+    const images = [];
+
+    for (const imageId of imageIds) {
+        const image = supplied.get(imageId);
+
+        if (!image) {
+            return {
+                error: "Una fotografia presente nel testo non ha i dati necessari. Reinseriscila dall’editor."
+            };
+        }
+
+        images.push(image);
+    }
+
+    return images;
+}
+
+function normalizeWikiImage(value) {
+    if (!value || typeof value !== "object" || Array.isArray(value)) {
+        return { error: "Fotografia non valida." };
+    }
+
+    const id = String(value.id || "").trim().toLowerCase();
+    const name = String(value.name || "fotografia").trim().slice(0, 160);
+    const type = String(value.type || "").trim().toLowerCase();
+    const alt = String(value.alt || "").trim();
+    const caption = String(value.caption || "").trim();
+    const data = String(value.data || "").replace(/\s+/gu, "");
+
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(id)) {
+        return { error: "Identificativo della fotografia non valido." };
+    }
+
+    if (!alt || alt.length > MAX_WIKI_IMAGE_ALT_LENGTH) {
+        return {
+            error: `Il testo alternativo deve contenere da 1 a ${MAX_WIKI_IMAGE_ALT_LENGTH} caratteri.`
+        };
+    }
+
+    if (caption.length > MAX_WIKI_IMAGE_CAPTION_LENGTH) {
+        return {
+            error: `La didascalia non può superare ${MAX_WIKI_IMAGE_CAPTION_LENGTH} caratteri.`
+        };
+    }
+
+    if (!data) {
+        return { id, name, type, alt, caption, data: "" };
+    }
+
+    const media = validateWikiImageMedia({ name, type, data });
+
+    if (media.error) {
+        return media;
+    }
+
+    return { id, name: media.name, type: media.type, alt, caption, data: media.data };
+}
+
+function validateWikiImageMedia(value) {
+    const type = String(value.type || "").toLowerCase();
+    const name = String(value.name || "fotografia").trim().slice(0, 160);
+    const data = String(value.data || "").replace(/\s+/gu, "");
+    const maxBase64Length = Math.ceil(MAX_WIKI_IMAGE_BYTES / 3) * 4 + 4;
+
+    if (!WIKI_IMAGE_TYPES.has(type)) {
+        return { error: "Formato non supportato. Usa JPEG, PNG o WebP." };
+    }
+
+    if (!data || data.length > maxBase64Length || !/^[A-Za-z0-9+/]*={0,2}$/u.test(data)) {
+        return { error: "La fotografia è troppo grande o non è valida." };
+    }
+
+    let bytes;
+
+    try {
+        bytes = fromBase64(data);
+    } catch (_) {
+        return { error: "La fotografia non è valida." };
+    }
+
+    if (
+        !bytes.length ||
+        bytes.length > MAX_WIKI_IMAGE_BYTES ||
+        !memoryMediaSignatureMatches(type, bytes)
+    ) {
+        return {
+            error: "Il contenuto della fotografia non corrisponde al formato indicato."
+        };
+    }
+
+    return { type, name, data, error: "" };
+}
+
+function extractWikiImageIds(body) {
+    const ids = [];
+    const seen = new Set();
+    const pattern = /\[foto:([0-9a-f-]{36})\]/g;
+
+    for (const match of String(body || "").matchAll(pattern)) {
+        const id = match[1].toLowerCase();
+
+        if (!seen.has(id)) {
+            seen.add(id);
+            ids.push(id);
+        }
+    }
+
+    return ids;
+}
+
+async function validateWikiImageOwnership(env, entryId, images) {
+    if (!images.length) {
+        return { existing: new Map(), error: "" };
+    }
+
+    const placeholders = images.map(() => "?").join(", ");
+    const result = await env.DB.prepare(`
+        SELECT id, entry_id
+        FROM wiki_entry_images
+        WHERE id IN (${placeholders})
+    `).bind(...images.map((image) => image.id)).all();
+    const existing = new Map(
+        (result.results || []).map((row) => [row.id, Number(row.entry_id)])
+    );
+
+    for (const image of images) {
+        const ownerId = existing.get(image.id);
+
+        if (ownerId !== undefined && ownerId !== entryId) {
+            return { error: "Una fotografia appartiene a un’altra voce." };
+        }
+
+        if (ownerId === undefined && !image.data) {
+            return {
+                error: "I dati di una nuova fotografia sono mancanti. Seleziona nuovamente il file."
+            };
+        }
+    }
+
+    return { existing, error: "" };
+}
+
+function wikiImageStatements(env, entryId, images, existing, now) {
+    return images.map((image) => {
+        if (existing.has(image.id)) {
+            if (image.data) {
+                return env.DB.prepare(`
+                    UPDATE wiki_entry_images
+                    SET
+                        media_type = ?,
+                        media_name = ?,
+                        media_data = ?,
+                        alt_text = ?,
+                        caption = ?,
+                        updated_at = ?
+                    WHERE id = ? AND entry_id = ?
+                `).bind(
+                    image.type,
+                    image.name,
+                    image.data,
+                    image.alt,
+                    image.caption,
+                    now,
+                    image.id,
+                    entryId
+                );
+            }
+
+            return env.DB.prepare(`
+                UPDATE wiki_entry_images
+                SET alt_text = ?, caption = ?, updated_at = ?
+                WHERE id = ? AND entry_id = ?
+            `).bind(
+                image.alt,
+                image.caption,
+                now,
+                image.id,
+                entryId
+            );
+        }
+
+        return env.DB.prepare(`
+            INSERT INTO wiki_entry_images (
+                id,
+                entry_id,
+                media_type,
+                media_name,
+                media_data,
+                alt_text,
+                caption,
+                created_at,
+                updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `).bind(
+            image.id,
+            entryId,
+            image.type,
+            image.name,
+            image.data,
+            image.alt,
+            image.caption,
+            now,
+            now
+        );
+    });
+}
+
+function wikiImageCleanupStatement(env, entryId, images) {
+    if (!images.length) {
+        return env.DB.prepare(`
+            DELETE FROM wiki_entry_images
+            WHERE entry_id = ?
+        `).bind(entryId);
+    }
+
+    const placeholders = images.map(() => "?").join(", ");
+    return env.DB.prepare(`
+        DELETE FROM wiki_entry_images
+        WHERE entry_id = ? AND id NOT IN (${placeholders})
+    `).bind(entryId, ...images.map((image) => image.id));
 }
 
 function slugifyWikiTitle(title) {
@@ -2020,16 +2362,6 @@ function wikiRevisionStatement(env, entryId, revisionNumber, input, now) {
     );
 }
 
-async function saveWikiRevision(env, entryId, revisionNumber, input, now) {
-    await wikiRevisionStatement(
-        env,
-        entryId,
-        revisionNumber,
-        input,
-        now
-    ).run();
-}
-
 function wikiEntryPayload(row, includeBody) {
     const entry = {
         id: Number(row.id),
@@ -2048,6 +2380,97 @@ function wikiEntryPayload(row, includeBody) {
     }
 
     return entry;
+}
+
+async function wikiEntryWithImages(env, row, includeBody) {
+    const entry = wikiEntryPayload(row, includeBody);
+    entry.images = includeBody
+        ? await getWikiEntryImages(env, entry.id, entry.body)
+        : [];
+    return entry;
+}
+
+async function getWikiEntryImages(env, entryId, body) {
+    const imageIds = extractWikiImageIds(body);
+
+    if (!imageIds.length) {
+        return [];
+    }
+
+    const placeholders = imageIds.map(() => "?").join(", ");
+    const result = await env.DB.prepare(`
+        SELECT id, media_type, media_name, alt_text, caption
+        FROM wiki_entry_images
+        WHERE entry_id = ? AND id IN (${placeholders})
+    `).bind(entryId, ...imageIds).all();
+    const byId = new Map((result.results || []).map((row) => [row.id, row]));
+
+    return imageIds.flatMap((id) => {
+        const image = byId.get(id);
+
+        if (!image) {
+            return [];
+        }
+
+        return [{
+            id: image.id,
+            type: image.media_type,
+            name: image.media_name,
+            alt: image.alt_text,
+            caption: image.caption,
+            mediaUrl: `/api/public/wiki-images/${image.id}`,
+            adminMediaUrl: `/api/admin/wiki-images/${image.id}`
+        }];
+    });
+}
+
+async function getWikiImage(request, env, imageId, adminOnly) {
+    if (adminOnly && !(await adminAuthorized(request, env))) {
+        return unauthorized(request, env);
+    }
+
+    await ensureWikiStorage(env);
+
+    const image = await env.DB.prepare(`
+        SELECT
+            image.id,
+            image.media_type,
+            image.media_data,
+            entry.body,
+            entry.status
+        FROM wiki_entry_images image
+        INNER JOIN wiki_entries entry ON entry.id = image.entry_id
+        WHERE image.id = ?
+        LIMIT 1
+    `).bind(imageId).first();
+
+    if (
+        !image ||
+        !image.media_data ||
+        (!adminOnly && (
+            image.status !== "published" ||
+            !String(image.body || "").includes(`[foto:${imageId}]`)
+        ))
+    ) {
+        return json(request, env, { error: "Fotografia non disponibile." }, 404);
+    }
+
+    const bytes = fromBase64(image.media_data);
+    const extension = memoryMediaExtension(image.media_type);
+
+    return new Response(bytes, {
+        headers: {
+            "Content-Type": image.media_type,
+            "Content-Length": String(bytes.byteLength),
+            "Content-Disposition":
+                `inline; filename="voce-${imageId}.${extension}"`,
+            "Cache-Control": adminOnly
+                ? "no-store"
+                : "public, max-age=3600",
+            "X-Content-Type-Options": "nosniff",
+            ...corsHeaders(request, env)
+        }
+    });
 }
 
 async function ensureWikiStorage(env) {
