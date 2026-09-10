@@ -88,7 +88,7 @@
             event.preventDefault();
             closeWikiLinkPanel();
             elements.wikiLinkButton.focus();
-        } else if (event.key === "Enter") {
+        } else if (event.key === "Enter" && !event.target.closest("button")) {
             event.preventDefault();
             insertWikiLink();
         }
@@ -101,7 +101,7 @@
             event.preventDefault();
             closeSourcePanel();
             elements.sourceButton.focus();
-        } else if (event.key === "Enter") {
+        } else if (event.key === "Enter" && !event.target.closest("button")) {
             event.preventDefault();
             insertSource();
         }
@@ -244,9 +244,15 @@
     }
 
     function loadEntryFromHash() {
-        const slug = decodeURIComponent(location.hash.slice(1));
+        let slug;
 
-        if (!slug || slug === "editor") {
+        try {
+            slug = decodeURIComponent(location.hash.slice(1));
+        } catch (_) {
+            return;
+        }
+
+        if (!slug || slug === "editor" || document.getElementById(slug)) {
             return;
         }
 
