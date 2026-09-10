@@ -220,6 +220,22 @@
     }
 
     function handleInternalLink(event) {
+        const headingLink = event.target.closest("[data-wiki-heading]");
+
+        if (headingLink) {
+            event.preventDefault();
+            const heading = document.getElementById(
+                headingLink.dataset.wikiHeading
+            );
+
+            if (heading) {
+                heading.scrollIntoView({ block: "start" });
+                heading.focus({ preventScroll: true });
+            }
+
+            return;
+        }
+
         const link = event.target.closest("[data-wiki-slug]");
 
         if (!link) {
@@ -852,7 +868,13 @@
 
         const body = document.createElement("div");
         body.className = "voce-corpo";
-        appendBodyMarkup(body, entry.body || "", entry.images || [], citations);
+        appendBodyMarkup(
+            body,
+            entry.body || "",
+            entry.images || [],
+            citations,
+            container.id || "voce"
+        );
         container.appendChild(body);
 
         if (citations.items.length) {
@@ -870,9 +892,13 @@
         }
     }
 
-    function appendBodyMarkup(container, source, images, citations) {
+    function appendBodyMarkup(container, source, images, citations, scope) {
         const lines = String(source || "").split(/\r?\n/);
         const imagesById = new Map(images.map((image) => [image.id, image]));
+        const headings = collectHeadings(lines, scope);
+        const headingsByLine = new Map(
+            headings.map((heading) => [heading.lineIndex, heading])
+        );
         let paragraphLines = [];
         let currentList = null;
 
@@ -887,11 +913,12 @@
             paragraphLines = [];
         };
 
-        lines.forEach((line) => {
+        lines.forEach((line, lineIndex) => {
             const trimmed = line.trim();
             const heading = /^(#{2,3})\s+(.+)$/.exec(trimmed);
             const listItem = /^[-*]\s+(.+)$/.exec(trimmed);
             const photo = /^\[foto:([0-9a-f-]{36})\]$/.exec(trimmed);
+            const indexMarker = trimmed.toLocaleLowerCase("it") === "[indice]";
 
             if (!trimmed) {
                 flushParagraph();
@@ -905,8 +932,22 @@
                 const element = document.createElement(
                     heading[1].length === 2 ? "h2" : "h3"
                 );
+                const headingData = headingsByLine.get(lineIndex);
+
+                if (headingData) {
+                    element.id = headingData.id;
+                    element.tabIndex = -1;
+                }
+
                 appendInlineMarkup(element, heading[2], citations);
                 container.appendChild(element);
+                return;
+            }
+
+            if (indexMarker) {
+                flushParagraph();
+                currentList = null;
+                container.appendChild(renderInternalIndex(headings));
                 return;
             }
 
@@ -941,6 +982,80 @@
         });
 
         flushParagraph();
+    }
+
+    function collectHeadings(lines, scope) {
+        const occurrences = new Map();
+        const scopeSlug = slugify(scope) || "voce";
+
+        return lines.flatMap((line, lineIndex) => {
+            const heading = /^(#{2,3})\s+(.+)$/.exec(line.trim());
+
+            if (!heading) {
+                return [];
+            }
+
+            const title = publicSummaryPreview(heading[2]) || "Sezione";
+            const base = slugify(title) || "sezione";
+            const occurrence = (occurrences.get(base) || 0) + 1;
+            occurrences.set(base, occurrence);
+
+            return [{
+                id: `${scopeSlug}-sezione-${base}${occurrence > 1 ? `-${occurrence}` : ""}`,
+                level: heading[1].length,
+                lineIndex,
+                title
+            }];
+        });
+    }
+
+    function renderInternalIndex(headings) {
+        const navigation = document.createElement("nav");
+        navigation.className = "voce-indice-interno";
+        navigation.setAttribute("aria-label", "Indice della voce");
+        const title = document.createElement("p");
+        title.className = "voce-indice-interno-titolo";
+        title.textContent = "Indice";
+        navigation.appendChild(title);
+
+        if (!headings.length) {
+            const empty = document.createElement("p");
+            empty.className = "voce-indice-interno-vuoto";
+            empty.textContent = "Nessuna sezione presente.";
+            navigation.appendChild(empty);
+            return navigation;
+        }
+
+        const list = document.createElement("ol");
+        let currentSection = null;
+        let subsectionList = null;
+
+        headings.forEach((heading) => {
+            const item = document.createElement("li");
+            const link = document.createElement("button");
+            link.type = "button";
+            link.dataset.wikiHeading = heading.id;
+            link.textContent = heading.title;
+            item.appendChild(link);
+
+            if (heading.level === 3 && currentSection) {
+                if (!subsectionList) {
+                    subsectionList = document.createElement("ol");
+                    subsectionList.className = "voce-indice-interno-sottosezioni";
+                    currentSection.appendChild(subsectionList);
+                }
+
+                subsectionList.appendChild(item);
+                return;
+            }
+
+            list.appendChild(item);
+            currentSection = heading.level === 2 ? item : null;
+            subsectionList = null;
+        });
+
+        navigation.appendChild(list);
+        return navigation;
     }
 
     function renderPhoto(photo, citations) {

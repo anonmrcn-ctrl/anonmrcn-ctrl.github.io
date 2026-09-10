@@ -162,6 +162,54 @@
     font-style: italic;
 }
 
+.voce-indice-interno {
+    max-width: 42rem;
+    margin: 1.5rem 0 2rem;
+    padding: 1rem 1.25rem;
+    border: 1px solid var(--line);
+}
+
+.voce-indice-interno-titolo {
+    margin: 0 0 0.55rem;
+    font-weight: 700;
+}
+
+.voce-indice-interno ol {
+    margin: 0;
+    padding-left: 1.5rem;
+}
+
+.voce-indice-interno li {
+    margin: 0.25rem 0;
+    line-height: 1.45;
+}
+
+.voce-indice-interno button {
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    text-decoration: underline;
+    text-underline-offset: 0.15em;
+    cursor: pointer;
+}
+
+.voce-indice-interno button:focus-visible {
+    outline: 1px solid currentColor;
+    outline-offset: 0.2rem;
+}
+
+.voce-indice-interno-sottosezioni {
+    margin-top: 0.25rem !important;
+}
+
+.voce-indice-interno-vuoto {
+    margin: 0;
+    opacity: 0.65;
+}
+
 .voce-articolo a {
     color: inherit;
     text-underline-offset: 0.15em;
