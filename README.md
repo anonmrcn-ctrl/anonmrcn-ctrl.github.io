@@ -8,7 +8,7 @@ Sito GitHub Pages del progetto nnMrcn.
 - `autore.html` — autore
 - `progetto.html` — progetto, confronto 1975–oggi, percorso narrativo, mappa e accesso
 - `spazio-pubblico.html` — luoghi e testi condivisi pubblicamente
-- `voci.html` — indice pubblico ed editor amministrativo delle voci, con fotografie e fonti numerate
+- `voci.html` — indice pubblico ed editor amministrativo delle voci, con fotografie, fonti numerate, tabelle e collegamenti automatici
 - `spazio-personale.html` — profilo, visibilità, destinatari, messaggi e notifiche della location
 - `archivio.html` — archivio anonimo dei messaggi pubblicati con doppio consenso
 - `memorie.html` — mappa dei ricordi degli abitanti e invio di testo, fotografie o audio
