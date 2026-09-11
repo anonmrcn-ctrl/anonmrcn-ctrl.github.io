@@ -40,6 +40,13 @@
         sourceCancel: document.getElementById("vociFonteAnnulla"),
         sourceReuse: document.getElementById("vociFontiRiuso"),
         sourceReuseList: document.getElementById("vociFontiRiusoElenco"),
+        tableButton: document.getElementById("vociTabellaButton"),
+        tablePanel: document.getElementById("vociTabellaPannello"),
+        tableCaption: document.getElementById("vociTabellaDidascalia"),
+        tableColumns: document.getElementById("vociTabellaColonne"),
+        tableRows: document.getElementById("vociTabellaRighe"),
+        tableInsert: document.getElementById("vociTabellaInserisci"),
+        tableCancel: document.getElementById("vociTabellaAnnulla"),
         photoButton: document.getElementById("vociFotoButton"),
         photoInput: document.getElementById("vociFotoInput"),
         photoSection: document.getElementById("vociFotoSezione"),
@@ -60,6 +67,7 @@
     let editorImages = [];
     let wikiLinkInsertionRange = { start: 0, end: 0 };
     let sourceInsertionRange = { start: 0, end: 0 };
+    let tableInsertionRange = { start: 0, end: 0 };
     let slugEdited = false;
     const adminImageUrls = new Map();
     const MAX_IMAGES = 8;
@@ -104,6 +112,19 @@
         } else if (event.key === "Enter" && !event.target.closest("button")) {
             event.preventDefault();
             insertSource();
+        }
+    });
+    elements.tableButton.addEventListener("click", openTablePanel);
+    elements.tableInsert.addEventListener("click", insertTable);
+    elements.tableCancel.addEventListener("click", closeTablePanel);
+    elements.tablePanel.addEventListener("keydown", (event) => {
+        if (event.key === "Escape") {
+            event.preventDefault();
+            closeTablePanel();
+            elements.tableButton.focus();
+        } else if (event.key === "Enter" && !event.target.closest("button")) {
+            event.preventDefault();
+            insertTable();
         }
     });
     elements.photoButton.addEventListener("click", () => {
@@ -426,6 +447,7 @@
         clearEditorImageUrls();
         closeWikiLinkPanel();
         closeSourcePanel();
+        closeTablePanel();
         elements.id.value = String(entry.id);
         elements.title.value = entry.title || "";
         elements.slug.value = entry.slug || "";
@@ -451,6 +473,7 @@
         clearEditorImageUrls();
         closeWikiLinkPanel();
         closeSourcePanel();
+        closeTablePanel();
         elements.form.reset();
         elements.id.value = "";
         elements.state.value = "draft";
@@ -528,6 +551,7 @@
             .trim();
 
         closeSourcePanel();
+        closeTablePanel();
         elements.wikiLinkTarget.replaceChildren();
         const currentId = Number(elements.id.value || 0);
         const availableEntries = publicEntries.filter(
@@ -625,6 +649,7 @@
         }
 
         closeWikiLinkPanel();
+        closeTablePanel();
         sourceInsertionRange = {
             start: elements.body.selectionEnd,
             end: elements.body.selectionEnd
@@ -644,6 +669,114 @@
         elements.sourceUrl.value = "";
         elements.sourceTitle.setCustomValidity("");
         elements.sourceUrl.setCustomValidity("");
+    }
+
+    function openTablePanel() {
+        if (!elements.tablePanel.hidden) {
+            closeTablePanel();
+            return;
+        }
+
+        tableInsertionRange = {
+            start: elements.body.selectionStart,
+            end: elements.body.selectionEnd
+        };
+        const selectedText = elements.body.value
+            .slice(tableInsertionRange.start, tableInsertionRange.end)
+            .trim();
+
+        closeWikiLinkPanel();
+        closeSourcePanel();
+        elements.tableCaption.value = selectedText;
+        elements.tablePanel.hidden = false;
+        elements.tableButton.setAttribute("aria-expanded", "true");
+        elements.tableCaption.focus();
+    }
+
+    function closeTablePanel() {
+        elements.tablePanel.hidden = true;
+        elements.tableButton.setAttribute("aria-expanded", "false");
+        elements.tableCaption.value = "";
+        elements.tableColumns.value = "3";
+        elements.tableRows.value = "3";
+        elements.tableColumns.setCustomValidity("");
+        elements.tableRows.setCustomValidity("");
+    }
+
+    function insertTable() {
+        const columns = Number(elements.tableColumns.value);
+        const rows = Number(elements.tableRows.value);
+        const caption = elements.tableCaption.value.trim();
+
+        elements.tableColumns.setCustomValidity("");
+        elements.tableRows.setCustomValidity("");
+
+        if (!Number.isInteger(columns) || columns < 2 || columns > 8) {
+            elements.tableColumns.setCustomValidity(
+                "Scegli un numero di colonne compreso tra 2 e 8."
+            );
+            elements.tableColumns.reportValidity();
+            return;
+        }
+
+        if (!Number.isInteger(rows) || rows < 1 || rows > 30) {
+            elements.tableRows.setCustomValidity(
+                "Scegli un numero di righe compreso tra 1 e 30."
+            );
+            elements.tableRows.reportValidity();
+            return;
+        }
+
+        const captionLine = caption
+            ? `[tabella:${encodeURIComponent(caption)}]\n`
+            : "";
+        const headerCells = Array.from(
+            { length: columns },
+            (_, index) => `Intestazione ${index + 1}`
+        );
+        const separatorCells = Array.from(
+            { length: columns },
+            () => "---"
+        );
+        const dataLines = Array.from({ length: rows }, (_, rowIndex) =>
+            tableRow(Array.from(
+                { length: columns },
+                (_, columnIndex) => `Cella ${rowIndex + 1}.${columnIndex + 1}`
+            ))
+        );
+        const table = [
+            captionLine + tableRow(headerCells),
+            tableRow(separatorCells),
+            ...dataLines
+        ].join("\n");
+        const needsLeadingBreak = tableInsertionRange.start > 0 &&
+            elements.body.value[tableInsertionRange.start - 1] !== "\n";
+        const needsTrailingBreak = tableInsertionRange.end <
+            elements.body.value.length &&
+            elements.body.value[tableInsertionRange.end] !== "\n";
+        const before = needsLeadingBreak ? "\n\n" : "";
+        const after = needsTrailingBreak ? "\n\n" : "";
+        const replacement = `${before}${table}${after}`;
+        const firstHeaderStart = tableInsertionRange.start + before.length +
+            captionLine.length + 2;
+
+        elements.body.setRangeText(
+            replacement,
+            tableInsertionRange.start,
+            tableInsertionRange.end,
+            "end"
+        );
+        closeTablePanel();
+        elements.body.focus();
+        elements.body.selectionStart = firstHeaderStart;
+        elements.body.selectionEnd = firstHeaderStart + headerCells[0].length;
+        updateBodyCounter();
+        elements.adminStatus.textContent =
+            "Tabella inserita. Sostituisci intestazioni e celle nel testo.";
+    }
+
+    function tableRow(cells) {
+        return `| ${cells.join(" | ")} |`;
     }
 
     function insertSource() {
@@ -1147,6 +1280,7 @@
 
     function renderEntry(entry, container, showMetadata) {
         const citations = createCitationContext(container.id || "voce");
+        const wikiLinks = createAutomaticWikiLinkContext(entry);
         const title = document.createElement("h1");
         title.textContent = entry.title || "Senza titolo";
         container.replaceChildren(title);
@@ -1154,7 +1288,7 @@
         if (entry.summary) {
             const summary = document.createElement("p");
             summary.className = "voce-sommario";
-            appendInlineMarkup(summary, entry.summary, citations);
+            appendInlineMarkup(summary, entry.summary, citations, wikiLinks);
             container.appendChild(summary);
         }
 
@@ -1166,7 +1300,8 @@
             entry.images || [],
             citations,
             container.id || "voce",
-            showMetadata ? elements.articleIndex : null
+            showMetadata ? elements.articleIndex : null,
+            wikiLinks
         );
         container.appendChild(body);
 
@@ -1200,7 +1335,8 @@
         images,
         citations,
         scope,
-        indexContainer = null
+        indexContainer = null,
+        wikiLinks = null
     ) {
         const lines = String(source || "").split(/\r?\n/);
         const imagesById = new Map(images.map((image) => [image.id, image]));
@@ -1239,22 +1375,41 @@
             }
 
             const paragraph = document.createElement("p");
-            appendInlineMarkup(paragraph, paragraphLines.join(" "), citations);
+            appendInlineMarkup(
+                paragraph,
+                paragraphLines.join(" "),
+                citations,
+                wikiLinks
+            );
             container.appendChild(paragraph);
             paragraphLines = [];
         };
 
-        lines.forEach((line, lineIndex) => {
+        for (let lineIndex = 0; lineIndex < lines.length; lineIndex += 1) {
+            const line = lines[lineIndex];
             const trimmed = line.trim();
             const heading = /^(#{2,3})\s+(.+)$/.exec(trimmed);
             const listItem = /^[-*]\s+(.+)$/.exec(trimmed);
             const photo = /^\[foto:([0-9a-f-]{36})\]$/.exec(trimmed);
             const indexMarker = trimmed.toLocaleLowerCase("it") === "[indice]";
+            const table = markdownTableAt(lines, lineIndex);
+
+            if (table) {
+                flushParagraph();
+                currentList = null;
+                container.appendChild(renderMarkdownTable(
+                    table,
+                    citations,
+                    wikiLinks
+                ));
+                lineIndex = table.endIndex;
+                continue;
+            }
 
             if (!trimmed) {
                 flushParagraph();
                 currentList = null;
-                return;
+                continue;
             }
 
             if (heading) {
@@ -1270,9 +1425,9 @@
                     element.tabIndex = -1;
                 }
 
-                appendInlineMarkup(element, heading[2], citations);
+                appendInlineMarkup(element, heading[2], citations, wikiLinks);
                 container.appendChild(element);
-                return;
+                continue;
             }
 
             if (indexMarker) {
@@ -1283,7 +1438,7 @@
                     container.appendChild(renderInternalIndex(headings));
                 }
 
-                return;
+                continue;
             }
 
             if (photo) {
@@ -1292,10 +1447,14 @@
                 const image = imagesById.get(photo[1]);
 
                 if (image) {
-                    container.appendChild(renderPhoto(image, citations));
+                    container.appendChild(renderPhoto(
+                        image,
+                        citations,
+                        wikiLinks
+                    ));
                 }
 
-                return;
+                continue;
             }
 
             if (listItem) {
@@ -1307,17 +1466,156 @@
                 }
 
                 const item = document.createElement("li");
-                appendInlineMarkup(item, listItem[1], citations);
+                appendInlineMarkup(item, listItem[1], citations, wikiLinks);
                 currentList.appendChild(item);
-                return;
+                continue;
             }
 
             currentList = null;
             paragraphLines.push(trimmed);
-        });
+        }
 
         flushParagraph();
         return shouldShowIndex;
+    }
+
+    function markdownTableAt(lines, startIndex) {
+        let headerIndex = startIndex;
+        let caption = "";
+        const captionMatch = /^\[tabella(?::([^\]]*))?\]$/i.exec(
+            String(lines[startIndex] || "").trim()
+        );
+
+        if (captionMatch) {
+            headerIndex += 1;
+
+            if (captionMatch[1]) {
+                try {
+                    caption = decodeURIComponent(captionMatch[1]);
+                } catch (_) {
+                    caption = captionMatch[1];
+                }
+            }
+        }
+
+        if (headerIndex + 1 >= lines.length) {
+            return null;
+        }
+
+        const headers = parseMarkdownTableRow(lines[headerIndex]);
+        const separators = parseMarkdownTableRow(lines[headerIndex + 1]);
+
+        if (
+            !headers ||
+            headers.length < 2 ||
+            !separators ||
+            separators.length !== headers.length ||
+            !separators.every((cell) => /^:?-{3,}:?$/.test(cell))
+        ) {
+            return null;
+        }
+
+        const rows = [];
+        let endIndex = headerIndex + 1;
+
+        for (let index = headerIndex + 2; index < lines.length; index += 1) {
+            const cells = parseMarkdownTableRow(lines[index]);
+
+            if (!cells) {
+                break;
+            }
+
+            rows.push(Array.from(
+                { length: headers.length },
+                (_, cellIndex) => cells[cellIndex] || ""
+            ));
+            endIndex = index;
+        }
+
+        return { caption, headers, rows, endIndex };
+    }
+
+    function parseMarkdownTableRow(line) {
+        const value = String(line || "").trim();
+
+        if (!value.startsWith("|") || !value.endsWith("|")) {
+            return null;
+        }
+
+        const cells = [];
+        let cell = "";
+
+        for (let index = 1; index < value.length - 1; index += 1) {
+            const character = value[index];
+
+            if (character === "\\" && value[index + 1] === "|") {
+                cell += "|";
+                index += 1;
+            } else if (character === "|") {
+                cells.push(cell.trim());
+                cell = "";
+            } else {
+                cell += character;
+            }
+        }
+
+        cells.push(cell.trim());
+        return cells;
+    }
+
+    function renderMarkdownTable(tableData, citations, wikiLinks) {
+        const wrapper = document.createElement("div");
+        wrapper.className = "voce-tabella-contenitore";
+        wrapper.tabIndex = 0;
+        wrapper.setAttribute("role", "region");
+        wrapper.setAttribute(
+            "aria-label",
+            tableData.caption || "Tabella della voce"
+        );
+        const table = document.createElement("table");
+        table.className = "voce-tabella";
+
+        if (tableData.caption) {
+            const caption = document.createElement("caption");
+            appendInlineMarkup(
+                caption,
+                tableData.caption,
+                citations,
+                wikiLinks
+            );
+            table.appendChild(caption);
+        }
+
+        const head = document.createElement("thead");
+        const headerRow = document.createElement("tr");
+
+        tableData.headers.forEach((value) => {
+            const cell = document.createElement("th");
+            cell.scope = "col";
+            appendInlineMarkup(cell, value, citations, wikiLinks);
+            headerRow.appendChild(cell);
+        });
+        head.appendChild(headerRow);
+        table.appendChild(head);
+
+        if (tableData.rows.length) {
+            const body = document.createElement("tbody");
+
+            tableData.rows.forEach((values) => {
+                const row = document.createElement("tr");
+
+                values.forEach((value) => {
+                    const cell = document.createElement("td");
+                    appendInlineMarkup(cell, value, citations, wikiLinks);
+                    row.appendChild(cell);
+                });
+                body.appendChild(row);
+            });
+            table.appendChild(body);
+        }
+
+        wrapper.appendChild(table);
+        return wrapper;
     }
 
     function collectHeadings(lines, scope) {
@@ -1524,7 +1822,7 @@
         }
     }
 
-    function renderPhoto(photo, citations) {
+    function renderPhoto(photo, citations, wikiLinks) {
         const figure = document.createElement("figure");
         figure.className = "voce-foto";
         const image = document.createElement("img");
@@ -1542,38 +1840,48 @@
 
         if (photo.caption) {
             const caption = document.createElement("figcaption");
-            appendInlineMarkup(caption, photo.caption, citations);
+            appendInlineMarkup(caption, photo.caption, citations, wikiLinks);
             figure.appendChild(caption);
         }
 
         return figure;
     }
 
-    function appendInlineMarkup(container, source, citations) {
+    function appendInlineMarkup(container, source, citations, wikiLinks = null) {
         const pattern = /(\*\*[^*\n]+\*\*|\*[^*\n]+\*|\[fonte:[^\]\n]+\]|\[\[[^\]\n]+\]\]|\[[^\]\n]+\]\(https?:\/\/[^)\s]+\))/g;
         let cursor = 0;
 
         for (const match of String(source || "").matchAll(pattern)) {
-            container.appendChild(document.createTextNode(
-                source.slice(cursor, match.index)
+            appendAutomaticallyLinkedText(
+                container,
+                source.slice(cursor, match.index),
+                wikiLinks
+            );
+            container.appendChild(inlineToken(
+                match[0],
+                citations,
+                wikiLinks
             ));
-            container.appendChild(inlineToken(match[0], citations));
             cursor = match.index + match[0].length;
         }
 
-        container.appendChild(document.createTextNode(source.slice(cursor)));
+        appendAutomaticallyLinkedText(
+            container,
+            source.slice(cursor),
+            wikiLinks
+        );
     }
 
-    function inlineToken(token, citations) {
+    function inlineToken(token, citations, wikiLinks) {
         if (token.startsWith("**")) {
             const strong = document.createElement("strong");
-            strong.textContent = token.slice(2, -2);
+            appendInlineMarkup(strong, token.slice(2, -2), citations, wikiLinks);
             return strong;
         }
 
         if (token.startsWith("*")) {
             const emphasis = document.createElement("em");
-            emphasis.textContent = token.slice(1, -1);
+            appendInlineMarkup(emphasis, token.slice(1, -1), citations, wikiLinks);
             return emphasis;
         }
 
@@ -1617,6 +1925,116 @@
         }
 
         return document.createTextNode(token);
+    }
+
+    function createAutomaticWikiLinkContext(entry) {
+        const currentSlug = slugify(entry.slug || entry.title);
+        const targets = publicEntries
+            .filter((candidate) => candidate.slug !== currentSlug)
+            .map((candidate) => ({
+                slug: candidate.slug,
+                title: String(candidate.title || "").trim()
+            }))
+            .filter((candidate) => candidate.slug && candidate.title)
+            .map((candidate) => ({
+                ...candidate,
+                searchTitle: candidate.title.toLocaleLowerCase("it")
+            }))
+            .sort((first, second) =>
+                second.searchTitle.length - first.searchTitle.length
+            );
+
+        return { targets };
+    }
+
+    function appendAutomaticallyLinkedText(container, value, wikiLinks) {
+        const source = String(value || "");
+        const targets = wikiLinks?.targets || [];
+
+        if (!source || !targets.length) {
+            if (source) {
+                container.appendChild(document.createTextNode(source));
+            }
+
+            return;
+        }
+
+        const searchableSource = source.toLocaleLowerCase("it");
+        let cursor = 0;
+
+        while (cursor < source.length) {
+            let selectedTarget = null;
+            let selectedIndex = -1;
+
+            targets.forEach((target) => {
+                let matchIndex = searchableSource.indexOf(
+                    target.searchTitle,
+                    cursor
+                );
+
+                while (
+                    matchIndex !== -1 &&
+                    !hasAutomaticWikiLinkBoundaries(
+                        source,
+                        matchIndex,
+                        target.title.length
+                    )
+                ) {
+                    matchIndex = searchableSource.indexOf(
+                        target.searchTitle,
+                        matchIndex + 1
+                    );
+                }
+
+                if (
+                    matchIndex !== -1 &&
+                    (
+                        selectedIndex === -1 ||
+                        matchIndex < selectedIndex ||
+                        (
+                            matchIndex === selectedIndex &&
+                            target.title.length > selectedTarget.title.length
+                        )
+                    )
+                ) {
+                    selectedTarget = target;
+                    selectedIndex = matchIndex;
+                }
+            });
+
+            if (!selectedTarget) {
+                container.appendChild(document.createTextNode(
+                    source.slice(cursor)
+                ));
+                return;
+            }
+
+            if (selectedIndex > cursor) {
+                container.appendChild(document.createTextNode(
+                    source.slice(cursor, selectedIndex)
+                ));
+            }
+
+            const link = document.createElement("a");
+            link.href = `#${selectedTarget.slug}`;
+            link.dataset.wikiSlug = selectedTarget.slug;
+            link.textContent = source.slice(
+                selectedIndex,
+                selectedIndex + selectedTarget.title.length
+            );
+            container.appendChild(link);
+            cursor = selectedIndex + selectedTarget.title.length;
+        }
+    }
+
+    function hasAutomaticWikiLinkBoundaries(source, index, length) {
+        const before = source.slice(0, index).match(/.$/u)?.[0] || "";
+        const after = source.slice(index + length).match(/^./u)?.[0] || "";
+        return !isWikiWordCharacter(before) && !isWikiWordCharacter(after);
+    }
+
+    function isWikiWordCharacter(character) {
+        return Boolean(character) && /[\p{L}\p{N}]/u.test(character);
     }
 
     function resolveWikiTarget(rawSlug, label) {
