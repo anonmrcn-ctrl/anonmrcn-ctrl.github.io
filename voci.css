@@ -352,9 +352,6 @@
 .voce-tabella-contenitore {
     max-width: 100%;
     margin: 1.75rem 0;
-    overflow-x: auto;
-    overscroll-behavior-inline: contain;
-    scrollbar-width: thin;
 }
 
 .voce-tabella-contenitore:focus-visible {
@@ -363,10 +360,11 @@
 }
 
 .voce-tabella {
-    width: max-content;
-    min-width: min(100%, 34rem);
-    max-width: none;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
     border-collapse: collapse;
+    table-layout: auto;
     font-size: 0.95rem;
     line-height: 1.5;
 }
@@ -379,9 +377,12 @@
 
 .voce-tabella th,
 .voce-tabella td {
-    min-width: 8.5rem;
+    min-width: 0;
     padding: 0.55rem 0.7rem;
     border: 1px solid var(--line);
+    overflow-wrap: anywhere;
+    hyphens: auto;
+    white-space: normal;
     text-align: left;
     vertical-align: top;
 }
