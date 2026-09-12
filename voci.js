@@ -1566,7 +1566,6 @@
     function renderMarkdownTable(tableData, citations, wikiLinks) {
         const wrapper = document.createElement("div");
         wrapper.className = "voce-tabella-contenitore";
-        wrapper.tabIndex = 0;
         wrapper.setAttribute("role", "region");
         wrapper.setAttribute(
             "aria-label",
