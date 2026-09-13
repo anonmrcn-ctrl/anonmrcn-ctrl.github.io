@@ -570,7 +570,21 @@ select {
 }
 
 .menu-contenuto a.voce-attiva {
-    opacity: 0.45;
+    position: relative;
+    margin-left: -1.15rem;
+    padding-left: 1.15rem;
+    opacity: 1;
+}
+
+.menu-contenuto a.voce-attiva::before {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    width: 0.65rem;
+    height: 1px;
+    background: currentColor;
+    content: "";
+    transform: translateY(-50%);
 }
 
 .menu-accesso {
