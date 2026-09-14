@@ -2364,6 +2364,10 @@ html[data-theme="dark"] .leaflet-control-layers label {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
+    .admin h1 {
+        font-size: clamp(1.75rem, 8.5vw, 2rem);
+    }
+
     .admin-export-actions {
         display: grid;
         grid-template-columns: 1fr;
