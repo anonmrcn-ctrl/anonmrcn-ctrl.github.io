@@ -2535,6 +2535,13 @@ html[data-theme="dark"] .leaflet-control-layers label {
     }
 }
 
+/* Focus condiviso */
+
+:where(a, button, input, textarea, select, summary):focus-visible {
+    outline: 2px solid var(--ink) !important;
+    outline-offset: 3px !important;
+}
+
 html[data-motion="reduce"] {
     scroll-behavior: auto;
 }
