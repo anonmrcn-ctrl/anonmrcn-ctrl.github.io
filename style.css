@@ -2210,13 +2210,14 @@ html[data-theme="dark"] .leaflet-control-layers label {
     }
 
     .menu-button {
+        min-height: 2.75rem;
         padding: 0.6rem 0.8rem;
         font-size: 0.7rem;
     }
 
     .impostazioni-button {
-        width: 2.55rem;
-        height: 2.55rem;
+        width: 2.75rem;
+        height: 2.75rem;
     }
 
     .impostazioni-pannello {
@@ -2305,8 +2306,8 @@ html[data-theme="dark"] .leaflet-control-layers label {
     }
 
     .indice a {
-        width: 2.25rem;
-        height: 2.25rem;
+        width: 2.75rem;
+        height: 2.75rem;
         font-size: 0.85rem;
     }
 
