@@ -126,7 +126,7 @@ select {
     line-height: 1;
     pointer-events: none;
     text-align: right;
-    opacity: 0.5;
+    opacity: 0.62;
 }
 
 .canto p[data-numero-rigo-vuoto]::after {
@@ -145,7 +145,7 @@ select {
     line-height: 1;
     pointer-events: none;
     text-align: right;
-    opacity: 0.5;
+    opacity: 0.62;
 }
 
 @media (min-width: 1101px) {
@@ -2503,7 +2503,7 @@ html[data-theme="dark"] .leaflet-control-layers label {
 
 @media (max-width: 390px) {
     .poesia {
-        padding-right: 5vw;
+        padding-right: calc(5vw + 0.5rem);
         padding-left: 5vw;
     }
 
