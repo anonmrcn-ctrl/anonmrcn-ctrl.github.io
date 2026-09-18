@@ -2320,7 +2320,7 @@ html[data-theme="dark"] .leaflet-control-layers label {
     .progetto,
     .archivio {
         width: 100%;
-        padding-top: 6vh;
+        padding-top: 6rem;
         padding-right: 7vw;
         padding-left: 7vw;
     }
