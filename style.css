@@ -816,9 +816,13 @@ body.poesia-aperta {
 
 .contatti-elenco a,
 .contatti-toggle {
+    display: inline-flex;
+    min-height: 1.5rem;
+    align-items: center;
     color: inherit;
     text-decoration: underline;
     text-underline-offset: 0.15em;
+    vertical-align: middle;
 }
 
 .contatti-toggle {
@@ -2346,6 +2350,11 @@ html[data-theme="dark"] .leaflet-control-layers label {
     .autore-contatti {
         margin-top: 3rem;
         font-size: 0.8rem;
+    }
+
+    .contatti-elenco a,
+    .contatti-toggle {
+        min-height: 2.75rem;
     }
 
     .accesso-rete {
