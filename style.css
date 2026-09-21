@@ -2241,7 +2241,14 @@ html[data-theme="dark"] .leaflet-control-layers label {
         gap: 2.5rem;
     }
 
+    .menu-donazioni + .menu-contenuto {
+        gap: 0.75rem;
+    }
+
     .menu-contenuto a {
+        display: flex;
+        min-height: 2.75rem;
+        align-items: center;
         font-size: 1.8rem;
     }
 
