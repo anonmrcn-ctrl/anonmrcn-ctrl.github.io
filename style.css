@@ -587,14 +587,14 @@ select {
     transform: translateY(-50%);
 }
 
-.menu-accesso {
+.menu-principale .menu-accesso {
     width: 100%;
     margin: 0;
     padding-top: 1.25rem;
     flex: 0 0 auto;
 }
 
-.menu-accesso h2 {
+.menu-principale .menu-accesso h2 {
     margin-bottom: 0.85rem;
     font-size: 1.05rem;
 }
@@ -680,6 +680,9 @@ select {
 }
 
 .menu-installa {
+    display: inline-flex;
+    min-height: 1.5rem;
+    align-items: center;
     width: fit-content;
     padding: 0;
     border: 0;
@@ -712,6 +715,9 @@ select {
 }
 
 .menu-admin-link {
+    display: inline-flex;
+    min-height: 1.5rem;
+    align-items: center;
     align-self: flex-start;
     flex: 0 0 auto;
     margin-top: 1rem;
@@ -2250,6 +2256,14 @@ html[data-theme="dark"] .leaflet-control-layers label {
         min-height: 2.75rem;
         align-items: center;
         font-size: 1.8rem;
+    }
+
+    .menu-donazioni,
+    .menu-installa,
+    .menu-admin-link {
+        min-height: 2.75rem;
+        align-items: center;
+        box-sizing: border-box;
     }
 
     .poesia {
