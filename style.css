@@ -55,6 +55,11 @@ select {
     font: inherit;
 }
 
+::placeholder {
+    color: rgba(var(--ink-rgb), 0.62);
+    opacity: 1;
+}
+
 /* Poesia */
 
 .poesia {
