@@ -79,24 +79,24 @@ inserite nel database. Non pubblicare questi valori su GitHub.
 
 Salva e seleziona **Deploy**.
 
-## 4. Collega GitHub Pages al Worker
+## 4. Collegamento tra GitHub Pages e Worker
 
-Copia l'indirizzo pubblico del Worker, che avrà questa forma:
+Il Worker del progetto è pubblicato a questo indirizzo:
 
 ```text
-https://nnmrcn-rete.TUO-SOTTODOMINIO.workers.dev
+https://nnmrcn-rete.anonmrcn.workers.dev
 ```
 
-Inseriscilo nel file `config.js`, senza barra finale:
+Lo stesso indirizzo è configurato nel file `config.js`, senza barra finale:
 
 ```js
-window.NNMRCN_API_BASE = "https://nnmrcn-rete.TUO-SOTTODOMINIO.workers.dev";
+window.NNMRCN_API_BASE = "https://nnmrcn-rete.anonmrcn.workers.dev";
 ```
 
 Verifica il Worker aprendo:
 
 ```text
-https://nnmrcn-rete.TUO-SOTTODOMINIO.workers.dev/api/health
+https://nnmrcn-rete.anonmrcn.workers.dev/api/health
 ```
 
 Deve comparire una risposta JSON con `"ok": true`. A quel punto completa
