@@ -1,15 +1,18 @@
 (() => {
     "use strict";
 
-    const ACCESS_KEY = "nnmrcn_mayor_access";
-    const SESSION_KEY = "nnmrcn_mayor_session";
+    const ACCESS_KEY = "nnmrcn_qr_access";
+    const ACCESS_MODE_KEY = "nnmrcn_qr_mode";
+    const LEGACY_MAYOR_ACCESS_KEY = "nnmrcn_mayor_access";
+    const MAYOR_SESSION_KEY = "nnmrcn_mayor_session";
+    const LOCATION_SESSION_KEY = "nnmrcn_session";
 
     const verification = document.getElementById("accessoVerifica");
     const denied = document.getElementById("accessoNegato");
     const passwordSection = document.getElementById("accessoPassword");
-    const form = document.getElementById("accessoSindacoForm");
-    const passwordInput = document.getElementById("accessoSindacoPassword");
-    const formMessage = document.getElementById("accessoSindacoMessaggio");
+    const form = document.getElementById("accessoForm");
+    const passwordInput = document.getElementById("accessoPasswordInput");
+    const formMessage = document.getElementById("accessoMessaggio");
     const article = document.getElementById("messaggioSindaco");
     const articleTitle = document.getElementById("messaggioSindacoTitolo");
     const articleBody = document.getElementById("messaggioSindacoCorpo");
@@ -37,18 +40,59 @@
 
     function readQrAccess() {
         const url = new URL(window.location.href);
-        const accessToken = String(url.searchParams.get("chiave") || "").trim();
+        const queryToken = String(url.searchParams.get("chiave") || "").trim();
 
-        if (!accessToken) {
-            return sessionGet(ACCESS_KEY);
+        if (queryToken) {
+            const mode = url.searchParams.get("tipo") === "location"
+                ? "location"
+                : "mayor";
+
+            sessionSet(ACCESS_KEY, queryToken);
+            sessionSet(ACCESS_MODE_KEY, mode);
+            sessionRemove(LEGACY_MAYOR_ACCESS_KEY);
+            url.searchParams.delete("chiave");
+            url.searchParams.delete("tipo");
+            history.replaceState(
+                null,
+                "",
+                `${url.pathname}${url.search}${url.hash}`
+            );
+
+            return { accessToken: queryToken, mode };
         }
 
-        sessionSet(ACCESS_KEY, accessToken);
-        url.searchParams.delete("chiave");
-        const cleanUrl = `${url.pathname}${url.search}${url.hash}`;
-        history.replaceState(null, "", cleanUrl);
+        const storedToken = sessionGet(ACCESS_KEY);
+        const storedMode = sessionGet(ACCESS_MODE_KEY);
 
-        return accessToken;
+        if (storedToken && ["location", "mayor"].includes(storedMode)) {
+            return {
+                accessToken: storedToken,
+                mode: storedMode
+            };
+        }
+
+        const legacyMayorToken = sessionGet(LEGACY_MAYOR_ACCESS_KEY);
+
+        if (legacyMayorToken) {
+            sessionSet(ACCESS_KEY, legacyMayorToken);
+            sessionSet(ACCESS_MODE_KEY, "mayor");
+            sessionRemove(LEGACY_MAYOR_ACCESS_KEY);
+            return {
+                accessToken: legacyMayorToken,
+                mode: "mayor"
+            };
+        }
+
+        return {
+            accessToken: "",
+            mode: ""
+        };
+    }
+
+    function clearQrAccess() {
+        sessionRemove(ACCESS_KEY);
+        sessionRemove(ACCESS_MODE_KEY);
+        sessionRemove(LEGACY_MAYOR_ACCESS_KEY);
     }
 
     function showOnly(element) {
@@ -73,7 +117,7 @@
         }
     }
 
-    async function loadMessage(sessionToken) {
+    async function loadMayorMessage(sessionToken) {
         try {
             const data = await window.NNMRCN_API.request("/api/mayor/message", {
                 headers: {
@@ -87,19 +131,39 @@
             return true;
         } catch (error) {
             if (error.status === 401) {
-                sessionRemove(SESSION_KEY);
+                sessionRemove(MAYOR_SESSION_KEY);
                 return false;
             }
 
-            verification.textContent = "Impossibile caricare lo spazio riservato. Riprova.";
+            verification.textContent =
+                "Impossibile caricare lo spazio riservato. Riprova.";
             showOnly(verification);
             return false;
         }
     }
 
-    async function verifyAccess(accessToken) {
+    async function restoreLocationSession(sessionToken) {
         try {
-            await window.NNMRCN_API.request("/api/mayor/access", {
+            await window.NNMRCN_API.request("/api/session", {
+                headers: {
+                    Authorization: `Bearer ${sessionToken}`
+                }
+            });
+            window.location.replace("./spazio-personale.html");
+            return true;
+        } catch (_) {
+            sessionRemove(LOCATION_SESSION_KEY);
+            return false;
+        }
+    }
+
+    async function verifyAccess(accessToken, mode) {
+        const path = mode === "location"
+            ? "/api/location/access"
+            : "/api/mayor/access";
+
+        try {
+            await window.NNMRCN_API.request(path, {
                 method: "POST",
                 body: JSON.stringify({ accessToken })
             });
@@ -107,32 +171,44 @@
             passwordInput.focus();
             return true;
         } catch (_) {
-            sessionRemove(ACCESS_KEY);
+            clearQrAccess();
             showOnly(denied);
             return false;
         }
     }
 
     async function initialise() {
-        const accessToken = readQrAccess();
-        const sessionToken = sessionGet(SESSION_KEY);
+        const { accessToken, mode } = readQrAccess();
 
-        if (sessionToken && await loadMessage(sessionToken)) {
-            return;
+        if (mode === "mayor") {
+            const sessionToken = sessionGet(MAYOR_SESSION_KEY);
+
+            if (sessionToken && await loadMayorMessage(sessionToken)) {
+                return;
+            }
         }
 
-        if (!accessToken) {
+        if (mode === "location") {
+            const sessionToken = sessionGet(LOCATION_SESSION_KEY);
+
+            if (sessionToken && await restoreLocationSession(sessionToken)) {
+                return;
+            }
+        }
+
+        if (!accessToken || !mode) {
             showOnly(denied);
             return;
         }
 
-        await verifyAccess(accessToken);
+        await verifyAccess(accessToken, mode);
     }
 
     form.addEventListener("submit", async (event) => {
         event.preventDefault();
 
         const accessToken = sessionGet(ACCESS_KEY);
+        const mode = sessionGet(ACCESS_MODE_KEY);
         const password = passwordInput.value;
         const submitButton = form.querySelector("button[type='submit']");
 
@@ -140,15 +216,32 @@
         formMessage.textContent = "Verifica in corso…";
 
         try {
+            if (mode === "location") {
+                const data = await window.NNMRCN_API.request("/api/login", {
+                    method: "POST",
+                    body: JSON.stringify({ password })
+                });
+
+                sessionSet(LOCATION_SESSION_KEY, data.token);
+                passwordInput.value = "";
+                formMessage.textContent = "Accesso riconosciuto.";
+                window.location.assign("./spazio-personale.html");
+                return;
+            }
+
+            if (mode !== "mayor") {
+                throw new Error("INVALID_ACCESS_MODE");
+            }
+
             const data = await window.NNMRCN_API.request("/api/mayor/login", {
                 method: "POST",
                 body: JSON.stringify({ accessToken, password })
             });
 
-            sessionSet(SESSION_KEY, data.token);
+            sessionSet(MAYOR_SESSION_KEY, data.token);
             passwordInput.value = "";
             formMessage.textContent = "";
-            await loadMessage(data.token);
+            await loadMayorMessage(data.token);
         } catch (error) {
             formMessage.textContent = error.status === 401
                 ? "Password non riconosciuta."
@@ -160,8 +253,8 @@
     });
 
     logoutButton.addEventListener("click", async () => {
-        const sessionToken = sessionGet(SESSION_KEY);
-        sessionRemove(SESSION_KEY);
+        const sessionToken = sessionGet(MAYOR_SESSION_KEY);
+        sessionRemove(MAYOR_SESSION_KEY);
 
         if (sessionToken) {
             await window.NNMRCN_API.request("/api/mayor/logout", {

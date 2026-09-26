@@ -169,12 +169,14 @@ compare negli endpoint pubblici.
 
 ## Accesso speciale dal QR
 
-La pagina `accesso.html` non è collegata dai menu e richiede il token contenuto
-nel QR prima di mostrare il campo della password. La password speciale genera
-una sessione dedicata e non autorizza gli endpoint delle location, la mappa o lo
-spazio personale. Nel repository sono conservate soltanto impronte SHA-256 di
-credenziali casuali ad alta entropia; il QR e la password in chiaro devono
-restare nei materiali privati consegnati.
+La pagina `accesso.html` non è collegata dai menu e richiede uno dei token
+contenuti nei QR prima di mostrare il campo della password. Il QR ordinario
+accetta le password delle location e porta allo spazio personale; il QR del
+sindaco accetta soltanto la password speciale e apre il relativo messaggio.
+La password speciale genera una sessione dedicata e non autorizza gli endpoint
+delle location, la mappa o lo spazio personale. Nel repository sono conservate
+soltanto impronte SHA-256 di credenziali casuali ad alta entropia; i QR e la
+password speciale in chiaro devono restare nei materiali privati consegnati.
 
 ## 6. Attiva le notifiche push
 

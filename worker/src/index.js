@@ -14,6 +14,8 @@ const MAYOR_PASSWORD_SHA256 =
     "a67e12f44ada7f5ad5c4e30a53c6df570721e83e2ff6ea42ce38eaf678891faa";
 const MAYOR_ACCESS_TOKEN_SHA256 =
     "5f9c3578b2ddecae87e38f8f25738f0c60624a99bc95280571cc211366cdacb3";
+const LOCATION_ACCESS_TOKEN_SHA256 =
+    "e5cf056306b37f875f6bdae97ab0fbb39261102d06c30cee7045f324c79d83d9";
 const MESSAGE_LIMIT_PER_HOUR = 5;
 const MAX_MESSAGE_LENGTH = 1500;
 const MAX_CONTACT_NAME_LENGTH = 80;
@@ -247,6 +249,10 @@ export default {
 
             if (request.method === "POST" && path === "/api/mayor/access") {
                 return await checkMayorAccess(request, env);
+            }
+
+            if (request.method === "POST" && path === "/api/location/access") {
+                return await checkLocationAccess(request, env);
             }
 
             if (request.method === "POST" && path === "/api/mayor/login") {
@@ -590,6 +596,21 @@ async function checkMayorAccess(request, env) {
     const accessToken = String(body?.accessToken || "").trim();
 
     if (!(await matchesSha256(accessToken, MAYOR_ACCESS_TOKEN_SHA256))) {
+        return json(request, env, {
+            error: "Collegamento di accesso non valido."
+        }, 401);
+    }
+
+    return json(request, env, {
+        ok: true
+    });
+}
+
+async function checkLocationAccess(request, env) {
+    const body = await readJson(request);
+    const accessToken = String(body?.accessToken || "").trim();
+
+    if (!(await matchesSha256(accessToken, LOCATION_ACCESS_TOKEN_SHA256))) {
         return json(request, env, {
             error: "Collegamento di accesso non valido."
         }, 401);
