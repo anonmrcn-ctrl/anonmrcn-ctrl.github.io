@@ -3,7 +3,7 @@
 
     const apiClient = window.NNMRCN_API;
     const notifications = window.NNMRCN_NOTIFICHE;
-    const SESSION_KEY = "nnmrcn_session";
+    const sessionStore = window.NNMRCN_SESSION;
 
     const elements = {
         loginForm: document.getElementById("loginForm"),
@@ -27,12 +27,13 @@
     if (
         !apiClient ||
         !notifications ||
+        !sessionStore ||
         Object.values(elements).some((element) => !element)
     ) {
         return;
     }
 
-    let sessionToken = sessionStorage.getItem(SESSION_KEY) || "";
+    let sessionToken = sessionStore.read();
     let sessionLocation = null;
 
     const pushNotifications = notifications.create({
@@ -102,9 +103,10 @@
             });
 
             sessionToken = data.token;
-            sessionStorage.setItem(SESSION_KEY, sessionToken);
+            sessionStore.write(sessionToken);
             elements.loginPassword.value = "";
             setLoggedIn(data.location);
+            showWelcomeIfRequired(data);
         } catch (error) {
             elements.loginMessage.textContent =
                 error.status === 401
@@ -165,6 +167,7 @@
         try {
             const data = await api("/api/session");
             setLoggedIn(data.location);
+            showWelcomeIfRequired(data);
         } catch (_) {
             clearSession();
         }
@@ -199,10 +202,20 @@
         );
     }
 
+    function showWelcomeIfRequired(data) {
+        if (!data?.welcomeRequired) {
+            return;
+        }
+
+        sessionStore.showWelcome(() => api("/api/welcome/complete", {
+            method: "POST"
+        }));
+    }
+
     function clearSession() {
         sessionToken = "";
         sessionLocation = null;
-        sessionStorage.removeItem(SESSION_KEY);
+        sessionStore.clear();
         elements.loginLoggedOut.hidden = false;
         elements.loginLoggedIn.hidden = true;
         elements.loginLocation.textContent = "";

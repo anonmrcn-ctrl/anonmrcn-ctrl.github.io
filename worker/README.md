@@ -34,6 +34,11 @@ Le sessioni dedicate allo spazio «Messaggio per il sindaco» sono definite nell
 migrazione `0005_mayor_access.sql`. Sono archiviate separatamente dalle sessioni
 delle location e il Worker crea automaticamente le tabelle al primo accesso.
 
+La schermata di benvenuto delle location usa il campo aggiunto dalla migrazione
+non distruttiva `0006_location_welcome.sql`. Le sessioni delle location durano
+un anno e, durante l'uso del sito, vengono rinnovate al massimo una volta al
+giorno. Il pulsante «Esci» le revoca immediatamente.
+
 Se le location non sono ancora presenti, esegui successivamente il contenuto del
 file privato `nnmrcn_seed_private_d1_20260823.sql` aggiornato. Contiene le 20
 location, ma cancella prima messaggi, sessioni e location esistenti: usalo

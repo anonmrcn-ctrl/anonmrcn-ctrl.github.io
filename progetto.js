@@ -5,7 +5,7 @@
     const mapExtensions = window.NNMRCN_MAP;
     const notebook = window.NNMRCN_TACCUINO;
     const settingsManager = window.NNMRCN_SETTINGS;
-    const SESSION_KEY = "nnmrcn_session";
+    const sessionStore = window.NNMRCN_SESSION;
     const MAP_STATE_KEY = "nnmrcn_map_state_v1";
     const MOBILE_COMPARISON_QUERY = "(max-width: 700px)";
     const poemMetric = window.NNMRCN_POEM_METRIC;
@@ -306,7 +306,7 @@
         percorsoNarrativoAvanti: document.getElementById("percorsoNarrativoAvanti")
     };
 
-    let sessionToken = sessionStorage.getItem(SESSION_KEY) || "";
+    let sessionToken = sessionStore?.read() || "";
     let sessionLocation = null;
     let locations = [];
     let todayLayer = null;
@@ -1726,10 +1726,11 @@
             });
 
             sessionToken = data.token;
-            sessionStorage.setItem(SESSION_KEY, sessionToken);
+            sessionStore.write(sessionToken);
             elements.loginPassword.value = "";
 
             setLoggedIn(data.location);
+            showWelcomeIfRequired(data);
             await loadNetwork();
         } catch (error) {
             elements.loginMessage.textContent =
@@ -1798,6 +1799,7 @@
         try {
             const data = await api("/api/session");
             setLoggedIn(data.location);
+            showWelcomeIfRequired(data);
             await loadNetwork();
 
         } catch (_) {
@@ -1830,12 +1832,22 @@
         );
     }
 
+    function showWelcomeIfRequired(data) {
+        if (!data?.welcomeRequired) {
+            return;
+        }
+
+        sessionStore.showWelcome(() => api("/api/welcome/complete", {
+            method: "POST"
+        }));
+    }
+
     function clearSession() {
         sessionToken = "";
         sessionLocation = null;
         locations = [];
 
-        sessionStorage.removeItem(SESSION_KEY);
+        sessionStore.clear();
         locationsLayer.clearLayers();
 
         elements.loginLoggedOut.hidden = false;

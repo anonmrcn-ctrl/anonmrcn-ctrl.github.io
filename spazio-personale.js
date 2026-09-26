@@ -3,7 +3,7 @@
 
     const apiClient = window.NNMRCN_API;
     const settingsManager = window.NNMRCN_SETTINGS;
-    const SESSION_KEY = "nnmrcn_session";
+    const sessionStore = window.NNMRCN_SESSION;
     const MAX_BATCH_RECIPIENTS = 5;
     const MAX_MESSAGE_LENGTH = 1500;
 
@@ -38,7 +38,7 @@
         return;
     }
 
-    let sessionToken = sessionStorage.getItem(SESSION_KEY) || "";
+    let sessionToken = sessionStore?.read() || "";
     let sessionLocation = null;
     let locations = [];
     let selectedRecipientIds = new Set();
@@ -49,7 +49,7 @@
     bindInterface();
 
     document.addEventListener("nnmrcn:sessionchange", (event) => {
-        sessionToken = sessionStorage.getItem(SESSION_KEY) || "";
+        sessionToken = sessionStore?.read() || "";
 
         if (!event.detail?.authenticated) {
             lockSpace();
@@ -88,7 +88,7 @@
             return await apiClient.request(path, { ...options, headers });
         } catch (error) {
             if (error.status === 401) {
-                sessionStorage.removeItem(SESSION_KEY);
+                sessionStore?.clear();
                 document.dispatchEvent(new CustomEvent("nnmrcn:sessioninvalid"));
                 lockSpace();
             }

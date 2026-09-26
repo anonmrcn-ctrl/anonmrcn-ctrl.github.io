@@ -5,7 +5,7 @@
     const ACCESS_MODE_KEY = "nnmrcn_qr_mode";
     const LEGACY_MAYOR_ACCESS_KEY = "nnmrcn_mayor_access";
     const MAYOR_SESSION_KEY = "nnmrcn_mayor_session";
-    const LOCATION_SESSION_KEY = "nnmrcn_session";
+    const locationSession = window.NNMRCN_SESSION;
 
     const verification = document.getElementById("accessoVerifica");
     const denied = document.getElementById("accessoNegato");
@@ -152,7 +152,7 @@
             window.location.replace("./spazio-personale.html");
             return true;
         } catch (_) {
-            sessionRemove(LOCATION_SESSION_KEY);
+            locationSession.clear();
             return false;
         }
     }
@@ -189,7 +189,7 @@
         }
 
         if (mode === "location") {
-            const sessionToken = sessionGet(LOCATION_SESSION_KEY);
+            const sessionToken = locationSession.read();
 
             if (sessionToken && await restoreLocationSession(sessionToken)) {
                 return;
@@ -222,7 +222,7 @@
                     body: JSON.stringify({ password })
                 });
 
-                sessionSet(LOCATION_SESSION_KEY, data.token);
+                locationSession.write(data.token);
                 passwordInput.value = "";
                 formMessage.textContent = "Accesso riconosciuto.";
                 window.location.assign("./spazio-personale.html");

@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS locations (
     lon REAL NOT NULL,
     is_visible INTEGER NOT NULL DEFAULT 1
         CHECK (is_visible IN (0, 1)),
+    welcome_seen_at INTEGER,
     password_lookup TEXT NOT NULL UNIQUE,
     password_salt TEXT NOT NULL,
     password_hash TEXT NOT NULL

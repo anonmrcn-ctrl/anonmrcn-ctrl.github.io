@@ -8,7 +8,8 @@ import {
 
 // workerd refuses PBKDF2 requests above 100,000 iterations.
 const PBKDF2_ITERATIONS = 100000;
-const SESSION_TTL_MS = 12 * 60 * 60 * 1000;
+const SESSION_TTL_MS = 365 * 24 * 60 * 60 * 1000;
+const SESSION_RENEWAL_INTERVAL_MS = 24 * 60 * 60 * 1000;
 const MAYOR_SESSION_TTL_MS = 4 * 60 * 60 * 1000;
 const MAYOR_PASSWORD_SHA256 =
     "a67e12f44ada7f5ad5c4e30a53c6df570721e83e2ff6ea42ce38eaf678891faa";
@@ -182,6 +183,10 @@ const LOCATION_PROFILE_COLUMNS = Object.freeze([
         name: "is_visible",
         statement:
             "ALTER TABLE locations ADD COLUMN is_visible INTEGER NOT NULL DEFAULT 1 CHECK (is_visible IN (0, 1))"
+    },
+    {
+        name: "welcome_seen_at",
+        statement: "ALTER TABLE locations ADD COLUMN welcome_seen_at INTEGER"
     }
 ]);
 const MESSAGE_ARCHIVE_COLUMNS = Object.freeze([
@@ -245,6 +250,13 @@ export default {
 
             if (request.method === "POST" && path === "/api/logout") {
                 return await logout(request, env);
+            }
+
+            if (
+                request.method === "POST" &&
+                path === "/api/welcome/complete"
+            ) {
+                return await completeWelcome(request, env);
             }
 
             if (request.method === "POST" && path === "/api/mayor/access") {
@@ -492,6 +504,7 @@ async function login(request, env) {
             address,
             username,
             is_visible,
+            welcome_seen_at,
             password_salt,
             password_hash
         FROM locations
@@ -545,6 +558,7 @@ async function login(request, env) {
     return json(request, env, {
         token,
         expiresAt,
+        welcomeRequired: location.welcome_seen_at === null,
         location: {
             id: location.id,
             address: location.address,
@@ -570,7 +584,30 @@ async function sessionInfo(request, env) {
             username: session.username,
             visible: Number(session.is_visible) === 1
         },
-        expiresAt: session.expires_at
+        expiresAt: session.expires_at,
+        welcomeRequired: session.welcome_seen_at === null
+    });
+}
+
+async function completeWelcome(request, env) {
+    const session = await requireSession(request, env);
+
+    if (!session) {
+        return unauthorized(request, env);
+    }
+
+    await env.DB.prepare(`
+        UPDATE locations
+        SET welcome_seen_at = COALESCE(welcome_seen_at, ?)
+        WHERE id = ?
+    `).bind(
+        Date.now(),
+        session.location_id
+    ).run();
+
+    return json(request, env, {
+        ok: true,
+        welcomeRequired: false
     });
 }
 
@@ -3420,7 +3457,8 @@ async function requireSession(request, env) {
             s.expires_at,
             l.address,
             l.username,
-            l.is_visible
+            l.is_visible,
+            l.welcome_seen_at
         FROM sessions s
         JOIN locations l
             ON l.id = s.location_id
@@ -3433,7 +3471,29 @@ async function requireSession(request, env) {
         now
     ).first();
 
-    return session || null;
+    if (!session) {
+        return null;
+    }
+
+    const renewalThreshold =
+        now + SESSION_TTL_MS - SESSION_RENEWAL_INTERVAL_MS;
+
+    if (Number(session.expires_at) <= renewalThreshold) {
+        const expiresAt = now + SESSION_TTL_MS;
+
+        await env.DB.prepare(`
+            UPDATE sessions
+            SET expires_at = ?
+            WHERE session_hash = ?
+        `).bind(
+            expiresAt,
+            sessionHash
+        ).run();
+
+        session.expires_at = expiresAt;
+    }
+
+    return session;
 }
 
 async function requireMayorSession(request, env) {
