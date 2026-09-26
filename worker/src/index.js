@@ -5,7 +5,6 @@ import {
     removePushSubscription,
     savePushSubscription
 } from "./push.js";
-import { applyLocationRefresh } from "./location-refresh-20260926.js";
 
 // workerd refuses PBKDF2 requests above 100,000 iterations.
 const PBKDF2_ITERATIONS = 100000;
@@ -260,15 +259,6 @@ export default {
 
             if (request.method === "POST" && path === "/api/mayor/logout") {
                 return await mayorLogout(request, env);
-            }
-
-            if (
-                request.method === "POST" &&
-                path === "/api/internal/location-refresh-20260926"
-            ) {
-                const body = await readJson(request);
-                const result = await applyLocationRefresh(env, body?.key);
-                return json(request, env, result);
             }
 
             if (request.method === "GET" && path === "/api/locations") {
