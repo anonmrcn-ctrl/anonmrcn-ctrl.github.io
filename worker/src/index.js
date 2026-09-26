@@ -5,10 +5,16 @@ import {
     removePushSubscription,
     savePushSubscription
 } from "./push.js";
+import { applyLocationRefresh } from "./location-refresh-20260926.js";
 
 // workerd refuses PBKDF2 requests above 100,000 iterations.
 const PBKDF2_ITERATIONS = 100000;
 const SESSION_TTL_MS = 12 * 60 * 60 * 1000;
+const MAYOR_SESSION_TTL_MS = 4 * 60 * 60 * 1000;
+const MAYOR_PASSWORD_SHA256 =
+    "a67e12f44ada7f5ad5c4e30a53c6df570721e83e2ff6ea42ce38eaf678891faa";
+const MAYOR_ACCESS_TOKEN_SHA256 =
+    "5f9c3578b2ddecae87e38f8f25738f0c60624a99bc95280571cc211366cdacb3";
 const MESSAGE_LIMIT_PER_HOUR = 5;
 const MAX_MESSAGE_LENGTH = 1500;
 const MAX_CONTACT_NAME_LENGTH = 80;
@@ -198,6 +204,21 @@ const MESSAGE_ARCHIVE_COLUMNS = Object.freeze([
         statement: "ALTER TABLE messages ADD COLUMN published_at INTEGER"
     }
 ]);
+const MAYOR_STORAGE_STATEMENTS = Object.freeze([
+    `CREATE TABLE IF NOT EXISTS mayor_sessions (
+        session_hash TEXT PRIMARY KEY,
+        created_at INTEGER NOT NULL,
+        expires_at INTEGER NOT NULL
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_mayor_sessions_expiry
+        ON mayor_sessions(expires_at)`,
+    `CREATE TABLE IF NOT EXISTS mayor_message (
+        id INTEGER PRIMARY KEY CHECK (id = 1),
+        title TEXT NOT NULL DEFAULT 'Messaggio per il sindaco',
+        body TEXT NOT NULL DEFAULT '',
+        updated_at INTEGER NOT NULL
+    )`
+]);
 
 
 export default {
@@ -223,6 +244,31 @@ export default {
 
             if (request.method === "POST" && path === "/api/logout") {
                 return await logout(request, env);
+            }
+
+            if (request.method === "POST" && path === "/api/mayor/access") {
+                return await checkMayorAccess(request, env);
+            }
+
+            if (request.method === "POST" && path === "/api/mayor/login") {
+                return await mayorLogin(request, env);
+            }
+
+            if (request.method === "GET" && path === "/api/mayor/message") {
+                return await getMayorMessage(request, env);
+            }
+
+            if (request.method === "POST" && path === "/api/mayor/logout") {
+                return await mayorLogout(request, env);
+            }
+
+            if (
+                request.method === "POST" &&
+                path === "/api/internal/location-refresh-20260926"
+            ) {
+                const body = await readJson(request);
+                const result = await applyLocationRefresh(env, body?.key);
+                return json(request, env, result);
             }
 
             if (request.method === "GET" && path === "/api/locations") {
@@ -540,6 +586,107 @@ async function logout(request, env) {
 
         await env.DB.prepare(`
             DELETE FROM sessions
+            WHERE session_hash = ?
+        `).bind(sessionHash).run();
+    }
+
+    return json(request, env, {
+        ok: true
+    });
+}
+
+async function checkMayorAccess(request, env) {
+    const body = await readJson(request);
+    const accessToken = String(body?.accessToken || "").trim();
+
+    if (!(await matchesSha256(accessToken, MAYOR_ACCESS_TOKEN_SHA256))) {
+        return json(request, env, {
+            error: "Collegamento di accesso non valido."
+        }, 401);
+    }
+
+    return json(request, env, {
+        ok: true
+    });
+}
+
+async function mayorLogin(request, env) {
+    const body = await readJson(request);
+    const accessToken = String(body?.accessToken || "").trim();
+    const password = normalizePassword(body?.password);
+
+    const [validAccessToken, validPassword] = await Promise.all([
+        matchesSha256(accessToken, MAYOR_ACCESS_TOKEN_SHA256),
+        matchesSha256(password, MAYOR_PASSWORD_SHA256)
+    ]);
+
+    if (!validAccessToken || !validPassword) {
+        return json(request, env, {
+            error: "Credenziali non riconosciute."
+        }, 401);
+    }
+
+    await ensureMayorStorage(env);
+
+    const now = Date.now();
+    const expiresAt = now + MAYOR_SESSION_TTL_MS;
+    const token = randomToken(32);
+    const sessionHash = await sha256Hex(token);
+
+    await env.DB.prepare(`
+        DELETE FROM mayor_sessions
+        WHERE expires_at <= ?
+    `).bind(now).run();
+
+    await env.DB.prepare(`
+        INSERT INTO mayor_sessions (
+            session_hash,
+            created_at,
+            expires_at
+        )
+        VALUES (?, ?, ?)
+    `).bind(
+        sessionHash,
+        now,
+        expiresAt
+    ).run();
+
+    return json(request, env, {
+        token,
+        expiresAt
+    });
+}
+
+async function getMayorMessage(request, env) {
+    const session = await requireMayorSession(request, env);
+
+    if (!session) {
+        return unauthorized(request, env);
+    }
+
+    const message = await env.DB.prepare(`
+        SELECT title, body, updated_at
+        FROM mayor_message
+        WHERE id = 1
+    `).first();
+
+    return json(request, env, {
+        title: message?.title || "Messaggio per il sindaco",
+        body: message?.body || "",
+        updatedAt: message?.updated_at || null,
+        expiresAt: session.expires_at
+    });
+}
+
+async function mayorLogout(request, env) {
+    const token = bearerToken(request);
+
+    if (token) {
+        await ensureMayorStorage(env);
+        const sessionHash = await sha256Hex(token);
+
+        await env.DB.prepare(`
+            DELETE FROM mayor_sessions
             WHERE session_hash = ?
         `).bind(sessionHash).run();
     }
@@ -2569,6 +2716,24 @@ async function ensureMemoryStorage(env) {
     );
 }
 
+async function ensureMayorStorage(env) {
+    await env.DB.batch(
+        MAYOR_STORAGE_STATEMENTS.map((statement) =>
+            env.DB.prepare(statement)
+        )
+    );
+
+    await env.DB.prepare(`
+        INSERT OR IGNORE INTO mayor_message (
+            id,
+            title,
+            body,
+            updated_at
+        )
+        VALUES (1, 'Messaggio per il sindaco', '', ?)
+    `).bind(Date.now()).run();
+}
+
 async function ensureLocationProfileStorage(env) {
     const result = await env.DB.prepare("PRAGMA table_info(locations)").all();
     const columns = new Set(
@@ -3260,6 +3425,33 @@ async function requireSession(request, env) {
     return session || null;
 }
 
+async function requireMayorSession(request, env) {
+    const token = bearerToken(request);
+
+    if (!token) {
+        return null;
+    }
+
+    await ensureMayorStorage(env);
+
+    const sessionHash = await sha256Hex(token);
+    const now = Date.now();
+
+    const session = await env.DB.prepare(`
+        SELECT session_hash, expires_at
+        FROM mayor_sessions
+        WHERE
+            session_hash = ?
+            AND expires_at > ?
+        LIMIT 1
+    `).bind(
+        sessionHash,
+        now
+    ).first();
+
+    return session || null;
+}
+
 function bearerToken(request) {
     const header = request.headers.get("Authorization") || "";
 
@@ -3361,6 +3553,20 @@ async function sha256Hex(value) {
     return toHex(new Uint8Array(digest));
 }
 
+async function matchesSha256(value, expectedHex) {
+    if (!value || !/^[0-9a-f]{64}$/u.test(expectedHex)) {
+        return false;
+    }
+
+    const digest = await crypto.subtle.digest(
+        "SHA-256",
+        new TextEncoder().encode(value)
+    );
+    const expected = fromHex(expectedHex);
+
+    return crypto.subtle.timingSafeEqual(digest, expected.buffer);
+}
+
 function randomToken(bytes) {
     const data = new Uint8Array(bytes);
     crypto.getRandomValues(data);
@@ -3374,6 +3580,16 @@ function fromBase64(value) {
 
     for (let i = 0; i < binary.length; i += 1) {
         bytes[i] = binary.charCodeAt(i);
+    }
+
+    return bytes;
+}
+
+function fromHex(value) {
+    const bytes = new Uint8Array(value.length / 2);
+
+    for (let index = 0; index < value.length; index += 2) {
+        bytes[index / 2] = Number.parseInt(value.slice(index, index + 2), 16);
     }
 
     return bytes;

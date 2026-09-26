@@ -30,6 +30,10 @@ Le voci enciclopediche e la relativa cronologia sono definite nella migrazione
 migrazione non distruttiva `0004_wiki_images.sql`. Anche queste tabelle vengono
 create automaticamente dal Worker al primo utilizzo.
 
+Le sessioni dedicate allo spazio «Messaggio per il sindaco» sono definite nella
+migrazione `0005_mayor_access.sql`. Sono archiviate separatamente dalle sessioni
+delle location e il Worker crea automaticamente le tabelle al primo accesso.
+
 Se le location non sono ancora presenti, esegui successivamente il contenuto del
 file privato `nnmrcn_seed_private_d1_20260823.sql` aggiornato. Contiene le 20
 location, ma cancella prima messaggi, sessioni e location esistenti: usalo
@@ -162,6 +166,15 @@ Il consenso alla pubblicazione è obbligatorio. Dopo l’invio il browser conser
 un codice di ritiro con cui l’autore può controllare lo stato e cancellare la
 memoria anche se è già pubblicata. Il codice non viene inviato all’admin e non
 compare negli endpoint pubblici.
+
+## Accesso speciale dal QR
+
+La pagina `accesso.html` non è collegata dai menu e richiede il token contenuto
+nel QR prima di mostrare il campo della password. La password speciale genera
+una sessione dedicata e non autorizza gli endpoint delle location, la mappa o lo
+spazio personale. Nel repository sono conservate soltanto impronte SHA-256 di
+credenziali casuali ad alta entropia; il QR e la password in chiaro devono
+restare nei materiali privati consegnati.
 
 ## 6. Attiva le notifiche push
 

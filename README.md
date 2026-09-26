@@ -14,6 +14,7 @@ Sito GitHub Pages del progetto nnMrcn.
 - `memorie.html` — mappa dei ricordi degli abitanti e invio di testo, fotografie o audio
 - `taccuino.html` — raccolta personale locale con mappa ed esportazione GeoJSON/JSON
 - `admin.html` — moderazione, riepilogo, ricerca ed esportazione dei messaggi
+- `accesso.html` — ingresso riservato dal QR e spazio «Messaggio per il sindaco»
 - `style.css` — stili comuni del sito
 - `spazi.css` — spazi pubblico e personale
 - `voci.css` e `voci.js` — visualizzazione, formattazione e modifica delle voci
@@ -24,6 +25,7 @@ Sito GitHub Pages del progetto nnMrcn.
 - `tema.js` — tema, lettura e preferenze tecniche della mappa
 - `poesia-metrica.js` — riferimenti condivisi alle righe della poesia
 - `api.js` — richieste HTTP condivise verso il backend
+- `accesso.js` e `accesso.css` — verifica del QR, accesso speciale e pagina riservata
 - `mappa.js` — dati geografici condivisi ed estensioni della mappa
 - `progetto.js` — mappa, paesaggi, percorso narrativo e accesso
 - `spazio-personale.js` — profilo, rete, messaggistica e posta della location

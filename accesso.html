@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow, noarchive">
+    <meta name="referrer" content="no-referrer">
+    <meta name="theme-color" content="#f4f1e8">
+    <title>Accesso — nnMrcn</title>
+    <script src="./tema.js?v=20260828-settings2"></script>
+    <link rel="stylesheet" href="./style.css?v=20260924-menu-label1">
+    <link rel="stylesheet" href="./accesso.css?v=20260926-sindaco1">
+</head>
+
+<body class="pagina-accesso-speciale">
+    <main class="accesso-speciale" aria-labelledby="accessoSpecialeTitolo">
+        <header class="accesso-speciale-intestazione">
+            <p class="accesso-speciale-marchio">nnMrcn</p>
+            <h1 id="accessoSpecialeTitolo">Accesso</h1>
+            <p>
+                Inserisci la password stampata sul foglio, appena sopra il codice QR.
+            </p>
+        </header>
+
+        <section
+            class="accesso-speciale-stato"
+            id="accessoVerifica"
+            aria-live="polite"
+        >
+            Verifica del collegamento in corso…
+        </section>
+
+        <section id="accessoNegato" hidden>
+            <h2>Collegamento necessario</h2>
+            <p>
+                Questa pagina può essere aperta soltanto dal codice QR presente
+                sul foglio consegnato.
+            </p>
+        </section>
+
+        <section id="accessoPassword" hidden aria-labelledby="accessoPasswordTitolo">
+            <h2 id="accessoPasswordTitolo">Password</h2>
+
+            <form class="accesso-speciale-form" id="accessoSindacoForm">
+                <label for="accessoSindacoPassword">Password di accesso</label>
+                <input
+                    id="accessoSindacoPassword"
+                    name="password"
+                    type="password"
+                    autocomplete="current-password"
+                    inputmode="text"
+                    required
+                >
+                <button type="submit">Accedi</button>
+            </form>
+
+            <p
+                class="accesso-speciale-messaggio"
+                id="accessoSindacoMessaggio"
+                aria-live="polite"
+            ></p>
+        </section>
+
+        <article id="messaggioSindaco" hidden aria-labelledby="messaggioSindacoTitolo">
+            <p class="accesso-speciale-etichetta">Spazio riservato</p>
+            <h2 id="messaggioSindacoTitolo">Messaggio per il sindaco</h2>
+            <div class="messaggio-sindaco-corpo" id="messaggioSindacoCorpo"></div>
+            <button class="accesso-speciale-esci" id="accessoSindacoEsci" type="button">
+                Esci
+            </button>
+        </article>
+    </main>
+
+    <script src="./config.js"></script>
+    <script src="./api.js"></script>
+    <script src="./accesso.js?v=20260926-sindaco1"></script>
+</body>
+</html>

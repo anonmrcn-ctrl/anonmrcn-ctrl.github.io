@@ -1,0 +1,126 @@
+.pagina-accesso-speciale {
+    min-height: 100vh;
+    min-height: 100dvh;
+    display: grid;
+    place-items: center;
+    padding: clamp(1rem, 4vw, 3rem);
+}
+
+.accesso-speciale {
+    width: min(42rem, 100%);
+    border: 1px solid var(--line);
+    background: var(--surface);
+    box-shadow: 0 1.5rem 4rem rgba(var(--ink-rgb), 0.08);
+}
+
+.accesso-speciale > * {
+    padding: clamp(1.35rem, 5vw, 3rem);
+}
+
+.accesso-speciale > * + * {
+    border-top: 1px solid var(--line);
+}
+
+.accesso-speciale-intestazione {
+    background: var(--paper);
+}
+
+.accesso-speciale-marchio,
+.accesso-speciale-etichetta {
+    margin: 0 0 1rem;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+}
+
+.accesso-speciale h1,
+.accesso-speciale h2 {
+    margin-top: 0;
+    line-height: 1.12;
+}
+
+.accesso-speciale h1 {
+    margin-bottom: 1rem;
+    font-size: clamp(2.8rem, 10vw, 5rem);
+    font-weight: 400;
+}
+
+.accesso-speciale h2 {
+    font-size: clamp(1.65rem, 5vw, 2.35rem);
+}
+
+.accesso-speciale p:last-child {
+    margin-bottom: 0;
+}
+
+.accesso-speciale-stato {
+    min-height: 5rem;
+}
+
+.accesso-speciale-form {
+    display: grid;
+    gap: 0.85rem;
+}
+
+.accesso-speciale-form label {
+    font-weight: 700;
+}
+
+.accesso-speciale-form input,
+.accesso-speciale-form button,
+.accesso-speciale-esci {
+    min-height: 3.25rem;
+    border: 1px solid var(--ink);
+    border-radius: 0;
+}
+
+.accesso-speciale-form input {
+    width: 100%;
+    padding: 0.7rem 0.85rem;
+    background: var(--paper);
+    color: var(--ink);
+}
+
+.accesso-speciale-form button,
+.accesso-speciale-esci {
+    padding: 0.7rem 1.2rem;
+    background: var(--ink);
+    color: var(--paper);
+    cursor: pointer;
+}
+
+.accesso-speciale-form button:disabled {
+    cursor: wait;
+    opacity: 0.62;
+}
+
+.accesso-speciale-messaggio {
+    min-height: 1.55em;
+    margin-top: 1rem;
+}
+
+.messaggio-sindaco-corpo {
+    margin: 2rem 0;
+    white-space: pre-wrap;
+}
+
+.messaggio-sindaco-corpo:empty {
+    min-height: 8rem;
+    border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+}
+
+@media (max-width: 540px) {
+    .pagina-accesso-speciale {
+        place-items: start center;
+        padding: 0;
+    }
+
+    .accesso-speciale {
+        min-height: 100vh;
+        min-height: 100dvh;
+        border: 0;
+        box-shadow: none;
+    }
+}
