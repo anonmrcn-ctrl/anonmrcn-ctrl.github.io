@@ -225,6 +225,7 @@ const MAYOR_STORAGE_STATEMENTS = Object.freeze([
         updated_at INTEGER NOT NULL
     )`
 ]);
+const mayorStorageInitializations = new WeakMap();
 
 
 export default {
@@ -2765,6 +2766,20 @@ async function ensureMemoryStorage(env) {
 }
 
 async function ensureMayorStorage(env) {
+    let initialization = mayorStorageInitializations.get(env.DB);
+
+    if (!initialization) {
+        initialization = initializeMayorStorage(env).catch((error) => {
+            mayorStorageInitializations.delete(env.DB);
+            throw error;
+        });
+        mayorStorageInitializations.set(env.DB, initialization);
+    }
+
+    await initialization;
+}
+
+async function initializeMayorStorage(env) {
     await env.DB.batch(
         MAYOR_STORAGE_STATEMENTS.map((statement) =>
             env.DB.prepare(statement)
