@@ -2626,6 +2626,16 @@ html[data-theme="dark"] .leaflet-control-layers label {
 }
 
 @media (max-width: 390px) {
+    .menu-donazioni {
+        margin-top: 4rem;
+    }
+
+    .menu-contenuto {
+        flex: 0 0 auto;
+        justify-content: flex-start;
+        padding-top: 1rem;
+    }
+
     .impostazioni-pannello h2 {
         font-size: 1.6rem;
     }
