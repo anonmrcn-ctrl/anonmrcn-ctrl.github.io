@@ -45,6 +45,7 @@
     let currentRecipients = [];
     let map = null;
     let locationsLayer = null;
+    let messagePreviouslyFocusedElement = null;
 
     bindInterface();
 
@@ -66,6 +67,7 @@
         elements.recipientContinue.addEventListener("click", continueToMessage);
         elements.inboxRefresh.addEventListener("click", loadInbox);
         elements.messageClose.addEventListener("click", closeMessage);
+        elements.messageOverlay.addEventListener("keydown", trapMessageFocus);
         elements.messageText.addEventListener("input", updateMessageCounter);
         elements.messageForm.addEventListener("change", syncArchiveConsent);
         elements.messageForm.addEventListener("submit", sendMessage);
@@ -344,6 +346,7 @@
     }
 
     function openMessageComposer() {
+        messagePreviouslyFocusedElement = elements.newMessage;
         updateMessageRecipientSummary();
         elements.messageForm.reset();
         elements.messageStatus.textContent = "";
@@ -355,13 +358,46 @@
     }
 
     function closeMessage() {
+        const returnFocus = messagePreviouslyFocusedElement;
+
         elements.messageOverlay.hidden = true;
+        messagePreviouslyFocusedElement = null;
         currentRecipients = [];
         selectedRecipientIds.clear();
         renderRecipientList();
         updateRecipientSelectionUi();
         renderLocations();
         document.body.classList.remove("poesia-aperta");
+
+        returnFocus?.focus({ preventScroll: true });
+    }
+
+    function trapMessageFocus(event) {
+        if (event.key !== "Tab" || elements.messageOverlay.hidden) {
+            return;
+        }
+
+        const focusableElements = Array.from(
+            elements.messageOverlay.querySelectorAll(
+                "button:not([disabled]), input:not([disabled]), " +
+                "select:not([disabled]), textarea:not([disabled]), " +
+                'a[href], [tabindex]:not([tabindex="-1"])'
+            )
+        ).filter((element) => element.getClientRects().length > 0);
+        const firstElement = focusableElements[0];
+        const lastElement = focusableElements[focusableElements.length - 1];
+
+        if (!firstElement || !lastElement) {
+            return;
+        }
+
+        if (event.shiftKey && document.activeElement === firstElement) {
+            event.preventDefault();
+            lastElement.focus();
+        } else if (!event.shiftKey && document.activeElement === lastElement) {
+            event.preventDefault();
+            firstElement.focus();
+        }
     }
 
     function updateMessageCounter() {
