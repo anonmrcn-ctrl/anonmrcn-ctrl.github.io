@@ -1564,6 +1564,7 @@
             toggleLocationVisibility
         );
         elements.poesiaClose.addEventListener("click", closePoem);
+        elements.poesiaOverlay.addEventListener("keydown", trapPoemFocus);
         elements.mappaGuidaClose.addEventListener("click", dismissMapGuide);
         elements.confrontoMappaButton.addEventListener(
             "click",
@@ -1964,6 +1965,36 @@
     function closePoem() {
         elements.poesiaOverlay.hidden = true;
         document.body.classList.remove("poesia-aperta");
+
+        elements.map.focus({ preventScroll: true });
+    }
+
+    function trapPoemFocus(event) {
+        if (event.key !== "Tab" || elements.poesiaOverlay.hidden) {
+            return;
+        }
+
+        const focusableElements = Array.from(
+            elements.poesiaOverlay.querySelectorAll(
+                "button:not([disabled]), input:not([disabled]), " +
+                "select:not([disabled]), textarea:not([disabled]), " +
+                'a[href], [tabindex]:not([tabindex="-1"])'
+            )
+        ).filter((element) => element.getClientRects().length > 0);
+        const firstElement = focusableElements[0];
+        const lastElement = focusableElements[focusableElements.length - 1];
+
+        if (!firstElement || !lastElement) {
+            return;
+        }
+
+        if (event.shiftKey && document.activeElement === firstElement) {
+            event.preventDefault();
+            lastElement.focus();
+        } else if (!event.shiftKey && document.activeElement === lastElement) {
+            event.preventDefault();
+            firstElement.focus();
+        }
     }
 
 })();
