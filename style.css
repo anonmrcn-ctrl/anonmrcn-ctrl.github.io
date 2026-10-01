@@ -72,7 +72,7 @@ body.pagina-autore {
 }
 
 body.pagina-progetto {
-    background: color-mix(in srgb, var(--paper) 94.5%, var(--brand-red));
+    background: color-mix(in srgb, var(--paper) 97.5%, var(--brand-red));
 }
 
 body.pagina-spazio-personale,
