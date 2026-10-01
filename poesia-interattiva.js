@@ -84,6 +84,7 @@
     let activeTrigger = null;
     let activeGroup = [];
     let activeNarrativeIndex = -1;
+    let poemOffset = 0;
 
     panel.id = "versoMappaScheda";
     panel.className = "verso-mappa-scheda";
@@ -266,7 +267,8 @@
             return;
         }
 
-        if (window.matchMedia("(max-width: 900px)").matches) {
+        if (window.matchMedia("(max-width: 1250px)").matches) {
+            resetPoemPosition();
             panel.style.removeProperty("top");
             panel.style.removeProperty("left");
             return;
@@ -277,20 +279,31 @@
         const lineBounds = activeTrigger.getBoundingClientRect();
         const panelBounds = panel.getBoundingClientRect();
         const poemBounds = poem.getBoundingClientRect();
-        const left = Math.max(
-            edge,
-            Math.min(
-                poemBounds.left - panelBounds.width - gap,
-                window.innerWidth - panelBounds.width - edge
-            )
+        const poemLeft = poemBounds.left - poemOffset;
+        const poemRight = poemLeft + poemBounds.width;
+        const left = edge;
+        const overlap = left + panelBounds.width + gap - poemLeft;
+        const roomOnRight = window.innerWidth - edge - poemRight;
+        const nextOffset = Math.max(
+            0,
+            Math.min(overlap, roomOnRight)
         );
         const top = Math.min(
             Math.max(edge, lineBounds.top - 36),
             Math.max(edge, window.innerHeight - panelBounds.height - edge)
         );
 
+        poemOffset = nextOffset;
+        poem.style.transform = nextOffset
+            ? `translateX(${nextOffset}px)`
+            : "";
         panel.style.left = `${left}px`;
         panel.style.top = `${top}px`;
+    }
+
+    function resetPoemPosition() {
+        poemOffset = 0;
+        poem.style.removeProperty("transform");
     }
 
     function closePanel(restoreFocus) {
@@ -307,6 +320,7 @@
         activeGroup = [];
         activeNarrativeIndex = -1;
         frame.removeAttribute("src");
+        resetPoemPosition();
 
         if (restoreFocus) {
             previousTrigger?.focus();

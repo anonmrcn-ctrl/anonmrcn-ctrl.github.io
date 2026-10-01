@@ -3837,7 +3837,7 @@ html.poesia-mappa-mini .percorso-narrativo-scheda > p:not(.percorso-narrativo-ve
     line-height: 1.38;
 }
 
-@media (max-width: 900px) {
+@media (max-width: 1250px) {
     .verso-mappa-scheda {
         top: auto;
         right: 0;
