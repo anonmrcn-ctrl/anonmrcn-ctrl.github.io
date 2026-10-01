@@ -9,31 +9,66 @@
     }
 
     const places = [
-        { key: "gaggio", label: "Gaggio" },
-        { key: "praello", label: "Praello" },
-        { key: "viaAlta", label: "Via Alta" },
-        { key: "viaFornace", label: "Via Fornace" },
-        { key: "viaBoscoBerizzi", label: "Via Bosco Berizzi" },
-        { key: "colmello", label: "Colmello" },
-        { key: "pojanon", label: "Pojanon" },
-        { key: "zero", label: "Zero" },
-        { key: "viaCostituzione", label: "Via della Costituzione" },
-        { key: "fossaStorta", label: "Fossa Storta" },
-        { key: "a57", label: "A57" },
-        { key: "a27", label: "A27" },
-        { key: "a4", label: "A4" }
+        "Gaggio",
+        "Praello",
+        "Via Alta",
+        "Via Fornace",
+        "Via Bosco Berizzi",
+        "Colmello",
+        "Pojanon",
+        "Zero",
+        "Via della Costituzione",
+        "Fossa Storta",
+        "A57",
+        "A27",
+        "A4"
+    ];
+    const targets = [
+        { lineKey: "gaggio", term: "Gajo", narrativeIndex: 0 },
+        { lineKey: "praello", term: "Praelli", narrativeIndex: 1 },
+        { lineKey: "viaAlta", term: "via Alta", narrativeIndex: 2 },
+        { lineKey: "viaFornace", term: "via Fornace", narrativeIndex: 3 },
+        {
+            lineKey: "viaBoscoBerizzi",
+            term: "via Bosco Berizzi",
+            narrativeIndex: 4
+        },
+        { lineKey: "colmello", term: "Colmello", narrativeIndex: 5 },
+        { lineKey: "pojanon", term: "Pojanon", narrativeIndex: 6 },
+        { lineKey: "zero", term: "Zero", narrativeIndex: 7 },
+        {
+            lineKey: "viaCostituzione",
+            term: "via della Costituzione",
+            narrativeIndex: 8
+        },
+        {
+            lineKey: "fossaStorta",
+            term: "Zero",
+            narrativeIndex: 7
+        },
+        {
+            lineKey: "fossaStorta",
+            term: "Fossa Storta",
+            narrativeIndex: 9
+        },
+        { lineKey: "a57", term: "A57", narrativeIndex: 10 },
+        { lineKey: "a27", term: "A27", narrativeIndex: 11 },
+        { lineKey: "a4", term: "A4", narrativeIndex: 12 }
     ];
     const groups = new Map();
 
-    places.forEach((place, narrativeIndex) => {
-        const lineNumber = Number(metricLines[place.key]);
+    targets.forEach((target) => {
+        const lineNumber = Number(metricLines[target.lineKey]);
 
         if (!Number.isInteger(lineNumber)) {
             return;
         }
 
         const group = groups.get(lineNumber) || [];
-        group.push({ ...place, narrativeIndex });
+        group.push({
+            ...target,
+            label: places[target.narrativeIndex]
+        });
         groups.set(lineNumber, group);
     });
 
@@ -92,24 +127,7 @@
             return;
         }
 
-        const labels = group.map((place) => place.label).join(", ");
-        const link = document.createElement("a");
-
-        link.className = "verso-mappa-link";
-        link.href = `./progetto.html?narrative=${group[0].narrativeIndex}`;
-        link.textContent = "poesia–mappa";
-        link.setAttribute("aria-haspopup", "dialog");
-        link.setAttribute("aria-controls", panel.id);
-        link.setAttribute("aria-expanded", "false");
-        link.setAttribute(
-            "aria-label",
-            `Apri mappa e spiegazione del verso: ${labels}`
-        );
-        link.addEventListener("click", (event) => {
-            event.preventDefault();
-            togglePanel(link, group);
-        });
-        line.append(" ", link);
+        linkToponyms(line, group);
     });
 
     closeButton.addEventListener("click", () => closePanel(true));
@@ -135,6 +153,45 @@
 
         closePanel(false);
     });
+
+    function linkToponyms(line, group) {
+        const text = line.textContent;
+        const occurrences = group
+            .map((place) => ({
+                ...place,
+                start: text.indexOf(place.term)
+            }))
+            .filter((place) => place.start >= 0)
+            .sort((first, second) => first.start - second.start);
+        const fragment = document.createDocumentFragment();
+        let cursor = 0;
+
+        occurrences.forEach((place) => {
+            const end = place.start + place.term.length;
+            const link = document.createElement("a");
+
+            fragment.append(text.slice(cursor, place.start));
+            link.className = "verso-mappa-link";
+            link.href = `./progetto.html?narrative=${place.narrativeIndex}`;
+            link.textContent = text.slice(place.start, end);
+            link.setAttribute("aria-haspopup", "dialog");
+            link.setAttribute("aria-controls", panel.id);
+            link.setAttribute("aria-expanded", "false");
+            link.setAttribute(
+                "aria-label",
+                `${place.term}. Apri mappa e spiegazione: ${place.label}`
+            );
+            link.addEventListener("click", (event) => {
+                event.preventDefault();
+                togglePanel(link, [place]);
+            });
+            fragment.append(link);
+            cursor = end;
+        });
+
+        fragment.append(text.slice(cursor));
+        line.replaceChildren(fragment);
+    }
 
     function togglePanel(trigger, group) {
         if (activeTrigger === trigger && !panel.hidden) {

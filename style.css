@@ -3409,9 +3409,8 @@ html[data-motion="reduce"] *::after {
 
 .verso-mappa-link {
     display: inline-block;
-    margin-left: 0.45rem;
     color: var(--brand-green-deep);
-    font-size: 0.68em;
+    font-size: inherit;
     font-style: normal;
     font-weight: 600;
     text-decoration: underline;
