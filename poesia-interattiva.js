@@ -81,10 +81,13 @@
     const status = document.createElement("p");
     const frame = document.createElement("iframe");
     const fullMapLink = document.createElement("a");
+    const resizeHandle = document.createElement("button");
     let activeTrigger = null;
     let activeGroup = [];
     let activeNarrativeIndex = -1;
     let poemOffset = 0;
+    let manualPanelGeometry = false;
+    let panelGesture = null;
 
     panel.id = "versoMappaScheda";
     panel.className = "verso-mappa-scheda";
@@ -94,6 +97,9 @@
     panel.setAttribute("aria-labelledby", "versoMappaTitolo");
 
     header.className = "verso-mappa-intestazione";
+    header.tabIndex = 0;
+    header.setAttribute("aria-label", "Sposta la finestra della mappa");
+    header.title = "Trascina per spostare la finestra";
     heading.id = "versoMappaTitolo";
     heading.textContent = "Il verso nel territorio";
     closeButton.type = "button";
@@ -117,7 +123,11 @@
 
     fullMapLink.className = "verso-mappa-apri";
     fullMapLink.textContent = "Apri nella mappa completa";
-    panel.append(header, tabs, frameWrap, fullMapLink);
+    resizeHandle.type = "button";
+    resizeHandle.className = "verso-mappa-ridimensiona";
+    resizeHandle.setAttribute("aria-label", "Ridimensiona la finestra");
+    resizeHandle.title = "Trascina per ridimensionare la finestra";
+    panel.append(header, tabs, frameWrap, fullMapLink, resizeHandle);
     document.body.append(panel);
 
     poem.querySelectorAll(".verso-linea[data-rigo-poesia]").forEach((line) => {
@@ -132,6 +142,15 @@
     });
 
     closeButton.addEventListener("click", () => closePanel(true));
+    header.addEventListener("pointerdown", startPanelMove);
+    header.addEventListener("keydown", movePanelWithKeyboard);
+    resizeHandle.addEventListener("pointerdown", startPanelResize);
+    resizeHandle.addEventListener("keydown", resizePanelWithKeyboard);
+    window.addEventListener("pointermove", updatePanelGesture, {
+        passive: false
+    });
+    window.addEventListener("pointerup", finishPanelGesture);
+    window.addEventListener("pointercancel", finishPanelGesture);
     frame.addEventListener("load", () => {
         status.hidden = true;
     });
@@ -268,9 +287,18 @@
         }
 
         if (window.matchMedia("(max-width: 1250px)").matches) {
+            manualPanelGeometry = false;
+            panel.style.removeProperty("width");
+            panel.style.removeProperty("height");
             resetPoemPosition();
             panel.style.removeProperty("top");
             panel.style.removeProperty("left");
+            return;
+        }
+
+        if (manualPanelGeometry) {
+            resetPoemPosition();
+            keepPanelInsideViewport();
             return;
         }
 
@@ -299,6 +327,212 @@
             : "";
         panel.style.left = `${left}px`;
         panel.style.top = `${top}px`;
+    }
+
+    function startPanelMove(event) {
+        if (
+            event.button !== 0 ||
+            event.target.closest("button, a") ||
+            window.matchMedia("(max-width: 1250px)").matches
+        ) {
+            return;
+        }
+
+        startPanelGesture("move", event);
+    }
+
+    function startPanelResize(event) {
+        if (
+            event.button !== 0 ||
+            window.matchMedia("(max-width: 1250px)").matches
+        ) {
+            return;
+        }
+
+        event.stopPropagation();
+        startPanelGesture("resize", event);
+    }
+
+    function startPanelGesture(type, event) {
+        const bounds = panel.getBoundingClientRect();
+
+        event.preventDefault();
+        manualPanelGeometry = true;
+        resetPoemPosition();
+        panel.style.left = `${bounds.left}px`;
+        panel.style.top = `${bounds.top}px`;
+        panel.style.width = `${bounds.width}px`;
+        panel.style.height = `${bounds.height}px`;
+        panelGesture = {
+            type,
+            pointerId: event.pointerId,
+            startX: event.clientX,
+            startY: event.clientY,
+            left: bounds.left,
+            top: bounds.top,
+            width: bounds.width,
+            height: bounds.height
+        };
+        event.currentTarget.setPointerCapture?.(event.pointerId);
+        document.body.classList.add("verso-mappa-gesto-attivo");
+    }
+
+    function updatePanelGesture(event) {
+        if (!panelGesture || event.pointerId !== panelGesture.pointerId) {
+            return;
+        }
+
+        event.preventDefault();
+        const deltaX = event.clientX - panelGesture.startX;
+        const deltaY = event.clientY - panelGesture.startY;
+        const edge = 8;
+
+        if (panelGesture.type === "move") {
+            const left = clamp(
+                panelGesture.left + deltaX,
+                edge,
+                window.innerWidth - panelGesture.width - edge
+            );
+            const top = clamp(
+                panelGesture.top + deltaY,
+                edge,
+                window.innerHeight - panelGesture.height - edge
+            );
+
+            panel.style.left = `${left}px`;
+            panel.style.top = `${top}px`;
+            return;
+        }
+
+        const width = clamp(
+            panelGesture.width + deltaX,
+            256,
+            window.innerWidth - panelGesture.left - edge
+        );
+        const height = clamp(
+            panelGesture.height + deltaY,
+            320,
+            window.innerHeight - panelGesture.top - edge
+        );
+
+        panel.style.width = `${width}px`;
+        panel.style.height = `${height}px`;
+    }
+
+    function finishPanelGesture(event) {
+        if (!panelGesture || event.pointerId !== panelGesture.pointerId) {
+            return;
+        }
+
+        panelGesture = null;
+        document.body.classList.remove("verso-mappa-gesto-attivo");
+    }
+
+    function movePanelWithKeyboard(event) {
+        if (
+            event.target !== header ||
+            window.matchMedia("(max-width: 1250px)").matches
+        ) {
+            return;
+        }
+
+        const movement = arrowMovement(event);
+
+        if (!movement) {
+            return;
+        }
+
+        event.preventDefault();
+        prepareManualGeometry();
+        const bounds = panel.getBoundingClientRect();
+        const edge = 8;
+        const step = event.shiftKey ? 48 : 16;
+
+        panel.style.left = `${clamp(
+            bounds.left + movement.x * step,
+            edge,
+            window.innerWidth - bounds.width - edge
+        )}px`;
+        panel.style.top = `${clamp(
+            bounds.top + movement.y * step,
+            edge,
+            window.innerHeight - bounds.height - edge
+        )}px`;
+    }
+
+    function resizePanelWithKeyboard(event) {
+        if (window.matchMedia("(max-width: 1250px)").matches) {
+            return;
+        }
+
+        const movement = arrowMovement(event);
+
+        if (!movement) {
+            return;
+        }
+
+        event.preventDefault();
+        prepareManualGeometry();
+        const bounds = panel.getBoundingClientRect();
+        const edge = 8;
+        const step = event.shiftKey ? 48 : 16;
+
+        panel.style.width = `${clamp(
+            bounds.width + movement.x * step,
+            256,
+            window.innerWidth - bounds.left - edge
+        )}px`;
+        panel.style.height = `${clamp(
+            bounds.height + movement.y * step,
+            320,
+            window.innerHeight - bounds.top - edge
+        )}px`;
+    }
+
+    function prepareManualGeometry() {
+        const bounds = panel.getBoundingClientRect();
+
+        manualPanelGeometry = true;
+        resetPoemPosition();
+        panel.style.left = `${bounds.left}px`;
+        panel.style.top = `${bounds.top}px`;
+        panel.style.width = `${bounds.width}px`;
+        panel.style.height = `${bounds.height}px`;
+    }
+
+    function keepPanelInsideViewport() {
+        const bounds = panel.getBoundingClientRect();
+        const edge = 8;
+        const width = Math.min(bounds.width, window.innerWidth - edge * 2);
+        const height = Math.min(bounds.height, window.innerHeight - edge * 2);
+
+        panel.style.width = `${width}px`;
+        panel.style.height = `${height}px`;
+        panel.style.left = `${clamp(
+            bounds.left,
+            edge,
+            window.innerWidth - width - edge
+        )}px`;
+        panel.style.top = `${clamp(
+            bounds.top,
+            edge,
+            window.innerHeight - height - edge
+        )}px`;
+    }
+
+    function arrowMovement(event) {
+        const movements = {
+            ArrowLeft: { x: -1, y: 0 },
+            ArrowRight: { x: 1, y: 0 },
+            ArrowUp: { x: 0, y: -1 },
+            ArrowDown: { x: 0, y: 1 }
+        };
+
+        return movements[event.key] || null;
+    }
+
+    function clamp(value, minimum, maximum) {
+        return Math.min(Math.max(value, minimum), Math.max(minimum, maximum));
     }
 
     function resetPoemPosition() {

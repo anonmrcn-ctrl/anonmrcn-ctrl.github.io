@@ -3649,6 +3649,8 @@ html[data-motion="reduce"] *::after {
     display: flex;
     width: min(19rem, calc(100vw - 2rem));
     height: min(39rem, calc(100dvh - 2rem));
+    min-width: 16rem;
+    min-height: 20rem;
     flex-direction: column;
     overflow: hidden;
     border: 1px solid var(--ink);
@@ -3671,6 +3673,13 @@ html[data-motion="reduce"] *::after {
     gap: 1rem;
     padding: 0.65rem 0.7rem 0.55rem 1rem;
     border-bottom: 1px solid var(--line);
+    cursor: move;
+    touch-action: none;
+    user-select: none;
+}
+
+.verso-mappa-intestazione:focus-visible {
+    outline-offset: -0.3rem;
 }
 
 .verso-mappa-intestazione h2 {
@@ -3764,6 +3773,33 @@ html[data-motion="reduce"] *::after {
     background: var(--ink);
 }
 
+.verso-mappa-ridimensiona {
+    position: absolute;
+    z-index: 4;
+    right: 0.15rem;
+    bottom: 0.15rem;
+    width: 1.55rem;
+    height: 1.55rem;
+    padding: 0;
+    border: 0;
+    background:
+        linear-gradient(
+            135deg,
+            transparent 0 48%,
+            var(--paper) 49% 56%,
+            transparent 57% 66%,
+            var(--paper) 67% 74%,
+            transparent 75%
+        );
+    cursor: nwse-resize;
+    touch-action: none;
+}
+
+body.verso-mappa-gesto-attivo {
+    cursor: grabbing;
+    user-select: none;
+}
+
 /* Modalità compatta usata dentro la scheda del verso. */
 
 html.poesia-mappa-mini,
@@ -3849,6 +3885,15 @@ html.poesia-mappa-mini .percorso-narrativo-scheda > p:not(.percorso-narrativo-ve
         border-bottom: 0;
         border-left: 0;
         box-shadow: 0 -0.75rem 2.5rem rgba(var(--ink-rgb), 0.28);
+    }
+
+    .verso-mappa-intestazione {
+        cursor: default;
+        touch-action: auto;
+    }
+
+    .verso-mappa-ridimensiona {
+        display: none;
     }
 }
 
