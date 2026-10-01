@@ -179,6 +179,21 @@ body.benvenuto-aperto {
     object-fit: contain;
 }
 
+.benvenuto-logo-link,
+.benvenuto-tour-logo-link,
+.autore-logo-link {
+    display: inline-flex;
+    color: inherit;
+    text-decoration: none;
+}
+
+.benvenuto-logo-link:focus-visible,
+.benvenuto-tour-logo-link:focus-visible,
+.autore-logo-link:focus-visible {
+    outline: 0.18rem solid var(--brand-yellow);
+    outline-offset: 0.3rem;
+}
+
 .benvenuto-dialogo h1 {
     margin: 0;
     overflow-wrap: normal;
@@ -311,6 +326,89 @@ body.benvenuto-aperto {
     width: 3.2rem;
     height: 2.25rem;
     object-fit: contain;
+}
+
+.pagina-logo {
+    background: var(--surface);
+}
+
+.logo-pagina {
+    width: min(58rem, calc(100% - 3rem));
+    margin: 0 auto;
+    padding: 7rem 0 6rem;
+}
+
+.logo-pagina-intestazione {
+    text-align: center;
+}
+
+.logo-pagina-intestazione h1 {
+    margin: 0;
+    font-size: clamp(2.8rem, 8vw, 5.6rem);
+    font-weight: 400;
+    line-height: 0.95;
+}
+
+.logo-pagina-immagine {
+    display: block;
+    width: min(36rem, 100%);
+    height: auto;
+    margin: 2.5rem auto 4rem;
+}
+
+.logo-significati {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+}
+
+.logo-significato {
+    padding: 1.4rem;
+    border: 1px solid var(--line);
+    border-top-width: 0.28rem;
+    background: rgba(var(--paper-rgb), 0.62);
+}
+
+.logo-significato h2 {
+    margin: 0 0 0.8rem;
+    font-size: clamp(1.5rem, 3vw, 2.1rem);
+    font-weight: 400;
+}
+
+.logo-significato p {
+    margin: 0;
+}
+
+.logo-significato-verde {
+    border-top-color: var(--brand-green);
+}
+
+.logo-significato-giallo {
+    border-top-color: var(--brand-yellow);
+}
+
+.logo-significato-forme {
+    border-top-color: var(--ink);
+}
+
+.logo-significato-bianco {
+    border-top-color: var(--surface);
+    box-shadow: inset 0 0.28rem 0 var(--line);
+}
+
+@media (max-width: 680px) {
+    .logo-pagina {
+        width: min(100% - 2rem, 58rem);
+        padding: 6rem 0 4rem;
+    }
+
+    .logo-pagina-immagine {
+        margin: 2rem auto 3rem;
+    }
+
+    .logo-significati {
+        grid-template-columns: 1fr;
+    }
 }
 
 .benvenuto-tour-contatore {

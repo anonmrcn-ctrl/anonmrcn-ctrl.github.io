@@ -4,18 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="apple-mobile-web-app-title" content="anonMrcn">
-    <meta name="description" content="Spazio pubblico di nnMrcn: memorie, archivio e voci sul territorio">
-    <meta name="theme-color" content="#f4f1e8">
-    <title>Spazio pubblico — nnMrcn</title>
-
+    <meta name="description" content="Il significato del logo del progetto artistico anonMrcn">
+    <meta name="theme-color" content="#ffffff">
+    <title>Il logo — nnMrcn</title>
     <link rel="manifest" href="./manifest.webmanifest">
     <link rel="apple-touch-icon" href="./icona-app-192.png?v=logo2">
     <script src="./tema.js?v=20260828-settings2"></script>
     <link rel="stylesheet" href="./style.css?v=20261001-logopage1">
-    <link rel="stylesheet" href="./spazi.css?v=20260830-voci2">
 </head>
 
-<body class="pagina-spazio-pubblico">
+<body class="pagina-logo">
     <button class="menu-button" id="menuButton" type="button" aria-label="Apri il menu" aria-expanded="false" aria-controls="menuPrincipale">MENU</button>
     <div class="menu-overlay" id="menuOverlay"></div>
 
@@ -28,12 +26,11 @@
             <a href="./index.html">La poesia</a>
             <a href="./autore.html">L’autore</a>
             <a href="./progetto.html">Il progetto</a>
-            <a href="./spazio-pubblico.html" class="voce-attiva" aria-current="page" data-spazio-pubblico-link>Spazio pubblico</a>
+            <a href="./spazio-pubblico.html" data-spazio-pubblico-link>Spazio pubblico</a>
         </div>
 
         <section class="accesso-rete menu-accesso" id="accessoLocations" aria-labelledby="accessoTitolo">
             <h2 id="accessoTitolo">Accesso alle locations</h2>
-
             <div id="loginLoggedOut">
                 <form class="accesso-form" id="loginForm">
                     <label for="loginPassword">Password della poesia</label>
@@ -65,33 +62,32 @@
         <a class="menu-admin-link" href="./admin.html">admin space</a>
     </nav>
 
-    <main class="spazio-pubblico">
-        <header class="spazio-intestazione">
-            <h1>Spazio pubblico</h1>
-            <p>La parte collettiva del progetto, accessibile a tutti.</p>
+    <main class="logo-pagina">
+        <header class="logo-pagina-intestazione">
+            <h1>Il logo</h1>
+            <img class="logo-pagina-immagine" src="./logo.webp?v=20261001-logo2" alt="Logo di anonMrcn: la mappa stilizzata di Marcon" width="640" height="360" decoding="async" fetchpriority="high">
         </header>
 
-        <aside class="avviso-sviluppo" aria-label="Avviso sullo sviluppo dello Spazio pubblico">
-            <p>
-                Questa pagina è ancora sperimentale e mancano ancora molte
-                funzionalità e informazioni. Vuoi dare una mano al suo sviluppo?
-                <a href="./autore.html#contattiTitolo">Contatta l’admin</a>.
-            </p>
-        </aside>
+        <div class="logo-significati">
+            <section class="logo-significato logo-significato-verde">
+                <h2>Il verde</h2>
+                <p>Questo colore rappresenta i prati e i boschi che sono all’origine del nostro territorio comunale e che ancora ricoprono, in parte, il comune.</p>
+            </section>
 
-        <div class="spazio-griglia spazio-griglia-pubblica">
-            <a class="spazio-carta" href="./memorie.html">
-                <h2>Memorie</h2>
-                <p>Ricordi, immagini e suoni legati ai luoghi di Marcon.</p>
-            </a>
-            <a class="spazio-carta" href="./archivio.html">
-                <h2>Archivio</h2>
-                <p>I messaggi resi pubblici con il consenso delle persone coinvolte.</p>
-            </a>
-            <a class="spazio-carta" href="./voci.html">
-                <h2>Voci</h2>
-                <p>Schede dedicate ai luoghi, ai nomi e alla storia del territorio.</p>
-            </a>
+            <section class="logo-significato logo-significato-giallo">
+                <h2>Il giallo</h2>
+                <p>Questo colore rappresenta la parte antropizzata del paesaggio di Marcon: il campo agricolo.</p>
+            </section>
+
+            <section class="logo-significato logo-significato-forme">
+                <h2>Le forme</h2>
+                <p>La forma del logo riprende la figura stilizzata della mappa di Marcon, divisa secondo le infrastrutture che l’attraversano: fiumi, autostrade e ferrovie.</p>
+            </section>
+
+            <section class="logo-significato logo-significato-bianco">
+                <h2>Il bianco</h2>
+                <p>Questo colore rappresenta le montagne che si stagliano lontane, ma sono sempre presenti all’orizzonte. Il bianco inonda il sito come l’immagine delle montagne inonda Marcon in una limpida giornata.</p>
+            </section>
         </div>
     </main>
 

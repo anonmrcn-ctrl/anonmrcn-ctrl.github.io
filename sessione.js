@@ -147,6 +147,7 @@
         const overlay = document.createElement("div");
         const dialog = document.createElement("section");
         const intro = document.createElement("div");
+        const logoLink = document.createElement("a");
         const logo = document.createElement("img");
         const title = document.createElement("h1");
         const subtitle = document.createElement("p");
@@ -158,6 +159,7 @@
         const tour = document.createElement("div");
         const tourHeader = document.createElement("header");
         const tourBrand = document.createElement("div");
+        const tourLogoLink = document.createElement("a");
         const tourLogo = document.createElement("img");
         const tourName = document.createElement("span");
         const tourCounter = document.createElement("span");
@@ -178,6 +180,9 @@
         dialog.setAttribute("aria-labelledby", "benvenutoTitolo");
 
         intro.className = "benvenuto-pagina benvenuto-intro";
+        logoLink.className = "benvenuto-logo-link";
+        logoLink.href = "./logo.html";
+        logoLink.setAttribute("aria-label", "Scopri il significato del logo");
         logo.className = "benvenuto-logo";
         logo.src = "./logo.webp?v=20261001-logo2";
         logo.alt = "Logo di anonMrcn";
@@ -197,7 +202,8 @@
         discoverButton.className = "benvenuto-azione";
         discoverButton.textContent = "Scopri le funzionalità";
         actions.append(exploreButton, discoverButton);
-        intro.append(logo, title, subtitle, actions);
+        logoLink.append(logo);
+        intro.append(logoLink, title, subtitle, actions);
 
         if (cancelAccess) {
             cancelButton.type = "button";
@@ -212,12 +218,16 @@
         tour.hidden = true;
         tourHeader.className = "benvenuto-tour-intestazione";
         tourBrand.className = "benvenuto-tour-marchio";
+        tourLogoLink.className = "benvenuto-tour-logo-link";
+        tourLogoLink.href = "./logo.html";
+        tourLogoLink.setAttribute("aria-label", "Scopri il significato del logo");
         tourLogo.src = "./logo.webp?v=20261001-logo2";
         tourLogo.alt = "";
         tourName.textContent = "anonMrcn";
         tourCounter.className = "benvenuto-tour-contatore";
         tourCounter.setAttribute("aria-live", "polite");
-        tourBrand.append(tourLogo, tourName);
+        tourLogoLink.append(tourLogo);
+        tourBrand.append(tourLogoLink, tourName);
         tourMeta.className = "benvenuto-tour-meta";
         tourMeta.append(tourCounter);
 
