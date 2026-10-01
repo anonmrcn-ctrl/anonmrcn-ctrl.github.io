@@ -3407,40 +3407,25 @@ html[data-motion="reduce"] *::after {
 
 /* Versi interattivi: dalla poesia alla mappa */
 
-.verso-interattivo {
-    padding-right: 4.5rem;
-    border-radius: 0.15rem;
-    cursor: pointer;
-    transition: background-color 160ms ease, color 160ms ease;
-}
-
-.verso-interattivo::before {
-    position: absolute;
-    top: 0.22em;
-    right: 0.35rem;
-    padding: 0.12rem 0.35rem;
-    border: 1px solid var(--brand-green-deep);
-    background: var(--paper);
+.verso-mappa-link {
+    display: inline-block;
+    margin-left: 0.45rem;
     color: var(--brand-green-deep);
-    content: "mappa";
-    font-size: 0.58rem;
+    font-size: 0.68em;
     font-style: normal;
-    font-weight: 700;
-    letter-spacing: 0.05em;
-    line-height: 1.2;
-    text-transform: uppercase;
+    font-weight: 600;
+    text-decoration: underline;
+    text-decoration-color: var(--brand-green);
+    text-decoration-thickness: 0.08em;
+    text-underline-offset: 0.2em;
 }
 
-.verso-interattivo:hover,
-.verso-interattivo:focus-visible,
-.verso-interattivo-attivo {
-    outline: none;
-    background: rgba(var(--brand-yellow-rgb), 0.24);
-}
-
-.verso-interattivo-attivo::before {
-    background: var(--brand-green-deep);
-    color: var(--paper);
+.verso-mappa-link:hover,
+.verso-mappa-link:focus-visible,
+.verso-mappa-link-attivo {
+    color: var(--ink);
+    text-decoration-color: var(--brand-red);
+    text-decoration-thickness: 0.13em;
 }
 
 .verso-mappa-scheda {
@@ -3658,15 +3643,6 @@ html.poesia-mappa-mini .percorso-narrativo-scheda > p:not(.percorso-narrativo-ve
 }
 
 @media (max-width: 520px) {
-    .verso-interattivo {
-        padding-right: 3.65rem;
-    }
-
-    .verso-interattivo::before {
-        right: 0.1rem;
-        font-size: 0.52rem;
-    }
-
     .verso-mappa-luoghi {
         padding: 0.45rem 0.6rem;
     }

@@ -46,7 +46,7 @@
     const status = document.createElement("p");
     const frame = document.createElement("iframe");
     const fullMapLink = document.createElement("a");
-    let activeLine = null;
+    let activeTrigger = null;
     let activeGroup = [];
     let activeNarrativeIndex = -1;
 
@@ -93,24 +93,23 @@
         }
 
         const labels = group.map((place) => place.label).join(", ");
+        const link = document.createElement("a");
 
-        line.classList.add("verso-interattivo");
-        line.tabIndex = 0;
-        line.setAttribute("role", "button");
-        line.setAttribute("aria-haspopup", "dialog");
-        line.setAttribute("aria-controls", panel.id);
-        line.setAttribute("aria-expanded", "false");
-        line.setAttribute(
+        link.className = "verso-mappa-link";
+        link.href = `./progetto.html?narrative=${group[0].narrativeIndex}`;
+        link.textContent = "poesia–mappa";
+        link.setAttribute("aria-haspopup", "dialog");
+        link.setAttribute("aria-controls", panel.id);
+        link.setAttribute("aria-expanded", "false");
+        link.setAttribute(
             "aria-label",
-            `${line.textContent.trim()}. Apri mappa e spiegazione: ${labels}`
+            `Apri mappa e spiegazione del verso: ${labels}`
         );
-        line.addEventListener("click", () => togglePanel(line, group));
-        line.addEventListener("keydown", (event) => {
-            if (event.key === "Enter" || event.key === " ") {
-                event.preventDefault();
-                togglePanel(line, group);
-            }
+        link.addEventListener("click", (event) => {
+            event.preventDefault();
+            togglePanel(link, group);
         });
+        line.append(" ", link);
     });
 
     closeButton.addEventListener("click", () => closePanel(true));
@@ -129,7 +128,7 @@
         if (
             panel.hidden ||
             panel.contains(event.target) ||
-            activeLine?.contains(event.target)
+            activeTrigger?.contains(event.target)
         ) {
             return;
         }
@@ -137,25 +136,25 @@
         closePanel(false);
     });
 
-    function togglePanel(line, group) {
-        if (activeLine === line && !panel.hidden) {
+    function togglePanel(trigger, group) {
+        if (activeTrigger === trigger && !panel.hidden) {
             closePanel(true);
             return;
         }
 
-        openPanel(line, group);
+        openPanel(trigger, group);
     }
 
-    function openPanel(line, group) {
-        if (activeLine) {
-            activeLine.setAttribute("aria-expanded", "false");
-            activeLine.classList.remove("verso-interattivo-attivo");
+    function openPanel(trigger, group) {
+        if (activeTrigger) {
+            activeTrigger.setAttribute("aria-expanded", "false");
+            activeTrigger.classList.remove("verso-mappa-link-attivo");
         }
 
-        activeLine = line;
+        activeTrigger = trigger;
         activeGroup = group;
-        activeLine.setAttribute("aria-expanded", "true");
-        activeLine.classList.add("verso-interattivo-attivo");
+        activeTrigger.setAttribute("aria-expanded", "true");
+        activeTrigger.classList.add("verso-mappa-link-attivo");
         renderTabs();
         selectPlace(group[0].narrativeIndex);
         panel.hidden = false;
@@ -206,7 +205,7 @@
     }
 
     function positionPanel() {
-        if (!activeLine || panel.hidden) {
+        if (!activeTrigger || panel.hidden) {
             return;
         }
 
@@ -218,7 +217,7 @@
 
         const gap = 18;
         const edge = 16;
-        const lineBounds = activeLine.getBoundingClientRect();
+        const lineBounds = activeTrigger.getBoundingClientRect();
         const panelBounds = panel.getBoundingClientRect();
         const roomOnRight = window.innerWidth - lineBounds.right - gap;
         const left = roomOnRight >= panelBounds.width + edge
@@ -238,18 +237,18 @@
             return;
         }
 
-        const previousLine = activeLine;
+        const previousTrigger = activeTrigger;
 
         panel.hidden = true;
-        activeLine?.setAttribute("aria-expanded", "false");
-        activeLine?.classList.remove("verso-interattivo-attivo");
-        activeLine = null;
+        activeTrigger?.setAttribute("aria-expanded", "false");
+        activeTrigger?.classList.remove("verso-mappa-link-attivo");
+        activeTrigger = null;
         activeGroup = [];
         activeNarrativeIndex = -1;
         frame.removeAttribute("src");
 
         if (restoreFocus) {
-            previousLine?.focus();
+            previousTrigger?.focus();
         }
     }
 })();
