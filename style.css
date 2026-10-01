@@ -173,18 +173,40 @@ body.benvenuto-aperto {
 
 .benvenuto-logo {
     display: block;
-    width: min(18rem, 54vw);
-    max-height: 14rem;
-    margin-bottom: clamp(0.8rem, 3vh, 1.5rem);
+    width: auto;
+    max-width: none;
+    height: 100%;
     object-fit: contain;
 }
 
 .benvenuto-logo-link,
 .benvenuto-tour-logo-link,
 .autore-logo-link {
-    display: inline-flex;
+    display: inline-grid;
+    place-items: center;
+    overflow: hidden;
+    border-radius: 50%;
     color: inherit;
+    clip-path: circle(50%);
     text-decoration: none;
+}
+
+.benvenuto-logo-link {
+    width: min(10rem, 30vw);
+    aspect-ratio: 1;
+    margin-bottom: clamp(0.8rem, 3vh, 1.5rem);
+}
+
+.benvenuto-tour-logo-link {
+    width: 2.25rem;
+    aspect-ratio: 1;
+}
+
+.benvenuto-tour-logo-link img,
+.autore-logo-link img {
+    width: auto;
+    max-width: none;
+    height: 100%;
 }
 
 .benvenuto-logo-link:focus-visible,
@@ -323,7 +345,8 @@ body.benvenuto-aperto {
 }
 
 .benvenuto-tour-marchio img {
-    width: 3.2rem;
+    width: auto;
+    max-width: none;
     height: 2.25rem;
     object-fit: contain;
 }
@@ -1368,10 +1391,16 @@ body.poesia-aperta {
     margin: 0 0 7vh;
 }
 
+.autore-logo-link {
+    width: min(15.5rem, 90%);
+    aspect-ratio: 1;
+}
+
 .autore-logo img {
     display: block;
-    width: min(440px, 90%);
-    height: auto;
+    width: auto;
+    max-width: none;
+    height: 100%;
     object-fit: contain;
 }
 
@@ -3066,9 +3095,8 @@ body .voci-editor-indice button[aria-current="true"] {
         padding: 3.5rem 1.35rem 2rem;
     }
 
-    .benvenuto-logo {
-        width: min(15rem, 70vw);
-        max-height: 11rem;
+    .benvenuto-logo-link {
+        width: min(9rem, 36vw);
     }
 
     .benvenuto-dialogo h1 {
@@ -3102,8 +3130,9 @@ body .voci-editor-indice button[aria-current="true"] {
     }
 
     .benvenuto-tour-marchio img {
-        width: 2.7rem;
-        height: 1.9rem;
+        width: auto;
+        max-width: none;
+        height: 100%;
     }
 
     .benvenuto-funzionalita {
@@ -3315,8 +3344,8 @@ body .voci-editor-indice button[aria-current="true"] {
         margin-bottom: 5vh;
     }
 
-    .autore-logo img {
-        width: min(360px, 100%);
+    .autore-logo-link {
+        width: min(15.5rem, 90%);
     }
 
     .autore-testo,
