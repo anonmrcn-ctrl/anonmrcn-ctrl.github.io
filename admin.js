@@ -31,6 +31,7 @@
     const countPublicMemories = document.getElementById(
         "adminCountPublicMemories"
     );
+    const welcomePreview = document.getElementById("adminWelcomePreview");
 
     let adminToken = sessionStorage.getItem(TOKEN_KEY) || "";
     let loadedMessages = [];
@@ -641,6 +642,12 @@
     search.addEventListener("input", renderCurrentMessages);
     exportCsv.addEventListener("click", () => downloadExport("csv"));
     exportJson.addEventListener("click", () => downloadExport("json"));
+    welcomePreview.addEventListener("click", () => {
+        window.NNMRCN_SESSION.showWelcome(
+            () => Promise.resolve(),
+            { preview: true }
+        );
+    });
 
     document.querySelectorAll("[data-admin-filter]").forEach((button) => {
         button.addEventListener("click", () => {

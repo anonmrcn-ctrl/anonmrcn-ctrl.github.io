@@ -511,6 +511,10 @@
     closeButton.addEventListener("click", closeMenu);
     overlay.addEventListener("click", closeMenu);
 
+    if (new URLSearchParams(window.location.search).has("onboarding-menu")) {
+        window.requestAnimationFrame(openMenu);
+    }
+
     if (window.visualViewport) {
         window.visualViewport.addEventListener("resize", fitMenuToViewport);
         window.visualViewport.addEventListener("scroll", fitMenuToViewport);

@@ -6,6 +6,9 @@
     const notebook = window.NNMRCN_TACCUINO;
     const settingsManager = window.NNMRCN_SETTINGS;
     const sessionStore = window.NNMRCN_SESSION;
+    const isEmbeddedPreview = new URLSearchParams(
+        window.location.search
+    ).has("onboarding-preview");
     const MAP_STATE_KEY = "nnmrcn_map_state_v1";
     const MOBILE_COMPARISON_QUERY = "(max-width: 700px)";
     const poemMetric = window.NNMRCN_POEM_METRIC;
@@ -306,7 +309,9 @@
         percorsoNarrativoAvanti: document.getElementById("percorsoNarrativoAvanti")
     };
 
-    let sessionToken = sessionStore?.read() || "";
+    let sessionToken = isEmbeddedPreview
+        ? ""
+        : sessionStore?.read() || "";
     let sessionLocation = null;
     let locations = [];
     let todayLayer = null;
@@ -1834,7 +1839,7 @@
     }
 
     function showWelcomeIfRequired(data) {
-        if (!data?.welcomeRequired) {
+        if (!data?.welcomeRequired || isEmbeddedPreview) {
             return;
         }
 

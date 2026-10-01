@@ -4,6 +4,9 @@
     const apiClient = window.NNMRCN_API;
     const notifications = window.NNMRCN_NOTIFICHE;
     const sessionStore = window.NNMRCN_SESSION;
+    const isEmbeddedPreview = new URLSearchParams(
+        window.location.search
+    ).has("onboarding-preview");
 
     const elements = {
         loginForm: document.getElementById("loginForm"),
@@ -33,7 +36,7 @@
         return;
     }
 
-    let sessionToken = sessionStore.read();
+    let sessionToken = isEmbeddedPreview ? "" : sessionStore.read();
     let sessionLocation = null;
 
     const pushNotifications = notifications.create({
@@ -53,7 +56,9 @@
     );
     document.addEventListener("nnmrcn:sessioninvalid", clearSession);
 
-    if (document.readyState === "loading") {
+    if (isEmbeddedPreview) {
+        syncProtectedContent(false);
+    } else if (document.readyState === "loading") {
         document.addEventListener("DOMContentLoaded", restoreSession, {
             once: true
         });
@@ -203,7 +208,7 @@
     }
 
     function showWelcomeIfRequired(data) {
-        if (!data?.welcomeRequired) {
+        if (!data?.welcomeRequired || isEmbeddedPreview) {
             return;
         }
 

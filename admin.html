@@ -9,7 +9,7 @@
     <link rel="manifest" href="./admin.webmanifest">
     <link rel="apple-touch-icon" href="./icona-app-192.png?v=logo-png">
     <script src="./tema.js?v=20260828-settings2"></script>
-    <link rel="stylesheet" href="./style.css?v=20260928-menu-spacing1">
+    <link rel="stylesheet" href="./style.css?v=20261001-onboarding1">
 </head>
 
 <body>
@@ -32,6 +32,17 @@
         </section>
 
         <section class="admin-panel" id="adminPanel" hidden>
+            <section class="admin-anteprima-benvenuto" aria-labelledby="adminBenvenutoTitolo">
+                <h2 id="adminBenvenutoTitolo">Schermata di benvenuto</h2>
+                <p>
+                    Apri il flusso completo come lo vede un utente al primo accesso.
+                    L’anteprima non modifica lo stato degli utenti e può essere ripetuta.
+                </p>
+                <button id="adminWelcomePreview" type="button">
+                    Apri anteprima benvenuto
+                </button>
+            </section>
+
             <section class="notifiche-panel" aria-label="Notifiche amministratore">
                 <button
                     class="rete-button notifiche-button"
@@ -145,7 +156,8 @@
 
     <script src="./config.js"></script>
     <script src="./api.js"></script>
+    <script src="./sessione.js?v=20261001-onboarding1"></script>
     <script src="./notifiche.js"></script>
-    <script src="./admin.js"></script>
+    <script src="./admin.js?v=20261001-onboarding1"></script>
 </body>
 </html>

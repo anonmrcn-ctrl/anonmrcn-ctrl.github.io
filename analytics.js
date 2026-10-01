@@ -3,8 +3,15 @@
 
     const token = String(window.NNMRCN_ANALYTICS_TOKEN || "").trim();
     const localHosts = new Set(["localhost", "127.0.0.1"]);
+    const isEmbeddedPreview = new URLSearchParams(
+        window.location.search
+    ).has("onboarding-preview");
 
-    if (!token || localHosts.has(window.location.hostname)) {
+    if (
+        !token ||
+        isEmbeddedPreview ||
+        localHosts.has(window.location.hostname)
+    ) {
         return;
     }
 
