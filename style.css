@@ -3642,7 +3642,7 @@ html[data-motion="reduce"] *::after {
     position: fixed;
     z-index: 1900;
     display: flex;
-    width: min(26rem, calc(100vw - 2rem));
+    width: min(19rem, calc(100vw - 2rem));
     height: min(39rem, calc(100dvh - 2rem));
     flex-direction: column;
     overflow: hidden;

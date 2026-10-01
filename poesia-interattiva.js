@@ -276,10 +276,14 @@
         const edge = 16;
         const lineBounds = activeTrigger.getBoundingClientRect();
         const panelBounds = panel.getBoundingClientRect();
-        const roomOnRight = window.innerWidth - lineBounds.right - gap;
-        const left = roomOnRight >= panelBounds.width + edge
-            ? lineBounds.right + gap
-            : Math.max(edge, lineBounds.left - panelBounds.width - gap);
+        const poemBounds = poem.getBoundingClientRect();
+        const left = Math.max(
+            edge,
+            Math.min(
+                poemBounds.left - panelBounds.width - gap,
+                window.innerWidth - panelBounds.width - edge
+            )
+        );
         const top = Math.min(
             Math.max(edge, lineBounds.top - 36),
             Math.max(edge, window.innerHeight - panelBounds.height - edge)
