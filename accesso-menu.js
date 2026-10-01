@@ -212,9 +212,12 @@
             return;
         }
 
-        sessionStore.showWelcome(() => api("/api/welcome/complete", {
-            method: "POST"
-        }));
+        sessionStore.showWelcome(
+            () => api("/api/welcome/complete", {
+                method: "POST"
+            }),
+            { cancel: handleLogout }
+        );
     }
 
     function clearSession() {

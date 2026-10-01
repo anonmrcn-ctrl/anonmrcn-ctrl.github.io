@@ -47,6 +47,7 @@
             }
 
             rowNumber += 1;
+            node.dataset.rigoPoesia = String(rowNumber);
 
             if (rowNumber % 5 === 0) {
                 node.dataset.numeroVerso = String(rowNumber);

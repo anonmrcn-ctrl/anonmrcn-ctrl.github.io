@@ -140,6 +140,9 @@
         }
 
         const preview = options.preview === true;
+        const cancelAccess = typeof options.cancel === "function"
+            ? options.cancel
+            : null;
         const previousFocus = document.activeElement;
         const overlay = document.createElement("div");
         const dialog = document.createElement("section");
@@ -151,12 +154,15 @@
         const status = document.createElement("p");
         const exploreButton = document.createElement("button");
         const discoverButton = document.createElement("button");
+        const cancelButton = document.createElement("button");
         const tour = document.createElement("div");
         const tourHeader = document.createElement("header");
         const tourBrand = document.createElement("div");
         const tourLogo = document.createElement("img");
         const tourName = document.createElement("span");
         const tourCounter = document.createElement("span");
+        const tourMeta = document.createElement("div");
+        const tourCancelButton = document.createElement("button");
         const scroller = document.createElement("div");
         const tourFooter = document.createElement("footer");
         const previousButton = document.createElement("button");
@@ -191,7 +197,16 @@
         discoverButton.className = "benvenuto-azione";
         discoverButton.textContent = "Scopri le funzionalità";
         actions.append(exploreButton, discoverButton);
-        intro.append(logo, title, subtitle, actions, status);
+        intro.append(logo, title, subtitle, actions);
+
+        if (cancelAccess) {
+            cancelButton.type = "button";
+            cancelButton.className = "benvenuto-annulla-accesso";
+            cancelButton.textContent = "Annulla l’accesso";
+            intro.append(cancelButton);
+        }
+
+        intro.append(status);
 
         tour.className = "benvenuto-pagina benvenuto-tour";
         tour.hidden = true;
@@ -203,7 +218,17 @@
         tourCounter.className = "benvenuto-tour-contatore";
         tourCounter.setAttribute("aria-live", "polite");
         tourBrand.append(tourLogo, tourName);
-        tourHeader.append(tourBrand, tourCounter);
+        tourMeta.className = "benvenuto-tour-meta";
+        tourMeta.append(tourCounter);
+
+        if (cancelAccess) {
+            tourCancelButton.type = "button";
+            tourCancelButton.className = "benvenuto-tour-annulla";
+            tourCancelButton.textContent = "Annulla l’accesso";
+            tourMeta.append(tourCancelButton);
+        }
+
+        tourHeader.append(tourBrand, tourMeta);
         scroller.className = "benvenuto-tour-scroller";
         scroller.setAttribute("aria-label", "Funzionalità principali del sito");
 
@@ -370,6 +395,30 @@
             }
         }
 
+        async function cancelAndClose(button) {
+            const buttons = Array.from(dialog.querySelectorAll("button"));
+            const originalLabel = button.textContent;
+
+            buttons.forEach((item) => {
+                item.disabled = true;
+            });
+            button.textContent = "Uscita in corso…";
+            status.textContent = "Uscita in corso…";
+
+            try {
+                await Promise.resolve(cancelAccess());
+                close();
+            } catch (_) {
+                status.textContent = "Non è stato possibile uscire. Riprova.";
+                button.textContent = originalLabel;
+                buttons.forEach((item) => {
+                    item.disabled = false;
+                });
+                updateTour();
+                button.focus();
+            }
+        }
+
         exploreButton.addEventListener("click", () => {
             completeAndClose(exploreButton);
         });
@@ -382,6 +431,15 @@
             updateTour();
             nextButton.focus();
         });
+
+        if (cancelAccess) {
+            cancelButton.addEventListener("click", () => {
+                cancelAndClose(cancelButton);
+            });
+            tourCancelButton.addEventListener("click", () => {
+                cancelAndClose(tourCancelButton);
+            });
+        }
 
         previousButton.addEventListener("click", () => {
             goTo(activeIndex - 1);

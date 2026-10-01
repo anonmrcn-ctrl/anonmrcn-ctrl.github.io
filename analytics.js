@@ -3,9 +3,10 @@
 
     const token = String(window.NNMRCN_ANALYTICS_TOKEN || "").trim();
     const localHosts = new Set(["localhost", "127.0.0.1"]);
-    const isEmbeddedPreview = new URLSearchParams(
-        window.location.search
-    ).has("onboarding-preview");
+    const parameters = new URLSearchParams(window.location.search);
+    const isEmbeddedPreview =
+        parameters.has("onboarding-preview") ||
+        parameters.has("poesia-mini");
 
     if (
         !token ||

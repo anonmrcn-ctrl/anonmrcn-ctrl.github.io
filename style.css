@@ -203,6 +203,31 @@ body.benvenuto-aperto {
     opacity: 0.6;
 }
 
+.benvenuto-annulla-accesso {
+    margin-top: 1rem;
+    padding: 0.35rem 0.5rem;
+    border: 0;
+    background: transparent;
+    color: var(--ink);
+    cursor: pointer;
+    font: inherit;
+    font-size: 0.88rem;
+    text-decoration: underline;
+    text-decoration-color: var(--brand-red);
+    text-decoration-thickness: 0.12rem;
+    text-underline-offset: 0.25rem;
+}
+
+.benvenuto-annulla-accesso:hover,
+.benvenuto-annulla-accesso:focus-visible {
+    color: var(--brand-red);
+}
+
+.benvenuto-annulla-accesso:disabled {
+    cursor: wait;
+    opacity: 0.6;
+}
+
 .benvenuto-tour {
     display: flex;
     min-height: 0;
@@ -239,6 +264,34 @@ body.benvenuto-aperto {
     color: var(--brand-green-deep);
     font-size: 0.82rem;
     font-weight: 700;
+}
+
+.benvenuto-tour-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+}
+
+.benvenuto-tour-annulla {
+    min-height: 2.25rem;
+    padding: 0.4rem 0.7rem;
+    border: 1px solid var(--brand-red);
+    background: transparent;
+    color: var(--ink);
+    cursor: pointer;
+    font: inherit;
+    font-size: 0.78rem;
+}
+
+.benvenuto-tour-annulla:hover,
+.benvenuto-tour-annulla:focus-visible {
+    background: var(--brand-red);
+    color: var(--paper);
+}
+
+.benvenuto-tour-annulla:disabled {
+    cursor: wait;
+    opacity: 0.6;
 }
 
 .benvenuto-tour-scroller {
@@ -2854,6 +2907,18 @@ body .voci-editor-indice button[aria-current="true"] {
         padding: 0.85rem 1rem 0.65rem;
     }
 
+    .benvenuto-tour-meta {
+        gap: 0.5rem;
+    }
+
+    .benvenuto-tour-annulla {
+        max-width: 7.5rem;
+        min-height: 2rem;
+        padding: 0.3rem 0.5rem;
+        font-size: 0.7rem;
+        line-height: 1.15;
+    }
+
     .benvenuto-tour-marchio img {
         width: 2.7rem;
         height: 1.9rem;
@@ -3337,5 +3402,277 @@ html[data-motion="reduce"] *::after {
         animation-iteration-count: 1 !important;
         scroll-behavior: auto !important;
         transition-duration: 0.01ms !important;
+    }
+}
+
+/* Versi interattivi: dalla poesia alla mappa */
+
+.verso-interattivo {
+    padding-right: 4.5rem;
+    border-radius: 0.15rem;
+    cursor: pointer;
+    transition: background-color 160ms ease, color 160ms ease;
+}
+
+.verso-interattivo::before {
+    position: absolute;
+    top: 0.22em;
+    right: 0.35rem;
+    padding: 0.12rem 0.35rem;
+    border: 1px solid var(--brand-green-deep);
+    background: var(--paper);
+    color: var(--brand-green-deep);
+    content: "mappa";
+    font-size: 0.58rem;
+    font-style: normal;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    line-height: 1.2;
+    text-transform: uppercase;
+}
+
+.verso-interattivo:hover,
+.verso-interattivo:focus-visible,
+.verso-interattivo-attivo {
+    outline: none;
+    background: rgba(var(--brand-yellow-rgb), 0.24);
+}
+
+.verso-interattivo-attivo::before {
+    background: var(--brand-green-deep);
+    color: var(--paper);
+}
+
+.verso-mappa-scheda {
+    position: fixed;
+    z-index: 1900;
+    display: flex;
+    width: min(26rem, calc(100vw - 2rem));
+    height: min(39rem, calc(100dvh - 2rem));
+    flex-direction: column;
+    overflow: hidden;
+    border: 1px solid var(--ink);
+    background: var(--paper);
+    box-shadow: 0 1rem 3rem rgba(var(--ink-rgb), 0.3);
+}
+
+.verso-mappa-scheda::before {
+    height: 0.3rem;
+    flex: 0 0 auto;
+    background: linear-gradient(
+        90deg,
+        var(--brand-green) 0 62%,
+        var(--brand-yellow) 62% 88%,
+        var(--brand-red) 88% 100%
+    );
+    content: "";
+}
+
+.verso-mappa-intestazione {
+    display: flex;
+    min-height: 3.4rem;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.65rem 0.7rem 0.55rem 1rem;
+    border-bottom: 1px solid var(--line);
+}
+
+.verso-mappa-intestazione h2 {
+    margin: 0;
+    font-size: 1rem;
+}
+
+.verso-mappa-chiudi {
+    width: 2.5rem;
+    height: 2.5rem;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--ink);
+    cursor: pointer;
+    font-size: 1.6rem;
+    line-height: 1;
+}
+
+.verso-mappa-luoghi {
+    display: flex;
+    flex: 0 0 auto;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    padding: 0.6rem 0.75rem;
+    border-bottom: 1px solid var(--line);
+}
+
+.verso-mappa-luoghi button {
+    min-height: 2.25rem;
+    padding: 0.35rem 0.55rem;
+    border: 1px solid var(--brand-green-deep);
+    background: transparent;
+    color: var(--brand-green-deep);
+    cursor: pointer;
+    font: inherit;
+    font-size: 0.72rem;
+}
+
+.verso-mappa-luoghi button:hover,
+.verso-mappa-luoghi button:focus-visible,
+.verso-mappa-luoghi button[aria-selected="true"] {
+    background: var(--brand-green-deep);
+    color: var(--paper);
+}
+
+.verso-mappa-frame-contenitore {
+    position: relative;
+    min-height: 0;
+    flex: 1 1 auto;
+    background: rgba(var(--brand-green-rgb), 0.08);
+}
+
+.verso-mappa-frame {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border: 0;
+    background: var(--paper);
+}
+
+.verso-mappa-stato {
+    position: absolute;
+    z-index: 1;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    margin: 0;
+    background: var(--paper);
+    color: var(--brand-green-deep);
+    font-size: 0.8rem;
+}
+
+.verso-mappa-apri {
+    display: flex;
+    min-height: 3rem;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    padding: 0.55rem 0.8rem;
+    border-top: 1px solid var(--ink);
+    background: var(--brand-green-deep);
+    color: var(--paper);
+    font-size: 0.78rem;
+    text-align: center;
+    text-decoration: none;
+}
+
+.verso-mappa-apri:hover,
+.verso-mappa-apri:focus-visible {
+    background: var(--ink);
+}
+
+/* Modalità compatta usata dentro la scheda del verso. */
+
+html.poesia-mappa-mini,
+html.poesia-mappa-mini body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+}
+
+html.poesia-mappa-mini .menu-button,
+html.poesia-mappa-mini .menu-overlay,
+html.poesia-mappa-mini .menu-principale,
+html.poesia-mappa-mini main > .progetto,
+html.poesia-mappa-mini .sezione-mappa > :not(.mappa-contenitore),
+html.poesia-mappa-mini .poesia-overlay {
+    display: none !important;
+}
+
+html.poesia-mappa-mini body > main,
+html.poesia-mappa-mini .sezione-mappa,
+html.poesia-mappa-mini .mappa-contenitore {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+}
+
+html.poesia-mappa-mini #map {
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    border: 0;
+}
+
+html.poesia-mappa-mini .percorso-narrativo {
+    top: auto;
+    right: 0.45rem;
+    bottom: 0.45rem;
+    left: 0.45rem;
+    display: block;
+    width: auto;
+    max-height: 46%;
+    padding: 0.75rem;
+    border-color: var(--brand-green-deep);
+}
+
+html.poesia-mappa-mini .percorso-narrativo-selettore,
+html.poesia-mappa-mini .percorso-narrativo-close,
+html.poesia-mappa-mini .percorso-narrativo-linea,
+html.poesia-mappa-mini .percorso-narrativo-azioni {
+    display: none !important;
+}
+
+html.poesia-mappa-mini .percorso-narrativo-scheda {
+    overflow-y: auto;
+    padding: 0;
+}
+
+html.poesia-mappa-mini .percorso-narrativo-verso {
+    margin-bottom: 0.25rem;
+    font-size: 0.66rem;
+}
+
+html.poesia-mappa-mini .percorso-narrativo-scheda h2 {
+    margin-bottom: 0.3rem;
+    font-size: 0.95rem;
+}
+
+html.poesia-mappa-mini .percorso-narrativo-scheda > p:not(.percorso-narrativo-verso) {
+    font-size: 0.72rem;
+    line-height: 1.38;
+}
+
+@media (max-width: 900px) {
+    .verso-mappa-scheda {
+        top: auto;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        height: min(67dvh, 35rem);
+        border-right: 0;
+        border-bottom: 0;
+        border-left: 0;
+        box-shadow: 0 -0.75rem 2.5rem rgba(var(--ink-rgb), 0.28);
+    }
+}
+
+@media (max-width: 520px) {
+    .verso-interattivo {
+        padding-right: 3.65rem;
+    }
+
+    .verso-interattivo::before {
+        right: 0.1rem;
+        font-size: 0.52rem;
+    }
+
+    .verso-mappa-luoghi {
+        padding: 0.45rem 0.6rem;
+    }
+
+    .verso-mappa-luoghi button {
+        min-height: 2rem;
+        font-size: 0.68rem;
     }
 }
