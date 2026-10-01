@@ -9,9 +9,17 @@
     --brand-green-deep: #007a39;
     --brand-yellow: #ffc000;
     --brand-yellow-rgb: 255, 192, 0;
+    --brand-yellow-deep: #7a5a00;
     --brand-red: #ff0101;
     --brand-red-rgb: 255, 1, 1;
-    --line: rgba(var(--brand-green-rgb), 0.3);
+    --brand-red-deep: #960000;
+    --brand-ratio-gradient: linear-gradient(
+        90deg,
+        var(--brand-green) 0 50%,
+        var(--brand-yellow) 50% 83.333333%,
+        var(--brand-red) 83.333333% 100%
+    );
+    --line: rgba(var(--ink-rgb), 0.18);
     --font-serif: Georgia, "Times New Roman", serif;
     --body-font-size: 18px;
 }
@@ -31,7 +39,9 @@ html[data-theme="dark"] {
     --ink-rgb: 241, 238, 228;
     --surface: #211f1b;
     --brand-green-deep: #55d990;
-    --line: rgba(var(--brand-green-rgb), 0.48);
+    --brand-yellow-deep: #ffd24a;
+    --brand-red-deep: #ff6b6b;
+    --line: rgba(var(--ink-rgb), 0.24);
 }
 
 * {
@@ -108,12 +118,7 @@ body.benvenuto-aperto {
     right: 0;
     left: 0;
     height: 0.42rem;
-    background: linear-gradient(
-        90deg,
-        var(--brand-green) 0 58%,
-        var(--brand-yellow) 58% 87%,
-        var(--brand-red) 87% 100%
-    );
+    background: var(--brand-ratio-gradient);
     content: "";
 }
 
@@ -198,6 +203,18 @@ body.benvenuto-aperto {
     border-color: var(--ink);
 }
 
+.benvenuto-azione:not(.benvenuto-azione-primaria) {
+    border-color: var(--brand-yellow-deep);
+    color: var(--brand-yellow-deep);
+}
+
+.benvenuto-azione:not(.benvenuto-azione-primaria):hover,
+.benvenuto-azione:not(.benvenuto-azione-primaria):focus-visible {
+    border-color: var(--brand-yellow);
+    background: var(--brand-yellow);
+    color: #171717;
+}
+
 .benvenuto-azione:disabled {
     cursor: wait;
     opacity: 0.6;
@@ -220,7 +237,7 @@ body.benvenuto-aperto {
 
 .benvenuto-annulla-accesso:hover,
 .benvenuto-annulla-accesso:focus-visible {
-    color: var(--brand-red);
+    color: var(--brand-red-deep);
 }
 
 .benvenuto-annulla-accesso:disabled {
@@ -382,11 +399,11 @@ body.benvenuto-aperto {
 }
 
 .benvenuto-indicazione-gialla {
-    background: #7a5a00;
+    background: var(--brand-yellow-deep);
 }
 
 .benvenuto-indicazione-rossa {
-    background: #960000;
+    background: var(--brand-red-deep);
 }
 
 .benvenuto-funzionalita-testo h2 {
@@ -2626,28 +2643,48 @@ html[data-theme="dark"] .leaflet-control-layers label {
 /* Identità cromatica */
 
 .controlli-fissi {
-    border-top: 0.2rem solid var(--brand-green);
+    position: fixed;
 }
 
-.menu-button,
-.impostazioni-button {
+.controlli-fissi::before {
+    position: absolute;
+    top: -1px;
+    right: -1px;
+    left: -1px;
+    height: 0.2rem;
+    background: var(--brand-ratio-gradient);
+    content: "";
+    pointer-events: none;
+}
+
+.menu-button {
     border-color: var(--brand-green-deep);
     color: var(--brand-green-deep);
 }
 
+.impostazioni-button {
+    border-color: var(--brand-yellow-deep);
+    color: var(--brand-yellow-deep);
+}
+
 .menu-button:hover,
-.menu-button:focus-visible,
-.impostazioni-button:hover,
-.impostazioni-button:focus-visible,
-.impostazioni-button[aria-expanded="true"] {
+.menu-button:focus-visible {
     background: var(--brand-green-deep);
     color: var(--paper);
 }
 
+.impostazioni-button:hover,
+.impostazioni-button:focus-visible,
+.impostazioni-button[aria-expanded="true"] {
+    border-color: var(--brand-yellow);
+    background: var(--brand-yellow);
+    color: #171717;
+}
+
 .indice a:hover,
 .indice a:focus-visible {
-    border-color: var(--brand-green-deep);
-    background: rgba(var(--brand-green-rgb), 0.1);
+    border-color: var(--brand-yellow-deep);
+    background: rgba(var(--brand-yellow-rgb), 0.14);
 }
 
 .menu-principale {
@@ -2660,12 +2697,7 @@ html[data-theme="dark"] .leaflet-control-layers label {
     right: 0;
     left: 0;
     height: 0.35rem;
-    background: linear-gradient(
-        90deg,
-        var(--brand-green) 0 58%,
-        var(--brand-yellow) 58% 87%,
-        var(--brand-red) 87% 100%
-    );
+    background: var(--brand-ratio-gradient);
     content: "";
 }
 
@@ -2702,12 +2734,7 @@ html[data-theme="dark"] .leaflet-control-layers label {
     width: 5.5rem;
     height: 0.28rem;
     margin: 0.7rem auto 0;
-    background: linear-gradient(
-        90deg,
-        var(--brand-green) 0 62%,
-        var(--brand-yellow) 62% 88%,
-        var(--brand-red) 88% 100%
-    );
+    background: var(--brand-ratio-gradient);
     content: "";
 }
 
@@ -2715,7 +2742,7 @@ html[data-theme="dark"] .leaflet-control-layers label {
 .contatti-toggle,
 .autore-contatti a,
 .admin-strumenti a {
-    text-decoration-color: var(--brand-green);
+    text-decoration-color: var(--brand-yellow);
     text-decoration-thickness: 0.12em;
     text-underline-offset: 0.16em;
 }
@@ -2774,23 +2801,35 @@ html[data-theme="dark"] .leaflet-control-layers label {
 body .spazio-carta,
 body .memoria-card,
 body .memoria-propria-card {
-    border-color: rgba(var(--brand-green-rgb), 0.48);
+    border-color: var(--line);
     border-top-width: 0.28rem;
     background: rgba(var(--paper-rgb), 0.82);
 }
 
-body .spazio-carta:nth-child(3n + 1),
-body .memoria-card:nth-child(3n + 1) {
+body .spazio-carta:nth-child(6n + 1),
+body .spazio-carta:nth-child(6n + 2),
+body .spazio-carta:nth-child(6n + 3),
+body .memoria-card:nth-child(6n + 1),
+body .memoria-card:nth-child(6n + 2),
+body .memoria-card:nth-child(6n + 3),
+body .memoria-propria-card:nth-child(6n + 1),
+body .memoria-propria-card:nth-child(6n + 2),
+body .memoria-propria-card:nth-child(6n + 3) {
     border-top-color: var(--brand-green);
 }
 
-body .spazio-carta:nth-child(3n + 2),
-body .memoria-card:nth-child(3n + 2) {
+body .spazio-carta:nth-child(6n + 4),
+body .spazio-carta:nth-child(6n + 5),
+body .memoria-card:nth-child(6n + 4),
+body .memoria-card:nth-child(6n + 5),
+body .memoria-propria-card:nth-child(6n + 4),
+body .memoria-propria-card:nth-child(6n + 5) {
     border-top-color: var(--brand-yellow);
 }
 
-body .spazio-carta:nth-child(3n),
-body .memoria-card:nth-child(6n) {
+body .spazio-carta:nth-child(6n),
+body .memoria-card:nth-child(6n),
+body .memoria-propria-card:nth-child(6n) {
     border-top-color: var(--brand-red);
 }
 
@@ -2811,8 +2850,17 @@ body .voci-editor-indice button[aria-current="true"] {
 
 .archivio-lista article {
     padding-left: 1rem;
-    border-top-color: rgba(var(--brand-green-rgb), 0.34);
+    border-top-color: var(--line);
     border-left: 0.2rem solid var(--brand-green);
+}
+
+.archivio-lista article:nth-child(6n + 4),
+.archivio-lista article:nth-child(6n + 5) {
+    border-left-color: var(--brand-yellow);
+}
+
+.archivio-lista article:nth-child(6n) {
+    border-left-color: var(--brand-red);
 }
 
 .mappa-strumenti button,
@@ -3443,12 +3491,7 @@ html[data-motion="reduce"] *::after {
 .verso-mappa-scheda::before {
     height: 0.3rem;
     flex: 0 0 auto;
-    background: linear-gradient(
-        90deg,
-        var(--brand-green) 0 62%,
-        var(--brand-yellow) 62% 88%,
-        var(--brand-red) 88% 100%
-    );
+    background: var(--brand-ratio-gradient);
     content: "";
 }
 

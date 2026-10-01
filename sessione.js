@@ -109,7 +109,7 @@
             markers: [
                 { label: "Memorie", x: "13%", y: "61%" },
                 { label: "Archivio", x: "42%", y: "61%", tone: "yellow" },
-                { label: "Voci", x: "70%", y: "61%", tone: "red" }
+                { label: "Voci", x: "70%", y: "61%" }
             ]
         },
         {
