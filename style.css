@@ -13,18 +13,11 @@
     --brand-red: #ff0000;
     --brand-red-rgb: 255, 0, 0;
     --brand-red-deep: #960000;
-    --brand-surface-alpha: 0.055;
     --brand-ratio-gradient: linear-gradient(
         90deg,
         var(--brand-green) 0 50%,
         var(--brand-yellow) 50% 83.333333%,
         var(--brand-red) 83.333333% 100%
-    );
-    --brand-surface-gradient: linear-gradient(
-        90deg,
-        rgba(var(--brand-green-rgb), var(--brand-surface-alpha)) 0 50%,
-        rgba(var(--brand-yellow-rgb), var(--brand-surface-alpha)) 50% 83.333333%,
-        rgba(var(--brand-red-rgb), var(--brand-surface-alpha)) 83.333333% 100%
     );
     --line: rgba(var(--ink-rgb), 0.18);
     --font-serif: Georgia, "Times New Roman", serif;
@@ -48,7 +41,6 @@ html[data-theme="dark"] {
     --brand-green-deep: #a7d87c;
     --brand-yellow-deep: #f6c85a;
     --brand-red-deep: #ff6b6b;
-    --brand-surface-alpha: 0.075;
     --line: rgba(var(--ink-rgb), 0.24);
 }
 
@@ -64,11 +56,32 @@ html {
 body {
     margin: 0;
     overflow-x: hidden;
-    background: var(--brand-surface-gradient), var(--paper);
+    background: var(--paper);
     color: var(--ink);
     font-family: var(--font-serif);
     font-size: var(--body-font-size);
     line-height: 1.55;
+}
+
+body.pagina-poesia {
+    background: color-mix(in srgb, var(--paper) 94.5%, var(--brand-green));
+}
+
+body.pagina-autore {
+    background: color-mix(in srgb, var(--paper) 94.5%, var(--brand-yellow));
+}
+
+body.pagina-progetto {
+    background: color-mix(in srgb, var(--paper) 94.5%, var(--brand-red));
+}
+
+body.pagina-spazio-personale,
+body.pagina-taccuino,
+body.pagina-spazio-pubblico,
+body.pagina-memorie,
+body.pagina-archivio,
+body.pagina-voci {
+    background: var(--surface);
 }
 
 body.benvenuto-aperto {
@@ -97,7 +110,7 @@ body.benvenuto-aperto {
     flex-direction: column;
     overflow: hidden;
     border: 1px solid rgba(var(--brand-green-rgb), 0.5);
-    background: var(--brand-surface-gradient), var(--paper);
+    background: var(--paper);
     color: var(--ink);
     box-shadow: 0 1.5rem 5rem rgba(0, 0, 0, 0.32);
     text-align: center;
