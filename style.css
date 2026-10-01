@@ -88,6 +88,37 @@ body.benvenuto-aperto {
     overflow: hidden;
 }
 
+.avviso-sviluppo {
+    max-width: 52rem;
+    margin: 2rem 0 0;
+    padding: 0.9rem 1rem;
+    border: 1px solid var(--line);
+    border-left: 0.28rem solid var(--brand-yellow);
+    background: rgba(var(--brand-yellow-rgb), 0.07);
+    font-size: 0.92rem;
+    line-height: 1.55;
+}
+
+.avviso-sviluppo p {
+    margin: 0;
+}
+
+.avviso-sviluppo a {
+    color: inherit;
+    text-decoration-color: var(--brand-yellow-deep);
+    text-decoration-thickness: 0.1rem;
+    text-underline-offset: 0.18rem;
+}
+
+.avviso-sviluppo a:hover,
+.avviso-sviluppo a:focus-visible {
+    color: var(--brand-yellow-deep);
+}
+
+.avviso-sviluppo-mappa {
+    margin: 1rem 0 0;
+}
+
 .benvenuto-overlay {
     position: fixed;
     z-index: 5000;
