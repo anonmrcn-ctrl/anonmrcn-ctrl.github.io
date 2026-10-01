@@ -13,11 +13,18 @@
     --brand-red: #ff0000;
     --brand-red-rgb: 255, 0, 0;
     --brand-red-deep: #960000;
+    --brand-surface-alpha: 0.055;
     --brand-ratio-gradient: linear-gradient(
         90deg,
         var(--brand-green) 0 50%,
         var(--brand-yellow) 50% 83.333333%,
         var(--brand-red) 83.333333% 100%
+    );
+    --brand-surface-gradient: linear-gradient(
+        90deg,
+        rgba(var(--brand-green-rgb), var(--brand-surface-alpha)) 0 50%,
+        rgba(var(--brand-yellow-rgb), var(--brand-surface-alpha)) 50% 83.333333%,
+        rgba(var(--brand-red-rgb), var(--brand-surface-alpha)) 83.333333% 100%
     );
     --line: rgba(var(--ink-rgb), 0.18);
     --font-serif: Georgia, "Times New Roman", serif;
@@ -41,6 +48,7 @@ html[data-theme="dark"] {
     --brand-green-deep: #a7d87c;
     --brand-yellow-deep: #f6c85a;
     --brand-red-deep: #ff6b6b;
+    --brand-surface-alpha: 0.075;
     --line: rgba(var(--ink-rgb), 0.24);
 }
 
@@ -56,23 +64,7 @@ html {
 body {
     margin: 0;
     overflow-x: hidden;
-    background:
-        linear-gradient(
-            90deg,
-            rgba(var(--brand-green-rgb), 0.055) 0 0.28rem,
-            transparent 0.28rem
-        ),
-        radial-gradient(
-            circle at 0 7%,
-            rgba(var(--brand-green-rgb), 0.075),
-            transparent 27rem
-        ),
-        radial-gradient(
-            circle at 100% 93%,
-            rgba(var(--brand-yellow-rgb), 0.07),
-            transparent 23rem
-        ),
-        var(--paper);
+    background: var(--brand-surface-gradient), var(--paper);
     color: var(--ink);
     font-family: var(--font-serif);
     font-size: var(--body-font-size);
@@ -105,7 +97,7 @@ body.benvenuto-aperto {
     flex-direction: column;
     overflow: hidden;
     border: 1px solid rgba(var(--brand-green-rgb), 0.5);
-    background: var(--paper);
+    background: var(--brand-surface-gradient), var(--paper);
     color: var(--ink);
     box-shadow: 0 1.5rem 5rem rgba(0, 0, 0, 0.32);
     text-align: center;
