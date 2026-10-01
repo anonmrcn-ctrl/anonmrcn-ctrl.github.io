@@ -182,8 +182,8 @@ body.benvenuto-aperto {
 .benvenuto-logo-link,
 .benvenuto-tour-logo-link,
 .autore-logo-link {
-    display: inline-grid;
-    place-items: center;
+    position: relative;
+    display: inline-block;
     overflow: hidden;
     border-radius: 50%;
     color: inherit;
@@ -202,11 +202,16 @@ body.benvenuto-aperto {
     aspect-ratio: 1;
 }
 
+.benvenuto-logo-link img,
 .benvenuto-tour-logo-link img,
 .autore-logo-link img {
+    position: absolute;
+    top: 0;
+    left: 50%;
     width: auto;
     max-width: none;
     height: 100%;
+    transform: translateX(-50%);
 }
 
 .benvenuto-logo-link:focus-visible,
