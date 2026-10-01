@@ -179,7 +179,7 @@
 
         intro.className = "benvenuto-pagina benvenuto-intro";
         logo.className = "benvenuto-logo";
-        logo.src = "./logo.webp";
+        logo.src = "./logo.webp?v=20261001-logo2";
         logo.alt = "Logo di anonMrcn";
         title.id = "benvenutoTitolo";
         title.textContent = "Benvenuto nel sito anonMrcn";
@@ -212,7 +212,7 @@
         tour.hidden = true;
         tourHeader.className = "benvenuto-tour-intestazione";
         tourBrand.className = "benvenuto-tour-marchio";
-        tourLogo.src = "./logo.webp";
+        tourLogo.src = "./logo.webp?v=20261001-logo2";
         tourLogo.alt = "";
         tourName.textContent = "anonMrcn";
         tourCounter.className = "benvenuto-tour-contatore";
