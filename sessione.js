@@ -341,6 +341,7 @@
             const previewLabel = document.createElement("span");
             const previewClose = document.createElement("button");
 
+            dialog.classList.add("benvenuto-anteprima");
             previewLabel.className = "benvenuto-anteprima-etichetta";
             previewLabel.textContent = "Anteprima admin";
             previewClose.type = "button";
@@ -395,9 +396,13 @@
                 0,
                 Math.min(WELCOME_FEATURES.length - 1, index)
             );
+            const scrollBehavior = window.getComputedStyle(scroller)
+                .scrollBehavior === "smooth"
+                ? "smooth"
+                : "auto";
             scroller.scrollTo({
                 left: activeIndex * scroller.clientWidth,
-                behavior: "smooth"
+                behavior: scrollBehavior
             });
             updateTour();
         }

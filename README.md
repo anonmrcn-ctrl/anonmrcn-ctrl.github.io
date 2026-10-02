@@ -1,6 +1,6 @@
-# nnMrcn
+# anonMrcn
 
-Sito GitHub Pages del progetto nnMrcn.
+Sito GitHub Pages del progetto anonMrcn.
 
 ## Frontend
 
@@ -34,6 +34,7 @@ Sito GitHub Pages del progetto nnMrcn.
 - `taccuino.js` — salvataggio locale condiviso tra le pagine
 - `taccuino-pagina.js` — visualizzazione ed esportazione del taccuino
 - `analytics.js` — attivazione facoltativa di Cloudflare Web Analytics
+- `goatcounter.js` — copia locale dello script di conteggio visite GoatCounter
 - `percorsi.js` — percorsi, luoghi rilevanti e livelli paesaggistici
 - `marcon-da-sud.js` — percorso aggiuntivo Marcon da sud
 - `cave-rilevanti.js` — cave integrate tra i luoghi rilevanti
@@ -60,5 +61,9 @@ Cloudflare Web Analytics viene caricato soltanto quando
 `NNMRCN_ANALYTICS_TOKEN` contiene il token pubblico assegnato al sito. Il valore
 si imposta in `config.js`; con il campo vuoto non viene eseguita alcuna richiesta
 di analisi.
+
+Le pagine pubbliche caricano localmente `goatcounter.js` e inviano il conteggio
+a `anonmrcn.goatcounter.com`. Lo script esclude localhost e le anteprime caricate
+negli iframe del tour; la pagina amministrativa non lo include.
 
 Le locations private, le password e i secret non devono essere salvati nel repository pubblico.

@@ -611,17 +611,32 @@ body.benvenuto-aperto {
 }
 
 .benvenuto-tour-indicatore {
-    width: 0.62rem;
-    height: 0.62rem;
+    display: grid;
+    width: 24px;
+    height: 24px;
+    place-items: center;
     padding: 0;
-    border: 1px solid var(--brand-green-deep);
+    border: 0;
     border-radius: 50%;
     background: transparent;
     cursor: pointer;
 }
 
-.benvenuto-tour-indicatore[aria-current="step"] {
+.benvenuto-tour-indicatore::before {
+    width: 0.62rem;
+    height: 0.62rem;
+    border: 1px solid var(--brand-green-deep);
+    border-radius: 50%;
+    background: transparent;
+    content: "";
+}
+
+.benvenuto-tour-indicatore[aria-current="step"]::before {
     background: var(--brand-green);
+}
+
+.benvenuto-dialogo.benvenuto-anteprima .benvenuto-tour-intestazione {
+    padding-top: 4rem;
 }
 
 .benvenuto-anteprima-etichetta {
@@ -3220,12 +3235,12 @@ body .voci-editor-indice button[aria-current="true"] {
     }
 
     .benvenuto-tour-indicatori {
-        gap: 0.32rem;
+        gap: 0.08rem;
     }
 
     .benvenuto-tour-indicatore {
-        width: 0.55rem;
-        height: 0.55rem;
+        width: 24px;
+        height: 24px;
     }
 
     .benvenuto-anteprima-etichetta {
