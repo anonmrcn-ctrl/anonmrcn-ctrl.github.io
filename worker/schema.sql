@@ -6,13 +6,23 @@ CREATE TABLE IF NOT EXISTS locations (
     username TEXT NOT NULL DEFAULT '',
     lat REAL NOT NULL,
     lon REAL NOT NULL,
-    is_visible INTEGER NOT NULL DEFAULT 1
+    is_visible INTEGER NOT NULL DEFAULT 0
         CHECK (is_visible IN (0, 1)),
     welcome_seen_at INTEGER,
     password_lookup TEXT NOT NULL UNIQUE,
     password_salt TEXT NOT NULL,
     password_hash TEXT NOT NULL
 );
+
+CREATE TRIGGER IF NOT EXISTS locations_private_by_default
+AFTER INSERT ON locations
+FOR EACH ROW
+WHEN NEW.is_visible <> 0
+BEGIN
+    UPDATE locations
+    SET is_visible = 0
+    WHERE id = NEW.id;
+END;
 
 CREATE TABLE IF NOT EXISTS poems (
     location_id INTEGER PRIMARY KEY,

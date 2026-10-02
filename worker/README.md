@@ -12,7 +12,9 @@ Apri Cloudflare → **Storage & databases** → **D1 SQL Database** e seleziona
 Apri **Console** ed esegui innanzitutto il contenuto di `worker/schema.sql`.
 Il Worker aggiunge automaticamente alle installazioni esistenti i campi
 `username` e `is_visible`, usati per il nome pubblico e per la preferenza di
-visibilità della location. Aggiunge inoltre, senza cancellare dati, i campi per
+visibilità della location. Le nuove location partono nascoste e diventano
+visibili soltanto dopo una scelta esplicita dell’utente; le preferenze già
+salvate non vengono modificate. Aggiunge inoltre, senza cancellare dati, i campi per
 il consenso e la pubblicazione nell’archivio. La stessa modifica è disponibile
 come migrazione in `worker/migrations/0001_public_archive.sql`.
 
@@ -38,6 +40,10 @@ La schermata di benvenuto delle location usa il campo aggiunto dalla migrazione
 non distruttiva `0006_location_welcome.sql`. Le sessioni delle location durano
 un anno e, durante l'uso del sito, vengono rinnovate al massimo una volta al
 giorno. Il pulsante «Esci» le revoca immediatamente.
+
+La migrazione non distruttiva `0007_location_visibility_opt_in.sql` applica
+alle nuove location la visibilità iniziale nascosta anche nei database creati
+con una versione precedente dello schema.
 
 Se le location non sono ancora presenti, esegui successivamente il contenuto del
 file privato `nnmrcn_seed_private_d1_20260823.sql` aggiornato. Contiene le 20

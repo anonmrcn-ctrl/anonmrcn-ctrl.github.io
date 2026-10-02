@@ -182,7 +182,7 @@ const LOCATION_PROFILE_COLUMNS = Object.freeze([
     {
         name: "is_visible",
         statement:
-            "ALTER TABLE locations ADD COLUMN is_visible INTEGER NOT NULL DEFAULT 1 CHECK (is_visible IN (0, 1))"
+            "ALTER TABLE locations ADD COLUMN is_visible INTEGER NOT NULL DEFAULT 0 CHECK (is_visible IN (0, 1))"
     },
     {
         name: "welcome_seen_at",
@@ -1753,7 +1753,9 @@ async function createAccessRequest(request, env, ctx) {
         lines.push("Coordinate: non indicate");
     }
 
-    lines.push("Visibilità iniziale: mostra sulla mappa dopo la registrazione");
+    lines.push(
+        "Visibilità iniziale: posizione nascosta fino alla scelta esplicita dell’utente"
+    );
 
     return saveContactMessage(request, env, ctx, {
         name: username,
@@ -2816,6 +2818,18 @@ async function ensureLocationProfileStorage(env) {
             }
         }
     }
+
+    await env.DB.prepare(`
+        CREATE TRIGGER IF NOT EXISTS locations_private_by_default
+        AFTER INSERT ON locations
+        FOR EACH ROW
+        WHEN NEW.is_visible <> 0
+        BEGIN
+            UPDATE locations
+            SET is_visible = 0
+            WHERE id = NEW.id;
+        END
+    `).run();
 }
 
 async function ensureMessageArchiveStorage(env) {
