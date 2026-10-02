@@ -130,6 +130,22 @@
                 { label: "Accesso alle locations", x: "48%", y: "69%", tone: "yellow" },
                 { label: "Controlli e privacy", x: "70%", y: "12%", tone: "red" }
             ]
+        },
+        {
+            title: "Sostieni il progetto",
+            description:
+                "Basta una condivisione: fai conoscere anonMrcn a chi vive, ha vissuto o attraversa Marcon.",
+            details: [
+                "Condividi il sito con una persona interessata a Marcon",
+                "Aiuta nuove memorie e testimonianze a raggiungere il progetto"
+            ],
+            preview:
+                "./index.html?onboarding-preview=1&onboarding-menu=1",
+            alt:
+                "Menu del sito aperto con l’indicazione per sostenere e condividere il progetto anonMrcn.",
+            markers: [
+                { label: "Basta una condivisione", x: "48%", y: "17%", tone: "yellow" }
+            ]
         }
     ]);
 
