@@ -1831,8 +1831,11 @@
     function syncLocationVisibility() {
         const hidden = sessionLocation?.visible === false;
         elements.locationVisibilityToggle.textContent = hidden
-            ? "Mostra la mia location sulla mappa"
+            ? "Fai vedere la mia posizione sulla mappa"
             : "Nascondi la mia location sulla mappa";
+        elements.locationVisibilityToggle.dataset.visibilityAction = hidden
+            ? "show"
+            : "hide";
         elements.locationVisibilityToggle.setAttribute(
             "aria-pressed",
             String(hidden)
@@ -1864,6 +1867,7 @@
         elements.loginLoggedIn.hidden = true;
         elements.loginLocation.textContent = "";
         elements.locationVisibilityToggle.setAttribute("aria-pressed", "false");
+        elements.locationVisibilityToggle.dataset.visibilityAction = "hide";
         elements.locationVisibilityStatus.textContent = "";
         pushNotifications.reset();
     }

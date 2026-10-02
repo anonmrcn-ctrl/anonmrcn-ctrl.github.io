@@ -20,12 +20,38 @@
     const locationVisibilityStatus = document.getElementById(
         "locationVisibilityStatus"
     );
+    const locationVisibilityControl = locationVisibilityToggle?.closest(
+        ".location-visibility-control"
+    );
     const menuContent = menu?.querySelector(".menu-contenuto");
     const themeManager = window.NNMRCN_THEME;
     const settingsManager = window.NNMRCN_SETTINGS;
 
     if (!button || !closeButton || !menu || !overlay) {
         return;
+    }
+
+    if (
+        locationVisibilityControl &&
+        !locationVisibilityControl.querySelector(".location-privacy-note")
+    ) {
+        const privacyNote = document.createElement("p");
+
+        privacyNote.className = "location-privacy-note";
+        privacyNote.id = "locationVisibilityPrivacy";
+        privacyNote.innerHTML = `
+            <strong>Privacy.</strong> Sulla mappa l’indirizzo non è affiancato
+            da nome, cognome o e-mail, ma può rendere riconoscibile
+            l’abitazione. Se mostri la posizione, indirizzo e punto esatto sono
+            visibili soltanto agli utenti autenticati. L’e-mail usata per
+            richiedere il codice resta riservata all’admin. Puoi nascondere la
+            posizione in qualsiasi momento.
+        `;
+        locationVisibilityControl.appendChild(privacyNote);
+        locationVisibilityToggle.setAttribute(
+            "aria-describedby",
+            "locationVisibilityPrivacy"
+        );
     }
 
     let keepAccessVisible = false;

@@ -1250,34 +1250,55 @@ select {
 }
 
 .location-visibility-control {
-    margin-top: 0.8rem;
-    opacity: 0.62;
-    transition: opacity 180ms ease;
-}
-
-.location-visibility-control:hover,
-.location-visibility-control:focus-within {
-    opacity: 1;
+    display: grid;
+    gap: 0.55rem;
+    margin-top: 0.9rem;
+    padding: 0.75rem;
+    border: 1px solid rgba(var(--brand-green-rgb), 0.42);
+    background: rgba(var(--brand-green-rgb), 0.07);
 }
 
 .location-visibility-toggle {
-    padding: 0;
-    border: 0;
-    background: transparent;
+    display: inline-flex;
+    align-items: center;
+    width: 100%;
+    min-height: 2.75rem;
+    padding: 0.65rem 0.75rem;
+    border: 1px solid var(--brand-green-deep);
+    background: var(--surface);
     color: inherit;
     font-family: var(--font-serif);
-    font-size: 0.7rem;
+    font-size: 0.82rem;
+    font-weight: 700;
     line-height: 1.4;
     text-align: left;
-    text-decoration: underline;
-    text-underline-offset: 0.14em;
     cursor: pointer;
+    transition: background-color 160ms ease, color 160ms ease,
+        box-shadow 160ms ease, transform 160ms ease;
+}
+
+.location-visibility-toggle:hover,
+.location-visibility-toggle:focus-visible {
+    box-shadow: 0 0.25rem 0.8rem rgba(var(--brand-green-rgb), 0.24);
+}
+
+.location-visibility-toggle:focus-visible {
+    outline: 0.16rem solid var(--brand-yellow);
+    outline-offset: 0.15rem;
+}
+
+.location-visibility-toggle[data-visibility-action="show"] {
+    border-color: #3f6727;
+    background: #3f6727;
+    color: #fff;
+    box-shadow: 0 0.3rem 0.9rem rgba(var(--brand-green-rgb), 0.28);
 }
 
 .location-visibility-toggle::before {
     content: "○";
     display: inline-block;
-    width: 1.1em;
+    flex: 0 0 1.3em;
+    width: 1.3em;
     text-decoration: none;
 }
 
@@ -1287,9 +1308,20 @@ select {
 
 .location-visibility-status {
     min-height: 1.4em;
-    margin: 0.25rem 0 0;
-    font-size: 0.67rem;
+    margin: 0;
+    font-size: 0.72rem;
     line-height: 1.4;
+}
+
+.location-privacy-note {
+    margin: 0;
+    color: color-mix(in srgb, var(--ink) 78%, transparent);
+    font-size: 0.72rem;
+    line-height: 1.45;
+}
+
+.location-privacy-note strong {
+    color: var(--ink);
 }
 
 .menu-installazione {
