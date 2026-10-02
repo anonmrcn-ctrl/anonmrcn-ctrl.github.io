@@ -17,7 +17,7 @@ self.addEventListener("push", (event) => {
             {
                 body: notification.body || "Hai ricevuto un nuovo avviso.",
                 icon: new URL(
-                    "./icona-app-192.png?v=logo3",
+                    "./icona-app-192-logo3.png",
                     self.registration.scope
                 ).href,
                 tag: notification.tag || "nnmrcn-notifica",
