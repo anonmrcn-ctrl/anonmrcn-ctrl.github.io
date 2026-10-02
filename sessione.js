@@ -188,6 +188,8 @@
         const nextButton = document.createElement("button");
         let activeIndex = 0;
         let scrollFrame = 0;
+        let tourOpenFrame = 0;
+        let positioningTour = false;
 
         overlay.className = "benvenuto-overlay";
         dialog.className = "benvenuto-dialogo";
@@ -355,6 +357,7 @@
 
         function close() {
             window.cancelAnimationFrame(scrollFrame);
+            window.cancelAnimationFrame(tourOpenFrame);
             overlay.remove();
             document.body.classList.remove("benvenuto-aperto");
             welcomeDialog = null;
@@ -450,12 +453,26 @@
         });
 
         discoverButton.addEventListener("click", () => {
+            positioningTour = true;
             intro.hidden = true;
             tour.hidden = false;
             activeIndex = 0;
+            scroller.style.scrollBehavior = "auto";
+            scroller.style.scrollSnapType = "none";
             scroller.scrollLeft = 0;
             updateTour();
-            nextButton.focus();
+
+            window.cancelAnimationFrame(tourOpenFrame);
+            tourOpenFrame = window.requestAnimationFrame(() => {
+                scroller.scrollLeft = 0;
+                tourOpenFrame = window.requestAnimationFrame(() => {
+                    scroller.scrollLeft = 0;
+                    scroller.style.removeProperty("scroll-behavior");
+                    scroller.style.removeProperty("scroll-snap-type");
+                    positioningTour = false;
+                    nextButton.focus({ preventScroll: true });
+                });
+            });
         });
 
         if (cancelAccess) {
@@ -480,6 +497,10 @@
         });
 
         scroller.addEventListener("scroll", () => {
+            if (positioningTour) {
+                return;
+            }
+
             window.cancelAnimationFrame(scrollFrame);
             scrollFrame = window.requestAnimationFrame(() => {
                 if (!scroller.clientWidth) {
