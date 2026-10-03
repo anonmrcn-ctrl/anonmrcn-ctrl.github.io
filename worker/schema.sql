@@ -4,6 +4,9 @@ CREATE TABLE IF NOT EXISTS locations (
     id INTEGER PRIMARY KEY,
     address TEXT NOT NULL UNIQUE,
     username TEXT NOT NULL DEFAULT '',
+    street_name TEXT NOT NULL DEFAULT '',
+    street_order INTEGER NOT NULL DEFAULT 0
+        CHECK (street_order >= 0),
     lat REAL NOT NULL,
     lon REAL NOT NULL,
     is_visible INTEGER NOT NULL DEFAULT 0
@@ -16,6 +19,10 @@ CREATE TABLE IF NOT EXISTS locations (
     password_salt TEXT NOT NULL,
     password_hash TEXT NOT NULL
 );
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_locations_street_order
+ON locations(street_name, street_order)
+WHERE street_name <> '' AND street_order > 0;
 
 CREATE TRIGGER IF NOT EXISTS locations_private_by_default
 AFTER INSERT ON locations

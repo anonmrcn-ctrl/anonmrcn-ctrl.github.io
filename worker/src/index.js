@@ -183,6 +183,15 @@ const LOCATION_PROFILE_COLUMNS = Object.freeze([
         statement: "ALTER TABLE locations ADD COLUMN username TEXT NOT NULL DEFAULT ''"
     },
     {
+        name: "street_name",
+        statement: "ALTER TABLE locations ADD COLUMN street_name TEXT NOT NULL DEFAULT ''"
+    },
+    {
+        name: "street_order",
+        statement:
+            "ALTER TABLE locations ADD COLUMN street_order INTEGER NOT NULL DEFAULT 0 CHECK (street_order >= 0)"
+    },
+    {
         name: "is_visible",
         statement:
             "ALTER TABLE locations ADD COLUMN is_visible INTEGER NOT NULL DEFAULT 0 CHECK (is_visible IN (0, 1))"
@@ -2892,18 +2901,30 @@ async function ensureLocationProfileStorage(env) {
         WHERE location_consent_at IS NULL AND is_visible <> 0
     `).run();
 
-    await anonymizePendingLocations(env);
+    await normalizeLocationRecords(env);
+
+    await env.DB.prepare(`
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_locations_street_order
+        ON locations(street_name, street_order)
+        WHERE street_name <> '' AND street_order > 0
+    `).run();
 }
 
-async function anonymizePendingLocations(env) {
+async function normalizeLocationRecords(env) {
     if (!env.PASSWORD_PEPPER) {
         throw new Error("PASSWORD_PEPPER secret missing.");
     }
 
     const result = await env.DB.prepare(`
-        SELECT id, address, lat, lon
+        SELECT
+            id,
+            address,
+            street_name,
+            street_order,
+            lat,
+            lon,
+            privacy_safe
         FROM locations
-        WHERE privacy_safe = 0
         ORDER BY id
     `).all();
     const rows = result.results || [];
@@ -2912,37 +2933,138 @@ async function anonymizePendingLocations(env) {
         return;
     }
 
-    const statements = [];
+    const streetGroups = new Map();
+    const normalizedRows = [];
 
     for (const row of rows) {
-        const approximatePoint = await approximateCoordinates(
-            env,
-            Number(row.lat),
-            Number(row.lon),
-            `location:${row.id}`
+        const proposedStreet = extractLocationStreet(
+            row.street_name || row.address
         );
-        const genericAddress =
-            sanitizePublicLocationLabel(row.address) || "Marcon";
+        const streetKey = normalizeLocationStreetKey(proposedStreet);
+        let group = streetGroups.get(streetKey);
 
-        statements.push(
-            env.DB.prepare(`
-                UPDATE locations
-                SET
-                    address = ?,
-                    lat = ?,
-                    lon = ?,
-                    privacy_safe = 1
-                WHERE id = ? AND privacy_safe = 0
-            `).bind(
-                `${genericAddress} · location ${row.id}`,
-                approximatePoint.lat,
-                approximatePoint.lon,
-                row.id
-            )
-        );
+        if (!group) {
+            group = {
+                name: proposedStreet,
+                count: 0
+            };
+            streetGroups.set(streetKey, group);
+        }
+
+        group.count += 1;
+
+        let lat = Number(row.lat);
+        let lon = Number(row.lon);
+
+        if (Number(row.privacy_safe) !== 1) {
+            const approximatePoint = await approximateCoordinates(
+                env,
+                lat,
+                lon,
+                `location:${row.id}`
+            );
+
+            lat = approximatePoint.lat;
+            lon = approximatePoint.lon;
+        }
+
+        normalizedRows.push({
+            id: Number(row.id),
+            address: formatLocationLabel(group.name, group.count),
+            streetName: group.name,
+            streetOrder: group.count,
+            lat,
+            lon,
+            privacySafe: 1
+        });
     }
 
-    await env.DB.batch(statements);
+    const requiresUpdate = normalizedRows.some((row, index) => {
+        const current = rows[index];
+
+        return current.address !== row.address ||
+            current.street_name !== row.streetName ||
+            Number(current.street_order) !== row.streetOrder ||
+            Number(current.lat) !== row.lat ||
+            Number(current.lon) !== row.lon ||
+            Number(current.privacy_safe) !== row.privacySafe;
+    });
+
+    if (!requiresUpdate) {
+        return;
+    }
+
+    const temporaryStatements = normalizedRows.map((row) =>
+        env.DB.prepare(`
+            UPDATE locations
+            SET
+                address = ?,
+                street_name = '',
+                street_order = 0
+            WHERE id = ?
+        `).bind(
+            `__nnmrcn_location_${row.id}__`,
+            row.id
+        )
+    );
+    const finalStatements = normalizedRows.map((row) =>
+        env.DB.prepare(`
+            UPDATE locations
+            SET
+                address = ?,
+                street_name = ?,
+                street_order = ?,
+                lat = ?,
+                lon = ?,
+                privacy_safe = 1
+            WHERE id = ?
+        `).bind(
+            row.address,
+            row.streetName,
+            row.streetOrder,
+            row.lat,
+            row.lon,
+            row.id
+        )
+    );
+
+    await env.DB.batch([
+        ...temporaryStatements,
+        ...finalStatements
+    ]);
+}
+
+function extractLocationStreet(value) {
+    const withoutLegacyNumber = String(value || "")
+        .trim()
+        .replace(
+            /\s*[·•]\s*location\s+\d+\s*$/iu,
+            ""
+        );
+
+    return sanitizePublicLocationLabel(withoutLegacyNumber) || "Marcon";
+}
+
+function normalizeLocationStreetKey(value) {
+    return String(value || "")
+        .normalize("NFKC")
+        .toLocaleLowerCase("it")
+        .replace(/[.‘’'`´]/gu, "")
+        .replace(/\s+/gu, " ")
+        .trim();
+}
+
+function formatLocationLabel(streetName, streetOrder) {
+    const suffix = ` · location ${streetOrder}`;
+    const availableLength = Math.max(
+        1,
+        MAX_LOCATION_ADDRESS_LENGTH - suffix.length
+    );
+    const safeStreet = String(streetName || "Marcon")
+        .slice(0, availableLength)
+        .trim() || "Marcon";
+
+    return `${safeStreet}${suffix}`;
 }
 
 function sanitizePublicLocationLabel(value) {
