@@ -465,7 +465,8 @@ export default {
             if (request.method === "GET" && path === "/api/health") {
                 return json(request, env, {
                     ok: true,
-                    service: "nnmrcn-rete"
+                    service: "nnmrcn-rete",
+                    privacyVersion: "2026-10-03"
                 });
             }
 
