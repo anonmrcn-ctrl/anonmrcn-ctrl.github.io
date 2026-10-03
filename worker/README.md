@@ -69,22 +69,40 @@ SELECT COUNT(*) AS numero_location FROM locations;
 
 Il risultato atteso è `20`.
 
-## 2. Collega il Worker a GitHub
+## 2. Pubblicazione automatica GitHub → Cloudflare
 
-Apri Cloudflare → **Workers & Pages** → **Create application** e collega il
-repository `anonmrcn-ctrl/anonmrcn-ctrl.github.io`. Imposta:
+Il workflow `.github/workflows/deploy-cloudflare-worker.yml` pubblica il Worker
+`nnmrcn-rete` a ogni modifica della cartella `worker/` sul branch `main`. Può
+anche essere avviato manualmente dalla scheda **Actions** di GitHub. Il binding
+D1 `DB`, l'origine consentita di GitHub Pages e i log sono definiti in
+`wrangler.jsonc`.
 
-- nome Worker: `nnmrcn-rete`;
-- branch: `main`;
-- root directory: `worker`;
-- build command: nessuno;
-- deploy command: `npx wrangler deploy`.
+La configurazione iniziale richiede due Secrets nel repository GitHub. Apri
+**Settings** → **Secrets and variables** → **Actions** →
+**New repository secret** e aggiungi:
 
-Se `nnmrcn-rete` esiste già, aprilo e configura la connessione da
-**Settings** → **Builds** anziché creare un secondo Worker.
+- `CLOUDFLARE_API_TOKEN`: un token Cloudflare con il modello
+  **Edit Cloudflare Workers**, limitato al solo account del progetto;
+- `CLOUDFLARE_ACCOUNT_ID`: l'identificativo dell'account, copiabile da
+  **Workers & Pages** → **Account Details**.
 
-Il binding D1 `DB`, l'origine consentita di GitHub Pages e i log sono definiti
-in `wrangler.jsonc`.
+Il token non deve essere inserito nei file del repository né condiviso in
+chat. Se i Secrets mancano, il workflow termina senza pubblicare e mostra un
+avviso; dopo averli aggiunti, apri **Actions** →
+**Pubblica il Worker Cloudflare** → **Run workflow** per il primo deploy.
+Quelli successivi saranno automatici.
+
+Il workflow distribuisce il codice ma non applica automaticamente l'intera
+cronologia delle migrazioni D1, perché le installazioni esistenti potrebbero
+averne già applicate alcune manualmente. Il Worker aggiorna in modo idempotente
+lo schema necessario al primo accesso; le migrazioni esplicite restano
+disponibili per la manutenzione controllata descritta nella sezione precedente.
+
+Riferimenti ufficiali:
+
+- [GitHub Actions per Cloudflare Workers](https://developers.cloudflare.com/workers/ci-cd/external-cicd/github-actions/)
+- [Secrets di repository in GitHub Actions](https://docs.github.com/en/actions/how-tos/write-workflows/choose-what-workflows-do/use-secrets)
+- [Creazione di un API token Cloudflare](https://developers.cloudflare.com/fundamentals/api/get-started/create-token/)
 
 ## 3. Configura i due segreti
 
