@@ -40,12 +40,16 @@
         privacyNote.className = "location-privacy-note";
         privacyNote.id = "locationVisibilityPrivacy";
         privacyNote.innerHTML = `
-            <strong>Privacy.</strong> Sulla mappa l’indirizzo non è affiancato
-            da nome, cognome o e-mail, ma può rendere riconoscibile
-            l’abitazione. Se mostri la posizione, indirizzo e punto esatto sono
-            visibili soltanto agli utenti autenticati. L’e-mail usata per
-            richiedere il codice resta riservata all’admin. Puoi nascondere la
-            posizione in qualsiasi momento.
+            <strong>Informativa sulla privacy.</strong> anonMrcn è un progetto
+            artistico indipendente e senza scopo di lucro, sostenuto tramite
+            libere donazioni su Produzioni dal Basso. Attivando la posizione
+            accetti di mostrare dove è stata recapitata la poesia. Soltanto gli
+            utenti autenticati vedranno la via o zona generica e un punto
+            spostato di alcune centinaia di metri: la location non è associata a
+            una persona visibile e numero civico, posizione esatta, username ed
+            e-mail non vengono mostrati. Puoi nascondere il punto o chiederne la
+            rimozione in qualsiasi momento. <a href="./privacy.html">Leggi
+            l’informativa completa</a>.
         `;
         locationVisibilityControl.appendChild(privacyNote);
         locationVisibilityToggle.setAttribute(

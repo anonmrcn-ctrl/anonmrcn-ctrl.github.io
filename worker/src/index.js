@@ -23,6 +23,9 @@ const MAX_CONTACT_NAME_LENGTH = 80;
 const MAX_CONTACT_EMAIL_LENGTH = 254;
 const MAX_LOCATION_ADDRESS_LENGTH = 240;
 const MAX_CONTACT_REQUEST_BYTES = 8192;
+const CONTACT_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
+const LOCATION_MIN_SHIFT_METERS = 250;
+const LOCATION_MAX_SHIFT_METERS = 400;
 const MAX_JSON_REQUEST_BYTES = 16384;
 const MEMORY_LIMIT_PER_DAY = 3;
 const MAX_MEMORY_TITLE_LENGTH = 100;
@@ -187,6 +190,15 @@ const LOCATION_PROFILE_COLUMNS = Object.freeze([
     {
         name: "welcome_seen_at",
         statement: "ALTER TABLE locations ADD COLUMN welcome_seen_at INTEGER"
+    },
+    {
+        name: "privacy_safe",
+        statement:
+            "ALTER TABLE locations ADD COLUMN privacy_safe INTEGER NOT NULL DEFAULT 0 CHECK (privacy_safe IN (0, 1))"
+    },
+    {
+        name: "location_consent_at",
+        statement: "ALTER TABLE locations ADD COLUMN location_consent_at INTEGER"
     }
 ]);
 const MESSAGE_ARCHIVE_COLUMNS = Object.freeze([
@@ -478,6 +490,14 @@ export default {
                 error: "Errore interno."
             }, 500);
         }
+    },
+
+    async scheduled(_controller, env, ctx) {
+        ctx.waitUntil((async () => {
+            await ensureContactStorage(env);
+            await purgeExpiredContactMessages(env);
+            await ensureLocationProfileStorage(env);
+        })());
     }
 };
 
@@ -762,10 +782,13 @@ async function updateLocationPreferences(request, env) {
 
     await env.DB.prepare(`
         UPDATE locations
-        SET is_visible = ?
+        SET
+            is_visible = ?,
+            location_consent_at = ?
         WHERE id = ?
     `).bind(
         body.visible ? 1 : 0,
+        body.visible ? Date.now() : null,
         session.location_id
     ).run();
 
@@ -815,8 +838,8 @@ async function listLocations(request, env) {
                 id: row.id,
                 address: discloseLocation
                     ? row.address
-                    : row.username || "Location riservata",
-                username: row.username,
+                    : `Location ${row.id} riservata`,
+                username: isOwn ? row.username : "",
                 lat: discloseLocation ? row.lat : null,
                 lon: discloseLocation ? row.lon : null,
                 visible,
@@ -1693,6 +1716,7 @@ async function createAccessRequest(request, env, ctx) {
     const username = String(body.username || "").trim();
     const address = String(body.address || "").trim();
     const email = String(body.email || "").trim();
+    const privacyConsent = body.privacyConsent === true;
     const latValue = body.lat;
     const lonValue = body.lon;
     const hasLat = latValue !== null && latValue !== undefined && String(latValue).trim() !== "";
@@ -1727,6 +1751,12 @@ async function createAccessRequest(request, env, ctx) {
         }, 400);
     }
 
+    if (!privacyConsent) {
+        return json(request, env, {
+            error: "Per inviare la richiesta devi accettare l’informativa sulla privacy."
+        }, 400);
+    }
+
     if (hasLat !== hasLon || ((hasLat || hasLon) && !hasPoint)) {
         return json(request, env, {
             error: "Il punto selezionato sulla mappa non è valido."
@@ -1739,22 +1769,36 @@ async function createAccessRequest(request, env, ctx) {
         }, 400);
     }
 
+    const safeAddress = sanitizePublicLocationLabel(address);
+    const approximatePoint = hasPoint
+        ? await approximateCoordinates(
+            env,
+            lat,
+            lon,
+            `access-request:${email.toLowerCase()}`
+        )
+        : null;
     const lines = [
         "Richiesta di codice.",
         `Username: ${username || "non indicato"}`,
-        `Indirizzo: ${address || "non indicato"}`
+        `Via o zona approssimativa: ${safeAddress || "non indicata"}`,
+        "Consenso privacy: prestato (versione 2026-10-03)"
     ];
 
-    if (hasPoint) {
-        const coordinates = `${lat.toFixed(6)}, ${lon.toFixed(6)}`;
-        lines.push(`Coordinate: ${coordinates}`);
-        lines.push(`Mappa: https://www.google.com/maps?q=${lat.toFixed(6)},${lon.toFixed(6)}`);
+    if (approximatePoint) {
+        const coordinates =
+            `${approximatePoint.lat.toFixed(6)}, ${approximatePoint.lon.toFixed(6)}`;
+        lines.push(`Coordinate approssimative: ${coordinates}`);
+        lines.push(
+            `Mappa approssimativa: https://www.google.com/maps?q=${approximatePoint.lat.toFixed(6)},${approximatePoint.lon.toFixed(6)}`
+        );
     } else {
-        lines.push("Coordinate: non indicate");
+        lines.push("Coordinate approssimative: non indicate");
     }
 
     lines.push(
-        "Visibilità iniziale: posizione nascosta fino alla scelta esplicita dell’utente"
+        "Visibilità iniziale: posizione nascosta fino alla scelta esplicita dell’utente",
+        "Conservazione: richiesta da cancellare automaticamente entro 30 giorni"
     );
 
     return saveContactMessage(request, env, ctx, {
@@ -1788,6 +1832,7 @@ async function saveContactMessage(
     }
 
     await ensureContactStorage(env);
+    await purgeExpiredContactMessages(env);
 
     const sender = request.headers.get("CF-Connecting-IP") || "unknown";
     const senderHash = await hmacHex(
@@ -1860,6 +1905,7 @@ async function adminListContactMessages(request, env) {
     }
 
     await ensureContactStorage(env);
+    await purgeExpiredContactMessages(env);
 
     const result = await env.DB.prepare(`
         SELECT
@@ -1902,6 +1948,7 @@ async function adminUpdateContactMessage(request, env, messageId) {
     }
 
     await ensureContactStorage(env);
+    await purgeExpiredContactMessages(env);
 
     const message = await env.DB.prepare(`
         SELECT id
@@ -2759,6 +2806,13 @@ async function ensureContactStorage(env) {
     );
 }
 
+async function purgeExpiredContactMessages(env, now = Date.now()) {
+    await env.DB.prepare(`
+        DELETE FROM contact_messages
+        WHERE created_at < ?
+    `).bind(now - CONTACT_RETENTION_MS).run();
+}
+
 async function ensureMemoryStorage(env) {
     await env.DB.batch(
         MEMORY_STORAGE_STATEMENTS.map((statement) =>
@@ -2830,6 +2884,102 @@ async function ensureLocationProfileStorage(env) {
             WHERE id = NEW.id;
         END
     `).run();
+
+    await env.DB.prepare(`
+        UPDATE locations
+        SET is_visible = 0
+        WHERE location_consent_at IS NULL AND is_visible <> 0
+    `).run();
+
+    await anonymizePendingLocations(env);
+}
+
+async function anonymizePendingLocations(env) {
+    if (!env.PASSWORD_PEPPER) {
+        throw new Error("PASSWORD_PEPPER secret missing.");
+    }
+
+    const result = await env.DB.prepare(`
+        SELECT id, address, lat, lon
+        FROM locations
+        WHERE privacy_safe = 0
+        ORDER BY id
+    `).all();
+    const rows = result.results || [];
+
+    if (!rows.length) {
+        return;
+    }
+
+    const statements = [];
+
+    for (const row of rows) {
+        const approximatePoint = await approximateCoordinates(
+            env,
+            Number(row.lat),
+            Number(row.lon),
+            `location:${row.id}`
+        );
+        const genericAddress =
+            sanitizePublicLocationLabel(row.address) || "Marcon";
+
+        statements.push(
+            env.DB.prepare(`
+                UPDATE locations
+                SET
+                    address = ?,
+                    lat = ?,
+                    lon = ?,
+                    privacy_safe = 1
+                WHERE id = ? AND privacy_safe = 0
+            `).bind(
+                `${genericAddress} · location ${row.id}`,
+                approximatePoint.lat,
+                approximatePoint.lon,
+                row.id
+            )
+        );
+    }
+
+    await env.DB.batch(statements);
+}
+
+function sanitizePublicLocationLabel(value) {
+    return String(value || "")
+        .trim()
+        .replace(
+            /\s+(?:n(?:umero)?\.?\s*)?\d{1,4}[a-z]?(?:[\/-](?:\d{1,4}[a-z]?|[a-z]))?(?:\s+(?:bis|ter|quater))?(?=\s*(?:,|$))/giu,
+            ""
+        )
+        .replace(/\s*,\s*/gu, ", ")
+        .replace(/\s{2,}/gu, " ")
+        .replace(/^[,\s]+|[,\s]+$/gu, "")
+        .slice(0, MAX_LOCATION_ADDRESS_LENGTH);
+}
+
+async function approximateCoordinates(env, lat, lon, seed) {
+    if (!env.PASSWORD_PEPPER) {
+        throw new Error("PASSWORD_PEPPER secret missing.");
+    }
+
+    const digest = await hmacHex(
+        env.PASSWORD_PEPPER,
+        `location-privacy:${seed}:${Number(lat).toFixed(6)}:${Number(lon).toFixed(6)}`
+    );
+    const distanceRatio = parseInt(digest.slice(0, 8), 16) / 0xffffffff;
+    const angleRatio = parseInt(digest.slice(8, 16), 16) / 0xffffffff;
+    const distance = LOCATION_MIN_SHIFT_METERS +
+        distanceRatio * (LOCATION_MAX_SHIFT_METERS - LOCATION_MIN_SHIFT_METERS);
+    const angle = angleRatio * Math.PI * 2;
+    const latRadians = Number(lat) * Math.PI / 180;
+    const latOffset = distance * Math.cos(angle) / 111320;
+    const lonScale = Math.max(Math.abs(Math.cos(latRadians)), 0.01);
+    const lonOffset = distance * Math.sin(angle) / (111320 * lonScale);
+
+    return {
+        lat: Math.max(-90, Math.min(90, Number(lat) + latOffset)),
+        lon: Math.max(-180, Math.min(180, Number(lon) + lonOffset))
+    };
 }
 
 async function ensureMessageArchiveStorage(env) {
@@ -2864,6 +3014,7 @@ async function adminSummary(request, env) {
     }
 
     await ensureContactStorage(env);
+    await purgeExpiredContactMessages(env);
     await ensureMessageArchiveStorage(env);
     await ensureMemoryStorage(env);
 

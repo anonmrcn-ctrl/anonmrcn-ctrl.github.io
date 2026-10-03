@@ -154,7 +154,7 @@
             sessionLocation = data.location;
             syncLocationVisibility();
             elements.locationVisibilityStatus.textContent = nextVisible
-                ? "La location è di nuovo visibile sulla mappa."
+                ? "La posizione approssimativa è ora visibile sulla mappa."
                 : "La location è nascosta dalla mappa.";
         } catch (error) {
             elements.locationVisibilityStatus.textContent =
@@ -199,7 +199,7 @@
     function syncLocationVisibility() {
         const hidden = sessionLocation?.visible === false;
         elements.locationVisibilityToggle.textContent = hidden
-            ? "Fai vedere la mia posizione sulla mappa"
+            ? "Fai vedere la mia posizione approssimativa sulla mappa"
             : "Nascondi la mia location sulla mappa";
         elements.locationVisibilityToggle.dataset.visibilityAction = hidden
             ? "show"

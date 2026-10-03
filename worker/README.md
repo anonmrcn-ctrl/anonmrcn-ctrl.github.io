@@ -45,6 +45,13 @@ La migrazione non distruttiva `0007_location_visibility_opt_in.sql` applica
 alle nuove location la visibilità iniziale nascosta anche nei database creati
 con una versione precedente dello schema.
 
+La migrazione `0008_location_privacy.sql` aggiunge il marcatore usato per la
+minimizzazione geografica. Al primo accesso successivo al deploy, il Worker
+rimuove i numeri civici già presenti, sposta ogni coordinata di circa 250–400
+metri e sostituisce definitivamente i valori esatti. Un job programmato ogni
+notte elimina inoltre i messaggi di contatto e le richieste di codice più vecchi
+di 30 giorni.
+
 Se le location non sono ancora presenti, esegui successivamente il contenuto del
 file privato `nnmrcn_seed_private_d1_20260823.sql` aggiornato. Contiene le 20
 location, ma cancella prima messaggi, sessioni e location esistenti: usalo
@@ -162,10 +169,12 @@ npx wrangler d1 time-travel restore nnmrcn-rete --bookmark=BOOKMARK
 La procedura e i limiti di conservazione aggiornati sono descritti nella
 [documentazione ufficiale di D1](https://developers.cloudflare.com/d1/reference/time-travel/).
 
-Le richieste di codice inviate dalla pagina del progetto compaiono tra i
-messaggi diretti con username, indirizzo e, se selezionato, un collegamento al
-punto sulla mappa. Al momento della registrazione la location è visibile per
-impostazione predefinita; l’utente può nasconderla o mostrarla dal menu.
+Le richieste di codice inviate dalla pagina del progetto richiedono un consenso
+privacy esplicito e compaiono tra i messaggi diretti con username, email, zona
+generica e, se selezionato, un collegamento al punto già approssimato. Non viene
+salvato il numero civico né il punto esatto. La richiesta viene eliminata entro
+30 giorni. Al momento della registrazione la location è nascosta per
+impostazione predefinita; l’utente può mostrarla o nasconderla dal menu.
 
 Nello stesso pannello è presente la moderazione delle memorie. Ogni contributo
 parte nello stato `pending` e compare in `memorie.html` soltanto dopo

@@ -11,6 +11,9 @@
   "vars": {
     "ALLOWED_ORIGIN": "https://anonmrcn-ctrl.github.io"
   },
+  "triggers": {
+    "crons": ["17 2 * * *"]
+  },
   "d1_databases": [
     {
       "binding": "DB",

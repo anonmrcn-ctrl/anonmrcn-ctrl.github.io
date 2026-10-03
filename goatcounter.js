@@ -27,7 +27,7 @@
 			e: !!(vars.event || goatcounter.event),
 			s: window.screen.width,
 			b: is_bot(),
-			q: location.search,
+			q: '',
 		}
 
 		var rcb, pcb, tcb  // Save callbacks to apply later.
@@ -36,6 +36,11 @@
 		if (typeof(data.p) === 'function') pcb = data.p
 
 		if (is_empty(data.r)) data.r = document.referrer
+		if (typeof(data.r) === 'string' && data.r) {
+			var ref = document.createElement('a')
+			ref.href = data.r
+			data.r = ref.protocol + '//' + ref.host + ref.pathname
+		}
 		if (is_empty(data.t)) data.t = document.title
 		if (is_empty(data.p)) data.p = get_path()
 		if (vars.no_session) data.ns = (typeof(vars.no_session) === 'function' ? vars.no_session(false) : vars.no_session)
@@ -96,7 +101,7 @@
 			if (a.hostname.replace(/^www\./, '') === location.hostname.replace(/^www\./, ''))
 				loc = a
 		}
-		return (loc.pathname + loc.search) || '/'
+		return loc.pathname || '/'
 	}
 
 	// Run function after DOM is loaded.
@@ -267,4 +272,3 @@
 				goatcounter.bind_events()
 		})
 })();
-

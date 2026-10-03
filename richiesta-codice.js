@@ -9,6 +9,7 @@
     const address = document.getElementById("richiestaIndirizzo");
     const email = document.getElementById("richiestaEmail");
     const website = document.getElementById("richiestaSito");
+    const privacyConsent = document.getElementById("richiestaPrivacy");
     const submit = document.getElementById("richiestaCodiceInvia");
     const status = document.getElementById("richiestaCodiceStatus");
     const mapToggle = document.getElementById("richiestaMappaToggle");
@@ -26,6 +27,7 @@
         !username ||
         !address ||
         !email ||
+        !privacyConsent ||
         !submit ||
         !status ||
         !mapToggle ||
@@ -94,6 +96,7 @@
                     username: username.value.trim(),
                     address: address.value.trim(),
                     email: email.value.trim(),
+                    privacyConsent: privacyConsent.checked,
                     lat: latitude.value || null,
                     lon: longitude.value || null,
                     website: website?.value || ""
@@ -166,7 +169,7 @@
 
         mapClear.hidden = false;
         mapStatus.textContent =
-            `Punto selezionato: ${latitude.value}, ${longitude.value}`;
+            "Punto selezionato. Prima del salvataggio sarà reso approssimativo.";
         validateIdentity();
     }
 

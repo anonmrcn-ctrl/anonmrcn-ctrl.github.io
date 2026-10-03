@@ -19,10 +19,10 @@
             document.documentElement.classList.add("poesia-mappa-mini");
         }
     </script>
-    <link rel="stylesheet" href="./style.css?v=20261002-tour2">
+    <link rel="stylesheet" href="./style.css?v=20261003-privacy1">
     <link rel="stylesheet" href="./percorsi.css?v=20260828-theme1">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha384-sHL9NAb7lN7rfvG5lfHpm643Xkcjzp4jFvuavGOndn6pjVqS6ny56CAt3nsEVT4H" crossorigin="anonymous">
-    <script data-goatcounter="https://anonmrcn.goatcounter.com/count" async src="./goatcounter.js?v=20261002-1"></script>
+    <script data-goatcounter="https://anonmrcn.goatcounter.com/count" async src="./goatcounter.js?v=20261003-privacy1"></script>
 </head>
 
 <body class="pagina-progetto">
@@ -185,15 +185,15 @@
                     >
 
                     <label for="richiestaIndirizzo">
-                        La mia location (indirizzo di casa, dove possono esserti consegnate le lettere fisiche)
+                        Via o zona approssimativa (senza numero civico)
                     </label>
                     <input
                         id="richiestaIndirizzo"
                         name="address"
                         type="text"
-                        autocomplete="address-line1"
+                        autocomplete="off"
                         maxlength="240"
-                        placeholder="Via, numero civico, località"
+                        placeholder="Es. via Praello o zona Gaggio"
                     >
 
                     <div class="richiesta-location-actions">
@@ -218,7 +218,7 @@
                         hidden
                     >
                         <p id="richiestaMappaIstruzioni">
-                            Tocca la posizione della tua casa. Il punto esatto sarà inviato soltanto all’admin.
+                            Tocca una zona vicina, non il tetto di casa. Prima del salvataggio il server sposterà comunque il punto di alcune centinaia di metri e non conserverà le coordinate esatte.
                         </p>
                         <div
                             class="richiesta-location-map"
@@ -238,7 +238,7 @@
                     <input id="richiestaLongitudine" name="lon" type="hidden">
 
                     <p class="richiesta-codice-nota">
-                        Se registrata, la location sarà mostrata sulla mappa interattiva. Dopo l’accesso potrai nasconderla dal menu.
+                        La location nasce nascosta. Se in seguito scegli di attivarla, gli utenti con token vedranno soltanto la via o zona generica e un punto approssimativo, mai il numero civico o la posizione esatta.
                     </p>
 
                     <label for="richiestaEmail">Email per ricevere il codice</label>
@@ -250,6 +250,18 @@
                         maxlength="254"
                         required
                     >
+
+                    <label class="richiesta-privacy-consenso" for="richiestaPrivacy">
+                        <input
+                            id="richiestaPrivacy"
+                            name="privacyConsent"
+                            type="checkbox"
+                            required
+                        >
+                        <span>
+                            Accetto il trattamento dei miei dati personali al solo scopo di ricevere il token e partecipare al progetto, in conformità con la <a href="./privacy.html" target="_blank" rel="noopener">Privacy Policy</a>.
+                        </span>
+                    </label>
 
                     <div class="contatto-antispam" aria-hidden="true">
                         <label for="richiestaSito">Lascia questo campo vuoto</label>
@@ -430,9 +442,9 @@
     <script src="./analytics.js?v=20261001-versi1"></script>
     <script src="./api.js"></script>
     <script src="./sessione.js?v=20261002-tour1"></script>
-    <script src="./richiesta-codice.js?v=20260828-settings1"></script>
+    <script src="./richiesta-codice.js?v=20261003-privacy1"></script>
     <script src="./notifiche.js"></script>
-    <script src="./site.js?v=20261002-privacy1"></script>
+    <script src="./site.js?v=20261003-privacy1"></script>
     <script src="./mappa.js"></script>
     <script src="./marcon-da-sud.js"></script>
     <script src="./percorsi.js?v=20260828-settings1"></script>
@@ -440,6 +452,6 @@
     <script src="./fiumi-wikipedia.js"></script>
     <script src="./taccuino.js"></script>
     <script src="./poesia-metrica.js?v=20260828-righe1"></script>
-    <script src="./progetto.js?v=20261002-privacy1"></script>
+    <script src="./progetto.js?v=20261003-privacy1"></script>
 </body>
 </html>

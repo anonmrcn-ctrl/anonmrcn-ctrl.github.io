@@ -9,6 +9,9 @@ CREATE TABLE IF NOT EXISTS locations (
     is_visible INTEGER NOT NULL DEFAULT 0
         CHECK (is_visible IN (0, 1)),
     welcome_seen_at INTEGER,
+    privacy_safe INTEGER NOT NULL DEFAULT 0
+        CHECK (privacy_safe IN (0, 1)),
+    location_consent_at INTEGER,
     password_lookup TEXT NOT NULL UNIQUE,
     password_salt TEXT NOT NULL,
     password_hash TEXT NOT NULL

@@ -64,6 +64,12 @@ di analisi.
 
 Le pagine pubbliche caricano localmente `goatcounter.js` e inviano il conteggio
 a `anonmrcn.goatcounter.com`. Lo script esclude localhost e le anteprime caricate
-negli iframe del tour; la pagina amministrativa non lo include.
+negli iframe del tour; la pagina amministrativa e la pagina di accesso con token
+non lo includono. I parametri URL non vengono inviati al contatore.
+
+La richiesta di accesso richiede il consenso alla `privacy.html`. Indirizzi e
+coordinate vengono minimizzati prima della memorizzazione permanente; i moduli
+di contatto e le richieste di token vengono cancellati automaticamente entro 30
+giorni dal Worker.
 
 Le locations private, le password e i secret non devono essere salvati nel repository pubblico.
