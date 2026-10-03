@@ -26,6 +26,21 @@ const MAX_CONTACT_REQUEST_BYTES = 8192;
 const CONTACT_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
 const LOCATION_MIN_SHIFT_METERS = 250;
 const LOCATION_MAX_SHIFT_METERS = 400;
+const CIVIC_NUMBER_SOURCE = String.raw`\d{1,4}[a-z]?(?:[\/-](?:\d{1,4}[a-z]?|[a-z]))?(?:\s+(?:bis|ter|quater))?`;
+const EXPLICIT_CIVIC_NUMBER_PATTERN = new RegExp(
+    String.raw`\s*,?\s*(?:numero|civico|n(?:[°ºo])?)\.?\s*${CIVIC_NUMBER_SOURCE}`,
+    "giu"
+);
+const CIVIC_BEFORE_LOCALITY_PATTERN = new RegExp(
+    String.raw`(\p{L}[\p{L}'’.-]*(?:\s+(?:\d{1,2}\s+)?\p{L}[\p{L}'’.-]*)+)\s+${CIVIC_NUMBER_SOURCE}(?=\s+(?:\d{5}\s+)?\p{L})`,
+    "giu"
+);
+const CIVIC_BEFORE_BOUNDARY_PATTERN = new RegExp(
+    String.raw`\s+${CIVIC_NUMBER_SOURCE}(?=\s*(?:,|$))`,
+    "giu"
+);
+const NUMBERED_ROUTE_PREFIX_PATTERN =
+    /(?:strada\s+(?:regionale|statale|provinciale)|s[prs])\s*$/iu;
 const MAX_JSON_REQUEST_BYTES = 16384;
 const MEMORY_LIMIT_PER_DAY = 3;
 const MAX_MEMORY_TITLE_LENGTH = 100;
@@ -3069,10 +3084,16 @@ function formatLocationLabel(streetName, streetOrder) {
 
 function sanitizePublicLocationLabel(value) {
     return String(value || "")
+        .normalize("NFKC")
         .trim()
+        .replace(EXPLICIT_CIVIC_NUMBER_PATTERN, "")
+        .replace(CIVIC_BEFORE_LOCALITY_PATTERN, "$1")
         .replace(
-            /\s+(?:n(?:umero)?\.?\s*)?\d{1,4}[a-z]?(?:[\/-](?:\d{1,4}[a-z]?|[a-z]))?(?:\s+(?:bis|ter|quater))?(?=\s*(?:,|$))/giu,
-            ""
+            CIVIC_BEFORE_BOUNDARY_PATTERN,
+            (match, offset, input) =>
+                NUMBERED_ROUTE_PREFIX_PATTERN.test(
+                    input.slice(0, offset)
+                ) ? match : ""
         )
         .replace(/\s*,\s*/gu, ", ")
         .replace(/\s{2,}/gu, " ")
