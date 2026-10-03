@@ -17,6 +17,8 @@ const MAYOR_ACCESS_TOKEN_SHA256 =
     "5f9c3578b2ddecae87e38f8f25738f0c60624a99bc95280571cc211366cdacb3";
 const LOCATION_ACCESS_TOKEN_SHA256 =
     "e5cf056306b37f875f6bdae97ab0fbb39261102d06c30cee7045f324c79d83d9";
+const TESTER_BOOTSTRAP_TOKEN_SHA256 =
+    "fd2b20a61f5c1754846a9052124844db230d41ba164806a2235e601668524872";
 const MESSAGE_LIMIT_PER_HOUR = 5;
 const MAX_MESSAGE_LENGTH = 1500;
 const MAX_CONTACT_NAME_LENGTH = 80;
@@ -278,6 +280,13 @@ export default {
 
             if (request.method === "POST" && path === "/api/location/access") {
                 return await checkLocationAccess(request, env);
+            }
+
+            if (
+                request.method === "POST" &&
+                path === "/api/testing-token/bootstrap"
+            ) {
+                return await createTesterToken(request, env);
             }
 
             if (request.method === "POST" && path === "/api/mayor/login") {
@@ -678,6 +687,82 @@ async function checkLocationAccess(request, env) {
     return json(request, env, {
         ok: true
     });
+}
+
+async function createTesterToken(request, env) {
+    const body = await readJson(request);
+    const bootstrapToken = String(body?.bootstrapToken || "").trim();
+    const password = normalizePassword(body?.password);
+
+    if (!(await matchesSha256(
+        bootstrapToken,
+        TESTER_BOOTSTRAP_TOKEN_SHA256
+    ))) {
+        return unauthorized(request, env);
+    }
+
+    if (password.length < 16 || password.length > 100) {
+        return json(request, env, {
+            error: "Token tester non valido."
+        }, 400);
+    }
+
+    if (!env.PASSWORD_PEPPER) {
+        throw new Error("PASSWORD_PEPPER secret missing.");
+    }
+
+    await ensureLocationProfileStorage(env);
+
+    const existing = await env.DB.prepare(`
+        SELECT id
+        FROM locations
+        WHERE username = 'tester'
+        LIMIT 1
+    `).first();
+
+    if (existing) {
+        return json(request, env, {
+            error: "Il token tester esiste già."
+        }, 409);
+    }
+
+    const salt = new Uint8Array(16);
+    crypto.getRandomValues(salt);
+    const [passwordLookup, passwordHash] = await Promise.all([
+        hmacHex(env.PASSWORD_PEPPER, password),
+        createPasswordHash(password, salt)
+    ]);
+
+    const result = await env.DB.prepare(`
+        INSERT INTO locations (
+            address,
+            username,
+            lat,
+            lon,
+            is_visible,
+            welcome_seen_at,
+            privacy_safe,
+            location_consent_at,
+            password_lookup,
+            password_salt,
+            password_hash
+        )
+        VALUES (?, 'tester', ?, ?, 0, NULL, 1, NULL, ?, ?, ?)
+    `).bind(
+        "Marcon · location tester",
+        45.5515,
+        12.3278,
+        passwordLookup,
+        toBase64(salt),
+        passwordHash
+    ).run();
+
+    return json(request, env, {
+        ok: true,
+        id: result.meta?.last_row_id ?? null,
+        username: "tester",
+        visible: false
+    }, 201);
 }
 
 async function mayorLogin(request, env) {
@@ -3773,6 +3858,28 @@ async function verifyPassword(password, saltB64, expectedHashB64) {
     return crypto.subtle.timingSafeEqual(actual, expected);
 }
 
+async function createPasswordHash(password, salt) {
+    const key = await crypto.subtle.importKey(
+        "raw",
+        new TextEncoder().encode(password),
+        "PBKDF2",
+        false,
+        ["deriveBits"]
+    );
+    const bits = await crypto.subtle.deriveBits(
+        {
+            name: "PBKDF2",
+            salt,
+            iterations: PBKDF2_ITERATIONS,
+            hash: "SHA-256"
+        },
+        key,
+        256
+    );
+
+    return toBase64(new Uint8Array(bits));
+}
+
 async function hmacHex(secret, value) {
     const encoder = new TextEncoder();
 
@@ -3835,6 +3942,16 @@ function fromBase64(value) {
     }
 
     return bytes;
+}
+
+function toBase64(bytes) {
+    let binary = "";
+
+    bytes.forEach((byte) => {
+        binary += String.fromCharCode(byte);
+    });
+
+    return btoa(binary);
 }
 
 function fromHex(value) {
