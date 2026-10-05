@@ -390,10 +390,9 @@
             typeof window.NNMRCN_PM_TILES_SOURCE === "function" &&
             typeof window.NNMRCN_PM_TILES_LAYER === "function"
         ) {
-            const archive1975Url = new URL(
-                "./mappe/marcon_1975.pmtiles",
-                window.location.href
-            ).href;
+            const archive1975Url =
+                "https://raw.githubusercontent.com/anonmrcn-ctrl/" +
+                "anonmrcn-ctrl.github.io/main/mappe/marcon_1975.pmtiles";
             const archive1975 = new window.pmtiles.PMTiles(
                 window.NNMRCN_PM_TILES_SOURCE(archive1975Url)
             );
