@@ -56,7 +56,6 @@
     let mapEntryMarker = null;
     let mapEntryResizeObserver = null;
     let editingMapEntryId = null;
-    let wikiSlugsByTitle = new Map();
 
     const pushNotifications = window.NNMRCN_NOTIFICHE.create({
         button: pushButton,
@@ -736,16 +735,7 @@
         mapEntryList.replaceChildren(document.createTextNode("Caricamento…"));
 
         try {
-            const [data, wikiData] = await Promise.all([
-                request("/api/admin/map-entries"),
-                api.request("/api/public/wiki").catch(() => ({ entries: [] }))
-            ]);
-            wikiSlugsByTitle = new Map(
-                (wikiData.entries || []).map((entry) => [
-                    normalizedMapEntryTitle(entry.title),
-                    entry.slug
-                ])
-            );
+            const data = await request("/api/admin/map-entries");
             renderMapEntries(data.entries || []);
         } catch (error) {
             mapEntryList.textContent =
@@ -799,7 +789,7 @@
             openLink.href = mapEntryQrUrl(entry);
             openLink.target = "_blank";
             openLink.rel = "noopener noreferrer";
-            openLink.textContent = "Apri link QR";
+            openLink.textContent = "Apri mini-spiegazione";
 
             copyButton.type = "button";
             copyButton.className = "admin-action";
@@ -858,26 +848,7 @@
         });
     }
 
-    function normalizedMapEntryTitle(value) {
-        return String(value || "")
-            .replace(/[«»“”"']/g, "")
-            .replace(/\s+/g, " ")
-            .trim()
-            .toLocaleLowerCase("it");
-    }
-
     function mapEntryQrUrl(entry) {
-        const wikiSlug = wikiSlugsByTitle.get(
-            normalizedMapEntryTitle(entry.name)
-        );
-
-        if (wikiSlug) {
-            const wikiUrl = new URL("./voci.html", document.baseURI);
-
-            wikiUrl.hash = encodeURIComponent(wikiSlug);
-            return wikiUrl.href;
-        }
-
         const url = new URL("./progetto.html", document.baseURI);
 
         url.searchParams.set("luogo", String(entry.id));

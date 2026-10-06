@@ -116,7 +116,7 @@
         }
 
         mapLink.href = mapEntryUrl(entry.id);
-        mapLink.textContent = "Collegamento diretto alla mappa";
+        mapLink.textContent = "Link diretto a questa spiegazione";
         links.appendChild(mapLink);
 
         if (
