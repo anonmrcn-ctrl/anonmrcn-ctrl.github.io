@@ -2814,11 +2814,27 @@ html[data-theme="dark"] .leaflet-control-layers label {
 }
 
 .admin-voci-mappa-cartina {
+    position: relative;
+    z-index: 0;
+    isolation: isolate;
+    contain: layout paint;
     width: 100%;
     height: min(52vh, 410px);
     min-height: 280px;
+    overflow: hidden;
     border: 1px solid var(--ink);
     background: var(--line);
+}
+
+.admin-voci-mappa-cartina.leaflet-container {
+    position: relative !important;
+    overflow: hidden !important;
+}
+
+.admin-voci-mappa-cartina .leaflet-pane,
+.admin-voci-mappa-cartina .leaflet-control-container {
+    max-width: 100%;
+    max-height: 100%;
 }
 
 .admin-voci-mappa-coordinate {
@@ -2860,6 +2876,22 @@ html[data-theme="dark"] .leaflet-control-layers label {
 
 .admin-map-entry .admin-action {
     margin-top: 0.7rem;
+}
+
+.admin-map-entry .admin-actions {
+    align-items: stretch;
+}
+
+.admin-action-danger {
+    border-color: #8b2424;
+    color: #8b2424;
+}
+
+.admin-action-danger:hover,
+.admin-action-danger:focus-visible {
+    border-color: #8b2424;
+    background: #8b2424;
+    color: #fff;
 }
 
 .admin-riepilogo > h2,

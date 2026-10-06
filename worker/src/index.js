@@ -472,6 +472,22 @@ export default {
                 return await adminCreateMapEntry(request, env);
             }
 
+            if (
+                request.method === "PATCH" &&
+                /^\/api\/admin\/map-entries\/\d+$/.test(path)
+            ) {
+                const id = Number(path.split("/").pop());
+                return await adminUpdateMapEntry(request, env, id);
+            }
+
+            if (
+                request.method === "DELETE" &&
+                /^\/api\/admin\/map-entries\/\d+$/.test(path)
+            ) {
+                const id = Number(path.split("/").pop());
+                return await adminDeleteMapEntry(request, env, id);
+            }
+
             if (request.method === "GET" && path === "/api/admin/wiki") {
                 return await adminListWikiEntries(request, env);
             }
@@ -2140,6 +2156,99 @@ async function adminCreateMapEntry(request, env) {
         ok: true,
         entry: mapEntryPayload(entry)
     }, 201);
+}
+
+async function adminUpdateMapEntry(request, env, entryId) {
+    if (!(await adminAuthorized(request, env))) {
+        return unauthorized(request, env);
+    }
+
+    if (!Number.isInteger(entryId) || entryId <= 0) {
+        return json(request, env, { error: "Voce non valida." }, 400);
+    }
+
+    await ensureMapEntryStorage(env);
+
+    if (!(await getMapEntryById(env, entryId))) {
+        return json(request, env, { error: "Voce non trovata." }, 404);
+    }
+
+    const input = normalizeMapEntryInput(await readJson(request));
+
+    if (input.error) {
+        return json(request, env, { error: input.error }, 400);
+    }
+
+    await env.DB.prepare(`
+        UPDATE map_entries
+        SET
+            name = ?,
+            category = ?,
+            description = ?,
+            lat = ?,
+            lon = ?,
+            source_url = ?,
+            source_label = ?,
+            updated_at = ?
+        WHERE id = ?
+    `).bind(
+        input.name,
+        input.category,
+        input.description,
+        input.lat,
+        input.lon,
+        input.sourceUrl,
+        input.sourceLabel,
+        Date.now(),
+        entryId
+    ).run();
+
+    return json(request, env, {
+        ok: true,
+        entry: mapEntryPayload(await getMapEntryById(env, entryId))
+    });
+}
+
+async function adminDeleteMapEntry(request, env, entryId) {
+    if (!(await adminAuthorized(request, env))) {
+        return unauthorized(request, env);
+    }
+
+    if (!Number.isInteger(entryId) || entryId <= 0) {
+        return json(request, env, { error: "Voce non valida." }, 400);
+    }
+
+    await ensureMapEntryStorage(env);
+
+    if (!(await getMapEntryById(env, entryId))) {
+        return json(request, env, { error: "Voce non trovata." }, 404);
+    }
+
+    await env.DB.prepare(`
+        DELETE FROM map_entries
+        WHERE id = ?
+    `).bind(entryId).run();
+
+    return json(request, env, { ok: true });
+}
+
+async function getMapEntryById(env, entryId) {
+    return await env.DB.prepare(`
+        SELECT
+            id,
+            name,
+            category,
+            description,
+            lat,
+            lon,
+            source_url,
+            source_label,
+            created_at,
+            updated_at
+        FROM map_entries
+        WHERE id = ?
+        LIMIT 1
+    `).bind(entryId).first();
 }
 
 async function readMapEntries(env) {

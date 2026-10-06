@@ -17,7 +17,7 @@
         integrity="sha256-p4NxAoJBhIINfQ3ynhtHLw8jMZ6KxLA3uEBGmB6q03I="
         crossorigin="anonymous"
     >
-    <link rel="stylesheet" href="./style.css?v=20261006-map-entries1">
+    <link rel="stylesheet" href="./style.css?v=20261006-map-entries2">
 </head>
 
 <body>
@@ -122,8 +122,9 @@
             <section class="admin-voci-mappa" aria-labelledby="adminVociMappaTitolo">
                 <h2 id="adminVociMappaTitolo">Elenco dei luoghi</h2>
                 <p>
-                    Aggiungi una voce pubblica alla mappa. Tocca il punto esatto
-                    sulla cartina oppure inserisci manualmente le coordinate.
+                    Aggiungi o modifica una voce pubblica. Tocca il punto esatto
+                    sulla cartina per posizionarla oppure inserisci manualmente
+                    le coordinate.
                 </p>
 
                 <form id="adminMapEntryForm">
@@ -214,6 +215,13 @@
                     <button id="adminMapEntrySubmit" type="submit">
                         Aggiungi alla mappa
                     </button>
+                    <button
+                        id="adminMapEntryCancel"
+                        type="button"
+                        hidden
+                    >
+                        Annulla modifica
+                    </button>
                     <p
                         class="admin-status"
                         id="adminMapEntryStatus"
@@ -276,6 +284,6 @@
         integrity="sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH"
         crossorigin="anonymous"
     ></script>
-    <script src="./admin.js?v=20261006-map-entries1"></script>
+    <script src="./admin.js?v=20261006-map-entries2"></script>
 </body>
 </html>

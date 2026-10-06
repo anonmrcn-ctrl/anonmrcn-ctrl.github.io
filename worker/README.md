@@ -211,8 +211,8 @@ compare negli endpoint pubblici.
 
 La sezione **Elenco dei luoghi** del pannello amministrativo consente inoltre
 di scegliere un punto su una cartina, indicare nome, categoria, descrizione ed
-eventuale fonte e pubblicare immediatamente la nuova voce nella mappa e nel suo
-elenco testuale.
+eventuale fonte, pubblicare immediatamente una nuova voce e successivamente
+modificarla, spostarla o eliminarla dalla mappa e dall’elenco testuale.
 
 ## Accesso speciale dal QR
 

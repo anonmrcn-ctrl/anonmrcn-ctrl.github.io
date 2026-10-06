@@ -45,6 +45,7 @@
         "adminMapEntrySourceLabel"
     );
     const mapEntrySubmit = document.getElementById("adminMapEntrySubmit");
+    const mapEntryCancel = document.getElementById("adminMapEntryCancel");
     const mapEntryStatus = document.getElementById("adminMapEntryStatus");
     const mapEntryList = document.getElementById("adminMapEntryList");
 
@@ -53,6 +54,8 @@
     let memoryObjectUrls = [];
     let mapEntryMap = null;
     let mapEntryMarker = null;
+    let mapEntryResizeObserver = null;
+    let editingMapEntryId = null;
 
     const pushNotifications = window.NNMRCN_NOTIFICHE.create({
         button: pushButton,
@@ -640,12 +643,14 @@
     }
 
     function ensureMapEntryPicker() {
-        if (!window.L || !document.getElementById("adminMapEntryMap")) {
+        const mapContainer = document.getElementById("adminMapEntryMap");
+
+        if (!window.L || !mapContainer) {
             return;
         }
 
         if (mapEntryMap) {
-            window.setTimeout(() => mapEntryMap.invalidateSize(), 0);
+            refreshMapEntryPickerSize();
             return;
         }
 
@@ -666,7 +671,26 @@
             setMapEntryPosition(event.latlng.lat, event.latlng.lng, false);
         });
 
-        window.setTimeout(() => mapEntryMap.invalidateSize(), 0);
+        if ("ResizeObserver" in window) {
+            mapEntryResizeObserver = new ResizeObserver(() => {
+                mapEntryMap.invalidateSize({ pan: false });
+            });
+            mapEntryResizeObserver.observe(mapContainer);
+        }
+
+        refreshMapEntryPickerSize();
+    }
+
+    function refreshMapEntryPickerSize() {
+        if (!mapEntryMap) {
+            return;
+        }
+
+        window.requestAnimationFrame(() => {
+            window.requestAnimationFrame(() => {
+                mapEntryMap.invalidateSize({ pan: false });
+            });
+        });
     }
 
     function setMapEntryPosition(lat, lon, recenter = true) {
@@ -735,7 +759,10 @@
             const category = document.createElement("p");
             const description = document.createElement("p");
             const coordinates = document.createElement("p");
+            const actions = document.createElement("div");
             const showButton = document.createElement("button");
+            const editButton = document.createElement("button");
+            const deleteButton = document.createElement("button");
 
             article.className = "admin-message admin-map-entry";
             title.textContent = entry.name;
@@ -744,6 +771,7 @@
             description.textContent = entry.description || "Nessuna descrizione.";
             coordinates.className = "admin-meta";
             coordinates.textContent = `${entry.lat.toFixed(6)}, ${entry.lon.toFixed(6)}`;
+            actions.className = "admin-actions";
             showButton.type = "button";
             showButton.className = "admin-action";
             showButton.textContent = "Mostra nella cartina";
@@ -755,12 +783,28 @@
                 });
             });
 
+            editButton.type = "button";
+            editButton.className = "admin-action";
+            editButton.textContent = "Modifica o sposta";
+            editButton.addEventListener("click", () => {
+                startMapEntryEdit(entry);
+            });
+
+            deleteButton.type = "button";
+            deleteButton.className = "admin-action admin-action-danger";
+            deleteButton.textContent = "Elimina";
+            deleteButton.addEventListener("click", () => {
+                deleteMapEntry(entry, deleteButton);
+            });
+
+            actions.append(showButton, editButton, deleteButton);
+
             article.append(
                 title,
                 category,
                 description,
                 coordinates,
-                showButton
+                actions
             );
             mapEntryList.appendChild(article);
         });
@@ -781,45 +825,113 @@
         return labels[category] || "Luogo";
     }
 
-    async function createMapEntry(event) {
+    function mapEntryInput() {
+        return {
+            name: mapEntryName.value,
+            category: mapEntryCategory.value,
+            description: mapEntryDescription.value,
+            lat: Number(mapEntryLat.value),
+            lon: Number(mapEntryLon.value),
+            sourceUrl: mapEntrySourceUrl.value,
+            sourceLabel: mapEntrySourceLabel.value
+        };
+    }
+
+    function resetMapEntryForm() {
+        editingMapEntryId = null;
+        mapEntryForm.reset();
+        mapEntryCategory.value = "luogo";
+        mapEntryLat.value = "";
+        mapEntryLon.value = "";
+        mapEntrySubmit.textContent = "Aggiungi alla mappa";
+        mapEntryCancel.hidden = true;
+
+        if (mapEntryMarker && mapEntryMap) {
+            mapEntryMap.removeLayer(mapEntryMarker);
+            mapEntryMarker = null;
+        }
+    }
+
+    function startMapEntryEdit(entry) {
+        editingMapEntryId = entry.id;
+        mapEntryName.value = entry.name;
+        mapEntryCategory.value = entry.category;
+        mapEntryDescription.value = entry.description || "";
+        mapEntrySourceUrl.value = entry.sourceUrl || "";
+        mapEntrySourceLabel.value = entry.sourceLabel || "";
+        mapEntrySubmit.textContent = "Salva modifiche";
+        mapEntryCancel.hidden = false;
+        mapEntryStatus.textContent =
+            `Modifica di «${entry.name}». Tocca la cartina per spostarla.`;
+        setMapEntryPosition(entry.lat, entry.lon, true);
+        mapEntryForm.scrollIntoView({ behavior: "smooth", block: "start" });
+        refreshMapEntryPickerSize();
+        mapEntryName.focus({ preventScroll: true });
+    }
+
+    async function saveMapEntry(event) {
         event.preventDefault();
 
         mapEntrySubmit.disabled = true;
-        mapEntryStatus.textContent = "Salvataggio…";
+        mapEntryCancel.disabled = true;
+        mapEntryStatus.textContent = editingMapEntryId
+            ? "Aggiornamento…"
+            : "Salvataggio…";
 
         try {
-            await request("/api/admin/map-entries", {
-                method: "POST",
-                body: JSON.stringify({
-                    name: mapEntryName.value,
-                    category: mapEntryCategory.value,
-                    description: mapEntryDescription.value,
-                    lat: Number(mapEntryLat.value),
-                    lon: Number(mapEntryLon.value),
-                    sourceUrl: mapEntrySourceUrl.value,
-                    sourceLabel: mapEntrySourceLabel.value
-                })
+            const entryId = editingMapEntryId;
+            const path = entryId
+                ? `/api/admin/map-entries/${entryId}`
+                : "/api/admin/map-entries";
+
+            await request(path, {
+                method: entryId ? "PATCH" : "POST",
+                body: JSON.stringify(mapEntryInput())
             });
 
-            mapEntryForm.reset();
-            mapEntryCategory.value = "luogo";
-            mapEntryLat.value = "";
-            mapEntryLon.value = "";
-
-            if (mapEntryMarker) {
-                mapEntryMap.removeLayer(mapEntryMarker);
-                mapEntryMarker = null;
-            }
-
-            mapEntryStatus.textContent =
-                "Voce aggiunta. È già visibile nella mappa pubblica.";
+            resetMapEntryForm();
+            mapEntryStatus.textContent = entryId
+                ? "Voce aggiornata. La nuova posizione è già pubblica."
+                : "Voce aggiunta. È già visibile nella mappa pubblica.";
             await loadMapEntries();
             mapEntryName.focus();
         } catch (error) {
             mapEntryStatus.textContent =
-                error.message || "Non è stato possibile aggiungere la voce.";
+                error.message || "Non è stato possibile salvare la voce.";
         } finally {
             mapEntrySubmit.disabled = false;
+            mapEntryCancel.disabled = false;
+        }
+    }
+
+    async function deleteMapEntry(entry, button) {
+        const confirmed = window.confirm(
+            `Eliminare definitivamente «${entry.name}» dalla mappa pubblica?`
+        );
+
+        if (!confirmed) {
+            return;
+        }
+
+        button.disabled = true;
+        mapEntryStatus.textContent = `Eliminazione di «${entry.name}»…`;
+
+        try {
+            await request(`/api/admin/map-entries/${entry.id}`, {
+                method: "DELETE"
+            });
+
+            if (editingMapEntryId === entry.id) {
+                resetMapEntryForm();
+            }
+
+            mapEntryStatus.textContent =
+                `«${entry.name}» è stata eliminata dalla mappa pubblica.`;
+            await loadMapEntries();
+        } catch (error) {
+            button.disabled = false;
+            mapEntryStatus.textContent =
+                error.message || "Non è stato possibile eliminare la voce.";
         }
     }
 
@@ -844,7 +956,12 @@
     search.addEventListener("input", renderCurrentMessages);
     exportCsv.addEventListener("click", () => downloadExport("csv"));
     exportJson.addEventListener("click", () => downloadExport("json"));
-    mapEntryForm.addEventListener("submit", createMapEntry);
+    mapEntryForm.addEventListener("submit", saveMapEntry);
+    mapEntryCancel.addEventListener("click", () => {
+        resetMapEntryForm();
+        mapEntryStatus.textContent = "Modifica annullata.";
+        mapEntryName.focus();
+    });
     mapEntryLat.addEventListener("change", syncMapEntryPositionFromInputs);
     mapEntryLon.addEventListener("change", syncMapEntryPositionFromInputs);
     welcomePreview.addEventListener("click", () => {
