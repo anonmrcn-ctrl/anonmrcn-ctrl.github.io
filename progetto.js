@@ -2,7 +2,6 @@
     "use strict";
 
     const apiClient = window.NNMRCN_API;
-    const mapExtensions = window.NNMRCN_MAP;
     const notebook = window.NNMRCN_TACCUINO;
     const settingsManager = window.NNMRCN_SETTINGS;
     const sessionStore = window.NNMRCN_SESSION;

@@ -137,6 +137,39 @@
         return root;
     }
 
+    function enableKeyboard(marker, entry) {
+        marker.on("add", () => {
+            const element = marker.getElement();
+
+            if (!element) {
+                return;
+            }
+
+            element.classList.add("mappa-voce-interattiva");
+            element.setAttribute("tabindex", "0");
+            element.setAttribute("role", "button");
+            element.setAttribute(
+                "aria-label",
+                `Apri la mini-spiegazione di ${entry.name}`
+            );
+
+            if (element.hasAttribute("data-nnmrcn-keyboard")) {
+                return;
+            }
+
+            element.setAttribute("data-nnmrcn-keyboard", "true");
+            element.addEventListener("keydown", (event) => {
+                if (event.key !== "Enter" && event.key !== " ") {
+                    return;
+                }
+
+                event.preventDefault();
+                event.stopPropagation();
+                marker.openPopup();
+            });
+        });
+    }
+
     function renderEntries(entries) {
         layer.clearLayers();
         markersById.clear();
@@ -162,6 +195,7 @@
                 maxWidth: 280,
                 autoPanPadding: [24, 24]
             });
+            enableKeyboard(marker, entry);
             marker.addTo(layer);
             markersById.set(Number(entry.id), marker);
         });
