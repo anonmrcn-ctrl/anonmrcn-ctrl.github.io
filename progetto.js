@@ -1296,7 +1296,7 @@
             null,
             { "Luoghi": entriesLayer },
             {
-                collapsed: true
+                collapsed: false
             }
         ).addTo(map);
         registerMapControl(overlayControl);
