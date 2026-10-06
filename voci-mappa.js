@@ -12,12 +12,39 @@
     const markersById = new Map();
     let entriesPromise = null;
 
-    function entryUrl(entryId) {
+    function mapEntryUrl(entryId) {
         const url = new URL("./progetto.html", document.baseURI);
 
         url.searchParams.set("luogo", String(entryId));
         url.hash = "map";
         return url.href;
+    }
+
+    function wikiEntryUrl(slug) {
+        const url = new URL("./voci.html", document.baseURI);
+
+        url.hash = encodeURIComponent(slug);
+        return url.href;
+    }
+
+    function normalizedTitle(value) {
+        return String(value || "")
+            .replace(/[«»“”"']/g, "")
+            .replace(/\s+/g, " ")
+            .trim()
+            .toLocaleLowerCase("it");
+    }
+
+    function isInternalWikiUrl(value) {
+        try {
+            const url = new URL(value, document.baseURI);
+            const expected = new URL("./voci.html", document.baseURI);
+
+            return url.origin === expected.origin &&
+                url.pathname === expected.pathname;
+        } catch (_) {
+            return false;
+        }
     }
 
     function entryFeature(entry) {
@@ -29,7 +56,8 @@
                 categoria: entry.category,
                 descrizione: entry.description,
                 source_url: entry.sourceUrl,
-                source_label: entry.sourceLabel
+                source_label: entry.sourceLabel,
+                wiki_slug: entry.wikiSlug || ""
             },
             geometry: {
                 type: "Point",
@@ -75,14 +103,26 @@
         }
 
         const links = document.createElement("div");
-        const directLink = document.createElement("a");
+        const mapLink = document.createElement("a");
 
         links.className = "popup-luogo-links";
-        directLink.href = entryUrl(entry.id);
-        directLink.textContent = "Collegamento diretto a questo luogo";
-        links.appendChild(directLink);
 
-        if (entry.sourceUrl) {
+        if (entry.wikiSlug) {
+            const wikiLink = document.createElement("a");
+
+            wikiLink.href = wikiEntryUrl(entry.wikiSlug);
+            wikiLink.textContent = "Apri la voce completa";
+            links.appendChild(wikiLink);
+        }
+
+        mapLink.href = mapEntryUrl(entry.id);
+        mapLink.textContent = "Collegamento diretto alla mappa";
+        links.appendChild(mapLink);
+
+        if (
+            entry.sourceUrl &&
+            !(entry.wikiSlug && isInternalWikiUrl(entry.sourceUrl))
+        ) {
             const link = document.createElement("a");
 
             link.href = entry.sourceUrl;
@@ -129,14 +169,32 @@
 
     async function load() {
         if (!entriesPromise) {
-            entriesPromise = api.request("/api/public/map-entries")
-                .then((data) => {
+            entriesPromise = Promise.all([
+                api.request("/api/public/map-entries"),
+                api.request("/api/public/wiki").catch(() => ({ entries: [] }))
+            ])
+                .then(([data, wikiData]) => {
                     const entries = Array.isArray(data?.entries)
                         ? data.entries
                         : [];
+                    const wikiEntries = Array.isArray(wikiData?.entries)
+                        ? wikiData.entries
+                        : [];
+                    const wikiSlugsByTitle = new Map(
+                        wikiEntries.map((entry) => [
+                            normalizedTitle(entry.title),
+                            entry.slug
+                        ])
+                    );
+                    const linkedEntries = entries.map((entry) => ({
+                        ...entry,
+                        wikiSlug: wikiSlugsByTitle.get(
+                            normalizedTitle(entry.name)
+                        ) || ""
+                    }));
 
-                    renderEntries(entries);
-                    return entries;
+                    renderEntries(linkedEntries);
+                    return linkedEntries;
                 })
                 .catch((error) => {
                     entriesPromise = null;
@@ -178,7 +236,8 @@
         layer,
         load,
         open,
-        entryUrl,
+        mapEntryUrl,
+        wikiEntryUrl,
         entryFeature
     });
 })();
