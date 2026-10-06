@@ -761,6 +761,8 @@
             const coordinates = document.createElement("p");
             const actions = document.createElement("div");
             const showButton = document.createElement("button");
+            const openLink = document.createElement("a");
+            const copyButton = document.createElement("button");
             const editButton = document.createElement("button");
             const deleteButton = document.createElement("button");
 
@@ -783,6 +785,36 @@
                 });
             });
 
+            openLink.className = "admin-action";
+            openLink.href = mapEntryPublicUrl(entry.id);
+            openLink.target = "_blank";
+            openLink.rel = "noopener noreferrer";
+            openLink.textContent = "Apri link QR";
+
+            copyButton.type = "button";
+            copyButton.className = "admin-action";
+            copyButton.textContent = "Copia link QR";
+            copyButton.addEventListener("click", async () => {
+                const originalText = copyButton.textContent;
+
+                copyButton.disabled = true;
+
+                try {
+                    await copyText(mapEntryPublicUrl(entry.id));
+                    copyButton.textContent = "Link copiato";
+                    mapEntryStatus.textContent =
+                        `Link per il QR di «${entry.name}» copiato.`;
+                } catch (_) {
+                    mapEntryStatus.textContent =
+                        "Non è stato possibile copiare il link. Aprilo e copialo dalla barra del browser.";
+                } finally {
+                    window.setTimeout(() => {
+                        copyButton.textContent = originalText;
+                        copyButton.disabled = false;
+                    }, 1600);
+                }
+            });
+
             editButton.type = "button";
             editButton.className = "admin-action";
             editButton.textContent = "Modifica o sposta";
@@ -797,7 +829,13 @@
                 deleteMapEntry(entry, deleteButton);
             });
 
-            actions.append(showButton, editButton, deleteButton);
+            actions.append(
+                showButton,
+                openLink,
+                copyButton,
+                editButton,
+                deleteButton
+            );
 
             article.append(
                 title,
@@ -808,6 +846,37 @@
             );
             mapEntryList.appendChild(article);
         });
+    }
+
+    function mapEntryPublicUrl(entryId) {
+        const url = new URL("./progetto.html", document.baseURI);
+
+        url.searchParams.set("luogo", String(entryId));
+        url.hash = "map";
+        return url.href;
+    }
+
+    async function copyText(value) {
+        if (navigator.clipboard?.writeText) {
+            await navigator.clipboard.writeText(value);
+            return;
+        }
+
+        const field = document.createElement("textarea");
+
+        field.value = value;
+        field.setAttribute("readonly", "");
+        field.style.position = "fixed";
+        field.style.opacity = "0";
+        document.body.appendChild(field);
+        field.select();
+
+        const copied = document.execCommand("copy");
+        field.remove();
+
+        if (!copied) {
+            throw new Error("Copia non disponibile.");
+        }
     }
 
     function mapEntryCategoryLabel(category) {

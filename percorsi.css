@@ -90,6 +90,11 @@
     line-height: 1.45;
 }
 
+.popup-luogo-rilevante {
+    width: min(15rem, 68vw);
+    max-width: 100%;
+}
+
 .popup-percorso strong,
 .popup-luogo-rilevante strong,
 .popup-fiume strong {
@@ -129,6 +134,32 @@
 
 .popup-luogo-rilevante p {
     margin: 0 0 0.65rem;
+}
+
+.popup-luogo-descrizione {
+    max-height: min(11rem, 28vh);
+    padding-right: 0.55rem;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-color: rgba(var(--ink-rgb), 0.58) rgba(var(--ink-rgb), 0.12);
+    scrollbar-gutter: stable;
+    scrollbar-width: thin;
+    touch-action: pan-y;
+}
+
+.popup-luogo-descrizione::-webkit-scrollbar {
+    width: 0.5rem;
+}
+
+.popup-luogo-descrizione::-webkit-scrollbar-track {
+    background: rgba(var(--ink-rgb), 0.12);
+}
+
+.popup-luogo-descrizione::-webkit-scrollbar-thumb {
+    border: 2px solid transparent;
+    border-radius: 999px;
+    background: rgba(var(--ink-rgb), 0.58);
+    background-clip: padding-box;
 }
 
 .popup-luogo-fonte-geometria {

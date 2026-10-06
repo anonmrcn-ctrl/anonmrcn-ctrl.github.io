@@ -1178,10 +1178,32 @@
 
     function applyRequestedMapView() {
         const parameters = new URLSearchParams(window.location.search);
+        const placeId = parameters.get("luogo");
         const narrative = Number(parameters.get("narrative"));
         const lat = Number(parameters.get("lat"));
         const lon = Number(parameters.get("lon"));
         const zoom = Number(parameters.get("zoom"));
+
+        if (/^[1-9]\d*$/.test(placeId || "")) {
+            window.setTimeout(async () => {
+                try {
+                    const opened = await window.NNMRCN_MAP_ENTRIES?.open?.(
+                        Number(placeId),
+                        map
+                    );
+
+                    if (!opened) {
+                        elements.mappaStrumentiStatus.textContent =
+                            "Il luogo richiesto non esiste o non è più pubblicato.";
+                    }
+                } catch (error) {
+                    console.error("Impossibile aprire il luogo richiesto.", error);
+                    elements.mappaStrumentiStatus.textContent =
+                        "Non è stato possibile aprire il luogo richiesto.";
+                }
+            }, 120);
+            return;
+        }
 
         if (
             parameters.has("narrative") &&
