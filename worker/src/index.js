@@ -62,6 +62,10 @@ const MAX_WIKI_SOURCE_TITLE_LENGTH = 500;
 const MAX_WIKI_SOURCE_AUTHOR_LENGTH = 300;
 const MAX_WIKI_SOURCE_DATE_LENGTH = 100;
 const MAX_WIKI_REQUEST_BYTES = 8000000;
+const MAX_MAP_ENTRY_NAME_LENGTH = 160;
+const MAX_MAP_ENTRY_DESCRIPTION_LENGTH = 3000;
+const MAX_MAP_ENTRY_SOURCE_URL_LENGTH = 2048;
+const MAX_MAP_ENTRY_SOURCE_LABEL_LENGTH = 160;
 
 class RequestBodyTooLargeError extends Error {}
 
@@ -80,6 +84,16 @@ const MEMORY_MEDIA_TYPES = new Set([
     "audio/mp4"
 ]);
 const WIKI_STATUSES = new Set(["draft", "published"]);
+const MAP_ENTRY_CATEGORIES = new Set([
+    "luogo",
+    "edificio",
+    "monumento",
+    "infrastruttura",
+    "paesaggio",
+    "corso_d_acqua",
+    "cava",
+    "percorso"
+]);
 const WIKI_IMAGE_TYPES = new Set([
     "image/jpeg",
     "image/png",
@@ -191,6 +205,35 @@ const WIKI_STORAGE_STATEMENTS = Object.freeze([
     )`,
     `CREATE INDEX IF NOT EXISTS idx_wiki_images_entry
         ON wiki_entry_images(entry_id, created_at, id)`
+]);
+const MAP_ENTRY_STORAGE_STATEMENTS = Object.freeze([
+    `CREATE TABLE IF NOT EXISTS map_entries (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL CHECK (length(name) BETWEEN 2 AND 160),
+        category TEXT NOT NULL DEFAULT 'luogo'
+            CHECK (category IN (
+                'luogo',
+                'edificio',
+                'monumento',
+                'infrastruttura',
+                'paesaggio',
+                'corso_d_acqua',
+                'cava',
+                'percorso'
+            )),
+        description TEXT NOT NULL DEFAULT ''
+            CHECK (length(description) <= 3000),
+        lat REAL NOT NULL CHECK (lat BETWEEN -90 AND 90),
+        lon REAL NOT NULL CHECK (lon BETWEEN -180 AND 180),
+        source_url TEXT NOT NULL DEFAULT ''
+            CHECK (length(source_url) <= 2048),
+        source_label TEXT NOT NULL DEFAULT ''
+            CHECK (length(source_label) <= 160),
+        created_at INTEGER NOT NULL,
+        updated_at INTEGER NOT NULL
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_map_entries_name
+        ON map_entries(name COLLATE NOCASE, id)`
 ]);
 const LOCATION_PROFILE_COLUMNS = Object.freeze([
     {
@@ -337,6 +380,10 @@ export default {
                 return await listPublicMemories(request, env);
             }
 
+            if (request.method === "GET" && path === "/api/public/map-entries") {
+                return await listPublicMapEntries(request, env);
+            }
+
             if (request.method === "GET" && path === "/api/public/wiki") {
                 return await listPublicWikiEntries(request, env);
             }
@@ -415,6 +462,14 @@ export default {
 
             if (request.method === "GET" && path === "/api/admin/memories") {
                 return await adminListMemories(request, env, url);
+            }
+
+            if (request.method === "GET" && path === "/api/admin/map-entries") {
+                return await adminListMapEntries(request, env);
+            }
+
+            if (request.method === "POST" && path === "/api/admin/map-entries") {
+                return await adminCreateMapEntry(request, env);
             }
 
             if (request.method === "GET" && path === "/api/admin/wiki") {
@@ -2005,6 +2060,187 @@ async function adminUpdateContactMessage(request, env, messageId) {
     });
 }
 
+async function listPublicMapEntries(request, env) {
+    await ensureMapEntryStorage(env);
+
+    return json(request, env, {
+        entries: await readMapEntries(env)
+    });
+}
+
+async function adminListMapEntries(request, env) {
+    if (!(await adminAuthorized(request, env))) {
+        return unauthorized(request, env);
+    }
+
+    await ensureMapEntryStorage(env);
+
+    return json(request, env, {
+        entries: await readMapEntries(env)
+    });
+}
+
+async function adminCreateMapEntry(request, env) {
+    if (!(await adminAuthorized(request, env))) {
+        return unauthorized(request, env);
+    }
+
+    await ensureMapEntryStorage(env);
+
+    const input = normalizeMapEntryInput(await readJson(request));
+
+    if (input.error) {
+        return json(request, env, { error: input.error }, 400);
+    }
+
+    const now = Date.now();
+    const result = await env.DB.prepare(`
+        INSERT INTO map_entries (
+            name,
+            category,
+            description,
+            lat,
+            lon,
+            source_url,
+            source_label,
+            created_at,
+            updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).bind(
+        input.name,
+        input.category,
+        input.description,
+        input.lat,
+        input.lon,
+        input.sourceUrl,
+        input.sourceLabel,
+        now,
+        now
+    ).run();
+
+    const id = Number(result.meta?.last_row_id);
+    const entry = await env.DB.prepare(`
+        SELECT
+            id,
+            name,
+            category,
+            description,
+            lat,
+            lon,
+            source_url,
+            source_label,
+            created_at,
+            updated_at
+        FROM map_entries
+        WHERE id = ?
+        LIMIT 1
+    `).bind(id).first();
+
+    return json(request, env, {
+        ok: true,
+        entry: mapEntryPayload(entry)
+    }, 201);
+}
+
+async function readMapEntries(env) {
+    const result = await env.DB.prepare(`
+        SELECT
+            id,
+            name,
+            category,
+            description,
+            lat,
+            lon,
+            source_url,
+            source_label,
+            created_at,
+            updated_at
+        FROM map_entries
+        ORDER BY name COLLATE NOCASE, id
+    `).all();
+
+    return (result.results || []).map(mapEntryPayload);
+}
+
+function mapEntryPayload(row) {
+    return {
+        id: Number(row.id),
+        name: row.name,
+        category: row.category,
+        description: row.description,
+        lat: Number(row.lat),
+        lon: Number(row.lon),
+        sourceUrl: row.source_url,
+        sourceLabel: row.source_label,
+        createdAt: Number(row.created_at),
+        updatedAt: Number(row.updated_at)
+    };
+}
+
+function normalizeMapEntryInput(value) {
+    const name = String(value?.name || "").trim();
+    const category = String(value?.category || "luogo").trim();
+    const description = String(value?.description || "").trim();
+    const lat = Number(value?.lat);
+    const lon = Number(value?.lon);
+    const sourceUrl = String(value?.sourceUrl || "").trim();
+    let sourceLabel = String(value?.sourceLabel || "").trim();
+
+    if (name.length < 2 || name.length > MAX_MAP_ENTRY_NAME_LENGTH) {
+        return { error: "Il nome deve contenere da 2 a 160 caratteri." };
+    }
+
+    if (!MAP_ENTRY_CATEGORIES.has(category)) {
+        return { error: "Categoria non valida." };
+    }
+
+    if (description.length > MAX_MAP_ENTRY_DESCRIPTION_LENGTH) {
+        return { error: "La descrizione non può superare 3000 caratteri." };
+    }
+
+    if (!Number.isFinite(lat) || lat < -90 || lat > 90) {
+        return { error: "Latitudine non valida." };
+    }
+
+    if (!Number.isFinite(lon) || lon < -180 || lon > 180) {
+        return { error: "Longitudine non valida." };
+    }
+
+    if (sourceUrl.length > MAX_MAP_ENTRY_SOURCE_URL_LENGTH) {
+        return { error: "Il collegamento alla fonte è troppo lungo." };
+    }
+
+    if (sourceUrl) {
+        try {
+            const parsed = new URL(sourceUrl);
+
+            if (!["http:", "https:"].includes(parsed.protocol)) {
+                return { error: "Il collegamento deve usare HTTP o HTTPS." };
+            }
+        } catch (_) {
+            return { error: "Il collegamento alla fonte non è valido." };
+        }
+
+        sourceLabel ||= "Fonte esterna";
+    } else {
+        sourceLabel = "";
+    }
+
+    if (sourceLabel.length > MAX_MAP_ENTRY_SOURCE_LABEL_LENGTH) {
+        return { error: "L’etichetta della fonte è troppo lunga." };
+    }
+
+    return {
+        name,
+        category,
+        description,
+        lat,
+        lon,
+        sourceUrl,
+        sourceLabel
+    };
+}
+
 async function listPublicWikiEntries(request, env) {
     await ensureWikiStorage(env);
 
@@ -2818,6 +3054,14 @@ async function getWikiImage(request, env, imageId, adminOnly) {
 async function ensureWikiStorage(env) {
     await env.DB.batch(
         WIKI_STORAGE_STATEMENTS.map((statement) =>
+            env.DB.prepare(statement)
+        )
+    );
+}
+
+async function ensureMapEntryStorage(env) {
+    await env.DB.batch(
+        MAP_ENTRY_STORAGE_STATEMENTS.map((statement) =>
             env.DB.prepare(statement)
         )
     );

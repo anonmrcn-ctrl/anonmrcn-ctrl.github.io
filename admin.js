@@ -32,10 +32,27 @@
         "adminCountPublicMemories"
     );
     const welcomePreview = document.getElementById("adminWelcomePreview");
+    const mapEntryForm = document.getElementById("adminMapEntryForm");
+    const mapEntryName = document.getElementById("adminMapEntryName");
+    const mapEntryCategory = document.getElementById("adminMapEntryCategory");
+    const mapEntryDescription = document.getElementById(
+        "adminMapEntryDescription"
+    );
+    const mapEntryLat = document.getElementById("adminMapEntryLat");
+    const mapEntryLon = document.getElementById("adminMapEntryLon");
+    const mapEntrySourceUrl = document.getElementById("adminMapEntrySourceUrl");
+    const mapEntrySourceLabel = document.getElementById(
+        "adminMapEntrySourceLabel"
+    );
+    const mapEntrySubmit = document.getElementById("adminMapEntrySubmit");
+    const mapEntryStatus = document.getElementById("adminMapEntryStatus");
+    const mapEntryList = document.getElementById("adminMapEntryList");
 
     let adminToken = sessionStorage.getItem(TOKEN_KEY) || "";
     let loadedMessages = [];
     let memoryObjectUrls = [];
+    let mapEntryMap = null;
+    let mapEntryMarker = null;
 
     const pushNotifications = window.NNMRCN_NOTIFICHE.create({
         button: pushButton,
@@ -75,6 +92,7 @@
             await Promise.all([
                 loadContactMessages(),
                 loadMemories(),
+                loadMapEntries(),
                 loadSummary(),
                 pushNotifications.sync()
             ]);
@@ -621,6 +639,190 @@
         }
     }
 
+    function ensureMapEntryPicker() {
+        if (!window.L || !document.getElementById("adminMapEntryMap")) {
+            return;
+        }
+
+        if (mapEntryMap) {
+            window.setTimeout(() => mapEntryMap.invalidateSize(), 0);
+            return;
+        }
+
+        mapEntryMap = L.map("adminMapEntryMap", {
+            scrollWheelZoom: true
+        }).setView([45.5515, 12.3278], 13);
+
+        L.tileLayer(
+            "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+            {
+                maxZoom: 19,
+                attribution:
+                    '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap contributors</a>'
+            }
+        ).addTo(mapEntryMap);
+
+        mapEntryMap.on("click", (event) => {
+            setMapEntryPosition(event.latlng.lat, event.latlng.lng, false);
+        });
+
+        window.setTimeout(() => mapEntryMap.invalidateSize(), 0);
+    }
+
+    function setMapEntryPosition(lat, lon, recenter = true) {
+        if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
+            return;
+        }
+
+        mapEntryLat.value = lat.toFixed(6);
+        mapEntryLon.value = lon.toFixed(6);
+
+        if (!mapEntryMap) {
+            return;
+        }
+
+        if (!mapEntryMarker) {
+            mapEntryMarker = L.circleMarker([lat, lon], {
+                radius: 9,
+                color: "#171717",
+                weight: 2,
+                fillColor: "#f4f1e8",
+                fillOpacity: 0.95
+            }).addTo(mapEntryMap);
+        } else {
+            mapEntryMarker.setLatLng([lat, lon]);
+        }
+
+        if (recenter) {
+            mapEntryMap.setView([lat, lon], Math.max(mapEntryMap.getZoom(), 15));
+        }
+    }
+
+    function syncMapEntryPositionFromInputs() {
+        setMapEntryPosition(
+            Number(mapEntryLat.value),
+            Number(mapEntryLon.value),
+            true
+        );
+    }
+
+    async function loadMapEntries() {
+        ensureMapEntryPicker();
+        mapEntryList.replaceChildren(document.createTextNode("Caricamento…"));
+
+        try {
+            const data = await request("/api/admin/map-entries");
+            renderMapEntries(data.entries || []);
+        } catch (error) {
+            mapEntryList.textContent =
+                error.message || "Non è stato possibile caricare i luoghi.";
+        }
+    }
+
+    function renderMapEntries(entries) {
+        mapEntryList.replaceChildren();
+
+        if (!entries.length) {
+            const message = document.createElement("p");
+            message.textContent = "L’elenco è vuoto.";
+            mapEntryList.appendChild(message);
+            return;
+        }
+
+        entries.forEach((entry) => {
+            const article = document.createElement("article");
+            const title = document.createElement("h3");
+            const category = document.createElement("p");
+            const description = document.createElement("p");
+            const coordinates = document.createElement("p");
+            const showButton = document.createElement("button");
+
+            article.className = "admin-message admin-map-entry";
+            title.textContent = entry.name;
+            category.className = "admin-meta";
+            category.textContent = mapEntryCategoryLabel(entry.category);
+            description.textContent = entry.description || "Nessuna descrizione.";
+            coordinates.className = "admin-meta";
+            coordinates.textContent = `${entry.lat.toFixed(6)}, ${entry.lon.toFixed(6)}`;
+            showButton.type = "button";
+            showButton.className = "admin-action";
+            showButton.textContent = "Mostra nella cartina";
+            showButton.addEventListener("click", () => {
+                setMapEntryPosition(entry.lat, entry.lon, true);
+                document.getElementById("adminMapEntryMap").scrollIntoView({
+                    behavior: "smooth",
+                    block: "center"
+                });
+            });
+
+            article.append(
+                title,
+                category,
+                description,
+                coordinates,
+                showButton
+            );
+            mapEntryList.appendChild(article);
+        });
+    }
+
+    function mapEntryCategoryLabel(category) {
+        const labels = {
+            luogo: "Luogo",
+            edificio: "Edificio",
+            monumento: "Monumento",
+            infrastruttura: "Infrastruttura",
+            paesaggio: "Paesaggio",
+            corso_d_acqua: "Corso d’acqua",
+            cava: "Cava",
+            percorso: "Percorso"
+        };
+
+        return labels[category] || "Luogo";
+    }
+
+    async function createMapEntry(event) {
+        event.preventDefault();
+
+        mapEntrySubmit.disabled = true;
+        mapEntryStatus.textContent = "Salvataggio…";
+
+        try {
+            await request("/api/admin/map-entries", {
+                method: "POST",
+                body: JSON.stringify({
+                    name: mapEntryName.value,
+                    category: mapEntryCategory.value,
+                    description: mapEntryDescription.value,
+                    lat: Number(mapEntryLat.value),
+                    lon: Number(mapEntryLon.value),
+                    sourceUrl: mapEntrySourceUrl.value,
+                    sourceLabel: mapEntrySourceLabel.value
+                })
+            });
+
+            mapEntryForm.reset();
+            mapEntryCategory.value = "luogo";
+            mapEntryLat.value = "";
+            mapEntryLon.value = "";
+
+            if (mapEntryMarker) {
+                mapEntryMap.removeLayer(mapEntryMarker);
+                mapEntryMarker = null;
+            }
+
+            mapEntryStatus.textContent =
+                "Voce aggiunta. È già visibile nella mappa pubblica.";
+            await loadMapEntries();
+            mapEntryName.focus();
+        } catch (error) {
+            mapEntryStatus.textContent =
+                error.message || "Non è stato possibile aggiungere la voce.";
+        } finally {
+            mapEntrySubmit.disabled = false;
+        }
+    }
+
     form.addEventListener("submit", async (event) => {
         event.preventDefault();
 
@@ -642,6 +844,9 @@
     search.addEventListener("input", renderCurrentMessages);
     exportCsv.addEventListener("click", () => downloadExport("csv"));
     exportJson.addEventListener("click", () => downloadExport("json"));
+    mapEntryForm.addEventListener("submit", createMapEntry);
+    mapEntryLat.addEventListener("change", syncMapEntryPositionFromInputs);
+    mapEntryLon.addEventListener("change", syncMapEntryPositionFromInputs);
     welcomePreview.addEventListener("click", () => {
         window.NNMRCN_SESSION.showWelcome(
             () => Promise.resolve(),

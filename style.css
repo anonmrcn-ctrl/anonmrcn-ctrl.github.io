@@ -2752,6 +2752,116 @@ html[data-theme="dark"] .leaflet-control-layers label {
     margin: 0 0 2.5rem;
 }
 
+.admin-voci-mappa {
+    margin: 0 0 3rem;
+    padding: 1.5rem 0 2rem;
+    border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+}
+
+.admin-voci-mappa > h2 {
+    margin: 0 0 0.65rem;
+    font-size: 1.2rem;
+}
+
+.admin-voci-mappa > p {
+    max-width: 68ch;
+    margin: 0 0 1.4rem;
+}
+
+.admin-voci-mappa form {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.7rem 1rem;
+    margin-bottom: 2rem;
+}
+
+.admin-voci-mappa form > label,
+.admin-voci-mappa form > input,
+.admin-voci-mappa form > select,
+.admin-voci-mappa form > textarea,
+.admin-voci-mappa form > button,
+.admin-voci-mappa form > p,
+.admin-voci-mappa-cartina,
+.admin-voci-mappa-coordinate {
+    grid-column: 1 / -1;
+}
+
+.admin-voci-mappa form > label,
+.admin-voci-mappa-coordinate label {
+    font-size: 0.82rem;
+    font-weight: 700;
+}
+
+.admin-voci-mappa form > label span {
+    font-weight: 400;
+}
+
+.admin-voci-mappa input,
+.admin-voci-mappa select,
+.admin-voci-mappa textarea {
+    width: 100%;
+    padding: 0.7rem 0.85rem;
+    border: 1px solid var(--ink);
+    border-radius: 0;
+    background: transparent;
+    color: var(--ink);
+    font: inherit;
+}
+
+.admin-voci-mappa textarea {
+    resize: vertical;
+}
+
+.admin-voci-mappa-cartina {
+    width: 100%;
+    height: min(52vh, 410px);
+    min-height: 280px;
+    border: 1px solid var(--ink);
+    background: var(--line);
+}
+
+.admin-voci-mappa-coordinate {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+}
+
+.admin-voci-mappa-coordinate label {
+    display: grid;
+    gap: 0.4rem;
+}
+
+.admin-voci-mappa form > button {
+    min-height: 2.85rem;
+    padding: 0.7rem 1rem;
+    border: 1px solid var(--ink);
+    background: var(--ink);
+    color: var(--paper);
+    font: inherit;
+    cursor: pointer;
+}
+
+.admin-voci-mappa form > button:hover,
+.admin-voci-mappa form > button:focus-visible {
+    background: transparent;
+    color: var(--ink);
+}
+
+.admin-voci-mappa form > button:disabled {
+    cursor: wait;
+    opacity: 0.55;
+}
+
+.admin-map-entry h3 {
+    margin: 0 0 0.65rem;
+    font-size: 1.05rem;
+}
+
+.admin-map-entry .admin-action {
+    margin-top: 0.7rem;
+}
+
 .admin-riepilogo > h2,
 .admin-strumenti > h2 {
     margin: 0 0 1rem;
@@ -3553,6 +3663,11 @@ body .voci-editor-indice button[aria-current="true"] {
 
     .admin-export-actions {
         display: grid;
+        grid-template-columns: 1fr;
+    }
+
+    .admin-voci-mappa form,
+    .admin-voci-mappa-coordinate {
         grid-template-columns: 1fr;
     }
 

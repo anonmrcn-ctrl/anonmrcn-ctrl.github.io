@@ -11,7 +11,13 @@
     <link rel="apple-touch-icon" sizes="180x180" href="./apple-touch-icon-logo3.png">
     <link rel="manifest" href="./admin.webmanifest">
     <script src="./tema.js?v=20260828-settings2"></script>
-    <link rel="stylesheet" href="./style.css?v=20261003-location-layout1">
+    <link
+        rel="stylesheet"
+        href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIINfQ3ynhtHLw8jMZ6KxLA3uEBGmB6q03I="
+        crossorigin="anonymous"
+    >
+    <link rel="stylesheet" href="./style.css?v=20261006-map-entries1">
 </head>
 
 <body>
@@ -113,6 +119,111 @@
                 <p class="admin-export-status" id="adminExportStatus" aria-live="polite"></p>
             </section>
 
+            <section class="admin-voci-mappa" aria-labelledby="adminVociMappaTitolo">
+                <h2 id="adminVociMappaTitolo">Elenco dei luoghi</h2>
+                <p>
+                    Aggiungi una voce pubblica alla mappa. Tocca il punto esatto
+                    sulla cartina oppure inserisci manualmente le coordinate.
+                </p>
+
+                <form id="adminMapEntryForm">
+                    <label for="adminMapEntryName">Nome</label>
+                    <input
+                        id="adminMapEntryName"
+                        name="name"
+                        type="text"
+                        maxlength="160"
+                        required
+                    >
+
+                    <label for="adminMapEntryCategory">Categoria</label>
+                    <select id="adminMapEntryCategory" name="category" required>
+                        <option value="luogo">Luogo</option>
+                        <option value="edificio">Edificio</option>
+                        <option value="monumento">Monumento</option>
+                        <option value="infrastruttura">Infrastruttura</option>
+                        <option value="paesaggio">Paesaggio</option>
+                        <option value="corso_d_acqua">Corso d’acqua</option>
+                        <option value="cava">Cava</option>
+                        <option value="percorso">Percorso</option>
+                    </select>
+
+                    <label for="adminMapEntryDescription">Descrizione</label>
+                    <textarea
+                        id="adminMapEntryDescription"
+                        name="description"
+                        maxlength="3000"
+                        rows="5"
+                    ></textarea>
+
+                    <div
+                        class="admin-voci-mappa-cartina"
+                        id="adminMapEntryMap"
+                        aria-label="Seleziona la posizione della voce"
+                    ></div>
+
+                    <div class="admin-voci-mappa-coordinate">
+                        <label for="adminMapEntryLat">
+                            Latitudine
+                            <input
+                                id="adminMapEntryLat"
+                                name="lat"
+                                type="number"
+                                min="-90"
+                                max="90"
+                                step="any"
+                                required
+                            >
+                        </label>
+                        <label for="adminMapEntryLon">
+                            Longitudine
+                            <input
+                                id="adminMapEntryLon"
+                                name="lon"
+                                type="number"
+                                min="-180"
+                                max="180"
+                                step="any"
+                                required
+                            >
+                        </label>
+                    </div>
+
+                    <label for="adminMapEntrySourceUrl">
+                        Collegamento alla fonte <span>(facoltativo)</span>
+                    </label>
+                    <input
+                        id="adminMapEntrySourceUrl"
+                        name="sourceUrl"
+                        type="url"
+                        maxlength="2048"
+                        placeholder="https://…"
+                    >
+
+                    <label for="adminMapEntrySourceLabel">
+                        Testo del collegamento <span>(facoltativo)</span>
+                    </label>
+                    <input
+                        id="adminMapEntrySourceLabel"
+                        name="sourceLabel"
+                        type="text"
+                        maxlength="160"
+                        placeholder="Fonte esterna"
+                    >
+
+                    <button id="adminMapEntrySubmit" type="submit">
+                        Aggiungi alla mappa
+                    </button>
+                    <p
+                        class="admin-status"
+                        id="adminMapEntryStatus"
+                        aria-live="polite"
+                    ></p>
+                </form>
+
+                <div class="admin-list" id="adminMapEntryList"></div>
+            </section>
+
             <section class="admin-contatti" aria-labelledby="adminContattiTitolo">
                 <h2 id="adminContattiTitolo">Messaggi diretti</h2>
                 <div class="admin-list" id="adminContactList"></div>
@@ -160,6 +271,11 @@
     <script src="./api.js"></script>
     <script src="./sessione.js?v=20261002-tour1"></script>
     <script src="./notifiche.js"></script>
-    <script src="./admin.js?v=20261001-onboarding1"></script>
+    <script
+        src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH"
+        crossorigin="anonymous"
+    ></script>
+    <script src="./admin.js?v=20261006-map-entries1"></script>
 </body>
 </html>

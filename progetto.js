@@ -1340,20 +1340,15 @@
     }
 
     async function loadMapTextList() {
-        const sources = [
-            "./luoghi-rilevanti.geojson",
-            "./luoghi-significativi.geojson",
-            "./percorsi.geojson",
-            "./marcon-da-sud.geojson"
-        ];
-
         try {
-            const collections = await Promise.all(
-                sources.map((source) => mapExtensions.loadGeoJSON(source))
-            );
-            const features = collections
-                .flatMap((collection) => collection.features || [])
-                .filter((feature) => feature?.properties?.nome)
+            const mapEntries =
+                await (window.NNMRCN_MAP_ENTRIES?.load?.() ||
+                    Promise.resolve([]));
+            const features = (
+                typeof window.NNMRCN_MAP_ENTRIES?.entryFeature === "function"
+                    ? mapEntries.map(window.NNMRCN_MAP_ENTRIES.entryFeature)
+                    : []
+            )
                 .sort((left, right) =>
                     String(left.properties.nome).localeCompare(
                         String(right.properties.nome),
@@ -1362,6 +1357,15 @@
                 );
 
             elements.elencoMappaLista.replaceChildren();
+
+            if (!features.length) {
+                showMessage(
+                    elements.elencoMappaLista,
+                    "Nessun luogo è ancora presente. Le nuove voci verranno aggiunte dall’amministratore."
+                );
+                mapListLoaded = true;
+                return;
+            }
 
             features.forEach((feature) => {
                 const article = document.createElement("article");
@@ -1408,6 +1412,26 @@
             return "Percorso";
         }
 
+        if (category === "edificio") {
+            return "Edificio";
+        }
+
+        if (category === "monumento") {
+            return "Monumento";
+        }
+
+        if (category === "infrastruttura") {
+            return "Infrastruttura";
+        }
+
+        if (category === "paesaggio") {
+            return "Paesaggio";
+        }
+
+        if (category === "luogo") {
+            return "Luogo";
+        }
+
         return feature.geometry?.type === "Point"
             ? "Luogo rilevante"
             : "Paesaggio significativo";
@@ -1440,125 +1464,32 @@
         });
     }
 
-    async function loadLandscapes() {
-        const landscapeLayer = L.layerGroup();
-
+    function loadLandscapes() {
+        const entriesLayer = window.NNMRCN_MAP_ENTRIES?.layer;
         const overlayControl = L.control.layers(
             null,
-            {
-                "Paesaggi significativi": landscapeLayer
-            },
+            entriesLayer ? { "Luoghi": entriesLayer } : {},
             {
                 collapsed: true
             }
         ).addTo(map);
         registerMapControl(overlayControl);
 
+        if (!entriesLayer) {
+            return;
+        }
+
+        const loadEntries = () => {
+            window.NNMRCN_MAP_ENTRIES.load().catch((error) => {
+                console.error("Impossibile caricare i luoghi.", error);
+            });
+        };
+
         if (settingsManager?.isLightMapEnabled?.()) {
-            const landscapeLayers = new Set(
-                ["Paesaggi significativi", "Fiumi", "Cave"]
-                    .map((name) => mapLayerRegistry.get(name)?.layer)
-                    .filter(Boolean)
-            );
-
-            if (landscapeLayers.size) {
-                await new Promise((resolve) => {
-                    const handleOverlayAdd = (event) => {
-                        if (!landscapeLayers.has(event.layer)) {
-                            return;
-                        }
-
-                        map.off("overlayadd", handleOverlayAdd);
-                        resolve();
-                    };
-
-                    map.on("overlayadd", handleOverlayAdd);
-                });
-            }
+            entriesLayer.once("add", loadEntries);
+        } else {
+            loadEntries();
         }
-
-        try {
-            const data = await mapExtensions.loadGeoJSON(
-                "./luoghi-significativi.geojson"
-            );
-
-            L.geoJSON(data, {
-                style: landscapeMainStyle,
-                onEachFeature: bindLandscapeFeature
-            }).addTo(landscapeLayer);
-
-            L.geoJSON(data, {
-                interactive: false,
-                style: landscapeDetailStyle
-            }).addTo(landscapeLayer);
-        } catch (error) {
-            console.error("Impossibile caricare i paesaggi significativi.", error);
-        }
-    }
-
-    function landscapeMainStyle(feature) {
-        if (feature.properties?.categoria === "cava") {
-            return {
-                color: "#006e8a",
-                weight: 3,
-                opacity: 1,
-                fillColor: "#2cc8ef",
-                fillOpacity: 0.35
-            };
-        }
-
-        return {
-            color: "#00b8ff",
-            weight: 8,
-            opacity: 0.95,
-            lineCap: "round",
-            lineJoin: "round"
-        };
-    }
-
-    function landscapeDetailStyle(feature) {
-        if (feature.properties?.categoria === "cava") {
-            return {
-                color: "#dff8ff",
-                weight: 1.5,
-                opacity: 1,
-                fill: false
-            };
-        }
-
-        return {
-            color: "#e8fbff",
-            weight: 2,
-            opacity: 1,
-            lineCap: "round",
-            lineJoin: "round"
-        };
-    }
-
-    function bindLandscapeFeature(feature, layer) {
-        const name = feature.properties?.nome;
-
-        if (name) {
-            layer.bindTooltip(name, {
-                sticky: true,
-                direction: "top"
-            });
-        }
-
-        mapExtensions.enhanceFeature(feature, layer);
-
-        layer.on("add", () => {
-            requestAnimationFrame(() => {
-                const path = layer.getElement();
-
-                if (!path) {
-                    return;
-                }
-
-                path.removeAttribute("tabindex");
-                path.setAttribute("focusable", "false");
-            });
-        });
     }
 
     function bindInterface() {

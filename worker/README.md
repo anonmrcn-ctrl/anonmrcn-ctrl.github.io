@@ -52,6 +52,10 @@ metri e sostituisce definitivamente i valori esatti. Un job programmato ogni
 notte elimina inoltre i messaggi di contatto e le richieste di codice più vecchi
 di 30 giorni.
 
+La migrazione `0010_map_entries.sql` aggiunge l’archivio delle voci pubbliche
+della mappa. Il Worker crea automaticamente la tabella al primo caricamento
+dell’elenco o all’inserimento di una voce dal pannello amministrativo.
+
 Se le location non sono ancora presenti, esegui successivamente il contenuto del
 file privato `nnmrcn_seed_private_d1_20260823.sql` aggiornato. Contiene le 20
 location, ma cancella prima messaggi, sessioni e location esistenti: usalo
@@ -204,6 +208,11 @@ Il consenso alla pubblicazione è obbligatorio. Dopo l’invio il browser conser
 un codice di ritiro con cui l’autore può controllare lo stato e cancellare la
 memoria anche se è già pubblicata. Il codice non viene inviato all’admin e non
 compare negli endpoint pubblici.
+
+La sezione **Elenco dei luoghi** del pannello amministrativo consente inoltre
+di scegliere un punto su una cartina, indicare nome, categoria, descrizione ed
+eventuale fonte e pubblicare immediatamente la nuova voce nella mappa e nel suo
+elenco testuale.
 
 ## Accesso speciale dal QR
 
