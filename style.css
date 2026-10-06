@@ -2831,12 +2831,6 @@ html[data-theme="dark"] .leaflet-control-layers label {
     overflow: hidden !important;
 }
 
-.admin-voci-mappa-cartina .leaflet-pane,
-.admin-voci-mappa-cartina .leaflet-control-container {
-    max-width: 100%;
-    max-height: 100%;
-}
-
 .admin-voci-mappa-coordinate {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -3701,6 +3695,12 @@ body .voci-editor-indice button[aria-current="true"] {
     .admin-voci-mappa form,
     .admin-voci-mappa-coordinate {
         grid-template-columns: 1fr;
+    }
+
+    .admin-voci-mappa-cartina {
+        height: min(42vh, 320px);
+        height: min(42dvh, 320px);
+        min-height: 240px;
     }
 
     .sezione-mappa {
