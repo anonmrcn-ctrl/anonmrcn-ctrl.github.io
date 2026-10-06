@@ -293,9 +293,6 @@
         confrontoMappaRange: document.getElementById("confrontoMappaRange"),
         confrontoMappaDivisore: document.getElementById("confrontoMappaDivisore"),
         geolocalizzaButton: document.getElementById("geolocalizzaButton"),
-        elencoMappaButton: document.getElementById("elencoMappaButton"),
-        elencoMappa: document.getElementById("elencoMappa"),
-        elencoMappaLista: document.getElementById("elencoMappaLista"),
         mappaStrumentiStatus: document.getElementById("mappaStrumentiStatus"),
         esploraPoesiaButton: document.getElementById("esploraPoesiaButton"),
         percorsoNarrativo: document.getElementById("percorsoNarrativo"),
@@ -316,11 +313,9 @@
     let sessionLocation = null;
     let locations = [];
     let todayLayer = null;
-    let year1975Layer = null;
     let historical1975Layer = null;
     let comparisonActive = false;
     let userPositionLayer = null;
-    let mapListLoaded = false;
     let narrativeStepIndex = 0;
     let narrativeMarker = null;
     let narrativeFocusTimer = 0;
@@ -381,10 +376,6 @@
             L.tileLayer(satelliteUrl, satelliteOptions)
         ]);
 
-        const year1975Layers = [
-            L.tileLayer(satelliteUrl, satelliteOptions)
-        ];
-
         if (
             window.pmtiles?.PMTiles &&
             typeof window.NNMRCN_PM_TILES_SOURCE === "function" &&
@@ -422,32 +413,9 @@
                 }
             });
 
-            year1975Layers.push(historical1975Layer);
         } else {
             console.error("PMTiles non è disponibile: il livello 1975 non può essere caricato.");
         }
-
-        year1975Layer = L.layerGroup(year1975Layers);
-
-        const baseControl = L.control.layers(
-            {
-                "Oggi": todayLayer,
-                "1975": year1975Layer
-            },
-            null,
-            {
-                collapsed: false
-            }
-        ).addTo(instance);
-        registerMapControl(baseControl);
-
-        instance.on("baselayerchange", () => {
-            if (comparisonActive) {
-                setComparisonMode(false);
-            }
-
-            scheduleMapStateSave();
-        });
         instance.on("overlayadd overlayremove", scheduleMapStateSave);
         instance.on("moveend zoomend", scheduleMapStateSave);
 
@@ -508,10 +476,6 @@
     }
 
     function currentBaseLayerName() {
-        if (year1975Layer && map.hasLayer(year1975Layer)) {
-            return "1975";
-        }
-
         if (todayLayer && map.hasLayer(todayLayer)) {
             return "Oggi";
         }
@@ -553,25 +517,20 @@
     }
 
     function clearBaseLayers() {
-        [todayLayer, year1975Layer].forEach((layer) => {
-            if (layer && map.hasLayer(layer)) {
-                map.removeLayer(layer);
-            }
-        });
+        if (todayLayer && map.hasLayer(todayLayer)) {
+            map.removeLayer(todayLayer);
+        }
 
         if (
             historical1975Layer &&
-            map.hasLayer(historical1975Layer) &&
-            (!year1975Layer || !map.hasLayer(year1975Layer))
+            map.hasLayer(historical1975Layer)
         ) {
             map.removeLayer(historical1975Layer);
         }
     }
 
     function addBaseLayer(name) {
-        if (name === "1975") {
-            year1975Layer?.addTo(map);
-        } else if (name === "Oggi") {
+        if (name === "Oggi") {
             todayLayer?.addTo(map);
         }
     }
@@ -586,11 +545,6 @@
             return;
         }
 
-        if (startup === "1975") {
-            addBaseLayer("1975");
-            return;
-        }
-
         if (startup !== "last") {
             return;
         }
@@ -601,7 +555,7 @@
             return;
         }
 
-        addBaseLayer(state.base);
+        addBaseLayer(state.base === "1975" ? "Oggi" : state.base);
 
         if (Array.isArray(state.overlays)) {
             state.overlays.forEach((name) => {
@@ -665,10 +619,6 @@
             !enabled || usesMobileComparison();
 
         if (enabled) {
-            if (year1975Layer && map.hasLayer(year1975Layer)) {
-                map.removeLayer(year1975Layer);
-            }
-
             if (todayLayer && !map.hasLayer(todayLayer)) {
                 todayLayer.addTo(map);
             }
@@ -690,8 +640,7 @@
 
         if (
             historical1975Layer &&
-            map.hasLayer(historical1975Layer) &&
-            (!year1975Layer || !map.hasLayer(year1975Layer))
+            map.hasLayer(historical1975Layer)
         ) {
             map.removeLayer(historical1975Layer);
         }
@@ -791,18 +740,6 @@
         historicalContainer.style.webkitClipPath = clipPolygon;
     }
 
-    function toggleMapPanel(button, panel) {
-        const willOpen = panel.hidden;
-
-        [
-            [elements.elencoMappaButton, elements.elencoMappa]
-        ].forEach(([otherButton, otherPanel]) => {
-            const open = willOpen && otherPanel === panel;
-            otherPanel.hidden = !open;
-            otherButton.setAttribute("aria-expanded", String(open));
-        });
-    }
-
     function updateComparisonFromTouch(event) {
         const touch = event.touches?.[0];
 
@@ -888,8 +825,6 @@
 
     function openNarrativeJourney() {
         dismissMapGuide();
-        elements.elencoMappa.hidden = true;
-        elements.elencoMappaButton.setAttribute("aria-expanded", "false");
         elements.percorsoNarrativo.hidden = false;
         elements.map.classList.add("percorso-narrativo-aperto");
         elements.esploraPoesiaButton.setAttribute("aria-pressed", "true");
@@ -1339,142 +1274,8 @@
         });
     }
 
-    async function loadMapTextList() {
-        try {
-            const mapEntries =
-                await (window.NNMRCN_MAP_ENTRIES?.load?.() ||
-                    Promise.resolve([]));
-            const features = (
-                typeof window.NNMRCN_MAP_ENTRIES?.entryFeature === "function"
-                    ? mapEntries.map(window.NNMRCN_MAP_ENTRIES.entryFeature)
-                    : []
-            )
-                .sort((left, right) =>
-                    String(left.properties.nome).localeCompare(
-                        String(right.properties.nome),
-                        "it"
-                    )
-                );
-
-            elements.elencoMappaLista.replaceChildren();
-
-            if (!features.length) {
-                showMessage(
-                    elements.elencoMappaLista,
-                    "Nessun luogo è ancora presente. Le nuove voci verranno aggiunte dall’amministratore."
-                );
-                mapListLoaded = true;
-                return;
-            }
-
-            features.forEach((feature) => {
-                const article = document.createElement("article");
-                const title = document.createElement("h3");
-                const category = document.createElement("p");
-                const button = document.createElement("button");
-
-                title.textContent = feature.properties.nome;
-                category.textContent = mapFeatureCategory(feature);
-                button.type = "button";
-                button.textContent = "Mostra sulla mappa";
-                button.addEventListener("click", () => {
-                    focusMapFeature(feature);
-                    elements.mappaStrumentiStatus.textContent =
-                        `Mostro ${feature.properties.nome}.`;
-                });
-
-                article.append(title, category, button);
-                elements.elencoMappaLista.appendChild(article);
-            });
-
-            mapListLoaded = true;
-        } catch (error) {
-            console.error("Impossibile creare l’elenco testuale della mappa.", error);
-            showMessage(
-                elements.elencoMappaLista,
-                "Non è stato possibile caricare l’elenco dei luoghi."
-            );
-        }
-    }
-
-    function mapFeatureCategory(feature) {
-        const category = feature.properties?.categoria;
-
-        if (category === "corso_d_acqua") {
-            return "Corso d’acqua";
-        }
-
-        if (category === "cava") {
-            return "Cava";
-        }
-
-        if (category === "percorso") {
-            return "Percorso";
-        }
-
-        if (category === "edificio") {
-            return "Edificio";
-        }
-
-        if (category === "monumento") {
-            return "Monumento";
-        }
-
-        if (category === "infrastruttura") {
-            return "Infrastruttura";
-        }
-
-        if (category === "paesaggio") {
-            return "Paesaggio";
-        }
-
-        if (category === "luogo") {
-            return "Luogo";
-        }
-
-        return feature.geometry?.type === "Point"
-            ? "Luogo rilevante"
-            : "Paesaggio significativo";
-    }
-
-    function focusMapFeature(feature) {
-        const coordinates = feature.geometry?.coordinates;
-
-        if (
-            feature.geometry?.type === "Point" &&
-            Array.isArray(coordinates) &&
-            Number.isFinite(coordinates[0]) &&
-            Number.isFinite(coordinates[1])
-        ) {
-            map.setView([coordinates[1], coordinates[0]], 16);
-        } else {
-            const bounds = L.geoJSON(feature).getBounds();
-
-            if (bounds.isValid()) {
-                map.fitBounds(bounds, {
-                    padding: [30, 30],
-                    maxZoom: 16
-                });
-            }
-        }
-
-        elements.map.scrollIntoView({
-            behavior: settingsManager?.scrollBehavior?.() || "smooth",
-            block: "center"
-        });
-    }
-
     function loadLandscapes() {
         const entriesLayer = window.NNMRCN_MAP_ENTRIES?.layer;
-        const overlayControl = L.control.layers(
-            null,
-            entriesLayer ? { "Luoghi": entriesLayer } : {},
-            {
-                collapsed: true
-            }
-        ).addTo(map);
-        registerMapControl(overlayControl);
-
         if (!entriesLayer) {
             return;
         }
@@ -1487,7 +1288,20 @@
 
         if (settingsManager?.isLightMapEnabled?.()) {
             entriesLayer.once("add", loadEntries);
-        } else {
+        }
+
+        entriesLayer.addTo(map);
+
+        const overlayControl = L.control.layers(
+            null,
+            { "Luoghi": entriesLayer },
+            {
+                collapsed: true
+            }
+        ).addTo(map);
+        registerMapControl(overlayControl);
+
+        if (!settingsManager?.isLightMapEnabled?.()) {
             loadEntries();
         }
     }
@@ -1533,13 +1347,6 @@
             mobileComparisonMedia.addListener?.(handleComparisonLayoutChange);
         }
         elements.geolocalizzaButton.addEventListener("click", locateVisitor);
-        elements.elencoMappaButton.addEventListener("click", async () => {
-            toggleMapPanel(elements.elencoMappaButton, elements.elencoMappa);
-
-            if (!elements.elencoMappa.hidden && !mapListLoaded) {
-                await loadMapTextList();
-            }
-        });
         elements.esploraPoesiaButton.addEventListener("click", () => {
             if (elements.percorsoNarrativo.hidden) {
                 openNarrativeJourney();

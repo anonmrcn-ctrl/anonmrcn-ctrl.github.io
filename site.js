@@ -117,10 +117,9 @@
         <section class="impostazioni-gruppo" aria-labelledby="impostazioniMappaTitolo">
             <h3 id="impostazioniMappaTitolo">Mappa</h3>
             <p class="impostazioni-etichetta">All’apertura mostra</p>
-            <div class="impostazioni-scelte impostazioni-scelte-4" role="group" aria-label="Avvio della mappa">
+            <div class="impostazioni-scelte impostazioni-scelte-3" role="group" aria-label="Avvio della mappa">
                 <button type="button" data-setting-name="mapStartup" data-setting-value="empty">Vuota</button>
                 <button type="button" data-setting-name="mapStartup" data-setting-value="today">Oggi</button>
-                <button type="button" data-setting-name="mapStartup" data-setting-value="1975">1975</button>
                 <button type="button" data-setting-name="mapStartup" data-setting-value="last">Ultima</button>
             </div>
             <p class="impostazioni-etichetta">Caricamento</p>

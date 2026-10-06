@@ -13,7 +13,7 @@
     <link rel="apple-touch-icon" sizes="180x180" href="./apple-touch-icon-logo3.png">
     <link rel="manifest" href="./manifest.webmanifest">
     <link rel="preconnect" href="https://server.arcgisonline.com">
-    <script src="./tema.js?v=20260828-settings2"></script>
+    <script src="./tema.js?v=20261006-map-layers1"></script>
     <script>
         if (new URLSearchParams(window.location.search).has("poesia-mini")) {
             document.documentElement.classList.add("poesia-mappa-mini");
@@ -150,7 +150,7 @@
 
             <div class="progetto-intro">
                 <p>
-                    Questa mappa mostra i luoghi di cui parla la poesia, oltre a quelli importanti per la storia di Marcon. Viene data la possibilità di selezionare mappe storiche (per ora solo 1975), ricavate da foto aeree, consultabili presso l'aerofototeca del Veneto, che sono state da me personalmente georeferenziate. I luoghi e i materiali cartografici verranno aggiunti progressivamente.
+                    Questa mappa mostra i luoghi di cui parla la poesia, oltre a quelli importanti per la storia di Marcon. È possibile confrontare la mappa attuale con mappe storiche (per ora solo quella del 1975), ricavate da foto aeree consultabili presso l'aerofototeca del Veneto e da me personalmente georeferenziate. I luoghi e i materiali cartografici verranno aggiunti progressivamente.
                 </p>
 
                 <p>
@@ -297,8 +297,7 @@
                 <h2 id="mappaGuidaTitolo">Come esplorare la mappa</h2>
                 <ol>
                     <li>Confronta il territorio attuale con quello del 1975.</li>
-                    <li>Apri il livello «Luoghi» per mostrare le voci disponibili.</li>
-                    <li>Tocca un elemento della mappa per leggerne informazioni e collegamenti.</li>
+                    <li>Il livello «Luoghi» è già attivo: tocca un elemento per leggerne informazioni e collegamenti.</li>
                 </ol>
             </aside>
 
@@ -316,12 +315,6 @@
                     aria-controls="confrontoMappaPanel"
                 >Confronta 1975–oggi</button>
                 <button id="geolocalizzaButton" type="button">Dove sono</button>
-                <button
-                    id="elencoMappaButton"
-                    type="button"
-                    aria-expanded="false"
-                    aria-controls="elencoMappa"
-                >Elenco dei luoghi</button>
             </div>
 
             <p class="mappa-strumenti-status" id="mappaStrumentiStatus" aria-live="polite"></p>
@@ -343,16 +336,6 @@
                     aria-valuetext="Metà mappa del 1975 e metà mappa attuale"
                 >
             </div>
-
-            <section class="mappa-pannello elenco-mappa" id="elencoMappa" hidden aria-labelledby="elencoMappaTitolo">
-                <div class="elenco-mappa-intestazione">
-                    <h2 id="elencoMappaTitolo">Luoghi e paesaggi</h2>
-                    <p>Alternativa testuale alla consultazione della mappa.</p>
-                </div>
-                <div class="elenco-mappa-lista" id="elencoMappaLista">
-                    <p>Caricamento…</p>
-                </div>
-            </section>
 
             <div class="mappa-contenitore">
                 <section
@@ -444,11 +427,11 @@
     <script src="./sessione.js?v=20261002-tour1"></script>
     <script src="./richiesta-codice.js?v=20261003-privacy1"></script>
     <script src="./notifiche.js"></script>
-    <script src="./site.js?v=20261003-privacy1"></script>
+    <script src="./site.js?v=20261006-map-layers1"></script>
     <script src="./mappa.js"></script>
     <script src="./voci-mappa.js?v=20261006-clean1"></script>
     <script src="./taccuino.js"></script>
     <script src="./poesia-metrica.js?v=20260828-righe1"></script>
-    <script src="./progetto.js?v=20261006-clean1"></script>
+    <script src="./progetto.js?v=20261006-layers1"></script>
 </body>
 </html>

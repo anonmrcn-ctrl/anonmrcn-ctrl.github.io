@@ -17,7 +17,7 @@
     const SETTINGS_VALUES = Object.freeze({
         textSize: Object.freeze(["normal", "large", "xlarge"]),
         motion: Object.freeze(["system", "reduce", "full"]),
-        mapStartup: Object.freeze(["empty", "today", "1975", "last"]),
+        mapStartup: Object.freeze(["empty", "today", "last"]),
         mapLite: Object.freeze(["off", "on"])
     });
     const RESETTABLE_LOCAL_KEYS = Object.freeze([
