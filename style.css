@@ -2832,6 +2832,27 @@ html[data-theme="dark"] .leaflet-control-layers label {
     opacity: 0.72;
 }
 
+.admin-voci-mappa .admin-inline-check {
+    display: flex;
+    gap: 0.65rem;
+    align-items: center;
+    min-height: 2.75rem;
+    padding: 0.65rem 0.8rem;
+    border: 1px solid var(--line);
+    cursor: pointer;
+}
+
+.admin-voci-mappa .admin-inline-check input {
+    width: 1.15rem;
+    height: 1.15rem;
+    margin: 0;
+    accent-color: var(--ink);
+}
+
+.admin-narrative-draft {
+    opacity: 0.7;
+}
+
 .admin-voci-mappa-foto {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;

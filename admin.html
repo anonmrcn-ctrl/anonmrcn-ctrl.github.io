@@ -12,7 +12,7 @@
     <link rel="manifest" href="./admin.webmanifest">
     <script src="./tema.js?v=20261006-map-layers1"></script>
     <link rel="stylesheet" href="./leaflet.css?v=1.9.4">
-    <link rel="stylesheet" href="./style.css?v=20261007-map-entry-photo-a11y1">
+    <link rel="stylesheet" href="./style.css?v=20261007-narrative-cms1">
 </head>
 
 <body>
@@ -247,6 +247,153 @@
                 <div class="admin-list" id="adminMapEntryList"></div>
             </section>
 
+            <section class="admin-voci-mappa" aria-labelledby="adminPercorsoTitolo">
+                <h2 id="adminPercorsoTitolo">Percorso «Esplora la poesia»</h2>
+                <p>
+                    Gestisci versi, spiegazioni, ordine, fonti e posizione delle
+                    tappe senza modificare il codice del sito.
+                </p>
+
+                <form id="adminNarrativeForm">
+                    <div class="admin-voci-mappa-coordinate">
+                        <label for="adminNarrativePosition">
+                            Ordine
+                            <input
+                                id="adminNarrativePosition"
+                                type="number"
+                                min="1"
+                                max="9999"
+                                step="1"
+                                required
+                            >
+                        </label>
+                        <label for="adminNarrativeZoom">
+                            Zoom della mappa
+                            <input
+                                id="adminNarrativeZoom"
+                                type="number"
+                                min="10"
+                                max="19"
+                                step="1"
+                                value="16"
+                                required
+                            >
+                        </label>
+                    </div>
+
+                    <label for="adminNarrativeVerse">Verso</label>
+                    <input
+                        id="adminNarrativeVerse"
+                        type="text"
+                        maxlength="240"
+                        placeholder="v. 31 — «via Fornace»"
+                        required
+                    >
+
+                    <label for="adminNarrativeLabel">Nome breve della tappa</label>
+                    <input
+                        id="adminNarrativeLabel"
+                        type="text"
+                        maxlength="160"
+                        placeholder="Via Fornace"
+                        required
+                    >
+
+                    <label for="adminNarrativeTitle">Titolo della spiegazione</label>
+                    <input
+                        id="adminNarrativeTitle"
+                        type="text"
+                        maxlength="160"
+                        required
+                    >
+
+                    <label for="adminNarrativeTitleUrl">
+                        Collegamento del titolo <span>(facoltativo)</span>
+                    </label>
+                    <input
+                        id="adminNarrativeTitleUrl"
+                        type="url"
+                        maxlength="2048"
+                        placeholder="https://…"
+                    >
+
+                    <label for="adminNarrativeText">Spiegazione</label>
+                    <textarea
+                        id="adminNarrativeText"
+                        maxlength="5000"
+                        rows="8"
+                        required
+                    ></textarea>
+
+                    <label for="adminNarrativeSources">
+                        Collegamenti nel testo <span>(facoltativi)</span>
+                    </label>
+                    <textarea
+                        id="adminNarrativeSources"
+                        rows="5"
+                        placeholder="Gaggio; Gajo; Via Alta | https://it.wikipedia.org/wiki/Gaggio_(Marcon)"
+                    ></textarea>
+                    <p class="admin-voci-mappa-aiuto">
+                        Una fonte per riga: termini da collegare separati da
+                        punto e virgola, poi | e l’indirizzo completo.
+                    </p>
+
+                    <section
+                        class="admin-voci-mappa-cartina"
+                        id="adminNarrativeMap"
+                        aria-label="Seleziona la posizione della tappa"
+                    ></section>
+
+                    <div class="admin-voci-mappa-coordinate">
+                        <label for="adminNarrativeLat">
+                            Latitudine
+                            <input
+                                id="adminNarrativeLat"
+                                type="number"
+                                min="-90"
+                                max="90"
+                                step="any"
+                                required
+                            >
+                        </label>
+                        <label for="adminNarrativeLon">
+                            Longitudine
+                            <input
+                                id="adminNarrativeLon"
+                                type="number"
+                                min="-180"
+                                max="180"
+                                step="any"
+                                required
+                            >
+                        </label>
+                    </div>
+
+                    <label class="admin-inline-check" for="adminNarrativePublished">
+                        <input
+                            id="adminNarrativePublished"
+                            type="checkbox"
+                            checked
+                        >
+                        Pubblicata nel percorso
+                    </label>
+
+                    <button id="adminNarrativeSubmit" type="submit">
+                        Aggiungi tappa
+                    </button>
+                    <button id="adminNarrativeCancel" type="button" hidden>
+                        Annulla modifica
+                    </button>
+                    <p
+                        class="admin-status"
+                        id="adminNarrativeStatus"
+                        aria-live="polite"
+                    ></p>
+                </form>
+
+                <div class="admin-list" id="adminNarrativeList"></div>
+            </section>
+
             <section class="admin-contatti" aria-labelledby="adminContattiTitolo">
                 <h2 id="adminContattiTitolo">Messaggi diretti</h2>
                 <div class="admin-list" id="adminContactList"></div>
@@ -299,6 +446,6 @@
         integrity="sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH"
         crossorigin="anonymous"
     ></script>
-    <script src="./admin.js?v=20261007-map-entry-photo1"></script>
+    <script src="./admin.js?v=20261007-narrative-cms1"></script>
 </body>
 </html>

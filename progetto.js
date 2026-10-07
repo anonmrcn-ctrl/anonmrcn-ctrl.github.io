@@ -88,7 +88,7 @@
         return `v. ${poemLines[lineKey]} — «${quote}»`;
     }
 
-    const NARRATIVE_STEPS = Object.freeze([
+    const NARRATIVE_STEPS_FALLBACK = Object.freeze([
         {
             verse: poemVerse("gaggio", "Il Gajo tra i Praelli"),
             label: "Gaggio",
@@ -315,6 +315,7 @@
     let historical1975Layer = null;
     let comparisonActive = false;
     let userPositionLayer = null;
+    let narrativeSteps = Array.from(NARRATIVE_STEPS_FALLBACK);
     let narrativeStepIndex = 0;
     let narrativeMarker = null;
     let narrativeFocusTimer = 0;
@@ -344,7 +345,7 @@
     mapStateReady = true;
     bindInterface();
     restoreSession();
-    applyRequestedMapView();
+    loadNarrativeSteps().finally(applyRequestedMapView);
 
     function createMap() {
         const lightMap = settingsManager?.isLightMapEnabled?.() || false;
@@ -791,11 +792,72 @@
         }
     }
 
+    async function loadNarrativeSteps() {
+        if (!apiClient?.baseUrl) {
+            return;
+        }
+
+        try {
+            const data = await apiClient.request("/api/public/narrative-steps");
+            if (!Array.isArray(data?.steps)) {
+                throw new Error("Risposta del percorso poetico non valida.");
+            }
+
+            narrativeSteps = data.steps
+                .filter((step) => (
+                    step &&
+                    typeof step.label === "string" &&
+                    typeof step.title === "string" &&
+                    typeof step.verse === "string" &&
+                    typeof step.text === "string" &&
+                    Number.isFinite(Number(step.lat)) &&
+                    Number.isFinite(Number(step.lon))
+                ))
+                .map((step) => ({
+                    ...step,
+                    lat: Number(step.lat),
+                    lon: Number(step.lon),
+                    zoom: Math.min(Math.max(Number(step.zoom) || 16, 10), 19),
+                    sources: Array.isArray(step.sources) ? step.sources : []
+                }));
+
+            if (!elements.percorsoNarrativo.hidden) {
+                closeNarrativeJourney();
+            }
+
+            buildNarrativeTimeline();
+            elements.esploraPoesiaButton.disabled = !narrativeSteps.length;
+            elements.esploraPoesiaButton.textContent = narrativeSteps.length
+                ? "Esplora la poesia"
+                : "Percorso non disponibile";
+        } catch (error) {
+            console.error(
+                "Impossibile caricare il percorso poetico amministrabile; uso la copia locale.",
+                error
+            );
+        }
+    }
+
+    function narrativeStepIndexFromReference(reference) {
+        if (!reference) {
+            return -1;
+        }
+
+        if (/^\d+$/u.test(reference)) {
+            const legacyIndex = Number(reference);
+            return legacyIndex >= 0 && legacyIndex < narrativeSteps.length
+                ? legacyIndex
+                : -1;
+        }
+
+        return narrativeSteps.findIndex((step) => step.key === reference);
+    }
+
     function buildNarrativeTimeline() {
         elements.percorsoNarrativoLinea.replaceChildren();
         elements.percorsoNarrativoSelect.replaceChildren();
 
-        NARRATIVE_STEPS.forEach((step, index) => {
+        narrativeSteps.forEach((step, index) => {
             const button = document.createElement("button");
             const point = document.createElement("span");
             const label = document.createElement("span");
@@ -823,6 +885,12 @@
     }
 
     function openNarrativeJourney() {
+        if (!narrativeSteps.length) {
+            elements.mappaStrumentiStatus.textContent =
+                "Il percorso poetico non contiene ancora tappe pubblicate.";
+            return;
+        }
+
         dismissMapGuide();
         elements.percorsoNarrativo.hidden = false;
         elements.map.classList.add("percorso-narrativo-aperto");
@@ -929,11 +997,15 @@
     }
 
     function showNarrativeStep(index) {
+        if (!narrativeSteps.length) {
+            return;
+        }
+
         const boundedIndex = Math.min(
             Math.max(Number(index) || 0, 0),
-            NARRATIVE_STEPS.length - 1
+            narrativeSteps.length - 1
         );
-        const step = NARRATIVE_STEPS[boundedIndex];
+        const step = narrativeSteps[boundedIndex];
 
         narrativeStepIndex = boundedIndex;
         elements.percorsoNarrativoSelect.value = String(boundedIndex);
@@ -946,7 +1018,7 @@
         );
         elements.percorsoNarrativoIndietro.disabled = boundedIndex === 0;
         elements.percorsoNarrativoAvanti.textContent =
-            boundedIndex === NARRATIVE_STEPS.length - 1
+            boundedIndex === narrativeSteps.length - 1
                 ? "Fine"
                 : "Successivo";
         syncNarrativeNotebookButton(step, boundedIndex);
@@ -1059,15 +1131,18 @@
     }
 
     function narrativeNotebookItem(step, index) {
+        const stableReference = step.key || String(index);
+
         return {
-            id: `verso:${index}:${step.label.toLocaleLowerCase("it")}`,
+            id: `verso:${stableReference}`,
             type: "verso",
             title: `${step.verse} — ${step.label}`,
             text: step.text,
             lat: step.lat,
             lon: step.lon,
             url:
-                `/progetto.html?narrative=${index}&lat=${step.lat}` +
+                `/progetto.html?narrative=${encodeURIComponent(stableReference)}` +
+                `&lat=${step.lat}` +
                 `&lon=${step.lon}&zoom=${step.zoom}`
         };
     }
@@ -1097,7 +1172,7 @@
             return;
         }
 
-        const step = NARRATIVE_STEPS[narrativeStepIndex];
+        const step = narrativeSteps[narrativeStepIndex];
         notebook.toggle(narrativeNotebookItem(step, narrativeStepIndex));
         syncNarrativeNotebookButton(step, narrativeStepIndex);
     }
@@ -1178,7 +1253,7 @@
     function applyRequestedMapView() {
         const parameters = new URLSearchParams(window.location.search);
         const placeId = parameters.get("luogo");
-        const narrative = Number(parameters.get("narrative"));
+        const narrativeReference = parameters.get("narrative") || "";
         const lat = Number(parameters.get("lat"));
         const lon = Number(parameters.get("lon"));
         const zoom = Number(parameters.get("zoom"));
@@ -1204,15 +1279,14 @@
             return;
         }
 
-        if (
-            parameters.has("narrative") &&
-            Number.isInteger(narrative) &&
-            narrative >= 0 &&
-            narrative < NARRATIVE_STEPS.length
-        ) {
+        const narrativeIndex = narrativeStepIndexFromReference(
+            narrativeReference
+        );
+
+        if (parameters.has("narrative") && narrativeIndex >= 0) {
             window.setTimeout(() => {
                 openNarrativeJourney();
-                showNarrativeStep(narrative);
+                showNarrativeStep(narrativeIndex);
             }, 120);
             return;
         }
@@ -1392,13 +1466,13 @@
         document.addEventListener("nnmrcn:taccuinochange", () => {
             if (!elements.percorsoNarrativo.hidden) {
                 syncNarrativeNotebookButton(
-                    NARRATIVE_STEPS[narrativeStepIndex],
+                    narrativeSteps[narrativeStepIndex],
                     narrativeStepIndex
                 );
             }
         });
         elements.percorsoNarrativoAvanti.addEventListener("click", () => {
-            if (narrativeStepIndex === NARRATIVE_STEPS.length - 1) {
+            if (narrativeStepIndex === narrativeSteps.length - 1) {
                 closeNarrativeJourney();
             } else {
                 showNarrativeStep(narrativeStepIndex + 1);

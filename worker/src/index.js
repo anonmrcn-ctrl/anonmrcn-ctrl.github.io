@@ -5,6 +5,7 @@ import {
     removePushSubscription,
     savePushSubscription
 } from "./push.js";
+import { NARRATIVE_STEP_SEEDS } from "./narrative-seed.js";
 
 // workerd refuses PBKDF2 requests above 100,000 iterations.
 const PBKDF2_ITERATIONS = 100000;
@@ -68,6 +69,12 @@ const MAX_MAP_ENTRY_SOURCE_URL_LENGTH = 2048;
 const MAX_MAP_ENTRY_SOURCE_LABEL_LENGTH = 160;
 const MAX_MAP_ENTRY_IMAGE_BYTES = 700000;
 const MAX_MAP_ENTRY_REQUEST_BYTES = 1000000;
+const MAX_NARRATIVE_STEP_REQUEST_BYTES = 64000;
+const MAX_NARRATIVE_STEP_LABEL_LENGTH = 160;
+const MAX_NARRATIVE_STEP_VERSE_LENGTH = 240;
+const MAX_NARRATIVE_STEP_TEXT_LENGTH = 5000;
+const MAX_NARRATIVE_STEP_SOURCES = 20;
+const MAX_NARRATIVE_SOURCE_TERMS = 20;
 
 class RequestBodyTooLargeError extends Error {}
 
@@ -96,6 +103,7 @@ const MAP_ENTRY_CATEGORIES = new Set([
     "cava",
     "percorso"
 ]);
+const NARRATIVE_STATUSES = new Set(["draft", "published"]);
 const WIKI_IMAGE_TYPES = new Set([
     "image/jpeg",
     "image/png",
@@ -246,6 +254,40 @@ const MAP_ENTRY_STORAGE_STATEMENTS = Object.freeze([
         FOREIGN KEY (entry_id)
             REFERENCES map_entries(id)
             ON DELETE CASCADE
+    )`
+]);
+const NARRATIVE_STORAGE_STATEMENTS = Object.freeze([
+    `CREATE TABLE IF NOT EXISTS narrative_steps (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        stable_key TEXT NOT NULL UNIQUE
+            CHECK (length(stable_key) BETWEEN 1 AND 160),
+        position INTEGER NOT NULL DEFAULT 1
+            CHECK (position BETWEEN 1 AND 9999),
+        verse TEXT NOT NULL
+            CHECK (length(verse) BETWEEN 1 AND 240),
+        label TEXT NOT NULL
+            CHECK (length(label) BETWEEN 1 AND 160),
+        title TEXT NOT NULL
+            CHECK (length(title) BETWEEN 1 AND 160),
+        title_url TEXT NOT NULL DEFAULT ''
+            CHECK (length(title_url) <= 2048),
+        lat REAL NOT NULL CHECK (lat BETWEEN -90 AND 90),
+        lon REAL NOT NULL CHECK (lon BETWEEN -180 AND 180),
+        zoom INTEGER NOT NULL DEFAULT 16 CHECK (zoom BETWEEN 10 AND 19),
+        explanation TEXT NOT NULL
+            CHECK (length(explanation) BETWEEN 1 AND 5000),
+        sources_json TEXT NOT NULL DEFAULT '[]',
+        status TEXT NOT NULL DEFAULT 'draft'
+            CHECK (status IN ('draft', 'published')),
+        created_at INTEGER NOT NULL,
+        updated_at INTEGER NOT NULL,
+        published_at INTEGER
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_narrative_steps_public
+        ON narrative_steps(status, position, id)`,
+    `CREATE TABLE IF NOT EXISTS content_initializations (
+        name TEXT PRIMARY KEY,
+        applied_at INTEGER NOT NULL
     )`
 ]);
 const LOCATION_PROFILE_COLUMNS = Object.freeze([
@@ -399,6 +441,13 @@ export default {
 
             if (
                 request.method === "GET" &&
+                path === "/api/public/narrative-steps"
+            ) {
+                return await listPublicNarrativeSteps(request, env);
+            }
+
+            if (
+                request.method === "GET" &&
                 /^\/api\/public\/map-entry-images\/\d+$/.test(path)
             ) {
                 const entryId = Number(path.split("/").pop());
@@ -507,6 +556,36 @@ export default {
             ) {
                 const id = Number(path.split("/").pop());
                 return await adminDeleteMapEntry(request, env, id);
+            }
+
+            if (
+                request.method === "GET" &&
+                path === "/api/admin/narrative-steps"
+            ) {
+                return await adminListNarrativeSteps(request, env);
+            }
+
+            if (
+                request.method === "POST" &&
+                path === "/api/admin/narrative-steps"
+            ) {
+                return await adminCreateNarrativeStep(request, env);
+            }
+
+            if (
+                request.method === "PATCH" &&
+                /^\/api\/admin\/narrative-steps\/\d+$/.test(path)
+            ) {
+                const id = Number(path.split("/").pop());
+                return await adminUpdateNarrativeStep(request, env, id);
+            }
+
+            if (
+                request.method === "DELETE" &&
+                /^\/api\/admin\/narrative-steps\/\d+$/.test(path)
+            ) {
+                const id = Number(path.split("/").pop());
+                return await adminDeleteNarrativeStep(request, env, id);
             }
 
             if (request.method === "GET" && path === "/api/admin/wiki") {
@@ -2420,6 +2499,387 @@ function normalizeMapEntryImage(value) {
     return media;
 }
 
+async function listPublicNarrativeSteps(request, env) {
+    await ensureNarrativeStorage(env);
+
+    return json(request, env, {
+        steps: await readNarrativeSteps(env, false)
+    });
+}
+
+async function adminListNarrativeSteps(request, env) {
+    if (!(await adminAuthorized(request, env))) {
+        return unauthorized(request, env);
+    }
+
+    await ensureNarrativeStorage(env);
+
+    return json(request, env, {
+        steps: await readNarrativeSteps(env, true)
+    });
+}
+
+async function adminCreateNarrativeStep(request, env) {
+    if (!(await adminAuthorized(request, env))) {
+        return unauthorized(request, env);
+    }
+
+    await ensureNarrativeStorage(env);
+
+    const input = normalizeNarrativeStepInput(
+        await readJson(request, MAX_NARRATIVE_STEP_REQUEST_BYTES)
+    );
+
+    if (input.error) {
+        return json(request, env, { error: input.error }, 400);
+    }
+
+    const now = Date.now();
+    const stableKey = await uniqueNarrativeStepKey(env, input.label);
+    const publishedAt = input.status === "published" ? now : null;
+    const result = await env.DB.prepare(`
+        INSERT INTO narrative_steps (
+            stable_key,
+            position,
+            verse,
+            label,
+            title,
+            title_url,
+            lat,
+            lon,
+            zoom,
+            explanation,
+            sources_json,
+            status,
+            created_at,
+            updated_at,
+            published_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).bind(
+        stableKey,
+        input.position,
+        input.verse,
+        input.label,
+        input.title,
+        input.titleUrl,
+        input.lat,
+        input.lon,
+        input.zoom,
+        input.text,
+        JSON.stringify(input.sources),
+        input.status,
+        now,
+        now,
+        publishedAt
+    ).run();
+
+    const id = Number(result.meta?.last_row_id);
+
+    return json(request, env, {
+        ok: true,
+        step: narrativeStepPayload(await getNarrativeStepById(env, id))
+    }, 201);
+}
+
+async function adminUpdateNarrativeStep(request, env, stepId) {
+    if (!(await adminAuthorized(request, env))) {
+        return unauthorized(request, env);
+    }
+
+    if (!Number.isInteger(stepId) || stepId <= 0) {
+        return json(request, env, { error: "Tappa non valida." }, 400);
+    }
+
+    await ensureNarrativeStorage(env);
+
+    const existing = await getNarrativeStepById(env, stepId);
+
+    if (!existing) {
+        return json(request, env, { error: "Tappa non trovata." }, 404);
+    }
+
+    const input = normalizeNarrativeStepInput(
+        await readJson(request, MAX_NARRATIVE_STEP_REQUEST_BYTES)
+    );
+
+    if (input.error) {
+        return json(request, env, { error: input.error }, 400);
+    }
+
+    const now = Date.now();
+    const publishedAt = input.status === "published"
+        ? Number(existing.published_at) || now
+        : null;
+
+    await env.DB.prepare(`
+        UPDATE narrative_steps
+        SET
+            position = ?,
+            verse = ?,
+            label = ?,
+            title = ?,
+            title_url = ?,
+            lat = ?,
+            lon = ?,
+            zoom = ?,
+            explanation = ?,
+            sources_json = ?,
+            status = ?,
+            updated_at = ?,
+            published_at = ?
+        WHERE id = ?
+    `).bind(
+        input.position,
+        input.verse,
+        input.label,
+        input.title,
+        input.titleUrl,
+        input.lat,
+        input.lon,
+        input.zoom,
+        input.text,
+        JSON.stringify(input.sources),
+        input.status,
+        now,
+        publishedAt,
+        stepId
+    ).run();
+
+    return json(request, env, {
+        ok: true,
+        step: narrativeStepPayload(await getNarrativeStepById(env, stepId))
+    });
+}
+
+async function adminDeleteNarrativeStep(request, env, stepId) {
+    if (!(await adminAuthorized(request, env))) {
+        return unauthorized(request, env);
+    }
+
+    if (!Number.isInteger(stepId) || stepId <= 0) {
+        return json(request, env, { error: "Tappa non valida." }, 400);
+    }
+
+    await ensureNarrativeStorage(env);
+
+    if (!(await getNarrativeStepById(env, stepId))) {
+        return json(request, env, { error: "Tappa non trovata." }, 404);
+    }
+
+    await env.DB.prepare(`
+        DELETE FROM narrative_steps
+        WHERE id = ?
+    `).bind(stepId).run();
+
+    return json(request, env, { ok: true });
+}
+
+async function getNarrativeStepById(env, stepId) {
+    return await env.DB.prepare(`
+        SELECT *
+        FROM narrative_steps
+        WHERE id = ?
+        LIMIT 1
+    `).bind(stepId).first();
+}
+
+async function readNarrativeSteps(env, includeDrafts) {
+    const where = includeDrafts ? "" : "WHERE status = 'published'";
+    const result = await env.DB.prepare(`
+        SELECT *
+        FROM narrative_steps
+        ${where}
+        ORDER BY position, id
+    `).all();
+
+    return (result.results || []).map(narrativeStepPayload);
+}
+
+function narrativeStepPayload(row) {
+    let sources = [];
+
+    try {
+        const parsed = JSON.parse(row.sources_json || "[]");
+        sources = Array.isArray(parsed) ? parsed : [];
+    } catch (_) {
+        sources = [];
+    }
+
+    return {
+        id: Number(row.id),
+        key: row.stable_key,
+        position: Number(row.position),
+        verse: row.verse,
+        label: row.label,
+        title: row.title,
+        titleUrl: row.title_url,
+        lat: Number(row.lat),
+        lon: Number(row.lon),
+        zoom: Number(row.zoom),
+        text: row.explanation,
+        sources,
+        published: row.status === "published",
+        createdAt: Number(row.created_at),
+        updatedAt: Number(row.updated_at)
+    };
+}
+
+function normalizeNarrativeStepInput(value) {
+    const position = Number(value?.position);
+    const verse = String(value?.verse || "").trim();
+    const label = String(value?.label || "").trim();
+    const title = String(value?.title || "").trim();
+    const titleUrl = String(value?.titleUrl || "").trim();
+    const lat = Number(value?.lat);
+    const lon = Number(value?.lon);
+    const zoom = Number(value?.zoom);
+    const text = String(value?.text || "").trim();
+    const status = value?.published === false ? "draft" : "published";
+    const sources = normalizeNarrativeSources(value?.sources);
+
+    if (!Number.isInteger(position) || position < 1 || position > 9999) {
+        return { error: "L’ordine deve essere un numero intero da 1 a 9999." };
+    }
+
+    if (!verse || verse.length > MAX_NARRATIVE_STEP_VERSE_LENGTH) {
+        return { error: "Il riferimento al verso è obbligatorio e non può superare 240 caratteri." };
+    }
+
+    if (!label || label.length > MAX_NARRATIVE_STEP_LABEL_LENGTH) {
+        return { error: "L’etichetta è obbligatoria e non può superare 160 caratteri." };
+    }
+
+    if (!title || title.length > MAX_NARRATIVE_STEP_LABEL_LENGTH) {
+        return { error: "Il titolo è obbligatorio e non può superare 160 caratteri." };
+    }
+
+    const titleUrlError = validateNarrativeUrl(titleUrl, "Il collegamento del titolo");
+    if (titleUrlError) {
+        return { error: titleUrlError };
+    }
+
+    if (!Number.isFinite(lat) || lat < -90 || lat > 90) {
+        return { error: "Latitudine non valida." };
+    }
+
+    if (!Number.isFinite(lon) || lon < -180 || lon > 180) {
+        return { error: "Longitudine non valida." };
+    }
+
+    if (!Number.isInteger(zoom) || zoom < 10 || zoom > 19) {
+        return { error: "Lo zoom deve essere un numero intero da 10 a 19." };
+    }
+
+    if (!text || text.length > MAX_NARRATIVE_STEP_TEXT_LENGTH) {
+        return { error: "La spiegazione è obbligatoria e non può superare 5000 caratteri." };
+    }
+
+    if (sources.error) {
+        return sources;
+    }
+
+    if (!NARRATIVE_STATUSES.has(status)) {
+        return { error: "Stato non valido." };
+    }
+
+    return {
+        position,
+        verse,
+        label,
+        title,
+        titleUrl,
+        lat,
+        lon,
+        zoom,
+        text,
+        sources,
+        status
+    };
+}
+
+function normalizeNarrativeSources(value) {
+    if (value === undefined || value === null) {
+        return [];
+    }
+
+    if (!Array.isArray(value) || value.length > MAX_NARRATIVE_STEP_SOURCES) {
+        return { error: "Le fonti della tappa non sono valide." };
+    }
+
+    const sources = [];
+
+    for (const item of value) {
+        const url = String(item?.url || "").trim();
+        const rawTerms = Array.isArray(item?.terms) ? item.terms : [];
+        const terms = Array.from(new Set(rawTerms.map((term) =>
+            String(term || "").trim()
+        ).filter(Boolean)));
+
+        if (!terms.length || terms.length > MAX_NARRATIVE_SOURCE_TERMS) {
+            return { error: "Ogni fonte deve avere da 1 a 20 termini collegati." };
+        }
+
+        if (terms.some((term) => term.length > 100)) {
+            return { error: "Un termine collegato a una fonte è troppo lungo." };
+        }
+
+        const urlError = validateNarrativeUrl(url, "Un collegamento alle fonti");
+        if (urlError || !url) {
+            return { error: urlError || "Ogni fonte deve avere un collegamento." };
+        }
+
+        sources.push({ terms, url });
+    }
+
+    return sources;
+}
+
+function validateNarrativeUrl(value, label) {
+    if (!value) {
+        return "";
+    }
+
+    if (value.length > 2048) {
+        return `${label} è troppo lungo.`;
+    }
+
+    try {
+        const parsed = new URL(value);
+        if (!["http:", "https:"].includes(parsed.protocol)) {
+            return `${label} deve usare HTTP o HTTPS.`;
+        }
+    } catch (_) {
+        return `${label} non è valido.`;
+    }
+
+    return "";
+}
+
+async function uniqueNarrativeStepKey(env, label) {
+    const root = narrativeStepKey(label) || "tappa";
+    let candidate = root;
+    let suffix = 2;
+
+    while (await env.DB.prepare(`
+        SELECT id FROM narrative_steps WHERE stable_key = ? LIMIT 1
+    `).bind(candidate).first()) {
+        candidate = `${root}-${suffix}`;
+        suffix += 1;
+    }
+
+    return candidate;
+}
+
+function narrativeStepKey(value) {
+    return String(value || "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/gu, "")
+        .toLocaleLowerCase("it")
+        .replace(/[^a-z0-9]+/gu, "-")
+        .replace(/^-+|-+$/gu, "")
+        .slice(0, 160);
+}
+
 async function updateMapEntryImage(env, entryId, image, removeImage, now) {
     if (removeImage) {
         await env.DB.prepare(`
@@ -3314,6 +3774,70 @@ async function ensureMapEntryStorage(env) {
             env.DB.prepare(statement)
         )
     );
+}
+
+async function ensureNarrativeStorage(env) {
+    await env.DB.batch(
+        NARRATIVE_STORAGE_STATEMENTS.map((statement) =>
+            env.DB.prepare(statement)
+        )
+    );
+
+    const initialized = await env.DB.prepare(`
+        SELECT name
+        FROM content_initializations
+        WHERE name = 'narrative_steps_v1'
+        LIMIT 1
+    `).first();
+
+    if (initialized) {
+        return;
+    }
+
+    const now = Date.now();
+    const inserts = NARRATIVE_STEP_SEEDS.map((step) =>
+        env.DB.prepare(`
+            INSERT OR IGNORE INTO narrative_steps (
+                stable_key,
+                position,
+                verse,
+                label,
+                title,
+                title_url,
+                lat,
+                lon,
+                zoom,
+                explanation,
+                sources_json,
+                status,
+                created_at,
+                updated_at,
+                published_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'published', ?, ?, ?)
+        `).bind(
+            step.key,
+            step.position,
+            step.verse,
+            step.label,
+            step.title,
+            step.titleUrl,
+            step.lat,
+            step.lon,
+            step.zoom,
+            step.text,
+            JSON.stringify(step.sources),
+            now,
+            now,
+            now
+        )
+    );
+
+    inserts.push(env.DB.prepare(`
+        INSERT OR IGNORE INTO content_initializations (name, applied_at)
+        VALUES ('narrative_steps_v1', ?)
+    `).bind(now));
+
+    await env.DB.batch(inserts);
 }
 
 async function ensureContactStorage(env) {

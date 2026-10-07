@@ -58,6 +58,22 @@
     const mapEntryCancel = document.getElementById("adminMapEntryCancel");
     const mapEntryStatus = document.getElementById("adminMapEntryStatus");
     const mapEntryList = document.getElementById("adminMapEntryList");
+    const narrativeForm = document.getElementById("adminNarrativeForm");
+    const narrativePosition = document.getElementById("adminNarrativePosition");
+    const narrativeVerse = document.getElementById("adminNarrativeVerse");
+    const narrativeLabel = document.getElementById("adminNarrativeLabel");
+    const narrativeTitle = document.getElementById("adminNarrativeTitle");
+    const narrativeTitleUrl = document.getElementById("adminNarrativeTitleUrl");
+    const narrativeText = document.getElementById("adminNarrativeText");
+    const narrativeSources = document.getElementById("adminNarrativeSources");
+    const narrativeLat = document.getElementById("adminNarrativeLat");
+    const narrativeLon = document.getElementById("adminNarrativeLon");
+    const narrativeZoom = document.getElementById("adminNarrativeZoom");
+    const narrativePublished = document.getElementById("adminNarrativePublished");
+    const narrativeSubmit = document.getElementById("adminNarrativeSubmit");
+    const narrativeCancel = document.getElementById("adminNarrativeCancel");
+    const narrativeStatus = document.getElementById("adminNarrativeStatus");
+    const narrativeList = document.getElementById("adminNarrativeList");
 
     let adminToken = sessionStorage.getItem(TOKEN_KEY) || "";
     let loadedMessages = [];
@@ -70,6 +86,11 @@
     let mapEntryImage = null;
     let mapEntryImageRemoved = false;
     let mapEntryImageObjectUrl = "";
+    let narrativeMap = null;
+    let narrativeMarker = null;
+    let narrativeResizeObserver = null;
+    let editingNarrativeId = null;
+    let loadedNarrativeSteps = [];
 
     const pushNotifications = window.NNMRCN_NOTIFICHE.create({
         button: pushButton,
@@ -110,6 +131,7 @@
                 loadContactMessages(),
                 loadMemories(),
                 loadMapEntries(),
+                loadNarrativeSteps(),
                 loadSummary(),
                 pushNotifications.sync()
             ]);
@@ -1173,6 +1195,357 @@
         }
     }
 
+    function ensureNarrativePicker() {
+        const mapContainer = document.getElementById("adminNarrativeMap");
+
+        if (!window.L || !mapContainer) {
+            return;
+        }
+
+        if (narrativeMap) {
+            refreshNarrativePickerSize();
+            return;
+        }
+
+        narrativeMap = L.map("adminNarrativeMap", {
+            scrollWheelZoom: true
+        }).setView([45.5515, 12.3278], 13);
+
+        L.tileLayer(
+            "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+            {
+                maxZoom: 19,
+                attribution:
+                    '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap contributors</a>'
+            }
+        ).addTo(narrativeMap);
+
+        narrativeMap.on("click", (event) => {
+            setNarrativePosition(event.latlng.lat, event.latlng.lng, false);
+            narrativeZoom.value = String(narrativeMap.getZoom());
+        });
+
+        narrativeMap.on("zoomend", () => {
+            narrativeZoom.value = String(narrativeMap.getZoom());
+        });
+
+        if ("ResizeObserver" in window) {
+            narrativeResizeObserver = new ResizeObserver(() => {
+                narrativeMap.invalidateSize({ pan: false });
+            });
+            narrativeResizeObserver.observe(mapContainer);
+        }
+
+        refreshNarrativePickerSize();
+    }
+
+    function refreshNarrativePickerSize() {
+        if (!narrativeMap) {
+            return;
+        }
+
+        window.requestAnimationFrame(() => {
+            window.requestAnimationFrame(() => {
+                narrativeMap.invalidateSize({ pan: false });
+            });
+        });
+    }
+
+    function setNarrativePosition(lat, lon, recenter = true, zoom = null) {
+        if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
+            return;
+        }
+
+        narrativeLat.value = lat.toFixed(6);
+        narrativeLon.value = lon.toFixed(6);
+
+        if (!narrativeMap) {
+            return;
+        }
+
+        if (!narrativeMarker) {
+            narrativeMarker = L.circleMarker([lat, lon], {
+                radius: 9,
+                color: "#171717",
+                weight: 2,
+                fillColor: "#f4f1e8",
+                fillOpacity: 0.95
+            }).addTo(narrativeMap);
+        } else {
+            narrativeMarker.setLatLng([lat, lon]);
+        }
+
+        if (recenter) {
+            const nextZoom = Number.isFinite(Number(zoom))
+                ? Number(zoom)
+                : Math.max(narrativeMap.getZoom(), 15);
+            narrativeMap.setView([lat, lon], nextZoom);
+            narrativeZoom.value = String(nextZoom);
+        }
+    }
+
+    function syncNarrativePositionFromInputs() {
+        setNarrativePosition(
+            Number(narrativeLat.value),
+            Number(narrativeLon.value),
+            true,
+            Number(narrativeZoom.value)
+        );
+    }
+
+    async function loadNarrativeSteps() {
+        ensureNarrativePicker();
+        narrativeList.replaceChildren(document.createTextNode("Caricamento…"));
+
+        try {
+            const data = await request("/api/admin/narrative-steps");
+            loadedNarrativeSteps = data.steps || [];
+            renderNarrativeSteps(loadedNarrativeSteps);
+
+            if (!editingNarrativeId) {
+                narrativePosition.value = String(nextNarrativePosition());
+            }
+        } catch (error) {
+            narrativeList.textContent =
+                error.message || "Non è stato possibile caricare il percorso.";
+        }
+    }
+
+    function nextNarrativePosition() {
+        return loadedNarrativeSteps.reduce(
+            (maximum, step) => Math.max(maximum, Number(step.position) || 0),
+            0
+        ) + 1;
+    }
+
+    function renderNarrativeSteps(steps) {
+        narrativeList.replaceChildren();
+
+        if (!steps.length) {
+            const message = document.createElement("p");
+            message.textContent = "Il percorso non contiene tappe.";
+            narrativeList.appendChild(message);
+            return;
+        }
+
+        steps.forEach((step) => {
+            const article = document.createElement("article");
+            const title = document.createElement("h3");
+            const verse = document.createElement("p");
+            const description = document.createElement("p");
+            const meta = document.createElement("p");
+            const actions = document.createElement("div");
+            const showButton = document.createElement("button");
+            const editButton = document.createElement("button");
+            const deleteButton = document.createElement("button");
+
+            article.className = "admin-message admin-map-entry";
+            if (!step.published) {
+                article.classList.add("admin-narrative-draft");
+            }
+
+            title.textContent = `${step.position}. ${step.title}`;
+            verse.className = "admin-meta";
+            verse.textContent = step.verse;
+            description.textContent = step.text;
+            meta.className = "admin-meta";
+            meta.textContent = step.published
+                ? `${step.label} · pubblicata`
+                : `${step.label} · bozza non visibile`;
+            actions.className = "admin-actions";
+
+            showButton.type = "button";
+            showButton.className = "admin-action";
+            showButton.textContent = "Mostra nella cartina";
+            showButton.addEventListener("click", () => {
+                setNarrativePosition(
+                    Number(step.lat),
+                    Number(step.lon),
+                    true,
+                    Number(step.zoom)
+                );
+                document.getElementById("adminNarrativeMap").scrollIntoView({
+                    behavior: "smooth",
+                    block: "center"
+                });
+            });
+
+            editButton.type = "button";
+            editButton.className = "admin-action";
+            editButton.textContent = "Modifica";
+            editButton.addEventListener("click", () => {
+                startNarrativeEdit(step);
+            });
+
+            deleteButton.type = "button";
+            deleteButton.className = "admin-action admin-action-danger";
+            deleteButton.textContent = "Elimina";
+            deleteButton.addEventListener("click", () => {
+                deleteNarrativeStep(step, deleteButton);
+            });
+
+            actions.append(showButton, editButton, deleteButton);
+            article.append(title, verse, description, meta, actions);
+            narrativeList.appendChild(article);
+        });
+    }
+
+    function narrativeSourcesInput(sources) {
+        return (sources || []).map((source) =>
+            `${(source.terms || []).join("; ")} | ${source.url}`
+        ).join("\n");
+    }
+
+    function parseNarrativeSources(value) {
+        return String(value || "")
+            .split(/\r?\n/u)
+            .map((line) => line.trim())
+            .filter(Boolean)
+            .map((line, index) => {
+                const separator = line.lastIndexOf("|");
+
+                if (separator < 1) {
+                    throw new Error(
+                        `Fonte ${index + 1}: usa il formato termini | indirizzo.`
+                    );
+                }
+
+                const terms = line.slice(0, separator)
+                    .split(";")
+                    .map((term) => term.trim())
+                    .filter(Boolean);
+                const url = line.slice(separator + 1).trim();
+
+                if (!terms.length || !url) {
+                    throw new Error(
+                        `Fonte ${index + 1}: termini e indirizzo sono obbligatori.`
+                    );
+                }
+
+                return { terms, url };
+            });
+    }
+
+    function narrativeInput() {
+        return {
+            position: Number(narrativePosition.value),
+            verse: narrativeVerse.value,
+            label: narrativeLabel.value,
+            title: narrativeTitle.value,
+            titleUrl: narrativeTitleUrl.value,
+            text: narrativeText.value,
+            sources: parseNarrativeSources(narrativeSources.value),
+            lat: Number(narrativeLat.value),
+            lon: Number(narrativeLon.value),
+            zoom: Number(narrativeZoom.value),
+            published: narrativePublished.checked
+        };
+    }
+
+    function resetNarrativeForm() {
+        editingNarrativeId = null;
+        narrativeForm.reset();
+        narrativePosition.value = String(nextNarrativePosition());
+        narrativeZoom.value = "16";
+        narrativePublished.checked = true;
+        narrativeSubmit.textContent = "Aggiungi tappa";
+        narrativeCancel.hidden = true;
+
+        if (narrativeMarker && narrativeMap) {
+            narrativeMap.removeLayer(narrativeMarker);
+            narrativeMarker = null;
+        }
+    }
+
+    function startNarrativeEdit(step) {
+        editingNarrativeId = Number(step.id);
+        narrativePosition.value = String(step.position);
+        narrativeVerse.value = step.verse;
+        narrativeLabel.value = step.label;
+        narrativeTitle.value = step.title;
+        narrativeTitleUrl.value = step.titleUrl || "";
+        narrativeText.value = step.text;
+        narrativeSources.value = narrativeSourcesInput(step.sources);
+        narrativeZoom.value = String(step.zoom);
+        narrativePublished.checked = Boolean(step.published);
+        narrativeSubmit.textContent = "Salva modifiche";
+        narrativeCancel.hidden = false;
+        narrativeStatus.textContent = `Modifica di «${step.title}».`;
+        setNarrativePosition(
+            Number(step.lat),
+            Number(step.lon),
+            true,
+            Number(step.zoom)
+        );
+        narrativeForm.scrollIntoView({ behavior: "smooth", block: "start" });
+        refreshNarrativePickerSize();
+        narrativeVerse.focus({ preventScroll: true });
+    }
+
+    async function saveNarrativeStep(event) {
+        event.preventDefault();
+        narrativeSubmit.disabled = true;
+        narrativeCancel.disabled = true;
+        narrativeStatus.textContent = editingNarrativeId
+            ? "Aggiornamento…"
+            : "Salvataggio…";
+
+        try {
+            const stepId = editingNarrativeId;
+            const path = stepId
+                ? `/api/admin/narrative-steps/${stepId}`
+                : "/api/admin/narrative-steps";
+
+            await request(path, {
+                method: stepId ? "PATCH" : "POST",
+                body: JSON.stringify(narrativeInput())
+            });
+
+            resetNarrativeForm();
+            narrativeStatus.textContent = stepId
+                ? "Tappa aggiornata. Il percorso pubblico usa già la nuova versione."
+                : "Tappa aggiunta al percorso.";
+            await loadNarrativeSteps();
+            narrativeVerse.focus();
+        } catch (error) {
+            narrativeStatus.textContent =
+                error.message || "Non è stato possibile salvare la tappa.";
+        } finally {
+            narrativeSubmit.disabled = false;
+            narrativeCancel.disabled = false;
+        }
+    }
+
+    async function deleteNarrativeStep(step, button) {
+        const confirmed = window.confirm(
+            `Eliminare definitivamente la tappa «${step.title}»?`
+        );
+
+        if (!confirmed) {
+            return;
+        }
+
+        button.disabled = true;
+        narrativeStatus.textContent = `Eliminazione di «${step.title}»…`;
+
+        try {
+            await request(`/api/admin/narrative-steps/${step.id}`, {
+                method: "DELETE"
+            });
+
+            if (editingNarrativeId === Number(step.id)) {
+                resetNarrativeForm();
+            }
+
+            narrativeStatus.textContent = `«${step.title}» è stata eliminata.`;
+            await loadNarrativeSteps();
+        } catch (error) {
+            button.disabled = false;
+            narrativeStatus.textContent =
+                error.message || "Non è stato possibile eliminare la tappa.";
+        }
+    }
+
     form.addEventListener("submit", async (event) => {
         event.preventDefault();
 
@@ -1211,6 +1584,15 @@
             ? "La fotografia verrà rimossa quando salvi la voce."
             : "Fotografia rimossa dalla selezione.";
     });
+    narrativeForm.addEventListener("submit", saveNarrativeStep);
+    narrativeCancel.addEventListener("click", () => {
+        resetNarrativeForm();
+        narrativeStatus.textContent = "Modifica annullata.";
+        narrativeVerse.focus();
+    });
+    narrativeLat.addEventListener("change", syncNarrativePositionFromInputs);
+    narrativeLon.addEventListener("change", syncNarrativePositionFromInputs);
+    narrativeZoom.addEventListener("change", syncNarrativePositionFromInputs);
     welcomePreview.addEventListener("click", () => {
         window.NNMRCN_SESSION.showWelcome(
             () => Promise.resolve(),

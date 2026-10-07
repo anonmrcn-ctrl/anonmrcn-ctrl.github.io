@@ -56,6 +56,11 @@ La migrazione `0010_map_entries.sql` aggiunge l’archivio delle voci pubbliche
 della mappa. Il Worker crea automaticamente la tabella al primo caricamento
 dell’elenco o all’inserimento di una voce dal pannello amministrativo.
 
+La migrazione `0012_narrative_steps.sql` aggiunge le tappe amministrabili di
+«Esplora la poesia». Al primo accesso il Worker importa una sola volta le 13
+tappe storiche; da quel momento ordine, versi, spiegazioni, coordinate, fonti e
+stato di pubblicazione vengono letti dal database e gestiti dal pannello.
+
 Se le location non sono ancora presenti, esegui successivamente il contenuto del
 file privato `nnmrcn_seed_private_d1_20260823.sql` aggiornato. Contiene le 20
 location, ma cancella prima messaggi, sessioni e location esistenti: usalo
