@@ -73,3 +73,16 @@ di contatto e le richieste di token vengono cancellati automaticamente entro 30
 giorni dal Worker.
 
 Le locations private, le password e i secret non devono essere salvati nel repository pubblico.
+
+## Evoluzione verso il CMS
+
+La separazione vincolante tra contenuti amministrabili e software è descritta in
+[`docs/cms/01-confine-contenuti-software.md`](docs/cms/01-confine-contenuti-software.md).
+L'inventario corrispondente, usato come base per schema e migrazioni, è in
+[`docs/cms/content-inventory.json`](docs/cms/content-inventory.json).
+
+L'inventario si controlla con:
+
+```bash
+node scripts/check-content-boundary.mjs
+```

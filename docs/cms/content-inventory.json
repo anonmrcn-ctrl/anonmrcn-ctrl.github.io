@@ -1,0 +1,190 @@
+{
+  "version": 1,
+  "updated": "2026-10-07",
+  "rule": "Project-specific prose, media, sources, geography, ordering and visibility are content; behavior, security, validation and presentation are software.",
+  "areas": [
+    {
+      "id": "poem",
+      "label": "Poesia e canti",
+      "classification": "content",
+      "currentSources": ["index.html", "poesia-metrica.js"],
+      "targetEntities": ["poems", "poem_sections", "poem_lines"],
+      "priority": "high",
+      "migration": "required"
+    },
+    {
+      "id": "poetry-path",
+      "label": "Percorso Esplora la poesia",
+      "classification": "content",
+      "currentSources": ["D1:narrative_steps", "progetto.js#NARRATIVE_STEPS_FALLBACK"],
+      "targetEntities": ["narrative_steps"],
+      "priority": "complete",
+      "migration": "complete"
+    },
+    {
+      "id": "project-page",
+      "label": "Pagina Il progetto",
+      "classification": "content",
+      "currentSources": ["progetto.html"],
+      "targetEntities": ["site_pages", "page_blocks"],
+      "priority": "high",
+      "migration": "required"
+    },
+    {
+      "id": "author-page",
+      "label": "Pagina autore e contatti editoriali",
+      "classification": "content",
+      "currentSources": ["autore.html"],
+      "targetEntities": ["site_pages", "page_blocks", "site_settings"],
+      "priority": "high",
+      "migration": "required"
+    },
+    {
+      "id": "logo-page",
+      "label": "Pagina Il logo",
+      "classification": "content",
+      "currentSources": ["logo.html"],
+      "targetEntities": ["site_pages", "page_blocks"],
+      "priority": "medium",
+      "migration": "required"
+    },
+    {
+      "id": "section-pages",
+      "label": "Testi introduttivi delle sezioni pubbliche e personali",
+      "classification": "content",
+      "currentSources": [
+        "spazio-pubblico.html",
+        "archivio.html",
+        "memorie.html",
+        "taccuino.html",
+        "spazio-personale.html"
+      ],
+      "targetEntities": ["site_pages", "page_blocks"],
+      "priority": "medium",
+      "migration": "required"
+    },
+    {
+      "id": "access-pages",
+      "label": "Testi di accesso, richiesta codice e messaggio per il sindaco",
+      "classification": "content",
+      "currentSources": ["accesso.html", "richiesta-codice.js", "D1:mayor_message"],
+      "targetEntities": ["site_pages", "page_blocks", "mayor_message"],
+      "priority": "low",
+      "migration": "extend-admin"
+    },
+    {
+      "id": "welcome-tour",
+      "label": "Benvenuto e tour iniziale",
+      "classification": "content",
+      "currentSources": ["sessione.js#WELCOME_FEATURES", "sessione.js"],
+      "targetEntities": ["onboarding_steps", "site_settings"],
+      "priority": "medium",
+      "migration": "required"
+    },
+    {
+      "id": "global-navigation",
+      "label": "Menu, collegamenti globali e invito alla condivisione",
+      "classification": "content",
+      "currentSources": ["*.html", "site.js"],
+      "targetEntities": ["navigation_items", "site_settings"],
+      "priority": "high",
+      "migration": "required"
+    },
+    {
+      "id": "map-content",
+      "label": "Livelli, percorsi, geometrie e descrizioni cartografiche",
+      "classification": "content",
+      "currentSources": [
+        "*.geojson",
+        "percorsi.js",
+        "marcon-da-sud.js",
+        "cave-rilevanti.js",
+        "fiumi-wikipedia.js",
+        "mappa.js"
+      ],
+      "targetEntities": ["map_layers", "map_features", "media_assets"],
+      "priority": "high",
+      "migration": "required"
+    },
+    {
+      "id": "sources",
+      "label": "Fonti e bibliografia riutilizzabili",
+      "classification": "content",
+      "currentSources": [
+        "progetto.js#SOURCES",
+        "D1:wiki_entries",
+        "D1:map_entries"
+      ],
+      "targetEntities": ["sources", "content_source_links"],
+      "priority": "high",
+      "migration": "required"
+    },
+    {
+      "id": "site-metadata",
+      "label": "Titoli, descrizioni e metadati del sito",
+      "classification": "content",
+      "currentSources": ["*.html", "manifest.webmanifest", "admin.webmanifest", "config.js"],
+      "targetEntities": ["site_settings"],
+      "priority": "medium",
+      "migration": "required"
+    },
+    {
+      "id": "privacy-policy",
+      "label": "Informativa sulla privacy",
+      "classification": "protected-content",
+      "currentSources": ["privacy.html"],
+      "targetEntities": ["legal_documents", "legal_document_versions"],
+      "priority": "low",
+      "migration": "required"
+    },
+    {
+      "id": "map-entries",
+      "label": "Luoghi e schede QR",
+      "classification": "content",
+      "currentSources": ["D1:map_entries", "D1:map_entry_images"],
+      "targetEntities": ["map_entries", "map_entry_images"],
+      "priority": "complete",
+      "migration": "reuse"
+    },
+    {
+      "id": "wiki-entries",
+      "label": "Voci di approfondimento",
+      "classification": "content",
+      "currentSources": [
+        "D1:wiki_entries",
+        "D1:wiki_entry_revisions",
+        "D1:wiki_entry_images"
+      ],
+      "targetEntities": ["wiki_entries", "wiki_entry_revisions", "wiki_entry_images"],
+      "priority": "complete",
+      "migration": "reuse"
+    },
+    {
+      "id": "community-content",
+      "label": "Memorie, messaggi e contatti",
+      "classification": "moderated-content",
+      "currentSources": ["D1:memories", "D1:messages", "D1:contact_messages"],
+      "targetEntities": ["memories", "messages", "contact_messages"],
+      "priority": "complete",
+      "migration": "reuse"
+    },
+    {
+      "id": "location-network",
+      "label": "Profili, poesie e visibilità delle location",
+      "classification": "protected-content",
+      "currentSources": ["D1:locations", "D1:poems"],
+      "targetEntities": ["locations", "poems"],
+      "priority": "medium",
+      "migration": "extend-admin"
+    },
+    {
+      "id": "software-core",
+      "label": "Motore del sito, sicurezza e interfaccia",
+      "classification": "software",
+      "currentSources": ["*.js", "*.css", "worker/src/*.js", ".github/workflows/*"],
+      "targetEntities": [],
+      "priority": "not-applicable",
+      "migration": "keep-in-code"
+    }
+  ]
+}
