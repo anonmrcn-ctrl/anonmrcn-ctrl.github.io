@@ -66,6 +66,8 @@ const MAX_MAP_ENTRY_NAME_LENGTH = 160;
 const MAX_MAP_ENTRY_DESCRIPTION_LENGTH = 3000;
 const MAX_MAP_ENTRY_SOURCE_URL_LENGTH = 2048;
 const MAX_MAP_ENTRY_SOURCE_LABEL_LENGTH = 160;
+const MAX_MAP_ENTRY_IMAGE_BYTES = 700000;
+const MAX_MAP_ENTRY_REQUEST_BYTES = 1000000;
 
 class RequestBodyTooLargeError extends Error {}
 
@@ -233,7 +235,18 @@ const MAP_ENTRY_STORAGE_STATEMENTS = Object.freeze([
         updated_at INTEGER NOT NULL
     )`,
     `CREATE INDEX IF NOT EXISTS idx_map_entries_name
-        ON map_entries(name COLLATE NOCASE, id)`
+        ON map_entries(name COLLATE NOCASE, id)`,
+    `CREATE TABLE IF NOT EXISTS map_entry_images (
+        entry_id INTEGER PRIMARY KEY,
+        media_type TEXT NOT NULL
+            CHECK (media_type IN ('image/jpeg', 'image/png', 'image/webp')),
+        media_name TEXT NOT NULL DEFAULT '',
+        media_data TEXT NOT NULL,
+        updated_at INTEGER NOT NULL,
+        FOREIGN KEY (entry_id)
+            REFERENCES map_entries(id)
+            ON DELETE CASCADE
+    )`
 ]);
 const LOCATION_PROFILE_COLUMNS = Object.freeze([
     {
@@ -382,6 +395,14 @@ export default {
 
             if (request.method === "GET" && path === "/api/public/map-entries") {
                 return await listPublicMapEntries(request, env);
+            }
+
+            if (
+                request.method === "GET" &&
+                /^\/api\/public\/map-entry-images\/\d+$/.test(path)
+            ) {
+                const entryId = Number(path.split("/").pop());
+                return await getPublicMapEntryImage(request, env, entryId);
             }
 
             if (request.method === "GET" && path === "/api/public/wiki") {
@@ -2103,7 +2124,9 @@ async function adminCreateMapEntry(request, env) {
 
     await ensureMapEntryStorage(env);
 
-    const input = normalizeMapEntryInput(await readJson(request));
+    const input = normalizeMapEntryInput(
+        await readJson(request, MAX_MAP_ENTRY_REQUEST_BYTES)
+    );
 
     if (input.error) {
         return json(request, env, { error: input.error }, 400);
@@ -2135,22 +2158,8 @@ async function adminCreateMapEntry(request, env) {
     ).run();
 
     const id = Number(result.meta?.last_row_id);
-    const entry = await env.DB.prepare(`
-        SELECT
-            id,
-            name,
-            category,
-            description,
-            lat,
-            lon,
-            source_url,
-            source_label,
-            created_at,
-            updated_at
-        FROM map_entries
-        WHERE id = ?
-        LIMIT 1
-    `).bind(id).first();
+    await updateMapEntryImage(env, id, input.image, input.removeImage, now);
+    const entry = await getMapEntryById(env, id);
 
     return json(request, env, {
         ok: true,
@@ -2173,11 +2182,15 @@ async function adminUpdateMapEntry(request, env, entryId) {
         return json(request, env, { error: "Voce non trovata." }, 404);
     }
 
-    const input = normalizeMapEntryInput(await readJson(request));
+    const input = normalizeMapEntryInput(
+        await readJson(request, MAX_MAP_ENTRY_REQUEST_BYTES)
+    );
 
     if (input.error) {
         return json(request, env, { error: input.error }, 400);
     }
+
+    const now = Date.now();
 
     await env.DB.prepare(`
         UPDATE map_entries
@@ -2199,9 +2212,17 @@ async function adminUpdateMapEntry(request, env, entryId) {
         input.lon,
         input.sourceUrl,
         input.sourceLabel,
-        Date.now(),
+        now,
         entryId
     ).run();
+
+    await updateMapEntryImage(
+        env,
+        entryId,
+        input.image,
+        input.removeImage,
+        now
+    );
 
     return json(request, env, {
         ok: true,
@@ -2224,10 +2245,16 @@ async function adminDeleteMapEntry(request, env, entryId) {
         return json(request, env, { error: "Voce non trovata." }, 404);
     }
 
-    await env.DB.prepare(`
-        DELETE FROM map_entries
-        WHERE id = ?
-    `).bind(entryId).run();
+    await env.DB.batch([
+        env.DB.prepare(`
+            DELETE FROM map_entry_images
+            WHERE entry_id = ?
+        `).bind(entryId),
+        env.DB.prepare(`
+            DELETE FROM map_entries
+            WHERE id = ?
+        `).bind(entryId)
+    ]);
 
     return json(request, env, { ok: true });
 }
@@ -2235,18 +2262,21 @@ async function adminDeleteMapEntry(request, env, entryId) {
 async function getMapEntryById(env, entryId) {
     return await env.DB.prepare(`
         SELECT
-            id,
-            name,
-            category,
-            description,
-            lat,
-            lon,
-            source_url,
-            source_label,
-            created_at,
-            updated_at
-        FROM map_entries
-        WHERE id = ?
+            entry.id,
+            entry.name,
+            entry.category,
+            entry.description,
+            entry.lat,
+            entry.lon,
+            entry.source_url,
+            entry.source_label,
+            entry.created_at,
+            entry.updated_at,
+            image.entry_id AS image_entry_id,
+            image.updated_at AS image_updated_at
+        FROM map_entries entry
+        LEFT JOIN map_entry_images image ON image.entry_id = entry.id
+        WHERE entry.id = ?
         LIMIT 1
     `).bind(entryId).first();
 }
@@ -2254,18 +2284,21 @@ async function getMapEntryById(env, entryId) {
 async function readMapEntries(env) {
     const result = await env.DB.prepare(`
         SELECT
-            id,
-            name,
-            category,
-            description,
-            lat,
-            lon,
-            source_url,
-            source_label,
-            created_at,
-            updated_at
-        FROM map_entries
-        ORDER BY name COLLATE NOCASE, id
+            entry.id,
+            entry.name,
+            entry.category,
+            entry.description,
+            entry.lat,
+            entry.lon,
+            entry.source_url,
+            entry.source_label,
+            entry.created_at,
+            entry.updated_at,
+            image.entry_id AS image_entry_id,
+            image.updated_at AS image_updated_at
+        FROM map_entries entry
+        LEFT JOIN map_entry_images image ON image.entry_id = entry.id
+        ORDER BY entry.name COLLATE NOCASE, entry.id
     `).all();
 
     return (result.results || []).map(mapEntryPayload);
@@ -2282,7 +2315,10 @@ function mapEntryPayload(row) {
         sourceUrl: row.source_url,
         sourceLabel: row.source_label,
         createdAt: Number(row.created_at),
-        updatedAt: Number(row.updated_at)
+        updatedAt: Number(row.updated_at),
+        imageUrl: row.image_entry_id === null || row.image_entry_id === undefined
+            ? ""
+            : `/api/public/map-entry-images/${row.id}?v=${Number(row.image_updated_at)}`
     };
 }
 
@@ -2294,6 +2330,18 @@ function normalizeMapEntryInput(value) {
     const lon = Number(value?.lon);
     const sourceUrl = String(value?.sourceUrl || "").trim();
     let sourceLabel = String(value?.sourceLabel || "").trim();
+    const removeImage = value?.removeImage === true;
+    const image = value?.image
+        ? normalizeMapEntryImage(value.image)
+        : null;
+
+    if (image?.error) {
+        return image;
+    }
+
+    if (image && removeImage) {
+        return { error: "Non è possibile aggiungere e rimuovere la fotografia insieme." };
+    }
 
     if (name.length < 2 || name.length > MAX_MAP_ENTRY_NAME_LENGTH) {
         return { error: "Il nome deve contenere da 2 a 160 caratteri." };
@@ -2346,8 +2394,100 @@ function normalizeMapEntryInput(value) {
         lat,
         lon,
         sourceUrl,
-        sourceLabel
+        sourceLabel,
+        image,
+        removeImage
     };
+}
+
+function normalizeMapEntryImage(value) {
+    const media = validateWikiImageMedia({
+        name: value?.name || "fotografia",
+        type: value?.type,
+        data: value?.data
+    });
+
+    if (media.error) {
+        return media;
+    }
+
+    const bytes = fromBase64(media.data);
+
+    if (bytes.length > MAX_MAP_ENTRY_IMAGE_BYTES) {
+        return { error: "La fotografia è troppo grande." };
+    }
+
+    return media;
+}
+
+async function updateMapEntryImage(env, entryId, image, removeImage, now) {
+    if (removeImage) {
+        await env.DB.prepare(`
+            DELETE FROM map_entry_images
+            WHERE entry_id = ?
+        `).bind(entryId).run();
+        return;
+    }
+
+    if (!image) {
+        return;
+    }
+
+    await env.DB.prepare(`
+        INSERT INTO map_entry_images (
+            entry_id,
+            media_type,
+            media_name,
+            media_data,
+            updated_at
+        ) VALUES (?, ?, ?, ?, ?)
+        ON CONFLICT(entry_id) DO UPDATE SET
+            media_type = excluded.media_type,
+            media_name = excluded.media_name,
+            media_data = excluded.media_data,
+            updated_at = excluded.updated_at
+    `).bind(
+        entryId,
+        image.type,
+        image.name,
+        image.data,
+        now
+    ).run();
+}
+
+async function getPublicMapEntryImage(request, env, entryId) {
+    if (!Number.isInteger(entryId) || entryId <= 0) {
+        return json(request, env, { error: "Fotografia non disponibile." }, 404);
+    }
+
+    await ensureMapEntryStorage(env);
+
+    const image = await env.DB.prepare(`
+        SELECT image.media_type, image.media_data
+        FROM map_entry_images image
+        INNER JOIN map_entries entry ON entry.id = image.entry_id
+        WHERE image.entry_id = ?
+        LIMIT 1
+    `).bind(entryId).first();
+
+    if (!image?.media_data) {
+        return json(request, env, { error: "Fotografia non disponibile." }, 404);
+    }
+
+    const bytes = fromBase64(image.media_data);
+    const extension = memoryMediaExtension(image.media_type);
+
+    return new Response(bytes, {
+        headers: {
+            "Content-Type": image.media_type,
+            "Content-Length": String(bytes.byteLength),
+            "Content-Disposition":
+                `inline; filename="luogo-${entryId}.${extension}"`,
+            "Cache-Control": "public, max-age=3600",
+            "X-Content-Type-Options": "nosniff",
+            ...corsHeaders(request, env)
+        }
+    });
 }
 
 async function listPublicWikiEntries(request, env) {

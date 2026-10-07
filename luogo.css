@@ -1,0 +1,205 @@
+.pagina-luogo-scheda {
+    min-height: 100vh;
+    background:
+        linear-gradient(
+            145deg,
+            rgba(var(--brand-green-rgb), 0.09),
+            transparent 38%
+        ),
+        linear-gradient(
+            325deg,
+            rgba(var(--brand-yellow-rgb), 0.1),
+            transparent 42%
+        ),
+        var(--paper);
+}
+
+.luogo-scheda-pagina {
+    display: grid;
+    width: min(44rem, calc(100% - 2rem));
+    min-height: 100vh;
+    margin: 0 auto;
+    padding: clamp(1.25rem, 5vh, 3.5rem) 0;
+    place-items: center;
+    align-content: center;
+    gap: 1.25rem;
+}
+
+.luogo-scheda-logo {
+    display: block;
+    width: min(11rem, 52vw);
+    color: inherit;
+}
+
+.luogo-scheda-logo img {
+    display: block;
+    width: 100%;
+    height: auto;
+}
+
+.luogo-scheda-logo:focus-visible,
+.luogo-scheda-azione:focus-visible,
+.luogo-scheda-ritorno:focus-visible {
+    outline: 0.18rem solid var(--brand-yellow-deep);
+    outline-offset: 0.25rem;
+}
+
+.luogo-scheda-stato {
+    margin: 0;
+    text-align: center;
+}
+
+.luogo-scheda {
+    position: relative;
+    width: 100%;
+    overflow: hidden;
+    border: 1px solid var(--line);
+    background: rgba(var(--paper-rgb), 0.9);
+    box-shadow: 0 1.2rem 3rem rgba(var(--ink-rgb), 0.09);
+}
+
+.luogo-scheda-banner {
+    width: 100%;
+    height: clamp(12rem, 42vw, 20rem);
+    margin: 0;
+    overflow: hidden;
+    border-bottom: 1px solid var(--line);
+    background: var(--line);
+}
+
+.luogo-scheda-banner[hidden] {
+    display: none;
+}
+
+.luogo-scheda-banner img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.luogo-scheda-corpo {
+    padding: clamp(1.4rem, 5vw, 2.6rem);
+}
+
+.luogo-scheda::before {
+    position: absolute;
+    top: 0;
+    right: 0;
+    left: 0;
+    height: 0.32rem;
+    background: var(--brand-ratio-gradient);
+    content: "";
+}
+
+.luogo-scheda-categoria {
+    margin: 0 0 0.55rem;
+    color: var(--brand-green-deep);
+    font-size: 0.76rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+.luogo-scheda h1 {
+    margin: 0;
+    font-size: clamp(1.8rem, 8vw, 3.2rem);
+    line-height: 1.08;
+    overflow-wrap: anywhere;
+}
+
+.luogo-scheda-testo {
+    margin-top: clamp(1.2rem, 4vw, 2rem);
+    padding-top: clamp(1.2rem, 4vw, 2rem);
+    border-top: 1px solid var(--line);
+    font-size: clamp(1rem, 4vw, 1.15rem);
+    line-height: 1.68;
+    white-space: pre-line;
+}
+
+.luogo-scheda-azioni {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+    margin-top: clamp(1.6rem, 5vw, 2.5rem);
+}
+
+.luogo-scheda-azione {
+    display: grid;
+    min-height: 3.2rem;
+    padding: 0.7rem 1rem;
+    place-items: center;
+    border: 1px solid var(--ink);
+    color: var(--ink);
+    font-size: 0.9rem;
+    line-height: 1.3;
+    text-align: center;
+    text-decoration: none;
+}
+
+.luogo-scheda-azione-principale {
+    background: var(--ink);
+    color: var(--paper);
+}
+
+.luogo-scheda-azione:only-child {
+    grid-column: 1 / -1;
+}
+
+.luogo-scheda-azione-principale[hidden] + .luogo-scheda-azione {
+    grid-column: 1 / -1;
+}
+
+.luogo-scheda-azione:hover,
+.luogo-scheda-azione:focus-visible {
+    background: rgba(var(--brand-green-rgb), 0.14);
+    color: var(--ink);
+}
+
+.luogo-scheda-azione[hidden] {
+    display: none;
+}
+
+.luogo-scheda-ritorno {
+    color: inherit;
+    font-size: 0.82rem;
+    text-underline-offset: 0.18em;
+}
+
+@media (max-width: 560px) {
+    .luogo-scheda-pagina {
+        width: min(100% - 1.25rem, 44rem);
+        padding: 1rem 0 1.5rem;
+        align-content: start;
+    }
+
+    .luogo-scheda-logo {
+        width: 8rem;
+    }
+
+    .luogo-scheda-banner {
+        height: clamp(11rem, 56vw, 16rem);
+    }
+
+    .luogo-scheda-azioni {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    .luogo-scheda {
+        animation: luogo-scheda-entrata 360ms ease-out both;
+    }
+}
+
+@keyframes luogo-scheda-entrata {
+    from {
+        opacity: 0;
+        transform: translateY(0.6rem);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}

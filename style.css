@@ -2794,6 +2794,7 @@ html[data-theme="dark"] .leaflet-control-layers label {
 .admin-voci-mappa form > textarea,
 .admin-voci-mappa form > button,
 .admin-voci-mappa form > p,
+.admin-voci-mappa-foto,
 .admin-voci-mappa-cartina,
 .admin-voci-mappa-coordinate {
     grid-column: 1 / -1;
@@ -2823,6 +2824,48 @@ html[data-theme="dark"] .leaflet-control-layers label {
 
 .admin-voci-mappa textarea {
     resize: vertical;
+}
+
+.admin-voci-mappa-aiuto {
+    margin: -0.25rem 0 0;
+    font-size: 0.78rem;
+    opacity: 0.72;
+}
+
+.admin-voci-mappa-foto {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.75rem;
+    align-items: end;
+    padding: 0.75rem;
+    border: 1px solid var(--line);
+}
+
+.admin-voci-mappa-foto[hidden] {
+    display: none;
+}
+
+.admin-voci-mappa-foto img {
+    display: block;
+    width: 100%;
+    max-height: 18rem;
+    object-fit: cover;
+}
+
+.admin-voci-mappa-foto button {
+    min-height: 2.75rem;
+    padding: 0.65rem 0.85rem;
+    border: 1px solid #8b2424;
+    background: transparent;
+    color: #8b2424;
+    font: inherit;
+    cursor: pointer;
+}
+
+.admin-voci-mappa-foto button:hover,
+.admin-voci-mappa-foto button:focus-visible {
+    background: #8b2424;
+    color: #fff;
 }
 
 .admin-voci-mappa-cartina {
@@ -3706,6 +3749,10 @@ body .voci-editor-indice button[aria-current="true"] {
 
     .admin-voci-mappa form,
     .admin-voci-mappa-coordinate {
+        grid-template-columns: 1fr;
+    }
+
+    .admin-voci-mappa-foto {
         grid-template-columns: 1fr;
     }
 

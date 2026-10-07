@@ -12,6 +12,13 @@
     const markersById = new Map();
     let entriesPromise = null;
 
+    function placeCardUrl(entryId) {
+        const url = new URL("./luogo.html", document.baseURI);
+
+        url.searchParams.set("luogo", String(entryId));
+        return url.href;
+    }
+
     function mapEntryUrl(entryId) {
         const url = new URL("./progetto.html", document.baseURI);
 
@@ -115,8 +122,8 @@
             links.appendChild(wikiLink);
         }
 
-        mapLink.href = mapEntryUrl(entry.id);
-        mapLink.textContent = "Link diretto a questa spiegazione";
+        mapLink.href = placeCardUrl(entry.id);
+        mapLink.textContent = "Apri questa mini-spiegazione";
         links.appendChild(mapLink);
 
         if (
@@ -270,6 +277,7 @@
         layer,
         load,
         open,
+        placeCardUrl,
         mapEntryUrl,
         wikiEntryUrl,
         entryFeature

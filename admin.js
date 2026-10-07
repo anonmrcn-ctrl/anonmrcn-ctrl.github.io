@@ -38,6 +38,16 @@
     const mapEntryDescription = document.getElementById(
         "adminMapEntryDescription"
     );
+    const mapEntryImageInput = document.getElementById("adminMapEntryImage");
+    const mapEntryImagePreview = document.getElementById(
+        "adminMapEntryImagePreview"
+    );
+    const mapEntryImagePreviewImg = document.getElementById(
+        "adminMapEntryImagePreviewImg"
+    );
+    const mapEntryImageRemove = document.getElementById(
+        "adminMapEntryImageRemove"
+    );
     const mapEntryLat = document.getElementById("adminMapEntryLat");
     const mapEntryLon = document.getElementById("adminMapEntryLon");
     const mapEntrySourceUrl = document.getElementById("adminMapEntrySourceUrl");
@@ -56,6 +66,10 @@
     let mapEntryMarker = null;
     let mapEntryResizeObserver = null;
     let editingMapEntryId = null;
+    let editingMapEntryHasImage = false;
+    let mapEntryImage = null;
+    let mapEntryImageRemoved = false;
+    let mapEntryImageObjectUrl = "";
 
     const pushNotifications = window.NNMRCN_NOTIFICHE.create({
         button: pushButton,
@@ -849,10 +863,9 @@
     }
 
     function mapEntryQrUrl(entry) {
-        const url = new URL("./progetto.html", document.baseURI);
+        const url = new URL("./luogo.html", document.baseURI);
 
         url.searchParams.set("luogo", String(entry.id));
-        url.hash = "map";
         return url.href;
     }
 
@@ -895,19 +908,167 @@
     }
 
     function mapEntryInput() {
-        return {
+        const value = {
             name: mapEntryName.value,
             category: mapEntryCategory.value,
             description: mapEntryDescription.value,
             lat: Number(mapEntryLat.value),
             lon: Number(mapEntryLon.value),
             sourceUrl: mapEntrySourceUrl.value,
-            sourceLabel: mapEntrySourceLabel.value
+            sourceLabel: mapEntrySourceLabel.value,
+            removeImage: mapEntryImageRemoved
+        };
+
+        if (mapEntryImage) {
+            value.image = {
+                name: mapEntryImage.name,
+                type: mapEntryImage.type,
+                data: mapEntryImage.data
+            };
+        }
+
+        return value;
+    }
+
+    function clearMapEntryImagePreview() {
+        if (mapEntryImageObjectUrl) {
+            URL.revokeObjectURL(mapEntryImageObjectUrl);
+            mapEntryImageObjectUrl = "";
+        }
+
+        mapEntryImagePreviewImg.removeAttribute("src");
+        mapEntryImagePreview.hidden = true;
+    }
+
+    function showMapEntryImagePreview(source) {
+        mapEntryImagePreviewImg.src = source;
+        mapEntryImagePreview.hidden = false;
+    }
+
+    async function selectMapEntryImage() {
+        const file = mapEntryImageInput.files?.[0];
+
+        if (!file) {
+            return;
+        }
+
+        mapEntryImageInput.disabled = true;
+        mapEntryStatus.textContent = "Preparazione della fotografia…";
+
+        try {
+            const prepared = await prepareMapEntryImage(file);
+
+            clearMapEntryImagePreview();
+            mapEntryImage = prepared;
+            mapEntryImageRemoved = false;
+            mapEntryImageObjectUrl = URL.createObjectURL(prepared.blob);
+            showMapEntryImagePreview(mapEntryImageObjectUrl);
+            mapEntryStatus.textContent =
+                "Fotografia pronta. Salva la voce per pubblicarla.";
+        } catch (error) {
+            mapEntryStatus.textContent =
+                error.message || "Non è stato possibile preparare la fotografia.";
+        } finally {
+            mapEntryImageInput.value = "";
+            mapEntryImageInput.disabled = false;
+        }
+    }
+
+    async function prepareMapEntryImage(file) {
+        if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+            throw new Error("Formato non supportato. Usa JPEG, PNG o WebP.");
+        }
+
+        let blob = await resizeMapEntryImage(file, 1800, 0.82);
+
+        if (blob.size > 700000) {
+            blob = await resizeMapEntryImage(file, 1400, 0.7);
+        }
+
+        if (blob.size > 700000) {
+            blob = await resizeMapEntryImage(file, 1000, 0.58);
+        }
+
+        if (!blob.size || blob.size > 700000) {
+            throw new Error(
+                "La fotografia resta troppo grande dopo la riduzione automatica."
+            );
+        }
+
+        return {
+            name: file.name || "fotografia",
+            type: blob.type,
+            data: await mapEntryBlobToBase64(blob),
+            blob
         };
     }
 
+    async function resizeMapEntryImage(file, maxDimension, quality) {
+        const source = URL.createObjectURL(file);
+        const image = new Image();
+
+        try {
+            await new Promise((resolve, reject) => {
+                image.onload = resolve;
+                image.onerror = () => reject(
+                    new Error("La fotografia selezionata non è leggibile.")
+                );
+                image.src = source;
+            });
+        } finally {
+            URL.revokeObjectURL(source);
+        }
+
+        const scale = Math.min(
+            1,
+            maxDimension / Math.max(image.naturalWidth, image.naturalHeight)
+        );
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+        canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+        const context = canvas.getContext("2d", { alpha: true });
+
+        if (!context) {
+            throw new Error("Il browser non può elaborare questa fotografia.");
+        }
+
+        context.drawImage(image, 0, 0, canvas.width, canvas.height);
+        const webpSupported = canvas
+            .toDataURL("image/webp", 0.1)
+            .startsWith("data:image/webp");
+        const outputType = webpSupported ? "image/webp" : "image/jpeg";
+        const blob = await new Promise((resolve) => {
+            canvas.toBlob(resolve, outputType, quality);
+        });
+
+        if (!blob) {
+            throw new Error("Non è stato possibile preparare la fotografia.");
+        }
+
+        return blob;
+    }
+
+    function mapEntryBlobToBase64(blob) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+
+            reader.onload = () => {
+                const value = String(reader.result || "");
+                resolve(value.slice(value.indexOf(",") + 1));
+            };
+            reader.onerror = () => reject(
+                new Error("Non è stato possibile leggere la fotografia.")
+            );
+            reader.readAsDataURL(blob);
+        });
+    }
+
     function resetMapEntryForm() {
+        clearMapEntryImagePreview();
         editingMapEntryId = null;
+        editingMapEntryHasImage = false;
+        mapEntryImage = null;
+        mapEntryImageRemoved = false;
         mapEntryForm.reset();
         mapEntryCategory.value = "luogo";
         mapEntryLat.value = "";
@@ -922,12 +1083,20 @@
     }
 
     function startMapEntryEdit(entry) {
+        clearMapEntryImagePreview();
         editingMapEntryId = entry.id;
+        editingMapEntryHasImage = Boolean(entry.imageUrl);
+        mapEntryImage = null;
+        mapEntryImageRemoved = false;
         mapEntryName.value = entry.name;
         mapEntryCategory.value = entry.category;
         mapEntryDescription.value = entry.description || "";
         mapEntrySourceUrl.value = entry.sourceUrl || "";
         mapEntrySourceLabel.value = entry.sourceLabel || "";
+
+        if (entry.imageUrl) {
+            showMapEntryImagePreview(`${api.baseUrl}${entry.imageUrl}`);
+        }
         mapEntrySubmit.textContent = "Salva modifiche";
         mapEntryCancel.hidden = false;
         mapEntryStatus.textContent =
@@ -1033,6 +1202,15 @@
     });
     mapEntryLat.addEventListener("change", syncMapEntryPositionFromInputs);
     mapEntryLon.addEventListener("change", syncMapEntryPositionFromInputs);
+    mapEntryImageInput.addEventListener("change", selectMapEntryImage);
+    mapEntryImageRemove.addEventListener("click", () => {
+        clearMapEntryImagePreview();
+        mapEntryImage = null;
+        mapEntryImageRemoved = editingMapEntryHasImage;
+        mapEntryStatus.textContent = editingMapEntryHasImage
+            ? "La fotografia verrà rimossa quando salvi la voce."
+            : "Fotografia rimossa dalla selezione.";
+    });
     welcomePreview.addEventListener("click", () => {
         window.NNMRCN_SESSION.showWelcome(
             () => Promise.resolve(),

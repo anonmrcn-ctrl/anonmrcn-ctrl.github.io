@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="apple-mobile-web-app-title" content="anonMrcn">
+    <meta name="description" content="Una breve spiegazione dedicata a un luogo di Marcon">
+    <meta name="theme-color" content="#f4f1e8">
+    <title>Un luogo — nnMrcn</title>
+
+    <link rel="icon" href="./favicon.ico?v=logo3" sizes="any">
+    <link rel="icon" type="image/png" sizes="32x32" href="./favicon-32.png?v=logo3">
+    <link rel="apple-touch-icon" sizes="180x180" href="./apple-touch-icon-logo3.png">
+    <link rel="manifest" href="./manifest.webmanifest">
+    <script src="./tema.js?v=20261006-map-layers1"></script>
+    <link rel="stylesheet" href="./style.css?v=20261003-location-layout1">
+    <link rel="stylesheet" href="./luogo.css?v=20261007-place-photo1">
+    <script data-goatcounter="https://anonmrcn.goatcounter.com/count" async src="./goatcounter.js?v=20261003-privacy1"></script>
+</head>
+
+<body class="pagina-luogo-scheda">
+    <main class="luogo-scheda-pagina">
+        <a class="luogo-scheda-logo" href="./progetto.html" aria-label="Vai al progetto anonMrcn">
+            <img src="./logo.webp" alt="anonMrcn">
+        </a>
+
+        <p class="luogo-scheda-stato" id="luogoSchedaStato" aria-live="polite">
+            Caricamento della spiegazione…
+        </p>
+
+        <article class="luogo-scheda" id="luogoScheda" hidden>
+            <figure class="luogo-scheda-banner" id="luogoSchedaBanner" hidden>
+                <img id="luogoSchedaImmagine" alt="">
+            </figure>
+
+            <div class="luogo-scheda-corpo">
+                <p class="luogo-scheda-categoria" id="luogoSchedaCategoria"></p>
+                <h1 id="luogoSchedaTitolo" tabindex="-1"></h1>
+                <div class="luogo-scheda-testo" id="luogoSchedaTesto"></div>
+
+                <nav class="luogo-scheda-azioni" aria-label="Approfondisci questo luogo">
+                    <a class="luogo-scheda-azione luogo-scheda-azione-principale" id="luogoSchedaEspandi" href="./voci.html">
+                        Espandi sul sito
+                    </a>
+                    <a class="luogo-scheda-azione" id="luogoSchedaMappa" href="./progetto.html#map">
+                        Visualizza sulla mappa
+                    </a>
+                </nav>
+            </div>
+        </article>
+
+        <a class="luogo-scheda-ritorno" href="./progetto.html">Torna al progetto</a>
+    </main>
+
+    <script src="./config.js"></script>
+    <script src="./analytics.js?v=20261001-onboarding1"></script>
+    <script src="./api.js"></script>
+    <script src="./luogo.js?v=20261007-place-photo1"></script>
+</body>
+</html>

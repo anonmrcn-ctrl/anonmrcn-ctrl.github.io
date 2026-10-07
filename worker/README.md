@@ -212,7 +212,10 @@ compare negli endpoint pubblici.
 La sezione **Elenco dei luoghi** del pannello amministrativo consente inoltre
 di scegliere un punto su una cartina, indicare nome, categoria, descrizione ed
 eventuale fonte, pubblicare immediatamente una nuova voce e successivamente
-modificarla, spostarla o eliminarla dalla mappa e dall’elenco testuale.
+modificarla, spostarla o eliminarla dalla mappa e dall’elenco testuale. Ogni
+luogo può avere una fotografia facoltativa: il browser la riduce prima
+dell’invio e il Worker la conserva separatamente dai dati testuali per usarla
+come banner nella mini-spiegazione collegata al QR.
 
 ## Accesso speciale dal QR
 
