@@ -2609,7 +2609,7 @@ async function adminUpdateNarrativeStep(request, env, stepId) {
     const now = Date.now();
     const publishedAt = input.status === "published"
         ? Number(existing.published_at) || now
-        : null;
+        : Number(existing.published_at) || null;
 
     await env.DB.prepare(`
         UPDATE narrative_steps
@@ -2662,8 +2662,24 @@ async function adminDeleteNarrativeStep(request, env, stepId) {
 
     await ensureNarrativeStorage(env);
 
-    if (!(await getNarrativeStepById(env, stepId))) {
+    const existing = await getNarrativeStepById(env, stepId);
+
+    if (!existing) {
         return json(request, env, { error: "Tappa non trovata." }, 404);
+    }
+
+    if (Number(existing.published_at)) {
+        await env.DB.prepare(`
+            UPDATE narrative_steps
+            SET status = 'draft', updated_at = ?
+            WHERE id = ?
+        `).bind(Date.now(), stepId).run();
+
+        return json(request, env, {
+            ok: true,
+            archived: true,
+            step: narrativeStepPayload(await getNarrativeStepById(env, stepId))
+        });
     }
 
     await env.DB.prepare(`
@@ -2671,7 +2687,7 @@ async function adminDeleteNarrativeStep(request, env, stepId) {
         WHERE id = ?
     `).bind(stepId).run();
 
-    return json(request, env, { ok: true });
+    return json(request, env, { ok: true, deleted: true });
 }
 
 async function getNarrativeStepById(env, stepId) {
@@ -2719,6 +2735,7 @@ function narrativeStepPayload(row) {
         text: row.explanation,
         sources,
         published: row.status === "published",
+        everPublished: Boolean(Number(row.published_at)),
         createdAt: Number(row.created_at),
         updatedAt: Number(row.updated_at)
     };

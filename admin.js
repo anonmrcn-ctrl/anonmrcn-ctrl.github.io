@@ -860,7 +860,9 @@
 
             deleteButton.type = "button";
             deleteButton.className = "admin-action admin-action-danger";
-            deleteButton.textContent = "Elimina";
+            deleteButton.textContent = step.everPublished
+                ? "Ritira dalla pubblicazione"
+                : "Elimina bozza";
             deleteButton.addEventListener("click", () => {
                 deleteMapEntry(entry, deleteButton);
             });
@@ -1517,16 +1519,18 @@
     }
 
     async function deleteNarrativeStep(step, button) {
-        const confirmed = window.confirm(
-            `Eliminare definitivamente la tappa «${step.title}»?`
-        );
+        const confirmed = window.confirm(step.everPublished
+            ? `Ritirare «${step.title}» dal percorso pubblico? La tappa resterà modificabile e potrà essere ripubblicata.`
+            : `Eliminare definitivamente la bozza «${step.title}»?`);
 
         if (!confirmed) {
             return;
         }
 
         button.disabled = true;
-        narrativeStatus.textContent = `Eliminazione di «${step.title}»…`;
+        narrativeStatus.textContent = step.everPublished
+            ? `Ritiro di «${step.title}»…`
+            : `Eliminazione di «${step.title}»…`;
 
         try {
             await request(`/api/admin/narrative-steps/${step.id}`, {
@@ -1537,7 +1541,9 @@
                 resetNarrativeForm();
             }
 
-            narrativeStatus.textContent = `«${step.title}» è stata eliminata.`;
+            narrativeStatus.textContent = step.everPublished
+                ? `«${step.title}» è stata ritirata e conservata come bozza.`
+                : `La bozza «${step.title}» è stata eliminata.`;
             await loadNarrativeSteps();
         } catch (error) {
             button.disabled = false;

@@ -159,6 +159,7 @@ test("inizializza, modifica e pubblica il percorso poetico", async () => {
 
     assert.equal(drafted.response.status, 200);
     assert.equal(drafted.data.step.published, false);
+    assert.equal(drafted.data.step.everPublished, true);
 
     const publicAfterDraft = await call("/api/public/narrative-steps");
     assert.equal(publicAfterDraft.data.steps.length, 13);
@@ -171,9 +172,38 @@ test("inizializza, modifica e pubblica il percorso poetico", async () => {
         method: "DELETE"
     });
     assert.equal(deleted.response.status, 200);
+    assert.equal(deleted.data.archived, true);
 
     const finalList = await call("/api/admin/narrative-steps", { admin: true });
-    assert.equal(finalList.data.steps.length, 13);
+    assert.equal(finalList.data.steps.length, 14);
+    assert.equal(
+        finalList.data.steps.find((step) => step.id === stepId).published,
+        false
+    );
+
+    const draft = await call("/api/admin/narrative-steps", {
+        admin: true,
+        method: "POST",
+        body: {
+            position: 15,
+            verse: "v. 151 — «bozza»",
+            label: "Bozza eliminabile",
+            title: "Bozza eliminabile",
+            titleUrl: "",
+            lat: 45.55,
+            lon: 12.32,
+            zoom: 16,
+            text: "Questa tappa non è mai stata pubblicata.",
+            sources: [],
+            published: false
+        }
+    });
+
+    const removedDraft = await call(
+        `/api/admin/narrative-steps/${draft.data.step.id}`,
+        { admin: true, method: "DELETE" }
+    );
+    assert.equal(removedDraft.data.deleted, true);
 });
 
 test("protegge l’editor e rifiuta fonti non valide", async () => {
