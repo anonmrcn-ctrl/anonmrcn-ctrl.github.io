@@ -5,6 +5,7 @@ import {
     removePushSubscription,
     savePushSubscription
 } from "./push.js";
+import { CMS_STORAGE_STATEMENTS } from "./cms-schema.js";
 import { NARRATIVE_STEP_SEEDS } from "./narrative-seed.js";
 
 // workerd refuses PBKDF2 requests above 100,000 iterations.
@@ -359,6 +360,7 @@ const MAYOR_STORAGE_STATEMENTS = Object.freeze([
         updated_at INTEGER NOT NULL
     )`
 ]);
+const cmsStorageInitializations = new WeakMap();
 const mayorStorageInitializations = new WeakMap();
 
 
@@ -658,10 +660,12 @@ export default {
             }
 
             if (request.method === "GET" && path === "/api/health") {
+                await ensureCmsStorage(env);
                 return json(request, env, {
                     ok: true,
                     service: "nnmrcn-rete",
-                    privacyVersion: "2026-10-03"
+                    privacyVersion: "2026-10-03",
+                    contentSchema: 1
                 });
             }
 
@@ -693,6 +697,7 @@ export default {
             await ensureContactStorage(env);
             await purgeExpiredContactMessages(env);
             await ensureLocationProfileStorage(env);
+            await ensureCmsStorage(env);
         })());
     }
 };
@@ -3878,6 +3883,24 @@ async function ensureMemoryStorage(env) {
             env.DB.prepare(statement)
         )
     );
+}
+
+async function ensureCmsStorage(env) {
+    let initialization = cmsStorageInitializations.get(env.DB);
+
+    if (!initialization) {
+        initialization = env.DB.batch(
+            CMS_STORAGE_STATEMENTS.map((statement) =>
+                env.DB.prepare(statement)
+            )
+        ).catch((error) => {
+            cmsStorageInitializations.delete(env.DB);
+            throw error;
+        });
+        cmsStorageInitializations.set(env.DB, initialization);
+    }
+
+    await initialization;
 }
 
 async function ensureMayorStorage(env) {

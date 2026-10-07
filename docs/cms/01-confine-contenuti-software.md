@@ -109,6 +109,12 @@ La prima migrazione deve conservare integralmente i contenuti correnti e
 prevedere un valore locale di ripiego: il sito pubblico non deve diventare
 vuoto se l'API del CMS è temporaneamente irraggiungibile.
 
+La fondazione comune è definita dalla migrazione
+`worker/migrations/0013_cms_content_foundation.sql`. L’archivio poetico
+editoriale usa `poem_works` per non confondersi con la tabella storica `poems`,
+che contiene le poesie private associate alle location e non deve essere
+duplicata né reinterpretata.
+
 ## Criterio di completamento del passaggio 1
 
 Il passaggio è concluso quando ogni contenuto attuale appartiene a una riga

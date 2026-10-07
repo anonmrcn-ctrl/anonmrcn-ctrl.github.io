@@ -61,6 +61,15 @@ La migrazione `0012_narrative_steps.sql` aggiunge le tappe amministrabili di
 tappe storiche; da quel momento ordine, versi, spiegazioni, coordinate, fonti e
 stato di pubblicazione vengono letti dal database e gestiti dal pannello.
 
+La migrazione `0013_cms_content_foundation.sql` crea la fondazione comune per
+pagine e blocchi, poesia editoriale, menu, tour, impostazioni, fonti, livelli
+cartografici, revisioni, permalink e documenti legali. Non sposta ancora i
+contenuti statici: prepara archivi e vincoli prima delle importazioni. Le
+revisioni sono append-only, il percorso di un permalink non è riscrivibile e
+una versione legale pubblicata non può essere modificata o eliminata. Il primo
+health check dopo il deploy installa in modo idempotente queste strutture e
+restituisce `"contentSchema": 1`.
+
 Se le location non sono ancora presenti, esegui successivamente il contenuto del
 file privato `nnmrcn_seed_private_d1_20260823.sql` aggiornato. Contiene le 20
 location, ma cancella prima messaggi, sessioni e location esistenti: usalo

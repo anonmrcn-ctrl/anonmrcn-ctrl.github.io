@@ -8,7 +8,7 @@
       "label": "Poesia e canti",
       "classification": "content",
       "currentSources": ["index.html", "poesia-metrica.js"],
-      "targetEntities": ["poems", "poem_sections", "poem_lines"],
+      "targetEntities": ["poem_works", "poem_sections", "poem_lines"],
       "priority": "high",
       "migration": "required"
     },
