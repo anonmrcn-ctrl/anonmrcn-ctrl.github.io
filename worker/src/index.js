@@ -94,6 +94,9 @@ const MAX_NARRATIVE_STEP_VERSE_LENGTH = 240;
 const MAX_NARRATIVE_STEP_TEXT_LENGTH = 5000;
 const MAX_NARRATIVE_STEP_SOURCES = 20;
 const MAX_NARRATIVE_SOURCE_TERMS = 20;
+const MAX_CMS_PAGE_REQUEST_BYTES = 128000;
+const MAX_CMS_PAGE_BLOCKS = 100;
+const MAX_CMS_PAGE_BLOCK_TEXT_LENGTH = 20000;
 
 class RequestBodyTooLargeError extends Error {}
 
@@ -123,6 +126,7 @@ const MAP_ENTRY_CATEGORIES = new Set([
     "percorso"
 ]);
 const NARRATIVE_STATUSES = new Set(["draft", "published"]);
+const CMS_PAGE_STATUSES = new Set(["draft", "published"]);
 const WIKI_IMAGE_TYPES = new Set([
     "image/jpeg",
     "image/png",
@@ -644,6 +648,21 @@ export default {
                 path === "/api/admin/narrative-steps"
             ) {
                 return await adminListNarrativeSteps(request, env);
+            }
+
+            if (
+                request.method === "GET" &&
+                path === "/api/admin/cms/pages"
+            ) {
+                return await adminListCmsPages(request, env);
+            }
+
+            if (
+                request.method === "PATCH" &&
+                /^\/api\/admin\/cms\/pages\/[a-z0-9]+(?:-[a-z0-9]+)*$/.test(path)
+            ) {
+                const pageId = path.split("/").pop();
+                return await adminUpdateCmsPage(request, env, pageId);
             }
 
             if (
@@ -2621,6 +2640,310 @@ async function getPublicPage(request, env, slug) {
             }))
         }
     });
+}
+
+async function adminListCmsPages(request, env) {
+    if (!(await adminAuthorized(request, env))) {
+        return unauthorized(request, env);
+    }
+
+    await ensureCmsStorage(env);
+
+    return json(request, env, {
+        pages: await readCmsPages(env)
+    });
+}
+
+async function adminUpdateCmsPage(request, env, pageId) {
+    if (!(await adminAuthorized(request, env))) {
+        return unauthorized(request, env);
+    }
+
+    await ensureCmsStorage(env);
+
+    const page = await env.DB.prepare(`
+        SELECT
+            id, slug, title, description, status,
+            created_at, updated_at, published_at
+        FROM site_pages
+        WHERE id = ?
+        LIMIT 1
+    `).bind(pageId).first();
+
+    if (!page) {
+        return json(request, env, { error: "Pagina non trovata." }, 404);
+    }
+
+    const blockResult = await env.DB.prepare(`
+        SELECT id, position, block_type, content_json, created_at, updated_at
+        FROM page_blocks
+        WHERE page_id = ?
+        ORDER BY position ASC, id ASC
+    `).bind(pageId).all();
+    const existingBlocks = blockResult.results || [];
+    const input = normalizeCmsPageInput(
+        await readJson(request, MAX_CMS_PAGE_REQUEST_BYTES),
+        existingBlocks
+    );
+
+    if (input.error) {
+        return json(request, env, { error: input.error }, 400);
+    }
+
+    if (input.expectedUpdatedAt !== Number(page.updated_at)) {
+        return json(request, env, {
+            error: "La pagina è stata modificata altrove. Ricaricala prima di salvare."
+        }, 409);
+    }
+
+    const blockInputs = new Map(
+        input.blocks.map((block) => [block.id, block.text])
+    );
+    const changedBlocks = existingBlocks.filter((block) =>
+        String(parseJsonValue(block.content_json, {}).text || "") !==
+            blockInputs.get(block.id)
+    );
+    const pageChanged =
+        page.title !== input.title ||
+        page.description !== input.description ||
+        page.status !== input.status;
+
+    if (!pageChanged && !changedBlocks.length) {
+        return json(request, env, {
+            page: await readCmsPage(env, pageId),
+            unchanged: true
+        });
+    }
+
+    const now = Math.max(Date.now(), Number(page.updated_at) + 1);
+    const statements = [env.DB.prepare(`
+        UPDATE site_pages
+        SET
+            title = ?,
+            description = ?,
+            status = ?,
+            updated_at = ?,
+            published_at = CASE
+                WHEN ? = 'published' THEN COALESCE(published_at, ?)
+                ELSE published_at
+            END
+        WHERE id = ?
+    `).bind(
+        input.title,
+        input.description,
+        input.status,
+        now,
+        input.status,
+        now,
+        pageId
+    )];
+    const snapshotBlocks = existingBlocks.map((block) => {
+        const content = {
+            ...parseJsonValue(block.content_json, {}),
+            text: blockInputs.get(block.id)
+        };
+
+        if (changedBlocks.includes(block)) {
+            statements.push(env.DB.prepare(`
+                UPDATE page_blocks
+                SET content_json = ?, updated_at = ?
+                WHERE id = ? AND page_id = ?
+            `).bind(JSON.stringify(content), now, block.id, pageId));
+            statements.push(env.DB.prepare(`
+                INSERT INTO content_revisions (
+                    entity_type,
+                    entity_id,
+                    revision_number,
+                    snapshot_json,
+                    publication_state,
+                    created_at
+                )
+                SELECT
+                    'page_block',
+                    ?,
+                    COALESCE(MAX(revision_number), 0) + 1,
+                    ?,
+                    ?,
+                    ?
+                FROM content_revisions
+                WHERE entity_type = 'page_block' AND entity_id = ?
+            `).bind(
+                block.id,
+                JSON.stringify({
+                    id: block.id,
+                    pageId,
+                    position: Number(block.position),
+                    type: block.block_type,
+                    content
+                }),
+                input.status,
+                now,
+                block.id
+            ));
+        }
+
+        return {
+            id: block.id,
+            position: Number(block.position),
+            type: block.block_type,
+            content
+        };
+    });
+
+    statements.push(env.DB.prepare(`
+        INSERT INTO content_revisions (
+            entity_type,
+            entity_id,
+            revision_number,
+            snapshot_json,
+            publication_state,
+            created_at
+        )
+        SELECT
+            'site_page',
+            ?,
+            COALESCE(MAX(revision_number), 0) + 1,
+            ?,
+            ?,
+            ?
+        FROM content_revisions
+        WHERE entity_type = 'site_page' AND entity_id = ?
+    `).bind(
+        pageId,
+        JSON.stringify({
+            id: pageId,
+            slug: page.slug,
+            title: input.title,
+            description: input.description,
+            blocks: snapshotBlocks
+        }),
+        input.status,
+        now,
+        pageId
+    ));
+
+    await env.DB.batch(statements);
+
+    return json(request, env, {
+        page: await readCmsPage(env, pageId),
+        unchanged: false
+    });
+}
+
+async function readCmsPages(env) {
+    const result = await env.DB.prepare(`
+        SELECT id FROM site_pages
+        ORDER BY title COLLATE NOCASE, id
+    `).all();
+
+    return Promise.all((result.results || []).map((row) =>
+        readCmsPage(env, row.id)
+    ));
+}
+
+async function readCmsPage(env, pageId) {
+    const [page, blockResult] = await Promise.all([
+        env.DB.prepare(`
+            SELECT
+                id, slug, title, description, status,
+                created_at, updated_at, published_at
+            FROM site_pages
+            WHERE id = ?
+            LIMIT 1
+        `).bind(pageId).first(),
+        env.DB.prepare(`
+            SELECT id, position, block_type, content_json, updated_at
+            FROM page_blocks
+            WHERE page_id = ?
+            ORDER BY position ASC, id ASC
+        `).bind(pageId).all()
+    ]);
+
+    if (!page) {
+        return null;
+    }
+
+    return {
+        id: page.id,
+        slug: page.slug,
+        title: page.title,
+        description: page.description,
+        status: page.status,
+        createdAt: Number(page.created_at),
+        updatedAt: Number(page.updated_at),
+        publishedAt: page.published_at === null
+            ? null
+            : Number(page.published_at),
+        blocks: (blockResult.results || []).map((block) => ({
+            id: block.id,
+            position: Number(block.position),
+            type: block.block_type,
+            text: String(parseJsonValue(block.content_json, {}).text || ""),
+            updatedAt: Number(block.updated_at)
+        }))
+    };
+}
+
+function normalizeCmsPageInput(value, existingBlocks) {
+    const title = String(value?.title || "").trim();
+    const description = String(value?.description || "").trim();
+    const status = String(value?.status || "");
+    const expectedUpdatedAt = Number(value?.expectedUpdatedAt);
+    const blocks = Array.isArray(value?.blocks) ? value.blocks : [];
+
+    if (!title || title.length > 200) {
+        return { error: "Il titolo deve contenere da 1 a 200 caratteri." };
+    }
+
+    if (description.length > 500) {
+        return { error: "La descrizione non può superare 500 caratteri." };
+    }
+
+    if (!CMS_PAGE_STATUSES.has(status)) {
+        return { error: "Lo stato della pagina non è valido." };
+    }
+
+    if (!Number.isSafeInteger(expectedUpdatedAt) || expectedUpdatedAt < 0) {
+        return { error: "La versione della pagina non è valida." };
+    }
+
+    if (
+        blocks.length !== existingBlocks.length ||
+        blocks.length > MAX_CMS_PAGE_BLOCKS
+    ) {
+        return { error: "L’elenco dei blocchi della pagina non è completo." };
+    }
+
+    const expectedIds = new Set(existingBlocks.map((block) => block.id));
+    const seenIds = new Set();
+    const normalizedBlocks = [];
+
+    for (const block of blocks) {
+        const id = String(block?.id || "");
+        const text = block?.text;
+
+        if (!expectedIds.has(id) || seenIds.has(id)) {
+            return { error: "Un blocco della pagina non è valido." };
+        }
+
+        if (
+            typeof text !== "string" ||
+            text.length > MAX_CMS_PAGE_BLOCK_TEXT_LENGTH
+        ) {
+            return { error: "Il testo di un blocco non è valido." };
+        }
+
+        seenIds.add(id);
+        normalizedBlocks.push({ id, text });
+    }
+
+    return {
+        title,
+        description,
+        status,
+        expectedUpdatedAt,
+        blocks: normalizedBlocks
+    };
 }
 
 async function getPublicPoem(request, env, slug) {

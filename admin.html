@@ -114,6 +114,68 @@
                 <p class="admin-export-status" id="adminExportStatus" aria-live="polite"></p>
             </section>
 
+            <section class="admin-voci-mappa" aria-labelledby="adminPagineTitolo">
+                <h2 id="adminPagineTitolo">Pagine e blocchi</h2>
+                <p>
+                    Modifica i testi generali del sito senza intervenire nei file.
+                    Il salvataggio controlla che nessun’altra sessione abbia già
+                    cambiato la pagina e conserva una nuova revisione.
+                </p>
+
+                <form id="adminPageForm">
+                    <label for="adminPageSelect">Pagina</label>
+                    <select id="adminPageSelect" required></select>
+
+                    <label for="adminPageTitle">Titolo</label>
+                    <input
+                        id="adminPageTitle"
+                        type="text"
+                        maxlength="200"
+                        required
+                    >
+
+                    <label for="adminPageDescription">Descrizione</label>
+                    <textarea
+                        id="adminPageDescription"
+                        maxlength="500"
+                        rows="3"
+                    ></textarea>
+
+                    <label for="adminPagePublicationStatus">Pubblicazione</label>
+                    <select id="adminPagePublicationStatus" required>
+                        <option value="published">Pubblicata</option>
+                        <option value="draft">Bozza D1 (resta il ripiego statico)</option>
+                    </select>
+
+                    <div class="admin-page-blocks" id="adminPageBlocks"></div>
+
+                    <p class="admin-voci-mappa-aiuto">
+                        Gli identificativi e l’ordine dei blocchi restano invariati.
+                        Le funzioni interattive della pagina non vengono modificate.
+                        Finché esiste il ripiego HTML, lo stato bozza sospende la
+                        versione D1 ma non nasconde l’indirizzo pubblico.
+                    </p>
+
+                    <p>
+                        <a id="adminPageOpen" href="./index.html" target="_blank" rel="noopener noreferrer">
+                            Apri la pagina pubblica
+                        </a>
+                    </p>
+
+                    <button id="adminPageSubmit" type="submit">
+                        Salva pagina
+                    </button>
+                    <button id="adminPageReload" type="button">
+                        Ricarica senza salvare
+                    </button>
+                    <p
+                        class="admin-status"
+                        id="adminPageStatus"
+                        aria-live="polite"
+                    ></p>
+                </form>
+            </section>
+
             <section class="admin-voci-mappa" aria-labelledby="adminVociMappaTitolo">
                 <h2 id="adminVociMappaTitolo">Elenco dei luoghi</h2>
                 <p>
@@ -452,6 +514,6 @@
         integrity="sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH"
         crossorigin="anonymous"
     ></script>
-    <script src="./admin.js?v=20261007-narrative-cms1"></script>
+    <script src="./admin.js?v=20261008-pages-cms1"></script>
 </body>
 </html>

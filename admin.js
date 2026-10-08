@@ -32,6 +32,18 @@
         "adminCountPublicMemories"
     );
     const welcomePreview = document.getElementById("adminWelcomePreview");
+    const cmsPageForm = document.getElementById("adminPageForm");
+    const cmsPageSelect = document.getElementById("adminPageSelect");
+    const cmsPageTitle = document.getElementById("adminPageTitle");
+    const cmsPageDescription = document.getElementById("adminPageDescription");
+    const cmsPagePublicationStatus = document.getElementById(
+        "adminPagePublicationStatus"
+    );
+    const cmsPageBlocks = document.getElementById("adminPageBlocks");
+    const cmsPageOpen = document.getElementById("adminPageOpen");
+    const cmsPageSubmit = document.getElementById("adminPageSubmit");
+    const cmsPageReload = document.getElementById("adminPageReload");
+    const cmsPageStatus = document.getElementById("adminPageStatus");
     const mapEntryForm = document.getElementById("adminMapEntryForm");
     const mapEntryName = document.getElementById("adminMapEntryName");
     const mapEntryCategory = document.getElementById("adminMapEntryCategory");
@@ -91,6 +103,7 @@
     let narrativeResizeObserver = null;
     let editingNarrativeId = null;
     let loadedNarrativeSteps = [];
+    let loadedCmsPages = [];
 
     const pushNotifications = window.NNMRCN_NOTIFICHE.create({
         button: pushButton,
@@ -132,6 +145,7 @@
                 loadMemories(),
                 loadMapEntries(),
                 loadNarrativeSteps(),
+                loadCmsPages(),
                 loadSummary(),
                 pushNotifications.sync()
             ]);
@@ -187,6 +201,128 @@
             ].forEach((element) => {
                 element.textContent = "–";
             });
+        }
+    }
+
+    async function loadCmsPages(preferredId = "") {
+        const selectedId = preferredId || cmsPageSelect.value;
+
+        cmsPageStatus.textContent = "Caricamento pagine…";
+
+        try {
+            const data = await request("/api/admin/cms/pages");
+            loadedCmsPages = data.pages || [];
+            cmsPageSelect.replaceChildren();
+
+            for (const page of loadedCmsPages) {
+                const option = document.createElement("option");
+
+                option.value = page.id;
+                option.textContent = page.title;
+                cmsPageSelect.appendChild(option);
+            }
+
+            if (loadedCmsPages.some((page) => page.id === selectedId)) {
+                cmsPageSelect.value = selectedId;
+            }
+
+            renderCmsPageForm();
+            cmsPageStatus.textContent = loadedCmsPages.length
+                ? ""
+                : "Nessuna pagina disponibile.";
+        } catch (error) {
+            cmsPageStatus.textContent =
+                error.message || "Non è stato possibile caricare le pagine.";
+        }
+    }
+
+    function selectedCmsPage() {
+        return loadedCmsPages.find((page) => page.id === cmsPageSelect.value);
+    }
+
+    function renderCmsPageForm() {
+        const page = selectedCmsPage();
+
+        cmsPageBlocks.replaceChildren();
+
+        if (!page) {
+            cmsPageTitle.value = "";
+            cmsPageDescription.value = "";
+            cmsPageSubmit.disabled = true;
+            return;
+        }
+
+        cmsPageTitle.value = page.title;
+        cmsPageDescription.value = page.description;
+        cmsPagePublicationStatus.value = page.status;
+        cmsPageOpen.href = `./${page.slug}.html`;
+        cmsPageSubmit.disabled = false;
+
+        for (const block of page.blocks || []) {
+            const label = document.createElement("label");
+            const heading = document.createElement("span");
+            const textarea = document.createElement("textarea");
+
+            heading.textContent =
+                `${block.position}. ${block.type} — ${block.id}`;
+            textarea.value = block.text;
+            textarea.rows = Math.min(
+                12,
+                Math.max(2, String(block.text || "").split("\n").length + 1)
+            );
+            textarea.maxLength = 20000;
+            textarea.dataset.cmsPageBlock = block.id;
+            label.append(heading, textarea);
+            cmsPageBlocks.appendChild(label);
+        }
+    }
+
+    async function saveCmsPage(event) {
+        event.preventDefault();
+
+        const page = selectedCmsPage();
+
+        if (!page) {
+            return;
+        }
+
+        const blockFields = Array.from(
+            cmsPageBlocks.querySelectorAll("[data-cms-page-block]")
+        );
+
+        cmsPageSubmit.disabled = true;
+        cmsPageReload.disabled = true;
+        cmsPageStatus.textContent = `Salvataggio di «${page.title}»…`;
+
+        try {
+            const data = await request(
+                `/api/admin/cms/pages/${encodeURIComponent(page.id)}`,
+                {
+                    method: "PATCH",
+                    body: JSON.stringify({
+                        title: cmsPageTitle.value,
+                        description: cmsPageDescription.value,
+                        status: cmsPagePublicationStatus.value,
+                        expectedUpdatedAt: page.updatedAt,
+                        blocks: blockFields.map((field) => ({
+                            id: field.dataset.cmsPageBlock,
+                            text: field.value
+                        }))
+                    })
+                }
+            );
+
+            const message = data.unchanged
+                ? "Nessuna modifica da salvare."
+                : "Pagina salvata e revisione registrata.";
+            await loadCmsPages(page.id);
+            cmsPageStatus.textContent = message;
+        } catch (error) {
+            cmsPageStatus.textContent =
+                error.message || "Non è stato possibile salvare la pagina.";
+        } finally {
+            cmsPageSubmit.disabled = false;
+            cmsPageReload.disabled = false;
         }
     }
 
@@ -1589,6 +1725,12 @@
             : "Fotografia rimossa dalla selezione.";
     });
     narrativeForm.addEventListener("submit", saveNarrativeStep);
+    cmsPageForm.addEventListener("submit", saveCmsPage);
+    cmsPageSelect.addEventListener("change", renderCmsPageForm);
+    cmsPageReload.addEventListener("click", () => {
+        const page = selectedCmsPage();
+        loadCmsPages(page?.id || "");
+    });
     narrativeCancel.addEventListener("click", () => {
         resetNarrativeForm();
         narrativeStatus.textContent = "Modifica annullata.";

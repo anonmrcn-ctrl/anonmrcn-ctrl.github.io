@@ -134,6 +134,11 @@ fotografie includono anche le strutture annidate necessarie a ricostruire pagine
 opera poetica e livelli; sono append-only e non cambiano se il record corrente
 viene modificato in seguito.
 
+Il pannello amministrativo gestisce inoltre titolo, descrizione, stato D1 e
+testi dei blocchi delle nove pagine. Ogni salvataggio rifiuta una copia ormai
+superata e aggiunge revisioni append-only della pagina e dei soli blocchi
+modificati; ID, ordine e parti interattive restano invariati.
+
 L'inventario si controlla con:
 
 ```bash
