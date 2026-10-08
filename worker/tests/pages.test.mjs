@@ -170,7 +170,7 @@ test("ogni pagina conserva un blocco statico per ciascun contenuto D1", async ()
         );
         assert.match(
             html,
-            /<script src="\.\/api\.js"><\/script>\s*<script src="\.\/page-content\.js\?v=20261008-pages1"><\/script>/u,
+            /<script src="\.\/api\.js"><\/script>[\s\S]*?<script src="\.\/page-content\.js\?v=20261008-pages1"><\/script>/u,
             `${page.slug}.html deve caricare il contenuto dopo il client API`
         );
     }

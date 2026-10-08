@@ -93,6 +93,11 @@ Anche «Il Gajo tra i Praelli» usa D1 come sorgente pubblicata: 4 canti e
 copia completa in `index.html` rimane il ripiego e viene usata prima di avviare
 numerazione e collegamenti interattivi se l'API non risponde.
 
+Il menu comune usa sei record `navigation_items` per le quattro destinazioni
+principali, il sostegno al progetto e l'accesso amministrativo. Dieci pagine
+applicano etichette, ordine e URL pubblicati da D1, conservando localmente lo
+stesso menu come ripiego.
+
 L'inventario si controlla con:
 
 ```bash

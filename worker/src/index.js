@@ -7,6 +7,7 @@ import {
 } from "./push.js";
 import { CMS_STORAGE_STATEMENTS } from "./cms-schema.js";
 import { NARRATIVE_STEP_SEEDS } from "./narrative-seed.js";
+import { NAVIGATION_SEEDS } from "./navigation-seed.js";
 import { PAGE_SEEDS } from "./page-seed.js";
 import { POEM_SEED } from "./poem-seed.js";
 
@@ -457,6 +458,10 @@ export default {
             ) {
                 const slug = path.split("/").pop();
                 return await getPublicPoem(request, env, slug);
+            }
+
+            if (request.method === "GET" && path === "/api/public/navigation") {
+                return await getPublicNavigation(request, env);
             }
 
             if (
@@ -2647,6 +2652,33 @@ async function getPublicPoem(request, env, slug) {
     });
 }
 
+async function getPublicNavigation(request, env) {
+    await ensureCmsStorage(env);
+
+    const result = await env.DB.prepare(`
+        SELECT id, menu_key, position, label, href, visibility, updated_at
+        FROM navigation_items
+        WHERE status = 'published' AND visibility = 'public'
+        ORDER BY menu_key ASC, position ASC, id ASC
+    `).all();
+    const menus = {};
+
+    for (const row of result.results || []) {
+        const items = menus[row.menu_key] || [];
+        items.push({
+            id: row.id,
+            position: Number(row.position),
+            label: row.label,
+            href: row.href,
+            visibility: row.visibility,
+            updatedAt: Number(row.updated_at)
+        });
+        menus[row.menu_key] = items;
+    }
+
+    return json(request, env, { menus });
+}
+
 async function listPublicNarrativeSteps(request, env) {
     await ensureNarrativeStorage(env);
 
@@ -4051,6 +4083,7 @@ async function initializeCmsStorage(env) {
 
     await initializePageContent(env);
     await initializePoemContent(env);
+    await initializeNavigationContent(env);
 }
 
 async function initializePageContent(env) {
@@ -4207,6 +4240,52 @@ async function initializePoemContent(env) {
         INSERT OR IGNORE INTO content_initializations (name, applied_at)
         VALUES ('poem_il_gajo_v1', ?)
     `).bind(now).run();
+}
+
+async function initializeNavigationContent(env) {
+    const initialized = await env.DB.prepare(`
+        SELECT name
+        FROM content_initializations
+        WHERE name = 'navigation_v1'
+        LIMIT 1
+    `).first();
+
+    if (initialized) {
+        return;
+    }
+
+    const now = Date.now();
+    const inserts = NAVIGATION_SEEDS.map((item) => env.DB.prepare(`
+        INSERT OR IGNORE INTO navigation_items (
+            id,
+            menu_key,
+            position,
+            label,
+            href,
+            visibility,
+            status,
+            created_at,
+            updated_at,
+            published_at
+        ) VALUES (?, ?, ?, ?, ?, ?, 'published', ?, ?, ?)
+    `).bind(
+        item.id,
+        item.menuKey,
+        item.position,
+        item.label,
+        item.href,
+        item.visibility,
+        now,
+        now,
+        now
+    ));
+
+    inserts.push(env.DB.prepare(`
+        INSERT OR IGNORE INTO content_initializations (name, applied_at)
+        VALUES ('navigation_v1', ?)
+    `).bind(now));
+
+    await env.DB.batch(inserts);
 }
 
 async function ensureMayorStorage(env) {

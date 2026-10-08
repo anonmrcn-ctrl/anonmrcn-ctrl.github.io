@@ -86,6 +86,12 @@ pubblicata. `index.html` conserva l'intera poesia come ripiego; numerazione e
 collegamenti territoriali vengono applicati dopo D1 o dopo l'attivazione del
 ripiego, mantenendo invariati gli ancoraggi `#I`–`#IV` e i numeri di rigo.
 
+Il menu globale viene inizializzato in `navigation_items` con quattro voci
+principali, il collegamento al sostegno e quello amministrativo. L'endpoint
+`GET /api/public/navigation` restituisce in ordine soltanto record `published`
+con visibilità `public`. Le dieci pagine che mostrano il menu conservano le
+stesse destinazioni nell'HTML e le usano se l'API non è disponibile.
+
 Se le location non sono ancora presenti, esegui successivamente il contenuto del
 file privato `nnmrcn_seed_private_d1_20260823.sql` aggiornato. Contiene le 20
 location, ma cancella prima messaggi, sessioni e location esistenti: usalo

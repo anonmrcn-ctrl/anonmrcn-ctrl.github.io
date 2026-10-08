@@ -9,7 +9,7 @@ schema, compatibilità, test e documentazione sono presenti nel repository.
 | N. | Passaggio | Stato | Prova nel repository |
 |---:|---|---|---|
 | 1 | Confine contenuti/software | Completo | `01-confine-contenuti-software.md`, `content-inventory.json`, `scripts/check-content-boundary.mjs` |
-| 2 | Centralizzazione in D1 | In corso | Fondazione, percorso poetico, pagine e poesia completati; il primo punto incompleto è 2.5 |
+| 2 | Centralizzazione in D1 | In corso | Fondazione, percorso poetico, pagine, poesia e navigazione completati; il primo punto incompleto è 2.6 |
 | 3 | Ampliamento del pannello | Da iniziare | Si avvia soltanto dopo il completamento del punto 2 |
 | 4 | Bozze, anteprima e cronologia | Da iniziare | La tabella append-only `content_revisions` è predisposta, ma flussi e interfaccia non sono ancora realizzati |
 | 5 | Permanenza di QR e collegamenti | Da iniziare | La tabella `permalinks` è predisposta; migrazione e risoluzione degli URL storici non sono ancora realizzate |
@@ -25,7 +25,7 @@ schema, compatibilità, test e documentazione sono presenti nel repository.
 | 2.2 | Percorso «Esplora la poesia» | Completo | `0012_narrative_steps.sql`, API pubblica e amministrativa, ripiego locale, test di inizializzazione e conservazione delle tappe pubblicate |
 | 2.3 | Pagine e blocchi | Completo | `page-seed.js` importa idempotentemente 9 pagine e 60 blocchi; `GET /api/public/pages/:slug`, `page-content.js` e `pages.test.mjs` provano sorgente D1, soli contenuti pubblicati, ID stabili e ripiego statico |
 | 2.4 | Poesia, canti e versi | Completo | `poem-seed.js` importa 1 opera, 4 canti e 121 versi; `GET /api/public/poems/:slug`, `poem-content.js` e `poem.test.mjs` conservano 165 righe metriche, ancore, rientri, classi, collegamenti territoriali e ripiego HTML |
-| 2.5 | Menu e collegamenti globali | Da iniziare | Migrare etichette, ordine, destinazioni e visibilità senza cambiare gli URL |
+| 2.5 | Menu e collegamenti globali | Completo | `navigation-seed.js` importa 6 collegamenti; `GET /api/public/navigation`, `navigation-content.js` e `navigation.test.mjs` conservano etichette, ordine, destinazioni, visibilità, stato attivo, collegamento privato e ripiego su 10 pagine |
 | 2.6 | Tour e benvenuto | Da iniziare | Migrare tutte le schermate e mantenere lo stato locale già salvato |
 | 2.7 | Livelli, percorsi e geometrie | Da iniziare | Importare GeoJSON e dati JavaScript mantenendo identificativi e ripiego locale |
 | 2.8 | Fonti e bibliografia | Da iniziare | Deduplicare senza perdere citazioni, etichette o collegamenti esistenti |

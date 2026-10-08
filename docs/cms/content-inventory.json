@@ -95,10 +95,10 @@
       "id": "global-navigation",
       "label": "Menu, collegamenti globali e invito alla condivisione",
       "classification": "content",
-      "currentSources": ["*.html", "site.js"],
+      "currentSources": ["D1:navigation_items", "*.html", "site.js"],
       "targetEntities": ["navigation_items", "site_settings"],
       "priority": "high",
-      "migration": "required"
+      "migration": "partial"
     },
     {
       "id": "map-content",

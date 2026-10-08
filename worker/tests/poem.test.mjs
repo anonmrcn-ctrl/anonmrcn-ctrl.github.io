@@ -244,7 +244,7 @@ test("il seed D1 coincide integralmente con la copia HTML di ripiego", async () 
     assert.deepEqual(extractStaticPoem(html), seedShape());
     assert.match(
         html,
-        /<script src="\.\/api\.js"><\/script>\s*<script src="\.\/poem-content\.js\?v=20261008-poem1"><\/script>/u
+        /<script src="\.\/api\.js"><\/script>[\s\S]*?<script src="\.\/poem-content\.js\?v=20261008-poem1"><\/script>/u
     );
 });
 
