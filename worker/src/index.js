@@ -6,6 +6,7 @@ import {
     savePushSubscription
 } from "./push.js";
 import { CMS_STORAGE_STATEMENTS } from "./cms-schema.js";
+import { MAP_LAYER_SEEDS } from "./map-seed.js";
 import { NARRATIVE_STEP_SEEDS } from "./narrative-seed.js";
 import { NAVIGATION_SEEDS } from "./navigation-seed.js";
 import {
@@ -473,6 +474,14 @@ export default {
                 path === "/api/public/onboarding/welcome"
             ) {
                 return await getPublicOnboarding(request, env, "welcome");
+            }
+
+            if (
+                request.method === "GET" &&
+                /^\/api\/public\/map-layers\/[a-z0-9]+(?:-[a-z0-9]+)*$/.test(path)
+            ) {
+                const slug = path.split("/").pop();
+                return await getPublicMapLayer(request, env, slug);
             }
 
             if (
@@ -2748,6 +2757,70 @@ async function getPublicOnboarding(request, env, tourKey) {
     });
 }
 
+async function getPublicMapLayer(request, env, slug) {
+    await ensureCmsStorage(env);
+
+    const layer = await env.DB.prepare(`
+        SELECT id, slug, title, description, layer_type, style_json, updated_at
+        FROM map_layers
+        WHERE slug = ? AND status = 'published'
+        LIMIT 1
+    `).bind(slug).first();
+
+    if (!layer) {
+        return json(request, env, { error: "Livello non trovato." }, 404);
+    }
+
+    const result = await env.DB.prepare(`
+        SELECT
+            id,
+            position,
+            title,
+            description,
+            geometry_json,
+            properties_json,
+            updated_at
+        FROM map_features
+        WHERE layer_id = ? AND status = 'published'
+        ORDER BY position ASC, id ASC
+    `).bind(layer.id).all();
+    const parseJson = (value, fallback) => {
+        try {
+            return JSON.parse(value);
+        } catch (_) {
+            return fallback;
+        }
+    };
+
+    return json(request, env, {
+        layer: {
+            id: layer.id,
+            slug: layer.slug,
+            title: layer.title,
+            description: layer.description,
+            type: layer.layer_type,
+            style: parseJson(layer.style_json, {}),
+            updatedAt: Number(layer.updated_at)
+        },
+        geojson: {
+            type: "FeatureCollection",
+            name: layer.title,
+            features: (result.results || []).map((row) => ({
+                type: "Feature",
+                id: row.id,
+                geometry: parseJson(row.geometry_json, null),
+                properties: {
+                    ...parseJson(row.properties_json, {}),
+                    nome: row.title,
+                    descrizione: row.description,
+                    cmsPosition: Number(row.position),
+                    cmsUpdatedAt: Number(row.updated_at)
+                }
+            }))
+        }
+    });
+}
+
 async function listPublicNarrativeSteps(request, env) {
     await ensureNarrativeStorage(env);
 
@@ -4154,6 +4227,7 @@ async function initializeCmsStorage(env) {
     await initializePoemContent(env);
     await initializeNavigationContent(env);
     await initializeOnboardingContent(env);
+    await initializeMapContent(env);
 }
 
 async function initializePageContent(env) {
@@ -4417,6 +4491,91 @@ async function initializeOnboardingContent(env) {
     `).bind(now));
 
     await env.DB.batch(inserts);
+}
+
+async function initializeMapContent(env) {
+    const initialized = await env.DB.prepare(`
+        SELECT name
+        FROM content_initializations
+        WHERE name = 'map_layers_v1'
+        LIMIT 1
+    `).first();
+
+    if (initialized) {
+        return;
+    }
+
+    const now = Date.now();
+    const inserts = [];
+
+    for (const layer of MAP_LAYER_SEEDS) {
+        inserts.push(env.DB.prepare(`
+            INSERT OR IGNORE INTO map_layers (
+                id,
+                slug,
+                title,
+                description,
+                layer_type,
+                position,
+                style_json,
+                status,
+                created_at,
+                updated_at,
+                published_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `).bind(
+            layer.id,
+            layer.slug,
+            layer.title,
+            layer.description,
+            layer.layerType,
+            layer.position,
+            JSON.stringify(layer.style),
+            layer.status,
+            now,
+            now,
+            layer.status === "published" ? now : null
+        ));
+
+        for (const item of layer.features) {
+            inserts.push(env.DB.prepare(`
+                INSERT OR IGNORE INTO map_features (
+                    id,
+                    layer_id,
+                    position,
+                    title,
+                    description,
+                    geometry_json,
+                    properties_json,
+                    status,
+                    created_at,
+                    updated_at,
+                    published_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `).bind(
+                item.id,
+                layer.id,
+                item.position,
+                item.title,
+                item.description,
+                JSON.stringify(item.geometry),
+                JSON.stringify(item.properties),
+                item.status,
+                now,
+                now,
+                item.status === "published" ? now : null
+            ));
+        }
+    }
+
+    inserts.push(env.DB.prepare(`
+        INSERT OR IGNORE INTO content_initializations (name, applied_at)
+        VALUES ('map_layers_v1', ?)
+    `).bind(now));
+
+    for (let index = 0; index < inserts.length; index += 40) {
+        await env.DB.batch(inserts.slice(index, index + 40));
+    }
 }
 
 async function ensureMayorStorage(env) {

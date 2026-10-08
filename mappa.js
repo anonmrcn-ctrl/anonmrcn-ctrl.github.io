@@ -17,13 +17,16 @@
             return cached;
         }
 
-        const request = fetch(url).then((response) => {
+        const fallback = () => fetch(url).then((response) => {
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}`);
             }
 
             return response.json();
         });
+        const request = window.NNMRCN_MAP_CONTENT?.load
+            ? window.NNMRCN_MAP_CONTENT.load(url, fallback)
+            : fallback();
 
         requests.set(url, request);
         request.catch(() => {

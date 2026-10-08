@@ -105,6 +105,14 @@ risponde mantengono testi, anteprime e indicatori incorporati in `sessione.js`.
 La chiave `nnmrcn_session` e lo stato di completamento associato alla location
 restano invariati.
 
+I quattro cataloghi cartografici storici sono registrati in `map_layers`; i
+metadati di percorsi, fiumi e cave ritirati sono conservati in `map_features`
+con stato `archived`. I relativi GeoJSON erano già stati azzerati il 6 ottobre
+2026 e restano vuoti, così la migrazione non ripubblica geometrie rimosse. Il
+motore può leggere `GET /api/public/map-layers/:slug` e usa gli stessi file
+GeoJSON locali se il Worker non è disponibile. Le voci attive continuano a
+usare i propri ID esistenti in `map_entries`.
+
 L'inventario si controlla con:
 
 ```bash

@@ -108,16 +108,16 @@
       "label": "Livelli, percorsi, geometrie e descrizioni cartografiche",
       "classification": "content",
       "currentSources": [
+        "D1:map_layers/map_features",
         "*.geojson",
         "percorsi.js",
         "marcon-da-sud.js",
         "cave-rilevanti.js",
-        "fiumi-wikipedia.js",
-        "mappa.js"
+        "fiumi-wikipedia.js"
       ],
-      "targetEntities": ["map_layers", "map_features", "media_assets"],
-      "priority": "high",
-      "migration": "required"
+      "targetEntities": ["map_layers", "map_features"],
+      "priority": "complete",
+      "migration": "complete"
     },
     {
       "id": "sources",

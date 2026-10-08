@@ -47,7 +47,7 @@ amministrative devono riusare le API e gli identificativi già esistenti.
 | Tour e schermata di benvenuto | `onboarding_steps` e `site_settings` in D1, con ripiego in `sessione.js` | Sequenza ordinata di schermate | Migrati |
 | Menu e collegamenti globali | `navigation_items` in D1, con ripiego nei menu HTML | Voci ordinate e visibilità | Migrati |
 | Invito alla condivisione | `onboarding_steps` in D1, con ripiego in `sessione.js` | Tour e impostazioni globali | Migrato nel tour |
-| Percorsi, livelli e geometrie | GeoJSON, `percorsi.js`, `marcon-da-sud.js`, `cave-rilevanti.js`, `fiumi-wikipedia.js` | Livelli cartografici, elementi e geometrie | Alta |
+| Percorsi, livelli e geometrie | `map_layers` e `map_features` in D1, con ripiego GeoJSON e JavaScript | Livelli cartografici, elementi e geometrie | Migrati |
 | Fonti e bibliografia | `progetto.js`, Voci e collegamenti sparsi | Archivio fonti riutilizzabile | Alta |
 | Avvisi e testi di servizio specifici del progetto | HTML e JavaScript delle singole sezioni | Impostazioni o blocchi della pagina pertinente | Bassa |
 | Informativa sulla privacy | `privacy.html` | Documento legale versionato con pubblicazione protetta | Bassa e protetta |

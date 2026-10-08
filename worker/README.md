@@ -92,6 +92,18 @@ principali, il collegamento al sostegno e quello amministrativo. L'endpoint
 con visibilità `public`. Le dieci pagine che mostrano il menu conservano le
 stesse destinazioni nell'HTML e le usano se l'API non è disponibile.
 
+Introduzione e cinque schermate del benvenuto vengono importate in
+`site_settings` e `onboarding_steps` e lette da
+`GET /api/public/onboarding/welcome`. Il client conserva la stessa sequenza in
+`sessione.js` come ripiego, senza cambiare sessioni o stato di completamento.
+
+I cataloghi cartografici storici sono inizializzati in `map_layers` e
+`map_features`. `GET /api/public/map-layers/:slug` restituisce soltanto livello
+ed elementi pubblicati in forma GeoJSON. I sette elementi già ritirati restano
+`archived` e le quattro raccolte locali, già vuote dal 6 ottobre 2026, sono il
+ripiego: il deploy non reintroduce geometrie eliminate. Le voci correnti in
+`map_entries` non vengono modificate.
+
 Se le location non sono ancora presenti, esegui successivamente il contenuto del
 file privato `nnmrcn_seed_private_d1_20260823.sql` aggiornato. Contiene le 20
 location, ma cancella prima messaggi, sessioni e location esistenti: usalo
