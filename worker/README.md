@@ -219,6 +219,11 @@ deve iniziare con `/` e va codificato quando contiene query o frammenti. Il
 registro include i link QR dei luoghi, ma non conserva mai chiavi o password
 dei QR di accesso.
 
+`GET /api/public/legal/privacy` restituisce la versione pubblicata corrente
+dell’informativa, la data di efficacia e il checksum SHA-256. Una versione
+pubblicata è immutabile: ogni modifica futura deve creare un nuovo numero di
+versione.
+
 ## 5. Modera i messaggi
 
 L'area riservata è:

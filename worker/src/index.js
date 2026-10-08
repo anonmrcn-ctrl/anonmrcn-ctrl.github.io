@@ -6,6 +6,7 @@ import {
     savePushSubscription
 } from "./push.js";
 import { CMS_STORAGE_STATEMENTS } from "./cms-schema.js";
+import { PRIVACY_DOCUMENT_SEED } from "./legal-seed.js";
 import { MAP_LAYER_SEEDS } from "./map-seed.js";
 import { NARRATIVE_STEP_SEEDS } from "./narrative-seed.js";
 import { NAVIGATION_SEEDS } from "./navigation-seed.js";
@@ -509,6 +510,14 @@ export default {
                 path === "/api/public/permalinks/resolve"
             ) {
                 return await getPublicPermalink(request, env, url);
+            }
+
+            if (
+                request.method === "GET" &&
+                /^\/api\/public\/legal\/[a-z0-9]+(?:-[a-z0-9]+)*$/.test(path)
+            ) {
+                const slug = path.split("/").pop();
+                return await getPublicLegalDocument(request, env, slug);
             }
 
             if (
@@ -2965,6 +2974,49 @@ async function getPublicPermalink(request, env, url) {
     });
 }
 
+async function getPublicLegalDocument(request, env, slug) {
+    await ensureCmsStorage(env);
+
+    const row = await env.DB.prepare(`
+        SELECT
+            document.id,
+            document.slug,
+            document.title,
+            version.id AS version_id,
+            version.version_number,
+            version.effective_date,
+            version.body_html,
+            version.checksum,
+            version.published_at
+        FROM legal_documents document
+        INNER JOIN legal_document_versions version
+            ON version.document_id = document.id
+            AND version.version_number = document.current_version
+        WHERE document.slug = ? AND version.status = 'published'
+        LIMIT 1
+    `).bind(slug).first();
+
+    if (!row) {
+        return json(request, env, { error: "Documento legale non trovato." }, 404);
+    }
+
+    return json(request, env, {
+        document: {
+            id: row.id,
+            slug: row.slug,
+            title: row.title,
+            version: {
+                id: row.version_id,
+                number: Number(row.version_number),
+                effectiveDate: row.effective_date,
+                bodyHtml: row.body_html,
+                checksum: row.checksum,
+                publishedAt: Number(row.published_at)
+            }
+        }
+    });
+}
+
 async function publicSourceTargetExists(env, contentType, contentId) {
     if (contentType === "narrative_step") {
         return Boolean(await env.DB.prepare(`
@@ -4421,8 +4473,72 @@ async function initializeCmsStorage(env) {
     await initializeMapContent(env);
     await initializeSourceContent(env);
     await initializeSiteSettings(env);
+    await initializeLegalContent(env);
     await initializeContentRevisions(env);
     await initializePermalinks(env);
+}
+
+async function initializeLegalContent(env) {
+    const initialized = await env.DB.prepare(`
+        SELECT name
+        FROM content_initializations
+        WHERE name = 'legal_documents_v1'
+        LIMIT 1
+    `).first();
+
+    if (initialized) {
+        return;
+    }
+
+    const document = PRIVACY_DOCUMENT_SEED;
+    const version = document.version;
+    const now = Date.now();
+
+    await env.DB.batch([
+        env.DB.prepare(`
+            INSERT OR IGNORE INTO legal_documents (
+                id,
+                slug,
+                title,
+                current_version,
+                created_at,
+                updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?)
+        `).bind(
+            document.id,
+            document.slug,
+            document.title,
+            version.number,
+            now,
+            now
+        ),
+        env.DB.prepare(`
+            INSERT OR IGNORE INTO legal_document_versions (
+                id,
+                document_id,
+                version_number,
+                effective_date,
+                body_html,
+                checksum,
+                status,
+                created_at,
+                published_at
+            ) VALUES (?, ?, ?, ?, ?, ?, 'published', ?, ?)
+        `).bind(
+            version.id,
+            document.id,
+            version.number,
+            version.effectiveDate,
+            version.bodyHtml,
+            version.checksum,
+            now,
+            now
+        ),
+        env.DB.prepare(`
+            INSERT OR IGNORE INTO content_initializations (name, applied_at)
+            VALUES ('legal_documents_v1', ?)
+        `).bind(now)
+    ]);
 }
 
 async function initializePermalinks(env) {

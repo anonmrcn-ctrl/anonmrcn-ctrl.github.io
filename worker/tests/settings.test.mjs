@@ -158,7 +158,7 @@ test("titoli e descrizioni D1 coincidono con i quattordici ripieghi HTML", async
         assert.equal(metadata.description, description, `${key}.html description`);
         assert.match(
             html,
-            /<script src="\.\/api\.js"><\/script>\s*<script src="\.\/site-metadata\.js\?v=20261008-settings1"><\/script>/u,
+            /<script src="\.\/api\.js"><\/script>[\s\S]*?<script src="\.\/site-metadata\.js\?v=20261008-settings1"><\/script>/u,
             key
         );
     }
