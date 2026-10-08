@@ -98,6 +98,13 @@ principali, il sostegno al progetto e l'accesso amministrativo. Dieci pagine
 applicano etichette, ordine e URL pubblicati da D1, conservando localmente lo
 stesso menu come ripiego.
 
+Il benvenuto usa una voce pubblica in `site_settings` e cinque record ordinati
+in `onboarding_steps`. Le dodici pagine che possono mostrarlo attendono il
+contenuto pubblicato da `GET /api/public/onboarding/welcome`; se il Worker non
+risponde mantengono testi, anteprime e indicatori incorporati in `sessione.js`.
+La chiave `nnmrcn_session` e lo stato di completamento associato alla location
+restano invariati.
+
 L'inventario si controlla con:
 
 ```bash

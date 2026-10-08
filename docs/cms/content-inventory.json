@@ -86,10 +86,13 @@
       "id": "welcome-tour",
       "label": "Benvenuto e tour iniziale",
       "classification": "content",
-      "currentSources": ["sessione.js#WELCOME_FEATURES", "sessione.js"],
+      "currentSources": [
+        "D1:onboarding_steps/site_settings",
+        "sessione.js#WELCOME_FEATURES_FALLBACK"
+      ],
       "targetEntities": ["onboarding_steps", "site_settings"],
-      "priority": "medium",
-      "migration": "required"
+      "priority": "complete",
+      "migration": "complete"
     },
     {
       "id": "global-navigation",
@@ -97,8 +100,8 @@
       "classification": "content",
       "currentSources": ["D1:navigation_items", "*.html", "site.js"],
       "targetEntities": ["navigation_items", "site_settings"],
-      "priority": "high",
-      "migration": "partial"
+      "priority": "complete",
+      "migration": "complete"
     },
     {
       "id": "map-content",

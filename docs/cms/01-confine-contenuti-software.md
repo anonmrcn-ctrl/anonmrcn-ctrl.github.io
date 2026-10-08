@@ -44,9 +44,9 @@ amministrative devono riusare le API e gli identificativi già esistenti.
 | Biografia e contatti editoriali | Testi in `site_pages` e `page_blocks`, ripiego in `autore.html`; recapiti ancora statici | Pagina composta da blocchi e impostazioni di contatto | Testi migrati; recapiti da migrare |
 | Significato del logo | `site_pages` e `page_blocks` in D1, con ripiego in `logo.html` | Pagina composta da blocchi | Migrata |
 | Testi di Spazio pubblico, Archivio, Memorie e Taccuino | `site_pages` e `page_blocks` in D1, con ripiego nei rispettivi file HTML | Pagine e testi introduttivi | Migrati |
-| Tour e schermata di benvenuto | `sessione.js` (`WELCOME_FEATURES` e testi introduttivi) | Sequenza ordinata di schermate | Media |
+| Tour e schermata di benvenuto | `onboarding_steps` e `site_settings` in D1, con ripiego in `sessione.js` | Sequenza ordinata di schermate | Migrati |
 | Menu e collegamenti globali | `navigation_items` in D1, con ripiego nei menu HTML | Voci ordinate e visibilità | Migrati |
-| Invito alla condivisione | `sessione.js` | Tour e impostazioni globali | Media |
+| Invito alla condivisione | `onboarding_steps` in D1, con ripiego in `sessione.js` | Tour e impostazioni globali | Migrato nel tour |
 | Percorsi, livelli e geometrie | GeoJSON, `percorsi.js`, `marcon-da-sud.js`, `cave-rilevanti.js`, `fiumi-wikipedia.js` | Livelli cartografici, elementi e geometrie | Alta |
 | Fonti e bibliografia | `progetto.js`, Voci e collegamenti sparsi | Archivio fonti riutilizzabile | Alta |
 | Avvisi e testi di servizio specifici del progetto | HTML e JavaScript delle singole sezioni | Impostazioni o blocchi della pagina pertinente | Bassa |

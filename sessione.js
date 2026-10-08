@@ -57,7 +57,12 @@
         } catch (_) {}
     }
 
-    const WELCOME_FEATURES = Object.freeze([
+    const WELCOME_INTRO_FALLBACK = Object.freeze({
+        title: "Benvenuto nel sito anonMrcn",
+        subtitle: "Un progetto artistico dedicato alla città di Marcon."
+    });
+
+    const WELCOME_FEATURES_FALLBACK = Object.freeze([
         {
             title: "La poesia, punto di partenza",
             description:
@@ -150,6 +155,12 @@
     ]);
 
     function showWelcome(complete, options = {}) {
+        Promise.resolve(window.NNMRCN_ONBOARDING_READY).then(() => {
+            showWelcomeResolved(complete, options);
+        });
+    }
+
+    function showWelcomeResolved(complete, options = {}) {
         if (welcomeDialog) {
             welcomeDialog.focus();
             return;
@@ -190,6 +201,11 @@
         let scrollFrame = 0;
         let tourOpenFrame = 0;
         let positioningTour = false;
+        const remoteContent = window.NNMRCN_ONBOARDING_CONTENT;
+        const welcomeIntro = remoteContent?.intro || WELCOME_INTRO_FALLBACK;
+        const welcomeFeatures = remoteContent?.features?.length
+            ? remoteContent.features
+            : WELCOME_FEATURES_FALLBACK;
 
         overlay.className = "benvenuto-overlay";
         dialog.className = "benvenuto-dialogo";
@@ -205,10 +221,9 @@
         logo.src = "./logo.webp?v=20261001-logo2";
         logo.alt = "Logo di anonMrcn";
         title.id = "benvenutoTitolo";
-        title.textContent = "Benvenuto nel sito anonMrcn";
+        title.textContent = welcomeIntro.title;
         subtitle.className = "benvenuto-sottotitolo";
-        subtitle.textContent =
-            "Un progetto artistico dedicato alla città di Marcon.";
+        subtitle.textContent = welcomeIntro.subtitle;
         actions.className = "benvenuto-azioni";
         status.className = "benvenuto-stato";
         status.setAttribute("aria-live", "polite");
@@ -260,7 +275,7 @@
         scroller.className = "benvenuto-tour-scroller";
         scroller.setAttribute("aria-label", "Funzionalità principali del sito");
 
-        WELCOME_FEATURES.forEach((feature, index) => {
+        welcomeFeatures.forEach((feature, index) => {
             const page = document.createElement("article");
             const figure = document.createElement("figure");
             const image = document.createElement("iframe");
@@ -317,7 +332,7 @@
         indicators.className = "benvenuto-tour-indicatori";
         indicators.setAttribute("role", "group");
         indicators.setAttribute("aria-label", "Pagine del tour");
-        WELCOME_FEATURES.forEach((feature, index) => {
+        welcomeFeatures.forEach((feature, index) => {
             const indicator = document.createElement("button");
 
             indicator.type = "button";
@@ -376,10 +391,10 @@
 
         function updateTour() {
             const dots = Array.from(indicators.children);
-            const last = activeIndex === WELCOME_FEATURES.length - 1;
+            const last = activeIndex === welcomeFeatures.length - 1;
 
             tourCounter.textContent =
-                `${activeIndex + 1} di ${WELCOME_FEATURES.length}`;
+                `${activeIndex + 1} di ${welcomeFeatures.length}`;
             previousButton.disabled = activeIndex === 0;
             nextButton.textContent = last ? "Esplora il sito" : "Avanti";
             dots.forEach((dot, index) => {
@@ -394,7 +409,7 @@
         function goTo(index) {
             activeIndex = Math.max(
                 0,
-                Math.min(WELCOME_FEATURES.length - 1, index)
+                Math.min(welcomeFeatures.length - 1, index)
             );
             const scrollBehavior = window.getComputedStyle(scroller)
                 .scrollBehavior === "smooth"
@@ -494,7 +509,7 @@
         });
 
         nextButton.addEventListener("click", () => {
-            if (activeIndex === WELCOME_FEATURES.length - 1) {
+            if (activeIndex === welcomeFeatures.length - 1) {
                 completeAndClose(nextButton);
             } else {
                 goTo(activeIndex + 1);
@@ -519,7 +534,7 @@
                 if (nextIndex !== activeIndex) {
                     activeIndex = Math.max(
                         0,
-                        Math.min(WELCOME_FEATURES.length - 1, nextIndex)
+                        Math.min(welcomeFeatures.length - 1, nextIndex)
                     );
                     updateTour();
                 }

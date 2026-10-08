@@ -8,6 +8,10 @@ import {
 import { CMS_STORAGE_STATEMENTS } from "./cms-schema.js";
 import { NARRATIVE_STEP_SEEDS } from "./narrative-seed.js";
 import { NAVIGATION_SEEDS } from "./navigation-seed.js";
+import {
+    WELCOME_INTRO_SEED,
+    WELCOME_STEP_SEEDS
+} from "./onboarding-seed.js";
 import { PAGE_SEEDS } from "./page-seed.js";
 import { POEM_SEED } from "./poem-seed.js";
 
@@ -462,6 +466,13 @@ export default {
 
             if (request.method === "GET" && path === "/api/public/navigation") {
                 return await getPublicNavigation(request, env);
+            }
+
+            if (
+                request.method === "GET" &&
+                path === "/api/public/onboarding/welcome"
+            ) {
+                return await getPublicOnboarding(request, env, "welcome");
             }
 
             if (
@@ -2679,6 +2690,64 @@ async function getPublicNavigation(request, env) {
     return json(request, env, { menus });
 }
 
+async function getPublicOnboarding(request, env, tourKey) {
+    await ensureCmsStorage(env);
+
+    const [introRow, stepResult] = await Promise.all([
+        env.DB.prepare(`
+            SELECT value_json, updated_at
+            FROM site_settings
+            WHERE setting_key = ?
+                AND visibility = 'public'
+                AND status = 'published'
+            LIMIT 1
+        `).bind(`onboarding.${tourKey}.intro`).first(),
+        env.DB.prepare(`
+            SELECT id, position, title, body, action_json, updated_at
+            FROM onboarding_steps
+            WHERE tour_key = ? AND status = 'published'
+            ORDER BY position ASC, id ASC
+        `).bind(tourKey).all()
+    ]);
+
+    if (!introRow) {
+        return json(request, env, { error: "Tour non trovato." }, 404);
+    }
+
+    let intro = {};
+
+    try {
+        intro = JSON.parse(introRow.value_json);
+    } catch (_) {}
+
+    return json(request, env, {
+        intro: {
+            title: String(intro.title || ""),
+            subtitle: String(intro.subtitle || ""),
+            updatedAt: Number(introRow.updated_at)
+        },
+        steps: (stepResult.results || []).map((row) => {
+            let action = {};
+
+            try {
+                action = JSON.parse(row.action_json);
+            } catch (_) {}
+
+            return {
+                id: row.id,
+                position: Number(row.position),
+                title: row.title,
+                description: row.body,
+                details: Array.isArray(action.details) ? action.details : [],
+                preview: String(action.preview || ""),
+                alt: String(action.alt || ""),
+                markers: Array.isArray(action.markers) ? action.markers : [],
+                updatedAt: Number(row.updated_at)
+            };
+        })
+    });
+}
+
 async function listPublicNarrativeSteps(request, env) {
     await ensureNarrativeStorage(env);
 
@@ -4084,6 +4153,7 @@ async function initializeCmsStorage(env) {
     await initializePageContent(env);
     await initializePoemContent(env);
     await initializeNavigationContent(env);
+    await initializeOnboardingContent(env);
 }
 
 async function initializePageContent(env) {
@@ -4283,6 +4353,67 @@ async function initializeNavigationContent(env) {
     inserts.push(env.DB.prepare(`
         INSERT OR IGNORE INTO content_initializations (name, applied_at)
         VALUES ('navigation_v1', ?)
+    `).bind(now));
+
+    await env.DB.batch(inserts);
+}
+
+async function initializeOnboardingContent(env) {
+    const initialized = await env.DB.prepare(`
+        SELECT name
+        FROM content_initializations
+        WHERE name = 'onboarding_welcome_v1'
+        LIMIT 1
+    `).first();
+
+    if (initialized) {
+        return;
+    }
+
+    const now = Date.now();
+    const inserts = WELCOME_STEP_SEEDS.map((step) => env.DB.prepare(`
+        INSERT OR IGNORE INTO onboarding_steps (
+            id,
+            tour_key,
+            position,
+            title,
+            body,
+            action_json,
+            status,
+            created_at,
+            updated_at,
+            published_at
+        ) VALUES (?, ?, ?, ?, ?, ?, 'published', ?, ?, ?)
+    `).bind(
+        step.id,
+        step.tourKey,
+        step.position,
+        step.title,
+        step.body,
+        JSON.stringify(step.action),
+        now,
+        now,
+        now
+    ));
+
+    inserts.push(env.DB.prepare(`
+        INSERT OR IGNORE INTO site_settings (
+            setting_key,
+            value_json,
+            visibility,
+            status,
+            updated_at,
+            published_at
+        ) VALUES (?, ?, 'public', 'published', ?, ?)
+    `).bind(
+        "onboarding.welcome.intro",
+        JSON.stringify(WELCOME_INTRO_SEED),
+        now,
+        now
+    ));
+    inserts.push(env.DB.prepare(`
+        INSERT OR IGNORE INTO content_initializations (name, applied_at)
+        VALUES ('onboarding_welcome_v1', ?)
     `).bind(now));
 
     await env.DB.batch(inserts);
