@@ -115,6 +115,12 @@ editoriali delle pagine e dei manifesti. L'endpoint
 `GET /api/public/settings/site` esclude bozze, valori privati e chiavi tecniche;
 URL del Worker, analytics e opzioni PWA operative non vengono importati in D1.
 
+Dopo tutte le importazioni, `content_revisions_v1` crea la revisione iniziale
+di ogni pagina, blocco, opera, canto, verso, voce di navigazione, schermata del
+tour, impostazione, livello, geometria, fonte e tappa narrativa. Le revisioni
+sono append-only e l'inizializzazione non le rigenera né le aggiorna ai deploy
+successivi.
+
 Se le location non sono ancora presenti, esegui successivamente il contenuto del
 file privato `nnmrcn_seed_private_d1_20260823.sql` aggiornato. Contiene le 20
 location, ma cancella prima messaggi, sessioni e location esistenti: usalo

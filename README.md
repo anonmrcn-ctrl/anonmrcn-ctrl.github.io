@@ -128,6 +128,12 @@ ripiego. URL del Worker, token analytics, colori, icone, scope, pagine di avvio
 e altre opzioni operative restano intenzionalmente in `config.js`, HTML e
 manifesti perché sono configurazione software.
 
+Al termine dell'importazione il Worker crea in `content_revisions` la revisione
+1 di ogni oggetto editoriale, inclusi blocchi, canti, versi e geometrie. Le
+fotografie includono anche le strutture annidate necessarie a ricostruire pagine,
+opera poetica e livelli; sono append-only e non cambiano se il record corrente
+viene modificato in seguito.
+
 L'inventario si controlla con:
 
 ```bash

@@ -9,7 +9,7 @@ schema, compatibilità, test e documentazione sono presenti nel repository.
 | N. | Passaggio | Stato | Prova nel repository |
 |---:|---|---|---|
 | 1 | Confine contenuti/software | Completo | `01-confine-contenuti-software.md`, `content-inventory.json`, `scripts/check-content-boundary.mjs` |
-| 2 | Centralizzazione in D1 | In corso | Fondazione, percorso poetico, pagine, poesia, navigazione, tour, cartografia, fonti e metadati completati; il primo punto incompleto è 2.10 |
+| 2 | Centralizzazione in D1 | In corso | Fondazione, percorso poetico, pagine, poesia, navigazione, tour, cartografia, fonti, metadati e revisioni iniziali completati; il primo punto incompleto è 2.11 |
 | 3 | Ampliamento del pannello | Da iniziare | Si avvia soltanto dopo il completamento del punto 2 |
 | 4 | Bozze, anteprima e cronologia | Da iniziare | La tabella append-only `content_revisions` è predisposta, ma flussi e interfaccia non sono ancora realizzati |
 | 5 | Permanenza di QR e collegamenti | Da iniziare | La tabella `permalinks` è predisposta; migrazione e risoluzione degli URL storici non sono ancora realizzate |
@@ -30,7 +30,7 @@ schema, compatibilità, test e documentazione sono presenti nel repository.
 | 2.7 | Livelli, percorsi e geometrie | Completo | `map-seed.js` importa 4 livelli con ID stabili e conserva 7 elementi dismessi come `archived`; `GET /api/public/map-layers/:slug`, `map-content.js` e `map-content.test.mjs` provano filtro di pubblicazione e ripiego GeoJSON. Le quattro raccolte azzerate il 6 ottobre 2026 restano intenzionalmente vuote: la migrazione non ripubblica geometrie ritirate e non modifica gli ID dei `map_entries` attivi |
 | 2.8 | Fonti e bibliografia | Completo | `source-seed.js` registra le 17 fonti del percorso con ID stabili; l’inizializzazione deduplica per URL anche richiami delle Voci, fonti dei luoghi e collegamenti cartografici in `sources`/`content_source_links`. `GET /api/public/sources`, `sources.test.mjs` e le copie di compatibilità provano ordine, termini, etichette, autori, date, richiami ripetuti e filtro dei contenuti pubblicati senza modificare i campi originari |
 | 2.9 | Impostazioni e metadati | Completo | `settings-seed.js` importa identità, titoli e descrizioni di 14 pagine e i campi editoriali dei 2 manifesti; `GET /api/public/settings/site`, `site-metadata.js` e `settings.test.mjs` provano pubblicazione, ripiego e corrispondenza integrale. URL del Worker, token analytics, colori, icone, scope, avvio e comportamento restano nel codice |
-| 2.10 | Revisioni iniziali | Da iniziare | Creare una prima fotografia immutabile per ogni contenuto importato |
+| 2.10 | Revisioni iniziali | Completo | `initializeContentRevisions` crea una revisione 1 per pagine, blocchi, opera, canti, versi, navigazione, tour, impostazioni, livelli, geometrie, fonti e tappe narrative. `revisions.test.mjs` prova copertura completa, figli annidati, stati pubblicato/archiviato, idempotenza e immutabilità dopo modifiche ai record correnti |
 | 2.11 | Permalink esistenti | Da iniziare | Registrare URL e destinazioni già pubblicati prima di qualsiasi cambio di slug |
 | 2.12 | Informativa privacy | Da iniziare | Importare la versione del 3 ottobre 2026 con checksum e divieto di sovrascrittura |
 

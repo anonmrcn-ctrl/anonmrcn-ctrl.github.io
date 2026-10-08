@@ -4374,6 +4374,7 @@ async function initializeCmsStorage(env) {
     await initializeMapContent(env);
     await initializeSourceContent(env);
     await initializeSiteSettings(env);
+    await initializeContentRevisions(env);
 }
 
 async function initializePageContent(env) {
@@ -4869,6 +4870,393 @@ async function initializeSiteSettings(env) {
     `).bind(now));
 
     await env.DB.batch(statements);
+}
+
+async function initializeContentRevisions(env) {
+    const initialized = await env.DB.prepare(`
+        SELECT name
+        FROM content_initializations
+        WHERE name = 'content_revisions_v1'
+        LIMIT 1
+    `).first();
+
+    if (initialized) {
+        return;
+    }
+
+    const [
+        pages,
+        blocks,
+        works,
+        sections,
+        lines,
+        navigation,
+        onboarding,
+        settings,
+        layers,
+        features,
+        sources,
+        sourceLinks,
+        narrative
+    ] = await Promise.all([
+        env.DB.prepare(`
+            SELECT id, slug, title, description, status
+            FROM site_pages ORDER BY id
+        `).all(),
+        env.DB.prepare(`
+            SELECT id, page_id, position, block_type, content_json
+            FROM page_blocks ORDER BY page_id, position, id
+        `).all(),
+        env.DB.prepare(`
+            SELECT id, slug, title, subtitle, status
+            FROM poem_works ORDER BY id
+        `).all(),
+        env.DB.prepare(`
+            SELECT id, poem_id, position, title
+            FROM poem_sections ORDER BY poem_id, position, id
+        `).all(),
+        env.DB.prepare(`
+            SELECT id, section_id, position, text, indent_level, metadata_json
+            FROM poem_lines ORDER BY section_id, position, id
+        `).all(),
+        env.DB.prepare(`
+            SELECT
+                id, menu_key, parent_id, position, label, href,
+                visibility, status
+            FROM navigation_items ORDER BY menu_key, position, id
+        `).all(),
+        env.DB.prepare(`
+            SELECT id, tour_key, position, title, body, action_json, status
+            FROM onboarding_steps ORDER BY tour_key, position, id
+        `).all(),
+        env.DB.prepare(`
+            SELECT setting_key, value_json, visibility, status
+            FROM site_settings
+            WHERE
+                setting_key LIKE 'site.%'
+                OR setting_key LIKE 'onboarding.%'
+            ORDER BY setting_key
+        `).all(),
+        env.DB.prepare(`
+            SELECT
+                id, slug, title, description, layer_type,
+                position, style_json, status
+            FROM map_layers ORDER BY position, id
+        `).all(),
+        env.DB.prepare(`
+            SELECT
+                id, layer_id, position, title, description,
+                geometry_json, properties_json, status
+            FROM map_features ORDER BY layer_id, position, id
+        `).all(),
+        env.DB.prepare(`
+            SELECT
+                id, source_type, title, author,
+                publication_date, url, note
+            FROM sources ORDER BY id
+        `).all(),
+        env.DB.prepare(`
+            SELECT
+                content_type, content_id, source_id, position, context
+            FROM content_source_links
+            ORDER BY source_id, content_type, content_id, position
+        `).all(),
+        env.DB.prepare(`
+            SELECT
+                stable_key, position, verse, label, title, title_url,
+                lat, lon, zoom, explanation, sources_json, status
+            FROM narrative_steps ORDER BY position, id
+        `).all()
+    ]);
+    const revisions = [];
+
+    for (const page of pages.results || []) {
+        revisions.push({
+            type: "site_page",
+            id: page.id,
+            state: page.status,
+            snapshot: {
+                id: page.id,
+                slug: page.slug,
+                title: page.title,
+                description: page.description,
+                blocks: (blocks.results || [])
+                    .filter((block) => block.page_id === page.id)
+                    .map((block) => ({
+                        id: block.id,
+                        position: Number(block.position),
+                        type: block.block_type,
+                        content: parseJsonValue(block.content_json, {})
+                    }))
+            }
+        });
+    }
+
+    for (const block of blocks.results || []) {
+        const parent = (pages.results || []).find(
+            (page) => page.id === block.page_id
+        );
+        revisions.push({
+            type: "page_block",
+            id: block.id,
+            state: parent?.status,
+            snapshot: {
+                id: block.id,
+                pageId: block.page_id,
+                position: Number(block.position),
+                type: block.block_type,
+                content: parseJsonValue(block.content_json, {})
+            }
+        });
+    }
+
+    for (const work of works.results || []) {
+        revisions.push({
+            type: "poem_work",
+            id: work.id,
+            state: work.status,
+            snapshot: {
+                id: work.id,
+                slug: work.slug,
+                title: work.title,
+                subtitle: work.subtitle,
+                sections: (sections.results || [])
+                    .filter((section) => section.poem_id === work.id)
+                    .map((section) => ({
+                        id: section.id,
+                        position: Number(section.position),
+                        title: section.title,
+                        lines: (lines.results || [])
+                            .filter((line) => line.section_id === section.id)
+                            .map((line) => ({
+                                id: line.id,
+                                position: Number(line.position),
+                                text: line.text,
+                                indent: Number(line.indent_level),
+                                metadata: parseJsonValue(
+                                    line.metadata_json,
+                                    {}
+                                )
+                            }))
+                    }))
+            }
+        });
+    }
+
+    for (const section of sections.results || []) {
+        const parent = (works.results || []).find(
+            (work) => work.id === section.poem_id
+        );
+        revisions.push({
+            type: "poem_section",
+            id: section.id,
+            state: parent?.status,
+            snapshot: {
+                id: section.id,
+                poemId: section.poem_id,
+                position: Number(section.position),
+                title: section.title
+            }
+        });
+    }
+
+    for (const line of lines.results || []) {
+        const section = (sections.results || []).find(
+            (item) => item.id === line.section_id
+        );
+        const work = (works.results || []).find(
+            (item) => item.id === section?.poem_id
+        );
+        revisions.push({
+            type: "poem_line",
+            id: line.id,
+            state: work?.status,
+            snapshot: {
+                id: line.id,
+                sectionId: line.section_id,
+                position: Number(line.position),
+                text: line.text,
+                indent: Number(line.indent_level),
+                metadata: parseJsonValue(line.metadata_json, {})
+            }
+        });
+    }
+
+    for (const item of navigation.results || []) {
+        revisions.push({
+            type: "navigation_item",
+            id: item.id,
+            state: item.status,
+            snapshot: {
+                id: item.id,
+                menuKey: item.menu_key,
+                parentId: item.parent_id,
+                position: Number(item.position),
+                label: item.label,
+                href: item.href,
+                visibility: item.visibility
+            }
+        });
+    }
+
+    for (const step of onboarding.results || []) {
+        revisions.push({
+            type: "onboarding_step",
+            id: step.id,
+            state: step.status,
+            snapshot: {
+                id: step.id,
+                tourKey: step.tour_key,
+                position: Number(step.position),
+                title: step.title,
+                body: step.body,
+                action: parseJsonValue(step.action_json, {})
+            }
+        });
+    }
+
+    for (const setting of settings.results || []) {
+        revisions.push({
+            type: "site_setting",
+            id: setting.setting_key,
+            state: setting.status,
+            snapshot: {
+                key: setting.setting_key,
+                value: parseJsonValue(setting.value_json, {}),
+                visibility: setting.visibility
+            }
+        });
+    }
+
+    for (const layer of layers.results || []) {
+        revisions.push({
+            type: "map_layer",
+            id: layer.id,
+            state: layer.status,
+            snapshot: {
+                id: layer.id,
+                slug: layer.slug,
+                title: layer.title,
+                description: layer.description,
+                type: layer.layer_type,
+                position: Number(layer.position),
+                style: parseJsonValue(layer.style_json, {}),
+                features: (features.results || [])
+                    .filter((feature) => feature.layer_id === layer.id)
+                    .map((feature) => ({
+                        id: feature.id,
+                        position: Number(feature.position),
+                        title: feature.title,
+                        description: feature.description,
+                        geometry: parseJsonValue(
+                            feature.geometry_json,
+                            null
+                        ),
+                        properties: parseJsonValue(
+                            feature.properties_json,
+                            {}
+                        ),
+                        status: feature.status
+                    }))
+            }
+        });
+    }
+
+    for (const feature of features.results || []) {
+        revisions.push({
+            type: "map_feature",
+            id: feature.id,
+            state: feature.status,
+            snapshot: {
+                id: feature.id,
+                layerId: feature.layer_id,
+                position: Number(feature.position),
+                title: feature.title,
+                description: feature.description,
+                geometry: parseJsonValue(feature.geometry_json, null),
+                properties: parseJsonValue(feature.properties_json, {})
+            }
+        });
+    }
+
+    for (const source of sources.results || []) {
+        revisions.push({
+            type: "source",
+            id: source.id,
+            state: "published",
+            snapshot: {
+                id: source.id,
+                type: source.source_type,
+                title: source.title,
+                author: source.author,
+                publicationDate: source.publication_date,
+                url: source.url,
+                note: source.note,
+                links: (sourceLinks.results || [])
+                    .filter((link) => link.source_id === source.id)
+                    .map((link) => ({
+                        contentType: link.content_type,
+                        contentId: link.content_id,
+                        position: Number(link.position),
+                        context: parseJsonValue(link.context, {})
+                    }))
+            }
+        });
+    }
+
+    for (const step of narrative.results || []) {
+        revisions.push({
+            type: "narrative_step",
+            id: step.stable_key,
+            state: step.status,
+            snapshot: {
+                key: step.stable_key,
+                position: Number(step.position),
+                verse: step.verse,
+                label: step.label,
+                title: step.title,
+                titleUrl: step.title_url,
+                lat: Number(step.lat),
+                lon: Number(step.lon),
+                zoom: Number(step.zoom),
+                text: step.explanation,
+                sources: parseJsonValue(step.sources_json, [])
+            }
+        });
+    }
+
+    const now = Date.now();
+    const statements = revisions.map((revision) => env.DB.prepare(`
+        INSERT OR IGNORE INTO content_revisions (
+            entity_type,
+            entity_id,
+            revision_number,
+            snapshot_json,
+            publication_state,
+            created_at
+        ) VALUES (?, ?, 1, ?, ?, ?)
+    `).bind(
+        revision.type,
+        revision.id,
+        JSON.stringify(revision.snapshot),
+        revisionState(revision.state),
+        now
+    ));
+
+    statements.push(env.DB.prepare(`
+        INSERT OR IGNORE INTO content_initializations (name, applied_at)
+        VALUES ('content_revisions_v1', ?)
+    `).bind(now));
+
+    for (let index = 0; index < statements.length; index += 40) {
+        await env.DB.batch(statements.slice(index, index + 40));
+    }
+}
+
+function revisionState(value) {
+    return ["draft", "published", "archived"].includes(value)
+        ? value
+        : "draft";
 }
 
 function sourceInsertStatement(env, source, now) {
