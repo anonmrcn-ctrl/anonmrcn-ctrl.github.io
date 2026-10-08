@@ -121,6 +121,13 @@ token, le etichette e i campi preesistenti restano al loro posto come copia di
 compatibilità. `GET /api/public/sources` restituisce le fonti soltanto per un
 contenuto pubblico identificato da `contentType` e `contentId`.
 
+Identità, titoli e descrizioni delle quattordici pagine e i campi editoriali
+dei due manifesti sono pubblicati in `site_settings`. Le pagine applicano
+`GET /api/public/settings/site` e mantengono i propri metadati HTML come
+ripiego. URL del Worker, token analytics, colori, icone, scope, pagine di avvio
+e altre opzioni operative restano intenzionalmente in `config.js`, HTML e
+manifesti perché sono configurazione software.
+
 L'inventario si controlla con:
 
 ```bash

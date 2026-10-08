@@ -110,6 +110,11 @@ richiami già presenti nelle Voci, nei luoghi e nei metadati cartografici.
 campi originari. `GET /api/public/sources?contentType=…&contentId=…` risponde
 solo se il contenuto richiesto è pubblico.
 
+Le quattro impostazioni `site.*` contengono soltanto identità e metadati
+editoriali delle pagine e dei manifesti. L'endpoint
+`GET /api/public/settings/site` esclude bozze, valori privati e chiavi tecniche;
+URL del Worker, analytics e opzioni PWA operative non vengono importati in D1.
+
 Se le location non sono ancora presenti, esegui successivamente il contenuto del
 file privato `nnmrcn_seed_private_d1_20260823.sql` aggiornato. Contiene le 20
 location, ma cancella prima messaggi, sessioni e location esistenti: usalo

@@ -19,6 +19,7 @@ import {
     SHARED_SOURCE_IDS_BY_URL,
     SHARED_SOURCE_SEEDS
 } from "./source-seed.js";
+import { SITE_SETTINGS_SEEDS } from "./settings-seed.js";
 
 // workerd refuses PBKDF2 requests above 100,000 iterations.
 const PBKDF2_ITERATIONS = 100000;
@@ -490,6 +491,13 @@ export default {
 
             if (request.method === "GET" && path === "/api/public/sources") {
                 return await getPublicSources(request, env, url);
+            }
+
+            if (
+                request.method === "GET" &&
+                path === "/api/public/settings/site"
+            ) {
+                return await getPublicSiteSettings(request, env);
             }
 
             if (
@@ -2887,6 +2895,29 @@ async function getPublicSources(request, env, url) {
     });
 }
 
+async function getPublicSiteSettings(request, env) {
+    await ensureCmsStorage(env);
+
+    const result = await env.DB.prepare(`
+        SELECT setting_key, value_json, updated_at
+        FROM site_settings
+        WHERE
+            setting_key LIKE 'site.%'
+            AND visibility = 'public'
+            AND status = 'published'
+        ORDER BY setting_key ASC
+    `).all();
+    const settings = {};
+    const updatedAt = {};
+
+    for (const row of result.results || []) {
+        settings[row.setting_key] = parseJsonValue(row.value_json, {});
+        updatedAt[row.setting_key] = Number(row.updated_at);
+    }
+
+    return json(request, env, { settings, updatedAt });
+}
+
 async function publicSourceTargetExists(env, contentType, contentId) {
     if (contentType === "narrative_step") {
         return Boolean(await env.DB.prepare(`
@@ -4342,6 +4373,7 @@ async function initializeCmsStorage(env) {
     await initializeOnboardingContent(env);
     await initializeMapContent(env);
     await initializeSourceContent(env);
+    await initializeSiteSettings(env);
 }
 
 async function initializePageContent(env) {
@@ -4805,6 +4837,38 @@ async function initializeSourceContent(env) {
     for (let index = 0; index < statements.length; index += 40) {
         await env.DB.batch(statements.slice(index, index + 40));
     }
+}
+
+async function initializeSiteSettings(env) {
+    const initialized = await env.DB.prepare(`
+        SELECT name
+        FROM content_initializations
+        WHERE name = 'site_settings_v1'
+        LIMIT 1
+    `).first();
+
+    if (initialized) {
+        return;
+    }
+
+    const now = Date.now();
+    const statements = SITE_SETTINGS_SEEDS.map((setting) => env.DB.prepare(`
+        INSERT OR IGNORE INTO site_settings (
+            setting_key,
+            value_json,
+            visibility,
+            status,
+            updated_at,
+            published_at
+        ) VALUES (?, ?, 'public', 'published', ?, ?)
+    `).bind(setting.key, JSON.stringify(setting.value), now, now));
+
+    statements.push(env.DB.prepare(`
+        INSERT OR IGNORE INTO content_initializations (name, applied_at)
+        VALUES ('site_settings_v1', ?)
+    `).bind(now));
+
+    await env.DB.batch(statements);
 }
 
 function sourceInsertStatement(env, source, now) {

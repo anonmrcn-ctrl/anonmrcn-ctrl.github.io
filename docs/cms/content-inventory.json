@@ -138,10 +138,15 @@
       "id": "site-metadata",
       "label": "Titoli, descrizioni e metadati del sito",
       "classification": "content",
-      "currentSources": ["*.html", "manifest.webmanifest", "admin.webmanifest", "config.js"],
+      "currentSources": [
+        "D1:site_settings",
+        "*.html",
+        "manifest.webmanifest",
+        "admin.webmanifest"
+      ],
       "targetEntities": ["site_settings"],
-      "priority": "medium",
-      "migration": "required"
+      "priority": "complete",
+      "migration": "complete"
     },
     {
       "id": "privacy-policy",

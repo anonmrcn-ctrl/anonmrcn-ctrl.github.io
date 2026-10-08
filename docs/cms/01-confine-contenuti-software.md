@@ -51,7 +51,7 @@ amministrative devono riusare le API e gli identificativi già esistenti.
 | Fonti e bibliografia | `sources` e `content_source_links` in D1, con richiami originali conservati in Voci, percorso e mappe | Archivio fonti riutilizzabile | Migrati |
 | Avvisi e testi di servizio specifici del progetto | HTML e JavaScript delle singole sezioni | Impostazioni o blocchi della pagina pertinente | Bassa |
 | Informativa sulla privacy | `privacy.html` | Documento legale versionato con pubblicazione protetta | Bassa e protetta |
-| Metadati del sito | titoli, descrizioni e manifesti nei file HTML/JSON | Impostazioni globali con valori predefiniti nel codice | Media |
+| Metadati del sito | `site_settings` in D1, con ripiego in HTML e manifesti | Impostazioni globali con valori predefiniti nel codice | Migrati; configurazione tecnica esclusa |
 
 L'inventario macchina leggibile in `content-inventory.json` assegna a ogni area
 un identificativo, le sorgenti e la futura entità amministrabile.

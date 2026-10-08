@@ -212,7 +212,7 @@ test("tutte le pagine conservano lo stesso menu come ripiego", async () => {
         });
         assert.match(
             html,
-            /<script src="\.\/api\.js"><\/script>\s*<script src="\.\/navigation-content\.js\?v=20261008-navigation1"><\/script>/u,
+            /<script src="\.\/api\.js"><\/script>[\s\S]*?<script src="\.\/navigation-content\.js\?v=20261008-navigation1"><\/script>/u,
             pageName
         );
     }
