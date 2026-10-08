@@ -63,12 +63,20 @@ stato di pubblicazione vengono letti dal database e gestiti dal pannello.
 
 La migrazione `0013_cms_content_foundation.sql` crea la fondazione comune per
 pagine e blocchi, poesia editoriale, menu, tour, impostazioni, fonti, livelli
-cartografici, revisioni, permalink e documenti legali. Non sposta ancora i
-contenuti statici: prepara archivi e vincoli prima delle importazioni. Le
-revisioni sono append-only, il percorso di un permalink non è riscrivibile e
-una versione legale pubblicata non può essere modificata o eliminata. Il primo
-health check dopo il deploy installa in modo idempotente queste strutture e
-restituisce `"contentSchema": 1`.
+cartografici, revisioni, permalink e documenti legali. Le revisioni sono
+append-only, il percorso di un permalink non è riscrivibile e una versione
+legale pubblicata non può essere modificata o eliminata. Il primo health check
+dopo il deploy installa in modo idempotente queste strutture e restituisce
+`"contentSchema": 1`.
+
+Al primo accesso a una pagina pubblica, il Worker importa una sola volta in
+`site_pages` e `page_blocks` i 60 blocchi editoriali di Progetto, Autore, Logo,
+Spazio pubblico, Archivio, Memorie, Taccuino, Spazio personale e Accesso. Gli
+identificativi rimangono stabili e gli inserimenti usano `INSERT OR IGNORE`,
+quindi un contenuto già presente in D1 non viene sovrascritto da un deploy.
+L'endpoint pubblico è `GET /api/public/pages/:slug` e restituisce soltanto
+pagine con stato `published`. Ogni file HTML conserva la copia originaria e la
+usa automaticamente se il Worker non è raggiungibile.
 
 Se le location non sono ancora presenti, esegui successivamente il contenuto del
 file privato `nnmrcn_seed_private_d1_20260823.sql` aggiornato. Contiene le 20

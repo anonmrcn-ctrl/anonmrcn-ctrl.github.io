@@ -15,7 +15,7 @@
     <script data-goatcounter="https://anonmrcn.goatcounter.com/count" async src="./goatcounter.js?v=20261003-privacy1"></script>
 </head>
 
-<body class="pagina-autore">
+<body class="pagina-autore" data-cms-page="autore">
     <button
         class="menu-button"
         id="menuButton"
@@ -129,7 +129,7 @@
     </nav>
 
     <main class="autore">
-        <h1 class="titolo-pagina">L’autore</h1>
+        <h1 class="titolo-pagina" data-cms-block="autore-title">L’autore</h1>
 
         <figure class="autore-logo">
             <a class="autore-logo-link" href="./logo.html" aria-label="Scopri il significato del logo">
@@ -145,18 +145,18 @@
         </figure>
 
         <article class="autore-testo">
-            <p>
+            <p data-cms-block="autore-bio-1">
                 Sono un ragazzo nato e vissuto a Marcon
                 che ha deciso di iniziare a fare qualcosa
                 per la propria città.
             </p>
 
-            <p>
+            <p data-cms-block="autore-bio-2">
                 Ho deciso di farlo tramite la cosa che
                 mi entusiasma di più: creare arte.
             </p>
 
-            <p>
+            <p data-cms-block="autore-bio-3">
                 La mia speranza, tramite il mio lavoro,
                 è quella di unire la comunità di Marcon
                 in un modo nuovo ed inaspettato, ed allo
@@ -165,11 +165,11 @@
                 tempi in cui viviamo.
             </p>
 
-            <p class="firma">-nnMrcn-</p>
+            <p class="firma" data-cms-block="autore-signature">-nnMrcn-</p>
         </article>
 
         <section class="autore-contatti" aria-labelledby="contattiTitolo">
-            <h2 id="contattiTitolo">Contatti</h2>
+            <h2 id="contattiTitolo" data-cms-block="autore-contacts-title">Contatti</h2>
 
             <ul class="contatti-elenco">
                 <li>
@@ -244,6 +244,7 @@
     <script src="./config.js"></script>
     <script src="./analytics.js?v=20261001-onboarding1"></script>
     <script src="./api.js"></script>
+    <script src="./page-content.js?v=20261008-pages1"></script>
     <script src="./sessione.js?v=20261002-tour1"></script>
     <script src="./contatti.js"></script>
     <script src="./notifiche.js"></script>

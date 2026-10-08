@@ -40,10 +40,10 @@ amministrative devono riusare le API e gli identificativi già esistenti.
 |---|---|---|---|
 | Poesia e struttura dei canti | `index.html`, `poesia-metrica.js` | Poesia, sezioni e righe con identificativi stabili | Alta |
 | Percorso «Esplora la poesia» | `narrative_steps` in D1, con ripiego locale in `progetto.js` | Tappe ordinate, coordinate, versi, fonti e stato | Migrato e amministrabile |
-| Presentazione del progetto | `progetto.html` | Pagina composta da blocchi | Alta |
-| Biografia e contatti editoriali | `autore.html` | Pagina composta da blocchi e impostazioni di contatto | Alta |
-| Significato del logo | `logo.html` | Pagina composta da blocchi | Media |
-| Testi di Spazio pubblico, Archivio, Memorie e Taccuino | rispettivi file HTML | Pagine e testi introduttivi | Media |
+| Presentazione del progetto | `site_pages` e `page_blocks` in D1, con ripiego in `progetto.html` | Pagina composta da blocchi | Migrata |
+| Biografia e contatti editoriali | Testi in `site_pages` e `page_blocks`, ripiego in `autore.html`; recapiti ancora statici | Pagina composta da blocchi e impostazioni di contatto | Testi migrati; recapiti da migrare |
+| Significato del logo | `site_pages` e `page_blocks` in D1, con ripiego in `logo.html` | Pagina composta da blocchi | Migrata |
+| Testi di Spazio pubblico, Archivio, Memorie e Taccuino | `site_pages` e `page_blocks` in D1, con ripiego nei rispettivi file HTML | Pagine e testi introduttivi | Migrati |
 | Tour e schermata di benvenuto | `sessione.js` (`WELCOME_FEATURES` e testi introduttivi) | Sequenza ordinata di schermate | Media |
 | Menu, collegamenti e invito alla condivisione | menu ripetuto nei file HTML | Impostazioni globali e voci ordinate | Alta |
 | Percorsi, livelli e geometrie | GeoJSON, `percorsi.js`, `marcon-da-sud.js`, `cave-rilevanti.js`, `fiumi-wikipedia.js` | Livelli cartografici, elementi e geometrie | Alta |

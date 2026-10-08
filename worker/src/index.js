@@ -7,6 +7,7 @@ import {
 } from "./push.js";
 import { CMS_STORAGE_STATEMENTS } from "./cms-schema.js";
 import { NARRATIVE_STEP_SEEDS } from "./narrative-seed.js";
+import { PAGE_SEEDS } from "./page-seed.js";
 
 // workerd refuses PBKDF2 requests above 100,000 iterations.
 const PBKDF2_ITERATIONS = 100000;
@@ -439,6 +440,14 @@ export default {
 
             if (request.method === "GET" && path === "/api/public/map-entries") {
                 return await listPublicMapEntries(request, env);
+            }
+
+            if (
+                request.method === "GET" &&
+                /^\/api\/public\/pages\/[a-z0-9]+(?:-[a-z0-9]+)*$/.test(path)
+            ) {
+                const slug = path.split("/").pop();
+                return await getPublicPage(request, env, slug);
             }
 
             if (
@@ -2504,6 +2513,46 @@ function normalizeMapEntryImage(value) {
     return media;
 }
 
+async function getPublicPage(request, env, slug) {
+    await ensureCmsStorage(env);
+
+    const page = await env.DB.prepare(`
+        SELECT id, slug, title, description, updated_at, published_at
+        FROM site_pages
+        WHERE slug = ? AND status = 'published'
+        LIMIT 1
+    `).bind(slug).first();
+
+    if (!page) {
+        return json(request, env, { error: "Pagina non trovata." }, 404);
+    }
+
+    const result = await env.DB.prepare(`
+        SELECT id, position, block_type, content_json, updated_at
+        FROM page_blocks
+        WHERE page_id = ?
+        ORDER BY position ASC, id ASC
+    `).bind(page.id).all();
+
+    return json(request, env, {
+        page: {
+            id: page.id,
+            slug: page.slug,
+            title: page.title,
+            description: page.description,
+            updatedAt: Number(page.updated_at),
+            publishedAt: Number(page.published_at),
+            blocks: (result.results || []).map((block) => ({
+                id: block.id,
+                position: Number(block.position),
+                type: block.block_type,
+                content: JSON.parse(block.content_json),
+                updatedAt: Number(block.updated_at)
+            }))
+        }
+    });
+}
+
 async function listPublicNarrativeSteps(request, env) {
     await ensureNarrativeStorage(env);
 
@@ -3889,11 +3938,7 @@ async function ensureCmsStorage(env) {
     let initialization = cmsStorageInitializations.get(env.DB);
 
     if (!initialization) {
-        initialization = env.DB.batch(
-            CMS_STORAGE_STATEMENTS.map((statement) =>
-                env.DB.prepare(statement)
-            )
-        ).catch((error) => {
+        initialization = initializeCmsStorage(env).catch((error) => {
             cmsStorageInitializations.delete(env.DB);
             throw error;
         });
@@ -3901,6 +3946,80 @@ async function ensureCmsStorage(env) {
     }
 
     await initialization;
+}
+
+async function initializeCmsStorage(env) {
+    await env.DB.batch(
+        CMS_STORAGE_STATEMENTS.map((statement) =>
+            env.DB.prepare(statement)
+        )
+    );
+
+    const initialized = await env.DB.prepare(`
+        SELECT name
+        FROM content_initializations
+        WHERE name = 'site_pages_v1'
+        LIMIT 1
+    `).first();
+
+    if (initialized) {
+        return;
+    }
+
+    const now = Date.now();
+    const inserts = [];
+
+    for (const page of PAGE_SEEDS) {
+        inserts.push(env.DB.prepare(`
+            INSERT OR IGNORE INTO site_pages (
+                id,
+                slug,
+                title,
+                description,
+                status,
+                created_at,
+                updated_at,
+                published_at
+            ) VALUES (?, ?, ?, ?, 'published', ?, ?, ?)
+        `).bind(
+            page.id,
+            page.slug,
+            page.title,
+            page.description,
+            now,
+            now,
+            now
+        ));
+
+        for (const block of page.blocks) {
+            inserts.push(env.DB.prepare(`
+                INSERT OR IGNORE INTO page_blocks (
+                    id,
+                    page_id,
+                    position,
+                    block_type,
+                    content_json,
+                    created_at,
+                    updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?)
+            `).bind(
+                block.id,
+                page.id,
+                block.position,
+                block.type,
+                JSON.stringify(block.content),
+                now,
+                now
+            ));
+        }
+    }
+
+    inserts.push(env.DB.prepare(`
+        INSERT OR IGNORE INTO content_initializations (name, applied_at)
+        VALUES ('site_pages_v1', ?)
+    `).bind(now));
+
+    await env.DB.batch(inserts);
 }
 
 async function ensureMayorStorage(env) {

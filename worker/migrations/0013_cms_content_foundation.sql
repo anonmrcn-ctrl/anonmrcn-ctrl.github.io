@@ -3,6 +3,11 @@
 
 PRAGMA foreign_keys = ON;
 
+CREATE TABLE IF NOT EXISTS content_initializations (
+    name TEXT PRIMARY KEY,
+    applied_at INTEGER NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS site_pages (
         id TEXT PRIMARY KEY CHECK (length(id) BETWEEN 1 AND 160),
         slug TEXT NOT NULL UNIQUE CHECK (length(slug) BETWEEN 1 AND 160),

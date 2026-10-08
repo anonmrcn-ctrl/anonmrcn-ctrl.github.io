@@ -83,6 +83,11 @@ L'inventario corrispondente, usato come base per schema e migrazioni, è in
 Lo stato verificabile degli otto passaggi e il primo sottopunto da riprendere
 sono registrati in [`docs/cms/progress.md`](docs/cms/progress.md).
 
+I testi editoriali di nove pagine sono importati una sola volta in D1 come
+60 blocchi con identificativi stabili. Le pagine leggono la versione pubblicata
+da `GET /api/public/pages/:slug` e mantengono nel proprio HTML la stessa copia,
+così restano leggibili anche se il Worker non è raggiungibile.
+
 L'inventario si controlla con:
 
 ```bash

@@ -55,6 +55,16 @@ class D1StatementMock {
         return this;
     }
 
+    async first() {
+        return this.database.prepare(this.sql).get(...this.values) || null;
+    }
+
+    async all() {
+        return {
+            results: this.database.prepare(this.sql).all(...this.values)
+        };
+    }
+
     async run() {
         const result = this.database.prepare(this.sql).run(...this.values);
         return {

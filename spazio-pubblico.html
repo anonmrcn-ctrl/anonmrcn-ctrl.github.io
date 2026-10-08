@@ -18,7 +18,7 @@
     <script data-goatcounter="https://anonmrcn.goatcounter.com/count" async src="./goatcounter.js?v=20261003-privacy1"></script>
 </head>
 
-<body class="pagina-spazio-pubblico">
+<body class="pagina-spazio-pubblico" data-cms-page="spazio-pubblico">
     <button class="menu-button" id="menuButton" type="button" aria-label="Apri il menu" aria-expanded="false" aria-controls="menuPrincipale">MENU</button>
     <div class="menu-overlay" id="menuOverlay"></div>
 
@@ -70,30 +70,28 @@
 
     <main class="spazio-pubblico">
         <header class="spazio-intestazione">
-            <h1>Spazio pubblico</h1>
-            <p>La parte collettiva del progetto, accessibile a tutti.</p>
+            <h1 data-cms-block="spazio-pubblico-title">Spazio pubblico</h1>
+            <p data-cms-block="spazio-pubblico-lead">La parte collettiva del progetto, accessibile a tutti.</p>
         </header>
 
         <aside class="avviso-sviluppo" aria-label="Avviso sullo sviluppo dello Spazio pubblico">
             <p>
-                Questa pagina è ancora sperimentale e mancano ancora molte
-                funzionalità e informazioni. Vuoi dare una mano al suo sviluppo?
-                <a href="./autore.html#contattiTitolo">Contatta l’admin</a>.
+                <span data-cms-block="spazio-pubblico-development-prefix">Questa pagina è ancora sperimentale e mancano ancora molte funzionalità e informazioni. Vuoi dare una mano al suo sviluppo? </span><a href="./autore.html#contattiTitolo" data-cms-block="spazio-pubblico-development-link">Contatta l’admin</a>.
             </p>
         </aside>
 
         <div class="spazio-griglia spazio-griglia-pubblica">
             <a class="spazio-carta" href="./memorie.html">
-                <h2>Memorie</h2>
-                <p>Ricordi, immagini e suoni legati ai luoghi di Marcon.</p>
+                <h2 data-cms-block="spazio-pubblico-memorie-title">Memorie</h2>
+                <p data-cms-block="spazio-pubblico-memorie-text">Ricordi, immagini e suoni legati ai luoghi di Marcon.</p>
             </a>
             <a class="spazio-carta" href="./archivio.html">
-                <h2>Archivio</h2>
-                <p>I messaggi resi pubblici con il consenso delle persone coinvolte.</p>
+                <h2 data-cms-block="spazio-pubblico-archivio-title">Archivio</h2>
+                <p data-cms-block="spazio-pubblico-archivio-text">I messaggi resi pubblici con il consenso delle persone coinvolte.</p>
             </a>
             <a class="spazio-carta" href="./voci.html">
-                <h2>Voci</h2>
-                <p>Schede dedicate ai luoghi, ai nomi e alla storia del territorio.</p>
+                <h2 data-cms-block="spazio-pubblico-voci-title">Voci</h2>
+                <p data-cms-block="spazio-pubblico-voci-text">Schede dedicate ai luoghi, ai nomi e alla storia del territorio.</p>
             </a>
         </div>
     </main>
@@ -101,6 +99,7 @@
     <script src="./config.js"></script>
     <script src="./analytics.js?v=20261001-onboarding1"></script>
     <script src="./api.js"></script>
+    <script src="./page-content.js?v=20261008-pages1"></script>
     <script src="./sessione.js?v=20261002-tour1"></script>
     <script src="./notifiche.js"></script>
     <script src="./site.js?v=20261006-map-layers1"></script>

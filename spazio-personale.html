@@ -21,7 +21,7 @@
     <script data-goatcounter="https://anonmrcn.goatcounter.com/count" async src="./goatcounter.js?v=20261003-privacy1"></script>
 </head>
 
-<body class="pagina-spazio-personale">
+<body class="pagina-spazio-personale" data-cms-page="spazio-personale">
     <button class="menu-button" id="menuButton" type="button" aria-label="Apri il menu" aria-expanded="false" aria-controls="menuPrincipale">MENU</button>
     <div class="menu-overlay" id="menuOverlay"></div>
 
@@ -72,25 +72,25 @@
     </nav>
 
     <section class="spazio-accesso-richiesto" data-spazio-personale-blocco aria-labelledby="spazioPersonaleBloccoTitolo">
-        <h1 id="spazioPersonaleBloccoTitolo">Spazio personale</h1>
-        <p>Questa sezione compare dopo l’accesso con la password della poesia.</p>
+        <h1 id="spazioPersonaleBloccoTitolo" data-cms-block="spazio-personale-locked-title">Spazio personale</h1>
+        <p data-cms-block="spazio-personale-locked-text">Questa sezione compare dopo l’accesso con la password della poesia.</p>
         <a class="spazio-azione" href="#accessoLocations" id="accessoPasswordLink">Completa l’accesso</a>
     </section>
 
     <main class="spazio-personale" data-spazio-personale-contenuto hidden>
         <header class="spazio-intestazione">
-            <h1>Spazio personale</h1>
+            <h1 data-cms-block="spazio-personale-title">Spazio personale</h1>
             <p id="spazioPersonaleIdentita" class="spazio-sessione-stato"></p>
         </header>
 
         <div class="spazio-griglia spazio-personale-riepilogo">
             <a class="spazio-carta" href="#messaggi">
-                <h2>Messaggi</h2>
-                <p>Scrivi alle altre locations e leggi i messaggi ricevuti.</p>
+                <h2 data-cms-block="spazio-personale-messages-title">Messaggi</h2>
+                <p data-cms-block="spazio-personale-messages-text">Scrivi alle altre locations e leggi i messaggi ricevuti.</p>
             </a>
             <a class="spazio-carta" href="./taccuino.html">
-                <h2>Taccuino</h2>
-                <p><span data-taccuino-count>0</span> elementi salvati in questo dispositivo.</p>
+                <h2 data-cms-block="spazio-personale-notebook-title">Taccuino</h2>
+                <p><span data-taccuino-count>0</span><span data-cms-block="spazio-personale-notebook-suffix"> elementi salvati in questo dispositivo.</span></p>
             </a>
         </div>
 
@@ -175,6 +175,7 @@
     <script src="./config.js"></script>
     <script src="./analytics.js?v=20261001-onboarding1"></script>
     <script src="./api.js"></script>
+    <script src="./page-content.js?v=20261008-pages1"></script>
     <script src="./sessione.js?v=20261002-tour1"></script>
     <script src="./notifiche.js"></script>
     <script src="./site.js?v=20261006-map-layers1"></script>

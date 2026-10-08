@@ -20,7 +20,7 @@
     <script data-goatcounter="https://anonmrcn.goatcounter.com/count" async src="./goatcounter.js?v=20261003-privacy1"></script>
 </head>
 
-<body class="pagina-taccuino">
+<body class="pagina-taccuino" data-cms-page="taccuino">
     <button
         class="menu-button"
         id="menuButton"
@@ -112,16 +112,16 @@
     </nav>
 
     <section class="spazio-accesso-richiesto" data-spazio-personale-blocco aria-labelledby="taccuinoBloccoTitolo">
-        <h1 id="taccuinoBloccoTitolo">Taccuino personale</h1>
-        <p>Il taccuino fa parte dello Spazio personale.</p>
+        <h1 id="taccuinoBloccoTitolo" data-cms-block="taccuino-locked-title">Taccuino personale</h1>
+        <p data-cms-block="taccuino-locked-text">Il taccuino fa parte dello Spazio personale.</p>
         <a class="spazio-azione" href="#accessoLocations" id="accessoPasswordLink">Completa l’accesso</a>
     </section>
 
     <main class="taccuino-pagina" data-spazio-personale-contenuto hidden>
-        <h1 class="titolo-pagina">Taccuino</h1>
+        <h1 class="titolo-pagina" data-cms-block="taccuino-title">Taccuino</h1>
 
         <div class="taccuino-intro">
-            <p>
+            <p data-cms-block="taccuino-intro">
                 Qui ritrovi luoghi, versi, memorie e messaggi salvati durante
                 l’esplorazione. Il contenuto resta su questo dispositivo e non
                 viene inviato al server.
@@ -129,7 +129,7 @@
         </div>
 
         <section class="taccuino-mappa-sezione" aria-labelledby="taccuinoMappaTitolo">
-            <h2 id="taccuinoMappaTitolo">La mia mappa</h2>
+            <h2 id="taccuinoMappaTitolo" data-cms-block="taccuino-map-title">La mia mappa</h2>
             <div
                 class="taccuino-mappa"
                 id="taccuinoMap"
@@ -141,7 +141,7 @@
         <section class="taccuino-contenuti" aria-labelledby="taccuinoContenutiTitolo">
             <div class="taccuino-intestazione">
                 <div>
-                    <h2 id="taccuinoContenutiTitolo">Elementi salvati</h2>
+                    <h2 id="taccuinoContenutiTitolo" data-cms-block="taccuino-items-title">Elementi salvati</h2>
                     <p id="taccuinoStatus" aria-live="polite"></p>
                 </div>
                 <div class="taccuino-strumenti">
@@ -159,6 +159,7 @@
     <script src="./config.js"></script>
     <script src="./analytics.js?v=20261001-onboarding1"></script>
     <script src="./api.js"></script>
+    <script src="./page-content.js?v=20261008-pages1"></script>
     <script src="./sessione.js?v=20261002-tour1"></script>
     <script src="./notifiche.js"></script>
     <script src="./site.js?v=20261006-map-layers1"></script>

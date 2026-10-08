@@ -25,7 +25,7 @@
     <script data-goatcounter="https://anonmrcn.goatcounter.com/count" async src="./goatcounter.js?v=20261003-privacy1"></script>
 </head>
 
-<body class="pagina-progetto">
+<body class="pagina-progetto" data-cms-page="progetto">
     <button
         class="menu-button"
         id="menuButton"
@@ -146,25 +146,26 @@
 
     <main>
         <section class="progetto">
-            <h1 class="titolo-pagina">Il progetto</h1>
+            <h1 class="titolo-pagina" data-cms-block="progetto-title">Il progetto</h1>
 
             <div class="progetto-intro">
-                <p>
+                <p data-cms-block="progetto-map-intro">
                     Questa mappa mostra i luoghi di cui parla la poesia, oltre a quelli importanti per la storia di Marcon. È possibile confrontare la mappa attuale con mappe storiche (per ora solo quella del 1975), ricavate da foto aeree consultabili presso l'aerofototeca del Veneto e da me personalmente georeferenziate. I luoghi e i materiali cartografici verranno aggiunti progressivamente.
                 </p>
 
                 <p>
-                    Se hai ricevuto personalmente una poesia a casa tua, <a class="accesso-password-link" href="#accessoLocations" id="accessoPasswordLink">puoi accedere con la password che ti è stata fornita all'interno di essa</a>. Questo accesso sbloccherà sulla mappa le diverse locations dove sono state distribuite le poesie e ti consentirà di spedire un messaggio, online o fisicamente, in una di queste location.
+                    <span data-cms-block="progetto-access-prefix">Se hai ricevuto personalmente una poesia a casa tua, </span><a class="accesso-password-link" href="#accessoLocations" id="accessoPasswordLink" data-cms-block="progetto-access-link">puoi accedere con la password che ti è stata fornita all'interno di essa</a><span data-cms-block="progetto-access-suffix">. Questo accesso sbloccherà sulla mappa le diverse locations dove sono state distribuite le poesie e ti consentirà di spedire un messaggio, online o fisicamente, in una di queste location.</span>
                 </p>
 
                 <p>
-                    Non hai ricevuto la poesia ma vuoi comunque inviare messaggi?
+                    <span data-cms-block="progetto-request-prefix">Non hai ricevuto la poesia ma vuoi comunque inviare messaggi? </span>
                     <a
                         class="contatti-toggle"
                         href="#richiestaCodiceForm"
                         id="richiestaCodiceToggle"
                         aria-expanded="false"
                         aria-controls="richiestaCodiceForm"
+                        data-cms-block="progetto-request-link"
                     >Richiedi un codice all'admin</a>
                 </p>
 
@@ -294,10 +295,10 @@
                     type="button"
                     aria-label="Chiudi la guida"
                 >×</button>
-                <h2 id="mappaGuidaTitolo">Come esplorare la mappa</h2>
+                <h2 id="mappaGuidaTitolo" data-cms-block="progetto-map-guide-title">Come esplorare la mappa</h2>
                 <ol>
-                    <li>Confronta il territorio attuale con quello del 1975.</li>
-                    <li>Il livello «Luoghi» è già attivo: tocca un elemento per leggerne informazioni e collegamenti.</li>
+                    <li data-cms-block="progetto-map-guide-compare">Confronta il territorio attuale con quello del 1975.</li>
+                    <li data-cms-block="progetto-map-guide-places">Il livello «Luoghi» è già attivo: tocca un elemento per leggerne informazioni e collegamenti.</li>
                 </ol>
             </aside>
 
@@ -390,9 +391,7 @@
 
             <aside class="avviso-sviluppo avviso-sviluppo-mappa" aria-label="Avviso sullo sviluppo della mappa">
                 <p>
-                    Lo sviluppo di questa pagina non è ancora completato: mancano
-                    ancora da georeferenziare molte foto. Vuoi dare una mano al suo
-                    sviluppo? <a href="./autore.html#contattiTitolo">Contatta l’admin</a>.
+                    <span data-cms-block="progetto-development-prefix">Lo sviluppo di questa pagina non è ancora completato: mancano ancora da georeferenziare molte foto. Vuoi dare una mano al suo sviluppo? </span><a href="./autore.html#contattiTitolo" data-cms-block="progetto-development-link">Contatta l’admin</a>.
                 </p>
             </aside>
         </section>
@@ -424,6 +423,7 @@
     <script src="./config.js"></script>
     <script src="./analytics.js?v=20261001-versi1"></script>
     <script src="./api.js"></script>
+    <script src="./page-content.js?v=20261008-pages1"></script>
     <script src="./sessione.js?v=20261002-tour1"></script>
     <script src="./richiesta-codice.js?v=20261003-privacy1"></script>
     <script src="./notifiche.js"></script>

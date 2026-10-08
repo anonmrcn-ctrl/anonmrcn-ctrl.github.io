@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated": "2026-10-07",
+  "updated": "2026-10-08",
   "rule": "Project-specific prose, media, sources, geography, ordering and visibility are content; behavior, security, validation and presentation are software.",
   "areas": [
     {
@@ -25,34 +25,35 @@
       "id": "project-page",
       "label": "Pagina Il progetto",
       "classification": "content",
-      "currentSources": ["progetto.html"],
+      "currentSources": ["D1:site_pages/page_blocks", "progetto.html"],
       "targetEntities": ["site_pages", "page_blocks"],
-      "priority": "high",
-      "migration": "required"
+      "priority": "complete",
+      "migration": "complete"
     },
     {
       "id": "author-page",
       "label": "Pagina autore e contatti editoriali",
       "classification": "content",
-      "currentSources": ["autore.html"],
+      "currentSources": ["D1:site_pages/page_blocks", "autore.html"],
       "targetEntities": ["site_pages", "page_blocks", "site_settings"],
       "priority": "high",
-      "migration": "required"
+      "migration": "partial"
     },
     {
       "id": "logo-page",
       "label": "Pagina Il logo",
       "classification": "content",
-      "currentSources": ["logo.html"],
+      "currentSources": ["D1:site_pages/page_blocks", "logo.html"],
       "targetEntities": ["site_pages", "page_blocks"],
-      "priority": "medium",
-      "migration": "required"
+      "priority": "complete",
+      "migration": "complete"
     },
     {
       "id": "section-pages",
       "label": "Testi introduttivi delle sezioni pubbliche e personali",
       "classification": "content",
       "currentSources": [
+        "D1:site_pages/page_blocks",
         "spazio-pubblico.html",
         "archivio.html",
         "memorie.html",
@@ -60,14 +61,19 @@
         "spazio-personale.html"
       ],
       "targetEntities": ["site_pages", "page_blocks"],
-      "priority": "medium",
-      "migration": "required"
+      "priority": "complete",
+      "migration": "complete"
     },
     {
       "id": "access-pages",
       "label": "Testi di accesso, richiesta codice e messaggio per il sindaco",
       "classification": "content",
-      "currentSources": ["accesso.html", "richiesta-codice.js", "D1:mayor_message"],
+      "currentSources": [
+        "D1:site_pages/page_blocks",
+        "accesso.html",
+        "richiesta-codice.js",
+        "D1:mayor_message"
+      ],
       "targetEntities": ["site_pages", "page_blocks", "mayor_message"],
       "priority": "low",
       "migration": "extend-admin"
