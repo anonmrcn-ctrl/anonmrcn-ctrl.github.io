@@ -211,6 +211,14 @@ https://nnmrcn-rete.anonmrcn.workers.dev/api/health
 Deve comparire una risposta JSON con `"ok": true`. A quel punto completa
 l’accesso dal menu del sito con uno dei codici privati delle 20 location.
 
+### Registro dei permalink
+
+`GET /api/public/permalinks/resolve?path=%2Fluogo.html%3Fluogo%3D1`
+risolve un URL già pubblicato nel relativo contenuto D1. Il parametro `path`
+deve iniziare con `/` e va codificato quando contiene query o frammenti. Il
+registro include i link QR dei luoghi, ma non conserva mai chiavi o password
+dei QR di accesso.
+
 ## 5. Modera i messaggi
 
 L'area riservata è:

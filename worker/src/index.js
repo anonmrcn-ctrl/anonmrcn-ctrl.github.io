@@ -14,6 +14,10 @@ import {
     WELCOME_STEP_SEEDS
 } from "./onboarding-seed.js";
 import { PAGE_SEEDS } from "./page-seed.js";
+import {
+    POEM_SECTION_PERMALINK_SEEDS,
+    STATIC_PERMALINK_SEEDS
+} from "./permalink-seed.js";
 import { POEM_SEED } from "./poem-seed.js";
 import {
     SHARED_SOURCE_IDS_BY_URL,
@@ -498,6 +502,13 @@ export default {
                 path === "/api/public/settings/site"
             ) {
                 return await getPublicSiteSettings(request, env);
+            }
+
+            if (
+                request.method === "GET" &&
+                path === "/api/public/permalinks/resolve"
+            ) {
+                return await getPublicPermalink(request, env, url);
             }
 
             if (
@@ -2918,6 +2929,42 @@ async function getPublicSiteSettings(request, env) {
     return json(request, env, { settings, updatedAt });
 }
 
+async function getPublicPermalink(request, env, url) {
+    await ensureCmsStorage(env);
+
+    const path = String(url.searchParams.get("path") || "");
+
+    if (!path.startsWith("/") || path.length > 2048) {
+        return json(request, env, { error: "Permalink non valido." }, 400);
+    }
+
+    const row = await env.DB.prepare(`
+        SELECT
+            id, path, target_type, target_id, state,
+            redirect_path, created_at, updated_at
+        FROM permalinks
+        WHERE path = ?
+        LIMIT 1
+    `).bind(path).first();
+
+    if (!row) {
+        return json(request, env, { error: "Permalink non trovato." }, 404);
+    }
+
+    return json(request, env, {
+        permalink: {
+            id: row.id,
+            path: row.path,
+            targetType: row.target_type,
+            targetId: row.target_id,
+            state: row.state,
+            redirectPath: row.redirect_path,
+            createdAt: Number(row.created_at),
+            updatedAt: Number(row.updated_at)
+        }
+    });
+}
+
 async function publicSourceTargetExists(env, contentType, contentId) {
     if (contentType === "narrative_step") {
         return Boolean(await env.DB.prepare(`
@@ -4375,6 +4422,109 @@ async function initializeCmsStorage(env) {
     await initializeSourceContent(env);
     await initializeSiteSettings(env);
     await initializeContentRevisions(env);
+    await initializePermalinks(env);
+}
+
+async function initializePermalinks(env) {
+    const initialized = await env.DB.prepare(`
+        SELECT name
+        FROM content_initializations
+        WHERE name = 'permalinks_v1'
+        LIMIT 1
+    `).first();
+
+    if (initialized) {
+        return;
+    }
+
+    const [wikiEntries, mapEntries, narrativeSteps] = await Promise.all([
+        env.DB.prepare(`
+            SELECT id, slug
+            FROM wiki_entries
+            WHERE status = 'published'
+            ORDER BY id
+        `).all(),
+        env.DB.prepare(`
+            SELECT id
+            FROM map_entries
+            ORDER BY id
+        `).all(),
+        env.DB.prepare(`
+            SELECT stable_key, lat, lon, zoom
+            FROM narrative_steps
+            WHERE status = 'published'
+            ORDER BY position, id
+        `).all()
+    ]);
+    const records = [
+        ...STATIC_PERMALINK_SEEDS,
+        ...POEM_SECTION_PERMALINK_SEEDS
+    ];
+
+    for (const entry of wikiEntries.results || []) {
+        records.push({
+            id: `permalink-wiki-entry-${entry.id}`,
+            path: `/voci.html#${encodeURIComponent(entry.slug)}`,
+            targetType: "wiki_entry",
+            targetId: String(entry.id)
+        });
+    }
+
+    for (const entry of mapEntries.results || []) {
+        records.push(
+            {
+                id: `permalink-map-entry-qr-${entry.id}`,
+                path: `/luogo.html?luogo=${entry.id}`,
+                targetType: "map_entry",
+                targetId: String(entry.id)
+            },
+            {
+                id: `permalink-map-entry-map-${entry.id}`,
+                path: `/progetto.html?luogo=${entry.id}#map`,
+                targetType: "map_entry",
+                targetId: String(entry.id)
+            }
+        );
+    }
+
+    for (const step of narrativeSteps.results || []) {
+        records.push({
+            id: `permalink-narrative-${step.stable_key}`,
+            path:
+                `/progetto.html?narrative=${encodeURIComponent(step.stable_key)}` +
+                `&lat=${step.lat}&lon=${step.lon}&zoom=${step.zoom}`,
+            targetType: "narrative_step",
+            targetId: step.stable_key
+        });
+    }
+
+    const now = Date.now();
+    const statements = records.map((record) => env.DB.prepare(`
+        INSERT OR IGNORE INTO permalinks (
+            id,
+            path,
+            target_type,
+            target_id,
+            state,
+            redirect_path,
+            created_at,
+            updated_at
+        ) VALUES (?, ?, ?, ?, 'active', NULL, ?, ?)
+    `).bind(
+        record.id,
+        record.path,
+        record.targetType,
+        record.targetId,
+        now,
+        now
+    ));
+
+    statements.push(env.DB.prepare(`
+        INSERT OR IGNORE INTO content_initializations (name, applied_at)
+        VALUES ('permalinks_v1', ?)
+    `).bind(now));
+
+    await env.DB.batch(statements);
 }
 
 async function initializePageContent(env) {
