@@ -226,6 +226,43 @@
                 </form>
             </section>
 
+            <section class="admin-voci-mappa" aria-labelledby="adminNavigazioneTitolo">
+                <h2 id="adminNavigazioneTitolo">Menu e benvenuto</h2>
+                <p>
+                    Gestisci etichette, destinazioni e visibilità del menu e i
+                    testi delle cinque schermate introduttive.
+                </p>
+
+                <form id="adminNavigationForm">
+                    <h3>Collegamenti globali</h3>
+                    <div class="admin-cms-collection" id="adminNavigationItems"></div>
+                    <button id="adminNavigationSubmit" type="submit">Salva menu</button>
+                    <button id="adminNavigationReload" type="button">Ricarica menu</button>
+                    <p class="admin-status" id="adminNavigationStatus" aria-live="polite"></p>
+                </form>
+
+                <form id="adminOnboardingForm">
+                    <h3>Schermata iniziale</h3>
+                    <label for="adminOnboardingTitle">Titolo</label>
+                    <input id="adminOnboardingTitle" type="text" maxlength="200" required>
+                    <label for="adminOnboardingSubtitle">Sottotitolo</label>
+                    <textarea id="adminOnboardingSubtitle" maxlength="500" rows="2"></textarea>
+                    <label for="adminOnboardingStatus">Pubblicazione</label>
+                    <select id="adminOnboardingStatus" required>
+                        <option value="published">Pubblicata</option>
+                        <option value="draft">Bozza D1</option>
+                    </select>
+                    <div class="admin-cms-collection" id="adminOnboardingSteps"></div>
+                    <p class="admin-voci-mappa-aiuto">
+                        Posizione e indicatori grafici restano protetti; puoi
+                        modificare testi, elenco, destinazione e descrizione accessibile.
+                    </p>
+                    <button id="adminOnboardingSubmit" type="submit">Salva benvenuto</button>
+                    <button id="adminOnboardingReload" type="button">Ricarica benvenuto</button>
+                    <p class="admin-status" id="adminOnboardingStatusText" aria-live="polite"></p>
+                </form>
+            </section>
+
             <section class="admin-voci-mappa" aria-labelledby="adminVociMappaTitolo">
                 <h2 id="adminVociMappaTitolo">Elenco dei luoghi</h2>
                 <p>
@@ -564,6 +601,6 @@
         integrity="sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH"
         crossorigin="anonymous"
     ></script>
-    <script src="./admin.js?v=20261008-poem-cms1"></script>
+    <script src="./admin.js?v=20261008-menu-cms1"></script>
 </body>
 </html>

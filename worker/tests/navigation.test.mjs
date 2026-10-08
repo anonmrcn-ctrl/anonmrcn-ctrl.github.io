@@ -7,6 +7,11 @@ import vm from "node:vm";
 import worker from "../src/index.js";
 import { NAVIGATION_SEEDS } from "../src/navigation-seed.js";
 
+if (typeof crypto.subtle.timingSafeEqual !== "function") {
+    crypto.subtle.timingSafeEqual = (first, second) =>
+        Buffer.from(first).equals(Buffer.from(second));
+}
+
 class D1StatementMock {
     constructor(database, sql) {
         this.database = database;
@@ -70,9 +75,54 @@ class D1DatabaseMock {
 function createEnvironment() {
     return {
         DB: new D1DatabaseMock(),
+        ADMIN_TOKEN: "test-admin",
         ALLOWED_ORIGIN: "https://anonmrcn-ctrl.github.io"
     };
 }
+
+async function adminCall(env, options = {}) {
+    const response = await worker.fetch(new Request(
+        "https://worker.test/api/admin/cms/navigation",
+        {
+            method: options.method || "GET",
+            headers: {
+                Origin: env.ALLOWED_ORIGIN,
+                "X-Admin-Token": env.ADMIN_TOKEN,
+                "Content-Type": "application/json"
+            },
+            body: options.body ? JSON.stringify(options.body) : undefined
+        }
+    ), env, {});
+    return { response, data: await response.json() };
+}
+
+test("il pannello aggiorna il menu con concorrenza e revisioni", async () => {
+    const env = createEnvironment();
+    const initial = await adminCall(env);
+    const items = initial.data.items.map((item) => ({
+        id: item.id,
+        label: item.id === "nav-main-poem" ? "Poesia" : item.label,
+        href: item.href,
+        visibility: item.visibility,
+        status: item.status
+    }));
+    const updated = await adminCall(env, {
+        method: "PATCH",
+        body: { expectedUpdatedAt: initial.data.updatedAt, items }
+    });
+    assert.equal(updated.response.status, 200);
+    assert.equal(updated.data.items[0].label, "Poesia");
+    assert.equal((await call(env)).data.menus.main[0].label, "Poesia");
+    assert.equal(env.DB.database.prepare(`
+        SELECT COUNT(*) AS total FROM content_revisions
+        WHERE entity_type = 'navigation_item' AND entity_id = 'nav-main-poem'
+    `).get().total, 2);
+    const stale = await adminCall(env, {
+        method: "PATCH",
+        body: { expectedUpdatedAt: initial.data.updatedAt, items }
+    });
+    assert.equal(stale.response.status, 409);
+});
 
 async function call(env) {
     const request = new Request("https://worker.test/api/public/navigation", {

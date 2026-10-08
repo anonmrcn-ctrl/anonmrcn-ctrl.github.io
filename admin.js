@@ -54,6 +54,21 @@
     const cmsPoemSubmit = document.getElementById("adminPoemSubmit");
     const cmsPoemReload = document.getElementById("adminPoemReload");
     const cmsPoemStatus = document.getElementById("adminPoemStatus");
+    const cmsNavigationForm = document.getElementById("adminNavigationForm");
+    const cmsNavigationItems = document.getElementById("adminNavigationItems");
+    const cmsNavigationSubmit = document.getElementById("adminNavigationSubmit");
+    const cmsNavigationReload = document.getElementById("adminNavigationReload");
+    const cmsNavigationStatus = document.getElementById("adminNavigationStatus");
+    const cmsOnboardingForm = document.getElementById("adminOnboardingForm");
+    const cmsOnboardingTitle = document.getElementById("adminOnboardingTitle");
+    const cmsOnboardingSubtitle = document.getElementById("adminOnboardingSubtitle");
+    const cmsOnboardingStatus = document.getElementById("adminOnboardingStatus");
+    const cmsOnboardingSteps = document.getElementById("adminOnboardingSteps");
+    const cmsOnboardingSubmit = document.getElementById("adminOnboardingSubmit");
+    const cmsOnboardingReload = document.getElementById("adminOnboardingReload");
+    const cmsOnboardingStatusText = document.getElementById(
+        "adminOnboardingStatusText"
+    );
     const mapEntryForm = document.getElementById("adminMapEntryForm");
     const mapEntryName = document.getElementById("adminMapEntryName");
     const mapEntryCategory = document.getElementById("adminMapEntryCategory");
@@ -115,6 +130,8 @@
     let loadedNarrativeSteps = [];
     let loadedCmsPages = [];
     let loadedCmsPoem = null;
+    let loadedCmsNavigation = null;
+    let loadedCmsOnboarding = null;
 
     const pushNotifications = window.NNMRCN_NOTIFICHE.create({
         button: pushButton,
@@ -158,6 +175,8 @@
                 loadNarrativeSteps(),
                 loadCmsPages(),
                 loadCmsPoem(),
+                loadCmsNavigation(),
+                loadCmsOnboarding(),
                 loadSummary(),
                 pushNotifications.sync()
             ]);
@@ -464,6 +483,191 @@
         } finally {
             cmsPoemSubmit.disabled = false;
             cmsPoemReload.disabled = false;
+        }
+    }
+
+    function selectField(value, values, datasetName, id) {
+        const select = document.createElement("select");
+        for (const optionValue of values) {
+            const option = document.createElement("option");
+            option.value = optionValue;
+            option.textContent = optionValue;
+            select.appendChild(option);
+        }
+        select.value = value;
+        select.dataset[datasetName] = id;
+        return select;
+    }
+
+    async function loadCmsNavigation() {
+        cmsNavigationStatus.textContent = "Caricamento menu…";
+        try {
+            loadedCmsNavigation = await request("/api/admin/cms/navigation");
+            cmsNavigationItems.replaceChildren();
+            for (const item of loadedCmsNavigation.items || []) {
+                const row = document.createElement("fieldset");
+                const legend = document.createElement("legend");
+                const label = document.createElement("input");
+                const href = document.createElement("input");
+                legend.textContent = `${item.menuKey} · ${item.position} · ${item.id}`;
+                label.value = item.label;
+                label.maxLength = 160;
+                label.dataset.cmsNavigationLabel = item.id;
+                href.value = item.href;
+                href.maxLength = 2048;
+                href.dataset.cmsNavigationHref = item.id;
+                row.append(
+                    legend,
+                    fieldLabel("Etichetta", label),
+                    fieldLabel("Destinazione", href),
+                    fieldLabel("Visibilità", selectField(
+                        item.visibility, ["public", "authenticated", "admin"],
+                        "cmsNavigationVisibility", item.id
+                    )),
+                    fieldLabel("Stato", selectField(
+                        item.status, ["published", "draft"],
+                        "cmsNavigationStatus", item.id
+                    ))
+                );
+                cmsNavigationItems.appendChild(row);
+            }
+            cmsNavigationStatus.textContent = "";
+        } catch (error) {
+            cmsNavigationStatus.textContent = error.message || "Menu non disponibile.";
+        }
+    }
+
+    function fieldLabel(text, field) {
+        const label = document.createElement("label");
+        const span = document.createElement("span");
+        span.textContent = text;
+        label.append(span, field);
+        return label;
+    }
+
+    async function saveCmsNavigation(event) {
+        event.preventDefault();
+        if (!loadedCmsNavigation) return;
+        const value = (selector, id) => cmsNavigationItems.querySelector(
+            `[${selector}="${id}"]`
+        )?.value || "";
+        const items = loadedCmsNavigation.items.map((item) => ({
+            id: item.id,
+            label: value("data-cms-navigation-label", item.id),
+            href: value("data-cms-navigation-href", item.id),
+            visibility: value("data-cms-navigation-visibility", item.id),
+            status: value("data-cms-navigation-status", item.id)
+        }));
+        cmsNavigationSubmit.disabled = true;
+        try {
+            const data = await request("/api/admin/cms/navigation", {
+                method: "PATCH",
+                body: JSON.stringify({
+                    expectedUpdatedAt: loadedCmsNavigation.updatedAt,
+                    items
+                })
+            });
+            await loadCmsNavigation();
+            cmsNavigationStatus.textContent = data.unchanged
+                ? "Nessuna modifica da salvare."
+                : "Menu salvato e revisioni registrate.";
+        } catch (error) {
+            cmsNavigationStatus.textContent = error.message || "Salvataggio non riuscito.";
+        } finally {
+            cmsNavigationSubmit.disabled = false;
+        }
+    }
+
+    async function loadCmsOnboarding() {
+        cmsOnboardingStatusText.textContent = "Caricamento benvenuto…";
+        try {
+            loadedCmsOnboarding = await request("/api/admin/cms/onboarding");
+            cmsOnboardingTitle.value = loadedCmsOnboarding.intro.title;
+            cmsOnboardingSubtitle.value = loadedCmsOnboarding.intro.subtitle;
+            cmsOnboardingStatus.value = loadedCmsOnboarding.intro.status;
+            cmsOnboardingSteps.replaceChildren();
+            for (const step of loadedCmsOnboarding.steps || []) {
+                const row = document.createElement("fieldset");
+                const legend = document.createElement("legend");
+                const title = document.createElement("input");
+                const description = document.createElement("textarea");
+                const details = document.createElement("textarea");
+                const preview = document.createElement("input");
+                const alt = document.createElement("textarea");
+                legend.textContent = `${step.position}. ${step.id}`;
+                title.value = step.title;
+                title.dataset.cmsOnboardingTitle = step.id;
+                description.value = step.description;
+                description.rows = 4;
+                description.dataset.cmsOnboardingDescription = step.id;
+                details.value = step.details.join("\n");
+                details.rows = 4;
+                details.dataset.cmsOnboardingDetails = step.id;
+                preview.value = step.preview;
+                preview.dataset.cmsOnboardingPreview = step.id;
+                alt.value = step.alt;
+                alt.rows = 3;
+                alt.dataset.cmsOnboardingAlt = step.id;
+                row.append(
+                    legend,
+                    fieldLabel("Titolo", title),
+                    fieldLabel("Descrizione", description),
+                    fieldLabel("Punti, uno per riga", details),
+                    fieldLabel("Destinazione anteprima", preview),
+                    fieldLabel("Descrizione accessibile", alt),
+                    fieldLabel("Stato", selectField(
+                        step.status, ["published", "draft"],
+                        "cmsOnboardingStepStatus", step.id
+                    ))
+                );
+                cmsOnboardingSteps.appendChild(row);
+            }
+            cmsOnboardingStatusText.textContent = "";
+        } catch (error) {
+            cmsOnboardingStatusText.textContent =
+                error.message || "Benvenuto non disponibile.";
+        }
+    }
+
+    async function saveCmsOnboarding(event) {
+        event.preventDefault();
+        if (!loadedCmsOnboarding) return;
+        const value = (name, id) => cmsOnboardingSteps.querySelector(
+            `[data-${name}="${id}"]`
+        )?.value || "";
+        const steps = loadedCmsOnboarding.steps.map((step) => ({
+            id: step.id,
+            title: value("cms-onboarding-title", step.id),
+            description: value("cms-onboarding-description", step.id),
+            details: value("cms-onboarding-details", step.id)
+                .split("\n").map((line) => line.trim()).filter(Boolean),
+            preview: value("cms-onboarding-preview", step.id),
+            alt: value("cms-onboarding-alt", step.id),
+            status: value("cms-onboarding-step-status", step.id)
+        }));
+        cmsOnboardingSubmit.disabled = true;
+        try {
+            const data = await request("/api/admin/cms/onboarding", {
+                method: "PATCH",
+                body: JSON.stringify({
+                    expectedUpdatedAt: loadedCmsOnboarding.updatedAt,
+                    intro: {
+                        title: cmsOnboardingTitle.value,
+                        subtitle: cmsOnboardingSubtitle.value,
+                        status: cmsOnboardingStatus.value
+                    },
+                    steps
+                })
+            });
+            await loadCmsOnboarding();
+            cmsOnboardingStatusText.textContent = data.unchanged
+                ? "Nessuna modifica da salvare."
+                : "Benvenuto salvato e revisioni registrate.";
+        } catch (error) {
+            cmsOnboardingStatusText.textContent =
+                error.message || "Salvataggio non riuscito.";
+        } finally {
+            cmsOnboardingSubmit.disabled = false;
         }
     }
 
@@ -1874,6 +2078,10 @@
     });
     cmsPoemForm.addEventListener("submit", saveCmsPoem);
     cmsPoemReload.addEventListener("click", loadCmsPoem);
+    cmsNavigationForm.addEventListener("submit", saveCmsNavigation);
+    cmsNavigationReload.addEventListener("click", loadCmsNavigation);
+    cmsOnboardingForm.addEventListener("submit", saveCmsOnboarding);
+    cmsOnboardingReload.addEventListener("click", loadCmsOnboarding);
     narrativeCancel.addEventListener("click", () => {
         resetNarrativeForm();
         narrativeStatus.textContent = "Modifica annullata.";

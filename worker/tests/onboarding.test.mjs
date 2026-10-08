@@ -10,6 +10,11 @@ import {
     WELCOME_STEP_SEEDS
 } from "../src/onboarding-seed.js";
 
+if (typeof crypto.subtle.timingSafeEqual !== "function") {
+    crypto.subtle.timingSafeEqual = (first, second) =>
+        Buffer.from(first).equals(Buffer.from(second));
+}
+
 class D1StatementMock {
     constructor(database, sql) {
         this.database = database;
@@ -73,9 +78,66 @@ class D1DatabaseMock {
 function createEnvironment() {
     return {
         DB: new D1DatabaseMock(),
+        ADMIN_TOKEN: "test-admin",
         ALLOWED_ORIGIN: "https://anonmrcn-ctrl.github.io"
     };
 }
+
+async function adminCall(env, options = {}) {
+    const response = await worker.fetch(new Request(
+        "https://worker.test/api/admin/cms/onboarding",
+        {
+            method: options.method || "GET",
+            headers: {
+                Origin: env.ALLOWED_ORIGIN,
+                "X-Admin-Token": env.ADMIN_TOKEN,
+                "Content-Type": "application/json"
+            },
+            body: options.body ? JSON.stringify(options.body) : undefined
+        }
+    ), env, {});
+    return { response, data: await response.json() };
+}
+
+test("il pannello aggiorna il benvenuto preservando ordine e indicatori", async () => {
+    const env = createEnvironment();
+    const initial = await adminCall(env);
+    const markerSnapshot = JSON.stringify(initial.data.steps[0].markers);
+    const body = {
+        expectedUpdatedAt: initial.data.updatedAt,
+        intro: {
+            ...initial.data.intro,
+            title: "Benvenuto aggiornato"
+        },
+        steps: initial.data.steps.map((step, index) => ({
+            id: step.id,
+            title: index === 0 ? "La poesia" : step.title,
+            description: step.description,
+            details: step.details,
+            preview: step.preview,
+            alt: step.alt,
+            status: step.status
+        }))
+    };
+    const updated = await adminCall(env, { method: "PATCH", body });
+    assert.equal(updated.response.status, 200);
+    assert.equal(updated.data.intro.title, "Benvenuto aggiornato");
+    assert.equal(updated.data.steps[0].title, "La poesia");
+    assert.equal(JSON.stringify(updated.data.steps[0].markers), markerSnapshot);
+    assert.deepEqual(
+        updated.data.steps.map((step) => step.id),
+        WELCOME_STEP_SEEDS.map((step) => step.id)
+    );
+    assert.equal(env.DB.database.prepare(`
+        SELECT COUNT(*) AS total FROM content_revisions
+        WHERE entity_type = 'onboarding_step' AND entity_id = 'welcome-poetry'
+    `).get().total, 2);
+    assert.equal(env.DB.database.prepare(`
+        SELECT COUNT(*) AS total FROM content_revisions
+        WHERE entity_type = 'site_setting'
+            AND entity_id = 'onboarding.welcome.intro'
+    `).get().total, 2);
+});
 
 async function call(env) {
     const request = new Request(

@@ -144,6 +144,11 @@ rientro dei 121 versi sono modificabili, mentre ID, ordine, strofe, classi,
 ancore I–IV e 165 riferimenti metrici restano protetti. Anche questi salvataggi
 usano controllo di concorrenza e revisioni append-only.
 
+Menu globale e tour di benvenuto sono amministrabili nello stesso pannello.
+Le modifiche riguardano etichette, URL, visibilità, pubblicazione e testi;
+identificativi, ordine delle cinque schermate e indicatori grafici restano
+protetti e ogni cambiamento viene registrato come nuova revisione.
+
 L'inventario si controlla con:
 
 ```bash

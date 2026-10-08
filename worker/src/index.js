@@ -99,6 +99,7 @@ const MAX_CMS_PAGE_BLOCKS = 100;
 const MAX_CMS_PAGE_BLOCK_TEXT_LENGTH = 20000;
 const MAX_CMS_POEM_REQUEST_BYTES = 512000;
 const MAX_CMS_POEM_LINES = 1000;
+const MAX_CMS_CONFIGURATION_REQUEST_BYTES = 192000;
 
 class RequestBodyTooLargeError extends Error {}
 
@@ -679,6 +680,22 @@ export default {
                 path === "/api/admin/cms/poem"
             ) {
                 return await adminUpdateCmsPoem(request, env);
+            }
+
+            if (request.method === "GET" && path === "/api/admin/cms/navigation") {
+                return await adminGetCmsNavigation(request, env);
+            }
+
+            if (request.method === "PATCH" && path === "/api/admin/cms/navigation") {
+                return await adminUpdateCmsNavigation(request, env);
+            }
+
+            if (request.method === "GET" && path === "/api/admin/cms/onboarding") {
+                return await adminGetCmsOnboarding(request, env);
+            }
+
+            if (request.method === "PATCH" && path === "/api/admin/cms/onboarding") {
+                return await adminUpdateCmsOnboarding(request, env);
             }
 
             if (
@@ -3391,6 +3408,138 @@ async function getPublicNavigation(request, env) {
     return json(request, env, { menus });
 }
 
+async function adminGetCmsNavigation(request, env) {
+    if (!(await adminAuthorized(request, env))) {
+        return unauthorized(request, env);
+    }
+    await ensureCmsStorage(env);
+    return json(request, env, await readCmsNavigation(env));
+}
+
+async function readCmsNavigation(env) {
+    const result = await env.DB.prepare(`
+        SELECT id, menu_key, position, label, href, visibility, status, updated_at
+        FROM navigation_items
+        ORDER BY menu_key ASC, position ASC, id ASC
+    `).all();
+    const items = (result.results || []).map((row) => ({
+        id: row.id,
+        menuKey: row.menu_key,
+        position: Number(row.position),
+        label: row.label,
+        href: row.href,
+        visibility: row.visibility,
+        status: row.status,
+        updatedAt: Number(row.updated_at)
+    }));
+    return {
+        items,
+        updatedAt: Math.max(0, ...items.map((item) => item.updatedAt))
+    };
+}
+
+async function adminUpdateCmsNavigation(request, env) {
+    if (!(await adminAuthorized(request, env))) {
+        return unauthorized(request, env);
+    }
+    await ensureCmsStorage(env);
+    const current = await readCmsNavigation(env);
+    const input = normalizeCmsNavigationInput(
+        await readJson(request, MAX_CMS_CONFIGURATION_REQUEST_BYTES),
+        current
+    );
+    if (input.error) {
+        return json(request, env, { error: input.error }, 400);
+    }
+    if (input.expectedUpdatedAt !== current.updatedAt) {
+        return json(request, env, {
+            error: "Il menu è stato modificato altrove. Ricaricalo prima di salvare."
+        }, 409);
+    }
+    const byId = new Map(input.items.map((item) => [item.id, item]));
+    const changed = current.items.filter((item) => {
+        const next = byId.get(item.id);
+        return item.label !== next.label || item.href !== next.href ||
+            item.visibility !== next.visibility || item.status !== next.status;
+    });
+    if (!changed.length) {
+        return json(request, env, { ...current, unchanged: true });
+    }
+    const now = Math.max(Date.now(), current.updatedAt + 1);
+    const statements = [];
+    for (const item of changed) {
+        const next = byId.get(item.id);
+        statements.push(env.DB.prepare(`
+            UPDATE navigation_items
+            SET label = ?, href = ?, visibility = ?, status = ?, updated_at = ?,
+                published_at = CASE
+                    WHEN ? = 'published' THEN COALESCE(published_at, ?)
+                    ELSE published_at
+                END
+            WHERE id = ?
+        `).bind(
+            next.label, next.href, next.visibility, next.status, now,
+            next.status, now, item.id
+        ));
+        statements.push(revisionInsert(env, "navigation_item", item.id, {
+            id: item.id,
+            menuKey: item.menuKey,
+            position: item.position,
+            label: next.label,
+            href: next.href,
+            visibility: next.visibility,
+            status: next.status
+        }, next.status === "published" ? "published" : "draft", now));
+    }
+    await env.DB.batch(statements);
+    return json(request, env, { ...await readCmsNavigation(env), unchanged: false });
+}
+
+function normalizeCmsNavigationInput(value, current) {
+    const expectedUpdatedAt = Number(value?.expectedUpdatedAt);
+    const items = Array.isArray(value?.items) ? value.items : [];
+    if (!Number.isSafeInteger(expectedUpdatedAt) || expectedUpdatedAt < 0) {
+        return { error: "La versione del menu non è valida." };
+    }
+    if (items.length !== current.items.length) {
+        return { error: "L’elenco delle voci del menu non è completo." };
+    }
+    const expected = new Map(current.items.map((item) => [item.id, item]));
+    const seen = new Set();
+    const normalized = [];
+    for (const item of items) {
+        const id = String(item?.id || "");
+        const label = String(item?.label || "").trim();
+        const href = String(item?.href || "").trim();
+        const visibility = String(item?.visibility || "");
+        const status = String(item?.status || "");
+        if (!expected.has(id) || seen.has(id)) {
+            return { error: "Una voce del menu non è valida." };
+        }
+        if (!label || label.length > 160 || href.length > 2048 || !validCmsHref(href)) {
+            return { error: "Etichetta o collegamento del menu non valido." };
+        }
+        if (!["public", "authenticated", "admin"].includes(visibility) ||
+            !["draft", "published"].includes(status)) {
+            return { error: "Visibilità o stato del menu non valido." };
+        }
+        seen.add(id);
+        normalized.push({ id, label, href, visibility, status });
+    }
+    return { expectedUpdatedAt, items: normalized };
+}
+
+function validCmsHref(value) {
+    if (/^(?:\.\/|\/)(?!\/)/u.test(value)) {
+        return true;
+    }
+    try {
+        return new URL(value).protocol === "https:";
+    } catch (_) {
+        return false;
+    }
+}
+
 async function getPublicOnboarding(request, env, tourKey) {
     await ensureCmsStorage(env);
 
@@ -3447,6 +3596,195 @@ async function getPublicOnboarding(request, env, tourKey) {
             };
         })
     });
+}
+
+async function adminGetCmsOnboarding(request, env) {
+    if (!(await adminAuthorized(request, env))) {
+        return unauthorized(request, env);
+    }
+    await ensureCmsStorage(env);
+    return json(request, env, await readCmsOnboarding(env));
+}
+
+async function readCmsOnboarding(env) {
+    const [introRow, stepResult] = await Promise.all([
+        env.DB.prepare(`
+            SELECT value_json, status, updated_at
+            FROM site_settings WHERE setting_key = 'onboarding.welcome.intro'
+        `).first(),
+        env.DB.prepare(`
+            SELECT id, position, title, body, action_json, status, updated_at
+            FROM onboarding_steps WHERE tour_key = 'welcome'
+            ORDER BY position ASC, id ASC
+        `).all()
+    ]);
+    const intro = parseJsonValue(introRow?.value_json, {});
+    const steps = (stepResult.results || []).map((row) => {
+        const action = parseJsonValue(row.action_json, {});
+        return {
+            id: row.id,
+            position: Number(row.position),
+            title: row.title,
+            description: row.body,
+            details: Array.isArray(action.details) ? action.details : [],
+            preview: String(action.preview || ""),
+            alt: String(action.alt || ""),
+            markers: Array.isArray(action.markers) ? action.markers : [],
+            status: row.status,
+            updatedAt: Number(row.updated_at)
+        };
+    });
+    return {
+        intro: {
+            title: String(intro.title || ""),
+            subtitle: String(intro.subtitle || ""),
+            status: introRow?.status || "draft",
+            updatedAt: Number(introRow?.updated_at || 0)
+        },
+        steps,
+        updatedAt: Math.max(
+            Number(introRow?.updated_at || 0),
+            ...steps.map((step) => step.updatedAt)
+        )
+    };
+}
+
+async function adminUpdateCmsOnboarding(request, env) {
+    if (!(await adminAuthorized(request, env))) {
+        return unauthorized(request, env);
+    }
+    await ensureCmsStorage(env);
+    const current = await readCmsOnboarding(env);
+    const input = normalizeCmsOnboardingInput(
+        await readJson(request, MAX_CMS_CONFIGURATION_REQUEST_BYTES), current
+    );
+    if (input.error) {
+        return json(request, env, { error: input.error }, 400);
+    }
+    if (input.expectedUpdatedAt !== current.updatedAt) {
+        return json(request, env, {
+            error: "Il benvenuto è stato modificato altrove. Ricaricalo prima di salvare."
+        }, 409);
+    }
+    const byId = new Map(input.steps.map((step) => [step.id, step]));
+    const introChanged = input.intro.title !== current.intro.title ||
+        input.intro.subtitle !== current.intro.subtitle ||
+        input.intro.status !== current.intro.status;
+    const changedSteps = current.steps.filter((step) => {
+        const next = byId.get(step.id);
+        return step.title !== next.title || step.description !== next.description ||
+            JSON.stringify(step.details) !== JSON.stringify(next.details) ||
+            step.preview !== next.preview || step.alt !== next.alt ||
+            step.status !== next.status;
+    });
+    if (!introChanged && !changedSteps.length) {
+        return json(request, env, { ...current, unchanged: true });
+    }
+    const now = Math.max(Date.now(), current.updatedAt + 1);
+    const statements = [];
+    if (introChanged) {
+        statements.push(env.DB.prepare(`
+            UPDATE site_settings SET value_json = ?, status = ?, updated_at = ?,
+                published_at = CASE
+                    WHEN ? = 'published' THEN COALESCE(published_at, ?)
+                    ELSE published_at
+                END
+            WHERE setting_key = 'onboarding.welcome.intro'
+        `).bind(
+            JSON.stringify({ title: input.intro.title, subtitle: input.intro.subtitle }),
+            input.intro.status, now, input.intro.status, now
+        ));
+        statements.push(revisionInsert(
+            env, "site_setting", "onboarding.welcome.intro",
+            { key: "onboarding.welcome.intro", value: input.intro },
+            input.intro.status === "published" ? "published" : "draft", now
+        ));
+    }
+    for (const step of changedSteps) {
+        const next = byId.get(step.id);
+        const action = {
+            details: next.details,
+            preview: next.preview,
+            alt: next.alt,
+            markers: step.markers
+        };
+        statements.push(env.DB.prepare(`
+            UPDATE onboarding_steps
+            SET title = ?, body = ?, action_json = ?, status = ?, updated_at = ?,
+                published_at = CASE
+                    WHEN ? = 'published' THEN COALESCE(published_at, ?)
+                    ELSE published_at
+                END
+            WHERE id = ?
+        `).bind(
+            next.title, next.description, JSON.stringify(action), next.status,
+            now, next.status, now, step.id
+        ));
+        statements.push(revisionInsert(env, "onboarding_step", step.id, {
+            id: step.id,
+            tourKey: "welcome",
+            position: step.position,
+            title: next.title,
+            body: next.description,
+            action,
+            status: next.status
+        }, next.status === "published" ? "published" : "draft", now));
+    }
+    await env.DB.batch(statements);
+    return json(request, env, { ...await readCmsOnboarding(env), unchanged: false });
+}
+
+function normalizeCmsOnboardingInput(value, current) {
+    const expectedUpdatedAt = Number(value?.expectedUpdatedAt);
+    const intro = {
+        title: String(value?.intro?.title || "").trim(),
+        subtitle: String(value?.intro?.subtitle || "").trim(),
+        status: String(value?.intro?.status || "")
+    };
+    const steps = Array.isArray(value?.steps) ? value.steps : [];
+    if (!Number.isSafeInteger(expectedUpdatedAt) || expectedUpdatedAt < 0 ||
+        !intro.title || intro.title.length > 200 || intro.subtitle.length > 500 ||
+        !["draft", "published"].includes(intro.status)) {
+        return { error: "Introduzione o versione del benvenuto non valida." };
+    }
+    if (steps.length !== current.steps.length) {
+        return { error: "L’elenco delle schermate non è completo." };
+    }
+    const expected = new Set(current.steps.map((step) => step.id));
+    const seen = new Set();
+    const normalized = [];
+    for (const step of steps) {
+        const id = String(step?.id || "");
+        const title = String(step?.title || "").trim();
+        const description = String(step?.description || "").trim();
+        const details = Array.isArray(step?.details)
+            ? step.details.map((detail) => String(detail || "").trim()).filter(Boolean)
+            : [];
+        const preview = String(step?.preview || "").trim();
+        const alt = String(step?.alt || "").trim();
+        const status = String(step?.status || "");
+        if (!expected.has(id) || seen.has(id) || !title || title.length > 200 ||
+            description.length > 5000 || details.length > 20 ||
+            details.some((detail) => detail.length > 300) || !validCmsHref(preview) ||
+            alt.length > 1000 || !["draft", "published"].includes(status)) {
+            return { error: "Una schermata del benvenuto non è valida." };
+        }
+        seen.add(id);
+        normalized.push({ id, title, description, details, preview, alt, status });
+    }
+    return { expectedUpdatedAt, intro, steps: normalized };
+}
+
+function revisionInsert(env, type, id, snapshot, state, now) {
+    return env.DB.prepare(`
+        INSERT INTO content_revisions (
+            entity_type, entity_id, revision_number,
+            snapshot_json, publication_state, created_at
+        )
+        SELECT ?, ?, COALESCE(MAX(revision_number), 0) + 1, ?, ?, ?
+        FROM content_revisions
+        WHERE entity_type = ? AND entity_id = ?
+    `).bind(type, id, JSON.stringify(snapshot), state, now, type, id);
 }
 
 async function getPublicMapLayer(request, env, slug) {
