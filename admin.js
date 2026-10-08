@@ -860,9 +860,7 @@
 
             deleteButton.type = "button";
             deleteButton.className = "admin-action admin-action-danger";
-            deleteButton.textContent = step.everPublished
-                ? "Ritira dalla pubblicazione"
-                : "Elimina bozza";
+            deleteButton.textContent = "Elimina";
             deleteButton.addEventListener("click", () => {
                 deleteMapEntry(entry, deleteButton);
             });

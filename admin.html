@@ -12,7 +12,7 @@
     <link rel="manifest" href="./admin.webmanifest">
     <script src="./tema.js?v=20261006-map-layers1"></script>
     <link rel="stylesheet" href="./leaflet.css?v=1.9.4">
-    <link rel="stylesheet" href="./style.css?v=20261007-narrative-cms1">
+    <link rel="stylesheet" href="./style.css?v=20261008-admin-fix1">
 </head>
 
 <body>
@@ -166,7 +166,11 @@
                         e mostrata in alto nella mini-spiegazione del QR.
                     </p>
                     <div class="admin-voci-mappa-foto" id="adminMapEntryImagePreview" hidden>
-                        <img id="adminMapEntryImagePreviewImg" alt="Anteprima della foto del luogo">
+                        <img
+                            id="adminMapEntryImagePreviewImg"
+                            src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs="
+                            alt="Anteprima della foto del luogo"
+                        >
                         <button id="adminMapEntryImageRemove" type="button">
                             Rimuovi foto
                         </button>

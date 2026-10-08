@@ -2953,15 +2953,15 @@ html[data-theme="dark"] .leaflet-control-layers label {
 }
 
 .admin-action-danger {
-    border-color: #8b2424;
-    color: #8b2424;
+    border-color: var(--brand-red-deep);
+    color: var(--brand-red-deep);
 }
 
 .admin-action-danger:hover,
 .admin-action-danger:focus-visible {
-    border-color: #8b2424;
-    background: #8b2424;
-    color: #fff;
+    border-color: var(--brand-red-deep);
+    background: var(--brand-red-deep);
+    color: var(--paper);
 }
 
 .admin-riepilogo > h2,
