@@ -97,6 +97,8 @@ const MAX_NARRATIVE_SOURCE_TERMS = 20;
 const MAX_CMS_PAGE_REQUEST_BYTES = 128000;
 const MAX_CMS_PAGE_BLOCKS = 100;
 const MAX_CMS_PAGE_BLOCK_TEXT_LENGTH = 20000;
+const MAX_CMS_POEM_REQUEST_BYTES = 512000;
+const MAX_CMS_POEM_LINES = 1000;
 
 class RequestBodyTooLargeError extends Error {}
 
@@ -663,6 +665,20 @@ export default {
             ) {
                 const pageId = path.split("/").pop();
                 return await adminUpdateCmsPage(request, env, pageId);
+            }
+
+            if (
+                request.method === "GET" &&
+                path === "/api/admin/cms/poem"
+            ) {
+                return await adminGetCmsPoem(request, env);
+            }
+
+            if (
+                request.method === "PATCH" &&
+                path === "/api/admin/cms/poem"
+            ) {
+                return await adminUpdateCmsPoem(request, env);
             }
 
             if (
@@ -3029,6 +3045,323 @@ async function getPublicPoem(request, env, slug) {
             }))
         }
     });
+}
+
+async function adminGetCmsPoem(request, env) {
+    if (!(await adminAuthorized(request, env))) {
+        return unauthorized(request, env);
+    }
+
+    await ensureCmsStorage(env);
+
+    return json(request, env, {
+        poem: await readCmsPoem(env)
+    });
+}
+
+async function adminUpdateCmsPoem(request, env) {
+    if (!(await adminAuthorized(request, env))) {
+        return unauthorized(request, env);
+    }
+
+    await ensureCmsStorage(env);
+
+    const current = await readCmsPoem(env);
+
+    if (!current) {
+        return json(request, env, { error: "Poesia non trovata." }, 404);
+    }
+
+    const input = normalizeCmsPoemInput(
+        await readJson(request, MAX_CMS_POEM_REQUEST_BYTES),
+        current
+    );
+
+    if (input.error) {
+        return json(request, env, { error: input.error }, 400);
+    }
+
+    if (input.expectedUpdatedAt !== current.updatedAt) {
+        return json(request, env, {
+            error: "La poesia è stata modificata altrove. Ricaricala prima di salvare."
+        }, 409);
+    }
+
+    const currentLines = current.sections.flatMap((section) => section.lines);
+    const lineInputs = new Map(input.lines.map((line) => [line.id, line]));
+    const changedLines = currentLines.filter((line) => {
+        const next = lineInputs.get(line.id);
+        return line.text !== next.text || line.indent !== next.indent;
+    });
+    const workChanged =
+        current.title !== input.title ||
+        current.subtitle !== input.subtitle ||
+        current.status !== input.status;
+
+    if (!workChanged && !changedLines.length) {
+        return json(request, env, { poem: current, unchanged: true });
+    }
+
+    const now = Math.max(Date.now(), current.updatedAt + 1);
+    const statements = [env.DB.prepare(`
+        UPDATE poem_works
+        SET
+            title = ?,
+            subtitle = ?,
+            status = ?,
+            updated_at = ?,
+            published_at = CASE
+                WHEN ? = 'published' THEN COALESCE(published_at, ?)
+                ELSE published_at
+            END
+        WHERE id = ?
+    `).bind(
+        input.title,
+        input.subtitle,
+        input.status,
+        now,
+        input.status,
+        now,
+        current.id
+    )];
+
+    for (const line of changedLines) {
+        const next = lineInputs.get(line.id);
+        const snapshot = {
+            id: line.id,
+            sectionId: line.sectionId,
+            position: line.position,
+            text: next.text,
+            indent: next.indent,
+            metadata: line.metadata
+        };
+
+        statements.push(env.DB.prepare(`
+            UPDATE poem_lines
+            SET text = ?, indent_level = ?, updated_at = ?
+            WHERE id = ?
+        `).bind(next.text, next.indent, now, line.id));
+        statements.push(env.DB.prepare(`
+            INSERT INTO content_revisions (
+                entity_type,
+                entity_id,
+                revision_number,
+                snapshot_json,
+                publication_state,
+                created_at
+            )
+            SELECT
+                'poem_line',
+                ?,
+                COALESCE(MAX(revision_number), 0) + 1,
+                ?,
+                ?,
+                ?
+            FROM content_revisions
+            WHERE entity_type = 'poem_line' AND entity_id = ?
+        `).bind(
+            line.id,
+            JSON.stringify(snapshot),
+            input.status,
+            now,
+            line.id
+        ));
+    }
+
+    statements.push(env.DB.prepare(`
+        INSERT INTO content_revisions (
+            entity_type,
+            entity_id,
+            revision_number,
+            snapshot_json,
+            publication_state,
+            created_at
+        )
+        SELECT
+            'poem_work',
+            ?,
+            COALESCE(MAX(revision_number), 0) + 1,
+            ?,
+            ?,
+            ?
+        FROM content_revisions
+        WHERE entity_type = 'poem_work' AND entity_id = ?
+    `).bind(
+        current.id,
+        JSON.stringify({
+            id: current.id,
+            slug: current.slug,
+            title: input.title,
+            subtitle: input.subtitle,
+            sections: current.sections.map((section) => ({
+                id: section.id,
+                position: section.position,
+                title: section.title,
+                anchor: section.anchor,
+                lines: section.lines.map((line) => {
+                    const next = lineInputs.get(line.id);
+                    return {
+                        id: line.id,
+                        position: line.position,
+                        text: next.text,
+                        indent: next.indent,
+                        metadata: line.metadata
+                    };
+                })
+            }))
+        }),
+        input.status,
+        now,
+        current.id
+    ));
+
+    await env.DB.batch(statements);
+
+    return json(request, env, {
+        poem: await readCmsPoem(env),
+        unchanged: false
+    });
+}
+
+async function readCmsPoem(env) {
+    const work = await env.DB.prepare(`
+        SELECT
+            id, slug, title, subtitle, status,
+            created_at, updated_at, published_at
+        FROM poem_works
+        WHERE id = ?
+        LIMIT 1
+    `).bind(POEM_SEED.id).first();
+
+    if (!work) {
+        return null;
+    }
+
+    const [sectionResult, lineResult] = await Promise.all([
+        env.DB.prepare(`
+            SELECT id, position, title, updated_at
+            FROM poem_sections
+            WHERE poem_id = ?
+            ORDER BY position ASC, id ASC
+        `).bind(work.id).all(),
+        env.DB.prepare(`
+            SELECT
+                line.id,
+                line.section_id,
+                line.position,
+                line.text,
+                line.indent_level,
+                line.metadata_json,
+                line.updated_at
+            FROM poem_lines line
+            INNER JOIN poem_sections section ON section.id = line.section_id
+            WHERE section.poem_id = ?
+            ORDER BY section.position ASC, line.position ASC, line.id ASC
+        `).bind(work.id).all()
+    ]);
+    const linesBySection = new Map();
+
+    for (const line of lineResult.results || []) {
+        const lines = linesBySection.get(line.section_id) || [];
+        lines.push({
+            id: line.id,
+            sectionId: line.section_id,
+            position: Number(line.position),
+            text: line.text,
+            indent: Number(line.indent_level),
+            metadata: parseJsonValue(line.metadata_json, {}),
+            updatedAt: Number(line.updated_at)
+        });
+        linesBySection.set(line.section_id, lines);
+    }
+
+    return {
+        id: work.id,
+        slug: work.slug,
+        title: work.title,
+        subtitle: work.subtitle,
+        status: work.status,
+        createdAt: Number(work.created_at),
+        updatedAt: Number(work.updated_at),
+        publishedAt: work.published_at === null
+            ? null
+            : Number(work.published_at),
+        sections: (sectionResult.results || []).map((section) => ({
+            id: section.id,
+            position: Number(section.position),
+            title: section.title,
+            anchor: /^[IVXLCDM]+$/u.test(section.title)
+                ? section.title
+                : section.id,
+            updatedAt: Number(section.updated_at),
+            lines: linesBySection.get(section.id) || []
+        }))
+    };
+}
+
+function normalizeCmsPoemInput(value, current) {
+    const title = String(value?.title || "").trim();
+    const subtitle = String(value?.subtitle || "").trim();
+    const status = String(value?.status || "");
+    const expectedUpdatedAt = Number(value?.expectedUpdatedAt);
+    const lines = Array.isArray(value?.lines) ? value.lines : [];
+    const currentLines = current.sections.flatMap((section) => section.lines);
+
+    if (!title || title.length > 200) {
+        return { error: "Il titolo deve contenere da 1 a 200 caratteri." };
+    }
+
+    if (subtitle.length > 300) {
+        return { error: "Il sottotitolo non può superare 300 caratteri." };
+    }
+
+    if (!CMS_PAGE_STATUSES.has(status)) {
+        return { error: "Lo stato della poesia non è valido." };
+    }
+
+    if (!Number.isSafeInteger(expectedUpdatedAt) || expectedUpdatedAt < 0) {
+        return { error: "La versione della poesia non è valida." };
+    }
+
+    if (
+        lines.length !== currentLines.length ||
+        lines.length > MAX_CMS_POEM_LINES
+    ) {
+        return { error: "L’elenco dei versi non è completo." };
+    }
+
+    const expectedIds = new Set(currentLines.map((line) => line.id));
+    const seenIds = new Set();
+    const normalizedLines = [];
+
+    for (const line of lines) {
+        const id = String(line?.id || "");
+        const text = line?.text;
+        const indent = Number(line?.indent);
+
+        if (!expectedIds.has(id) || seenIds.has(id)) {
+            return { error: "Un verso non appartiene alla poesia." };
+        }
+
+        if (typeof text !== "string" || !text || text.length > 2000) {
+            return { error: "Il testo di un verso non è valido." };
+        }
+
+        if (!Number.isInteger(indent) || indent < 0 || indent > 12) {
+            return { error: "Il rientro di un verso non è valido." };
+        }
+
+        seenIds.add(id);
+        normalizedLines.push({ id, text, indent });
+    }
+
+    return {
+        title,
+        subtitle,
+        status,
+        expectedUpdatedAt,
+        lines: normalizedLines
+    };
 }
 
 async function getPublicNavigation(request, env) {

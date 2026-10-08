@@ -2845,6 +2845,42 @@ html[data-theme="dark"] .leaflet-control-layers label {
     overflow-wrap: anywhere;
 }
 
+.admin-poem-sections {
+    display: grid;
+    grid-column: 1 / -1;
+    gap: 0.85rem;
+}
+
+.admin-poem-section {
+    border: 1px solid var(--line);
+}
+
+.admin-poem-section summary {
+    padding: 0.9rem 1rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.admin-poem-lines {
+    display: grid;
+    gap: 0.8rem;
+    padding: 0 1rem 1rem;
+}
+
+.admin-poem-line {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(5rem, 8rem);
+    gap: 0.7rem;
+    align-items: end;
+}
+
+.admin-poem-line label {
+    display: grid;
+    gap: 0.35rem;
+    font-size: 0.78rem;
+    font-weight: 700;
+}
+
 .admin-voci-mappa-aiuto {
     margin: -0.25rem 0 0;
     font-size: 0.78rem;
@@ -3789,6 +3825,10 @@ body .voci-editor-indice button[aria-current="true"] {
 
     .admin-voci-mappa form,
     .admin-voci-mappa-coordinate {
+        grid-template-columns: 1fr;
+    }
+
+    .admin-poem-line {
         grid-template-columns: 1fr;
     }
 

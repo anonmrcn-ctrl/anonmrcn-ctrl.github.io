@@ -176,6 +176,56 @@
                 </form>
             </section>
 
+            <section class="admin-voci-mappa" aria-labelledby="adminPoesiaTitolo">
+                <h2 id="adminPoesiaTitolo">Poesia, canti e versi</h2>
+                <p>
+                    Modifica il testo e i rientri conservando identificativi,
+                    ordine, strofe, ancore e riferimenti metrici esistenti.
+                </p>
+
+                <form id="adminPoemForm">
+                    <label for="adminPoemTitle">Titolo dell’opera</label>
+                    <input
+                        id="adminPoemTitle"
+                        type="text"
+                        maxlength="200"
+                        required
+                    >
+
+                    <label for="adminPoemSubtitle">Sottotitolo</label>
+                    <input
+                        id="adminPoemSubtitle"
+                        type="text"
+                        maxlength="300"
+                    >
+
+                    <label for="adminPoemPublicationStatus">Pubblicazione</label>
+                    <select id="adminPoemPublicationStatus" required>
+                        <option value="published">Pubblicata</option>
+                        <option value="draft">Bozza D1 (resta il ripiego statico)</option>
+                    </select>
+
+                    <div class="admin-poem-sections" id="adminPoemSections"></div>
+
+                    <p class="admin-voci-mappa-aiuto">
+                        Strofe, classi grafiche, numeri di rigo e ancore I–IV sono
+                        protetti e non vengono riscritti da questo modulo.
+                    </p>
+
+                    <button id="adminPoemSubmit" type="submit">
+                        Salva poesia
+                    </button>
+                    <button id="adminPoemReload" type="button">
+                        Ricarica senza salvare
+                    </button>
+                    <p
+                        class="admin-status"
+                        id="adminPoemStatus"
+                        aria-live="polite"
+                    ></p>
+                </form>
+            </section>
+
             <section class="admin-voci-mappa" aria-labelledby="adminVociMappaTitolo">
                 <h2 id="adminVociMappaTitolo">Elenco dei luoghi</h2>
                 <p>
@@ -514,6 +564,6 @@
         integrity="sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH"
         crossorigin="anonymous"
     ></script>
-    <script src="./admin.js?v=20261008-pages-cms1"></script>
+    <script src="./admin.js?v=20261008-poem-cms1"></script>
 </body>
 </html>

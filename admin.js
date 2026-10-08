@@ -44,6 +44,16 @@
     const cmsPageSubmit = document.getElementById("adminPageSubmit");
     const cmsPageReload = document.getElementById("adminPageReload");
     const cmsPageStatus = document.getElementById("adminPageStatus");
+    const cmsPoemForm = document.getElementById("adminPoemForm");
+    const cmsPoemTitle = document.getElementById("adminPoemTitle");
+    const cmsPoemSubtitle = document.getElementById("adminPoemSubtitle");
+    const cmsPoemPublicationStatus = document.getElementById(
+        "adminPoemPublicationStatus"
+    );
+    const cmsPoemSections = document.getElementById("adminPoemSections");
+    const cmsPoemSubmit = document.getElementById("adminPoemSubmit");
+    const cmsPoemReload = document.getElementById("adminPoemReload");
+    const cmsPoemStatus = document.getElementById("adminPoemStatus");
     const mapEntryForm = document.getElementById("adminMapEntryForm");
     const mapEntryName = document.getElementById("adminMapEntryName");
     const mapEntryCategory = document.getElementById("adminMapEntryCategory");
@@ -104,6 +114,7 @@
     let editingNarrativeId = null;
     let loadedNarrativeSteps = [];
     let loadedCmsPages = [];
+    let loadedCmsPoem = null;
 
     const pushNotifications = window.NNMRCN_NOTIFICHE.create({
         button: pushButton,
@@ -146,6 +157,7 @@
                 loadMapEntries(),
                 loadNarrativeSteps(),
                 loadCmsPages(),
+                loadCmsPoem(),
                 loadSummary(),
                 pushNotifications.sync()
             ]);
@@ -323,6 +335,135 @@
         } finally {
             cmsPageSubmit.disabled = false;
             cmsPageReload.disabled = false;
+        }
+    }
+
+    async function loadCmsPoem() {
+        cmsPoemStatus.textContent = "Caricamento poesia…";
+
+        try {
+            const data = await request("/api/admin/cms/poem");
+            loadedCmsPoem = data.poem || null;
+            renderCmsPoemForm();
+            cmsPoemStatus.textContent = loadedCmsPoem
+                ? ""
+                : "Poesia non disponibile.";
+        } catch (error) {
+            cmsPoemStatus.textContent =
+                error.message || "Non è stato possibile caricare la poesia.";
+        }
+    }
+
+    function renderCmsPoemForm() {
+        const poem = loadedCmsPoem;
+
+        cmsPoemSections.replaceChildren();
+
+        if (!poem) {
+            cmsPoemSubmit.disabled = true;
+            return;
+        }
+
+        cmsPoemTitle.value = poem.title;
+        cmsPoemSubtitle.value = poem.subtitle;
+        cmsPoemPublicationStatus.value = poem.status;
+        cmsPoemSubmit.disabled = false;
+
+        for (const section of poem.sections || []) {
+            const details = document.createElement("details");
+            const summary = document.createElement("summary");
+            const lines = document.createElement("div");
+
+            details.className = "admin-poem-section";
+            details.open = Number(section.position) === 1;
+            summary.textContent =
+                `Canto ${section.title} — ${section.lines.length} versi`;
+            lines.className = "admin-poem-lines";
+
+            for (const line of section.lines) {
+                const row = document.createElement("div");
+                const textLabel = document.createElement("label");
+                const textHeading = document.createElement("span");
+                const textarea = document.createElement("textarea");
+                const indentLabel = document.createElement("label");
+                const indentSelect = document.createElement("select");
+
+                row.className = "admin-poem-line";
+                textHeading.textContent =
+                    `Verso ${line.position} · riga ${line.metadata?.metricRow || "–"}`;
+                textarea.value = line.text;
+                textarea.rows = 2;
+                textarea.maxLength = 2000;
+                textarea.dataset.cmsPoemLine = line.id;
+                textLabel.append(textHeading, textarea);
+                indentLabel.textContent = "Rientro";
+
+                for (let indent = 0; indent <= 3; indent += 1) {
+                    const option = document.createElement("option");
+                    option.value = String(indent);
+                    option.textContent = String(indent);
+                    indentSelect.appendChild(option);
+                }
+
+                indentSelect.value = String(line.indent);
+                indentSelect.dataset.cmsPoemIndent = line.id;
+                indentLabel.appendChild(indentSelect);
+                row.append(textLabel, indentLabel);
+                lines.appendChild(row);
+            }
+
+            details.append(summary, lines);
+            cmsPoemSections.appendChild(details);
+        }
+    }
+
+    async function saveCmsPoem(event) {
+        event.preventDefault();
+
+        if (!loadedCmsPoem) {
+            return;
+        }
+
+        const lineFields = Array.from(
+            cmsPoemSections.querySelectorAll("[data-cms-poem-line]")
+        );
+        const indentFields = new Map(Array.from(
+            cmsPoemSections.querySelectorAll("[data-cms-poem-indent]")
+        ).map((field) => [field.dataset.cmsPoemIndent, field]));
+
+        cmsPoemSubmit.disabled = true;
+        cmsPoemReload.disabled = true;
+        cmsPoemStatus.textContent = "Salvataggio della poesia…";
+
+        try {
+            const data = await request("/api/admin/cms/poem", {
+                method: "PATCH",
+                body: JSON.stringify({
+                    title: cmsPoemTitle.value,
+                    subtitle: cmsPoemSubtitle.value,
+                    status: cmsPoemPublicationStatus.value,
+                    expectedUpdatedAt: loadedCmsPoem.updatedAt,
+                    lines: lineFields.map((field) => ({
+                        id: field.dataset.cmsPoemLine,
+                        text: field.value,
+                        indent: Number(
+                            indentFields.get(field.dataset.cmsPoemLine)?.value
+                        )
+                    }))
+                })
+            });
+            const message = data.unchanged
+                ? "Nessuna modifica da salvare."
+                : "Poesia salvata e revisione registrata.";
+
+            await loadCmsPoem();
+            cmsPoemStatus.textContent = message;
+        } catch (error) {
+            cmsPoemStatus.textContent =
+                error.message || "Non è stato possibile salvare la poesia.";
+        } finally {
+            cmsPoemSubmit.disabled = false;
+            cmsPoemReload.disabled = false;
         }
     }
 
@@ -1731,6 +1872,8 @@
         const page = selectedCmsPage();
         loadCmsPages(page?.id || "");
     });
+    cmsPoemForm.addEventListener("submit", saveCmsPoem);
+    cmsPoemReload.addEventListener("click", loadCmsPoem);
     narrativeCancel.addEventListener("click", () => {
         resetNarrativeForm();
         narrativeStatus.textContent = "Modifica annullata.";

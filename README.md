@@ -139,6 +139,11 @@ testi dei blocchi delle nove pagine. Ogni salvataggio rifiuta una copia ormai
 superata e aggiunge revisioni append-only della pagina e dei soli blocchi
 modificati; ID, ordine e parti interattive restano invariati.
 
+Lo stesso pannello espone la poesia per canto: titolo, sottotitolo, testo e
+rientro dei 121 versi sono modificabili, mentre ID, ordine, strofe, classi,
+ancore I–IV e 165 riferimenti metrici restano protetti. Anche questi salvataggi
+usano controllo di concorrenza e revisioni append-only.
+
 L'inventario si controlla con:
 
 ```bash
