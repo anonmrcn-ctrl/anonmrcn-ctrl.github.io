@@ -7,10 +7,14 @@
       "id": "poem",
       "label": "Poesia e canti",
       "classification": "content",
-      "currentSources": ["index.html", "poesia-metrica.js"],
+      "currentSources": [
+        "D1:poem_works/poem_sections/poem_lines",
+        "index.html",
+        "poesia-metrica.js"
+      ],
       "targetEntities": ["poem_works", "poem_sections", "poem_lines"],
-      "priority": "high",
-      "migration": "required"
+      "priority": "complete",
+      "migration": "complete"
     },
     {
       "id": "poetry-path",

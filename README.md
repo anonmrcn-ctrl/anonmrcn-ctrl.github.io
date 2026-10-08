@@ -88,6 +88,11 @@ I testi editoriali di nove pagine sono importati una sola volta in D1 come
 da `GET /api/public/pages/:slug` e mantengono nel proprio HTML la stessa copia,
 così restano leggibili anche se il Worker non è raggiungibile.
 
+Anche «Il Gajo tra i Praelli» usa D1 come sorgente pubblicata: 4 canti e
+121 versi conservano ordine, strofe, rientri e i 165 riferimenti di rigo. La
+copia completa in `index.html` rimane il ripiego e viene usata prima di avviare
+numerazione e collegamenti interattivi se l'API non risponde.
+
 L'inventario si controlla con:
 
 ```bash

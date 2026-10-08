@@ -38,7 +38,7 @@ amministrative devono riusare le API e gli identificativi già esistenti.
 
 | Area editoriale | Dove si trova ora | Destinazione prevista | Priorità |
 |---|---|---|---|
-| Poesia e struttura dei canti | `index.html`, `poesia-metrica.js` | Poesia, sezioni e righe con identificativi stabili | Alta |
+| Poesia e struttura dei canti | `poem_works`, `poem_sections` e `poem_lines` in D1, con ripiego in `index.html` | Poesia, sezioni e righe con identificativi stabili | Migrata |
 | Percorso «Esplora la poesia» | `narrative_steps` in D1, con ripiego locale in `progetto.js` | Tappe ordinate, coordinate, versi, fonti e stato | Migrato e amministrabile |
 | Presentazione del progetto | `site_pages` e `page_blocks` in D1, con ripiego in `progetto.html` | Pagina composta da blocchi | Migrata |
 | Biografia e contatti editoriali | Testi in `site_pages` e `page_blocks`, ripiego in `autore.html`; recapiti ancora statici | Pagina composta da blocchi e impostazioni di contatto | Testi migrati; recapiti da migrare |

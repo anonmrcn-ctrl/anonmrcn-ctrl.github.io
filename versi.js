@@ -1,60 +1,72 @@
 (() => {
     "use strict";
 
-    const poem = document.querySelector("main.poesia");
-    const metric = window.NNMRCN_POEM_METRIC;
+    window.NNMRCN_POEM_RENDERED = Promise.resolve(
+        window.NNMRCN_POEM_READY
+    ).then(renderPoemLines);
 
-    if (!poem || poem.dataset.versiNumerati === "true") {
-        return;
-    }
+    function renderPoemLines() {
+        const poem = document.querySelector("main.poesia");
+        const metric = window.NNMRCN_POEM_METRIC;
 
-    const blankRowsBetweenStanzas = Number(
-        metric?.blankRowsBetweenStanzas ?? 1
-    );
-    const paragraphs = Array.from(poem.querySelectorAll(".canto p"));
-    let rowNumber = 0;
-
-    paragraphs.forEach((paragraph, paragraphIndex) => {
-        if (paragraphIndex > 0) {
-            for (let index = 0; index < blankRowsBetweenStanzas; index += 1) {
-                rowNumber += 1;
-
-                if (rowNumber % 5 === 0) {
-                    paragraphs[paragraphIndex - 1].dataset.numeroRigoVuoto =
-                        String(rowNumber);
-                }
-            }
+        if (!poem || poem.dataset.versiNumerati === "true") {
+            return;
         }
 
-        Array.from(paragraph.childNodes).forEach((node) => {
-            if (node.nodeType === Node.TEXT_NODE) {
-                if (!node.textContent.trim()) {
+        const blankRowsBetweenStanzas = Number(
+            metric?.blankRowsBetweenStanzas ?? 1
+        );
+        const paragraphs = Array.from(poem.querySelectorAll(".canto p"));
+        let rowNumber = 0;
+
+        paragraphs.forEach((paragraph, paragraphIndex) => {
+            if (paragraphIndex > 0) {
+                for (
+                    let index = 0;
+                    index < blankRowsBetweenStanzas;
+                    index += 1
+                ) {
+                    rowNumber += 1;
+
+                    if (rowNumber % 5 === 0) {
+                        paragraphs[paragraphIndex - 1].dataset.numeroRigoVuoto =
+                            String(rowNumber);
+                    }
+                }
+            }
+
+            Array.from(paragraph.childNodes).forEach((originalNode) => {
+                let node = originalNode;
+
+                if (node.nodeType === Node.TEXT_NODE) {
+                    if (!node.textContent.trim()) {
+                        return;
+                    }
+
+                    const line = document.createElement("span");
+                    line.className = "verso-linea";
+                    node.replaceWith(line);
+                    line.appendChild(node);
+                    node = line;
+                } else if (
+                    node.nodeType === Node.ELEMENT_NODE &&
+                    node.tagName === "SPAN"
+                ) {
+                    node.classList.add("verso-linea");
+                } else {
                     return;
                 }
 
-                const line = document.createElement("span");
-                line.className = "verso-linea";
-                node.replaceWith(line);
-                line.appendChild(node);
-                node = line;
-            } else if (
-                node.nodeType === Node.ELEMENT_NODE &&
-                node.tagName === "SPAN"
-            ) {
-                node.classList.add("verso-linea");
-            } else {
-                return;
-            }
+                rowNumber += 1;
+                node.dataset.rigoPoesia = String(rowNumber);
 
-            rowNumber += 1;
-            node.dataset.rigoPoesia = String(rowNumber);
-
-            if (rowNumber % 5 === 0) {
-                node.dataset.numeroVerso = String(rowNumber);
-            }
+                if (rowNumber % 5 === 0) {
+                    node.dataset.numeroVerso = String(rowNumber);
+                }
+            });
         });
-    });
 
-    poem.dataset.versiNumerati = "true";
-    poem.dataset.totaleRighi = String(rowNumber);
+        poem.dataset.versiNumerati = "true";
+        poem.dataset.totaleRighi = String(rowNumber);
+    }
 })();

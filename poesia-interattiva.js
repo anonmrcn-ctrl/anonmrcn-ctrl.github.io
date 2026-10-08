@@ -1,5 +1,9 @@
-(() => {
+(async () => {
     "use strict";
+
+    await Promise.resolve(
+        window.NNMRCN_POEM_RENDERED || window.NNMRCN_POEM_READY
+    );
 
     const poem = document.querySelector("main.poesia");
     const metricLines = window.NNMRCN_POEM_METRIC?.lines;

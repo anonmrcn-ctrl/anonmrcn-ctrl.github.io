@@ -78,6 +78,14 @@ L'endpoint pubblico è `GET /api/public/pages/:slug` e restituisce soltanto
 pagine con stato `published`. Ogni file HTML conserva la copia originaria e la
 usa automaticamente se il Worker non è raggiungibile.
 
+La stessa inizializzazione importa «Il Gajo tra i Praelli» in `poem_works`,
+`poem_sections` e `poem_lines`: 4 canti, 121 versi e i metadati necessari a
+ricostruire strofe, rientri e 165 righe metriche. L'endpoint
+`GET /api/public/poems/il-gajo-tra-i-praelli` restituisce soltanto l'opera
+pubblicata. `index.html` conserva l'intera poesia come ripiego; numerazione e
+collegamenti territoriali vengono applicati dopo D1 o dopo l'attivazione del
+ripiego, mantenendo invariati gli ancoraggi `#I`–`#IV` e i numeri di rigo.
+
 Se le location non sono ancora presenti, esegui successivamente il contenuto del
 file privato `nnmrcn_seed_private_d1_20260823.sql` aggiornato. Contiene le 20
 location, ma cancella prima messaggi, sessioni e location esistenti: usalo

@@ -8,6 +8,7 @@ import {
 import { CMS_STORAGE_STATEMENTS } from "./cms-schema.js";
 import { NARRATIVE_STEP_SEEDS } from "./narrative-seed.js";
 import { PAGE_SEEDS } from "./page-seed.js";
+import { POEM_SEED } from "./poem-seed.js";
 
 // workerd refuses PBKDF2 requests above 100,000 iterations.
 const PBKDF2_ITERATIONS = 100000;
@@ -448,6 +449,14 @@ export default {
             ) {
                 const slug = path.split("/").pop();
                 return await getPublicPage(request, env, slug);
+            }
+
+            if (
+                request.method === "GET" &&
+                /^\/api\/public\/poems\/[a-z0-9]+(?:-[a-z0-9]+)*$/.test(path)
+            ) {
+                const slug = path.split("/").pop();
+                return await getPublicPoem(request, env, slug);
             }
 
             if (
@@ -2553,6 +2562,91 @@ async function getPublicPage(request, env, slug) {
     });
 }
 
+async function getPublicPoem(request, env, slug) {
+    await ensureCmsStorage(env);
+
+    const poem = await env.DB.prepare(`
+        SELECT id, slug, title, subtitle, updated_at, published_at
+        FROM poem_works
+        WHERE slug = ? AND status = 'published'
+        LIMIT 1
+    `).bind(slug).first();
+
+    if (!poem) {
+        return json(request, env, { error: "Poesia non trovata." }, 404);
+    }
+
+    const [sectionResult, lineResult] = await Promise.all([
+        env.DB.prepare(`
+            SELECT id, position, title, updated_at
+            FROM poem_sections
+            WHERE poem_id = ?
+            ORDER BY position ASC, id ASC
+        `).bind(poem.id).all(),
+        env.DB.prepare(`
+            SELECT
+                poem_lines.id,
+                poem_lines.section_id,
+                poem_lines.position,
+                poem_lines.text,
+                poem_lines.indent_level,
+                poem_lines.metadata_json,
+                poem_lines.updated_at
+            FROM poem_lines
+            INNER JOIN poem_sections
+                ON poem_sections.id = poem_lines.section_id
+            WHERE poem_sections.poem_id = ?
+            ORDER BY
+                poem_sections.position ASC,
+                poem_lines.position ASC,
+                poem_lines.id ASC
+        `).bind(poem.id).all()
+    ]);
+    const linesBySection = new Map();
+
+    for (const line of lineResult.results || []) {
+        const lines = linesBySection.get(line.section_id) || [];
+        let metadata = {};
+
+        try {
+            metadata = JSON.parse(line.metadata_json || "{}");
+        } catch (_) {
+            metadata = {};
+        }
+
+        lines.push({
+            id: line.id,
+            position: Number(line.position),
+            text: line.text,
+            indent: Number(line.indent_level),
+            metadata,
+            updatedAt: Number(line.updated_at)
+        });
+        linesBySection.set(line.section_id, lines);
+    }
+
+    return json(request, env, {
+        poem: {
+            id: poem.id,
+            slug: poem.slug,
+            title: poem.title,
+            subtitle: poem.subtitle,
+            updatedAt: Number(poem.updated_at),
+            publishedAt: Number(poem.published_at),
+            sections: (sectionResult.results || []).map((section) => ({
+                id: section.id,
+                position: Number(section.position),
+                title: section.title,
+                anchor: /^[IVXLCDM]+$/u.test(section.title)
+                    ? section.title
+                    : section.id,
+                updatedAt: Number(section.updated_at),
+                lines: linesBySection.get(section.id) || []
+            }))
+        }
+    });
+}
+
 async function listPublicNarrativeSteps(request, env) {
     await ensureNarrativeStorage(env);
 
@@ -3955,6 +4049,11 @@ async function initializeCmsStorage(env) {
         )
     );
 
+    await initializePageContent(env);
+    await initializePoemContent(env);
+}
+
+async function initializePageContent(env) {
     const initialized = await env.DB.prepare(`
         SELECT name
         FROM content_initializations
@@ -4020,6 +4119,94 @@ async function initializeCmsStorage(env) {
     `).bind(now));
 
     await env.DB.batch(inserts);
+}
+
+async function initializePoemContent(env) {
+    const initialized = await env.DB.prepare(`
+        SELECT name
+        FROM content_initializations
+        WHERE name = 'poem_il_gajo_v1'
+        LIMIT 1
+    `).first();
+
+    if (initialized) {
+        return;
+    }
+
+    const now = Date.now();
+    const inserts = [env.DB.prepare(`
+        INSERT OR IGNORE INTO poem_works (
+            id,
+            slug,
+            title,
+            subtitle,
+            status,
+            created_at,
+            updated_at,
+            published_at
+        ) VALUES (?, ?, ?, ?, 'published', ?, ?, ?)
+    `).bind(
+        POEM_SEED.id,
+        POEM_SEED.slug,
+        POEM_SEED.title,
+        POEM_SEED.subtitle,
+        now,
+        now,
+        now
+    )];
+
+    for (const section of POEM_SEED.sections) {
+        inserts.push(env.DB.prepare(`
+            INSERT OR IGNORE INTO poem_sections (
+                id,
+                poem_id,
+                position,
+                title,
+                created_at,
+                updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?)
+        `).bind(
+            section.id,
+            POEM_SEED.id,
+            section.position,
+            section.title,
+            now,
+            now
+        ));
+
+        for (const line of section.lines) {
+            inserts.push(env.DB.prepare(`
+                INSERT OR IGNORE INTO poem_lines (
+                    id,
+                    section_id,
+                    position,
+                    text,
+                    indent_level,
+                    metadata_json,
+                    created_at,
+                    updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            `).bind(
+                line.id,
+                section.id,
+                line.position,
+                line.text,
+                line.indent,
+                JSON.stringify(line.metadata),
+                now,
+                now
+            ));
+        }
+    }
+
+    for (let index = 0; index < inserts.length; index += 40) {
+        await env.DB.batch(inserts.slice(index, index + 40));
+    }
+
+    await env.DB.prepare(`
+        INSERT OR IGNORE INTO content_initializations (name, applied_at)
+        VALUES ('poem_il_gajo_v1', ?)
+    `).bind(now).run();
 }
 
 async function ensureMayorStorage(env) {
