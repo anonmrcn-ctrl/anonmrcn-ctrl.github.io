@@ -237,6 +237,6 @@ test("il pannello raggruppa i versi per canto e invia solo campi modificabili", 
     assert.doesNotMatch(source, /metadata:\s*field/u);
     assert.match(
         html,
-        /<script src="\.\/admin\.js\?v=20261008-menu-cms1"><\/script>/u
+        /<script src="\.\/admin\.js\?v=20261008-map-layers-cms1"><\/script>/u
     );
 });

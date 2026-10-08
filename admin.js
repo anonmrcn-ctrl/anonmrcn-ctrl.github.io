@@ -69,6 +69,43 @@
     const cmsOnboardingStatusText = document.getElementById(
         "adminOnboardingStatusText"
     );
+    const cmsMapLayerForm = document.getElementById("adminMapLayerForm");
+    const cmsMapLayerSelect = document.getElementById("adminMapLayerSelect");
+    const cmsMapLayerIdentity = document.getElementById("adminMapLayerIdentity");
+    const cmsMapLayerTitle = document.getElementById("adminMapLayerTitle");
+    const cmsMapLayerDescription = document.getElementById(
+        "adminMapLayerDescription"
+    );
+    const cmsMapLayerPublicationStatus = document.getElementById(
+        "adminMapLayerPublicationStatus"
+    );
+    const cmsMapLayerStyle = document.getElementById("adminMapLayerStyle");
+    const cmsMapLayerSubmit = document.getElementById("adminMapLayerSubmit");
+    const cmsMapLayerReload = document.getElementById("adminMapLayerReload");
+    const cmsMapLayerStatus = document.getElementById("adminMapLayerStatus");
+    const cmsMapFeatureForm = document.getElementById("adminMapFeatureForm");
+    const cmsMapFeatureSelect = document.getElementById("adminMapFeatureSelect");
+    const cmsMapFeatureLayer = document.getElementById("adminMapFeatureLayer");
+    const cmsMapFeaturePosition = document.getElementById(
+        "adminMapFeaturePosition"
+    );
+    const cmsMapFeatureTitle = document.getElementById("adminMapFeatureTitle");
+    const cmsMapFeatureDescription = document.getElementById(
+        "adminMapFeatureDescription"
+    );
+    const cmsMapFeaturePublicationStatus = document.getElementById(
+        "adminMapFeaturePublicationStatus"
+    );
+    const cmsMapFeatureGeometry = document.getElementById(
+        "adminMapFeatureGeometry"
+    );
+    const cmsMapFeatureProperties = document.getElementById(
+        "adminMapFeatureProperties"
+    );
+    const cmsMapFeatureSubmit = document.getElementById("adminMapFeatureSubmit");
+    const cmsMapFeatureReset = document.getElementById("adminMapFeatureReset");
+    const cmsMapFeatureReload = document.getElementById("adminMapFeatureReload");
+    const cmsMapFeatureStatus = document.getElementById("adminMapFeatureStatus");
     const mapEntryForm = document.getElementById("adminMapEntryForm");
     const mapEntryName = document.getElementById("adminMapEntryName");
     const mapEntryCategory = document.getElementById("adminMapEntryCategory");
@@ -132,6 +169,7 @@
     let loadedCmsPoem = null;
     let loadedCmsNavigation = null;
     let loadedCmsOnboarding = null;
+    let loadedCmsMapLayers = [];
 
     const pushNotifications = window.NNMRCN_NOTIFICHE.create({
         button: pushButton,
@@ -177,6 +215,7 @@
                 loadCmsPoem(),
                 loadCmsNavigation(),
                 loadCmsOnboarding(),
+                loadCmsMapLayers(),
                 loadSummary(),
                 pushNotifications.sync()
             ]);
@@ -668,6 +707,267 @@
                 error.message || "Salvataggio non riuscito.";
         } finally {
             cmsOnboardingSubmit.disabled = false;
+        }
+    }
+
+    function cmsMapFeatures() {
+        return loadedCmsMapLayers.flatMap((layer) => layer.features || []);
+    }
+
+    function selectedCmsMapLayer() {
+        return loadedCmsMapLayers.find(
+            (layer) => layer.id === cmsMapLayerSelect.value
+        );
+    }
+
+    function selectedCmsMapFeature() {
+        return cmsMapFeatures().find(
+            (feature) => feature.id === cmsMapFeatureSelect.value
+        );
+    }
+
+    function fillCmsMapLayerSelect(select, selectedId) {
+        select.replaceChildren();
+
+        for (const layer of loadedCmsMapLayers) {
+            const option = document.createElement("option");
+            option.value = layer.id;
+            option.textContent = `${layer.position}. ${layer.title}`;
+            select.appendChild(option);
+        }
+
+        if (loadedCmsMapLayers.some((layer) => layer.id === selectedId)) {
+            select.value = selectedId;
+        }
+    }
+
+    async function loadCmsMapLayers(
+        preferredLayerId = "",
+        preferredFeatureId = ""
+    ) {
+        const layerId = preferredLayerId || cmsMapLayerSelect.value;
+        const featureId = preferredFeatureId || cmsMapFeatureSelect.value;
+        cmsMapLayerStatus.textContent = "Caricamento livelli…";
+        cmsMapFeatureStatus.textContent = "Caricamento geometrie…";
+
+        try {
+            const data = await request("/api/admin/cms/map-layers");
+            loadedCmsMapLayers = data.layers || [];
+            fillCmsMapLayerSelect(cmsMapLayerSelect, layerId);
+            fillCmsMapLayerSelect(
+                cmsMapFeatureLayer,
+                selectedCmsMapFeature()?.layerId || layerId
+            );
+            renderCmsMapLayerForm();
+            renderCmsMapFeatureSelect(featureId);
+            renderCmsMapFeatureForm();
+            cmsMapLayerStatus.textContent = loadedCmsMapLayers.length
+                ? ""
+                : "Nessun livello disponibile.";
+            cmsMapFeatureStatus.textContent = "";
+        } catch (error) {
+            const message = error.message ||
+                "Non è stato possibile caricare livelli e geometrie.";
+            cmsMapLayerStatus.textContent = message;
+            cmsMapFeatureStatus.textContent = message;
+        }
+    }
+
+    function renderCmsMapLayerForm() {
+        const layer = selectedCmsMapLayer();
+
+        if (!layer) {
+            cmsMapLayerIdentity.textContent = "";
+            cmsMapLayerTitle.value = "";
+            cmsMapLayerDescription.value = "";
+            cmsMapLayerStyle.value = "{}";
+            cmsMapLayerSubmit.disabled = true;
+            return;
+        }
+
+        cmsMapLayerIdentity.textContent =
+            `${layer.id} · /${layer.slug} · ${layer.type} · posizione ${layer.position}`;
+        cmsMapLayerTitle.value = layer.title;
+        cmsMapLayerDescription.value = layer.description;
+        cmsMapLayerPublicationStatus.value = layer.status;
+        cmsMapLayerStyle.value = JSON.stringify(layer.style || {}, null, 2);
+        cmsMapLayerSubmit.disabled = false;
+    }
+
+    function renderCmsMapFeatureSelect(preferredId = "") {
+        const features = cmsMapFeatures();
+        const newOption = document.createElement("option");
+        newOption.value = "";
+        newOption.textContent = "Nuova geometria";
+        cmsMapFeatureSelect.replaceChildren(newOption);
+
+        for (const layer of loadedCmsMapLayers) {
+            for (const feature of layer.features || []) {
+                const option = document.createElement("option");
+                option.value = feature.id;
+                option.textContent = `${layer.title} — ${feature.position}. ${feature.title}` +
+                    (feature.status === "archived" ? " [archiviata]" : "");
+                cmsMapFeatureSelect.appendChild(option);
+            }
+        }
+
+        cmsMapFeatureSelect.value = features.some(
+            (feature) => feature.id === preferredId
+        ) ? preferredId : "";
+    }
+
+    function nextCmsMapFeaturePosition(layerId) {
+        const positions = cmsMapFeatures()
+            .filter((feature) => feature.layerId === layerId)
+            .map((feature) => Number(feature.position) || 0);
+        return Math.max(0, ...positions) + 1;
+    }
+
+    function renderCmsMapFeatureForm() {
+        const feature = selectedCmsMapFeature();
+
+        if (!feature) {
+            const layerId = selectedCmsMapLayer()?.id ||
+                loadedCmsMapLayers[0]?.id || "";
+            cmsMapFeatureLayer.value = layerId;
+            cmsMapFeaturePosition.value = String(
+                nextCmsMapFeaturePosition(layerId)
+            );
+            cmsMapFeatureTitle.value = "";
+            cmsMapFeatureDescription.value = "";
+            cmsMapFeaturePublicationStatus.value = "draft";
+            cmsMapFeatureGeometry.value = "";
+            cmsMapFeatureProperties.value = "{}";
+            cmsMapFeatureSubmit.textContent = "Crea geometria";
+            return;
+        }
+
+        cmsMapFeatureLayer.value = feature.layerId;
+        cmsMapFeaturePosition.value = String(feature.position);
+        cmsMapFeatureTitle.value = feature.title;
+        cmsMapFeatureDescription.value = feature.description;
+        cmsMapFeaturePublicationStatus.value = feature.status;
+        cmsMapFeatureGeometry.value = feature.geometry === null
+            ? ""
+            : JSON.stringify(feature.geometry, null, 2);
+        cmsMapFeatureProperties.value = JSON.stringify(
+            feature.properties || {},
+            null,
+            2
+        );
+        cmsMapFeatureSubmit.textContent = "Salva geometria";
+        cmsMapFeatureStatus.textContent = feature.status === "archived"
+            ? "Geometria archiviata: non è visibile nella mappa pubblica."
+            : "";
+    }
+
+    function parseCmsMapJson(value, label, allowEmpty = false) {
+        const source = String(value || "").trim();
+
+        if (!source && allowEmpty) {
+            return null;
+        }
+
+        try {
+            const parsed = JSON.parse(source);
+            if (parsed === null || typeof parsed !== "object" ||
+                Array.isArray(parsed)) {
+                throw new Error();
+            }
+            return parsed;
+        } catch (_) {
+            throw new Error(`${label} deve contenere un oggetto JSON valido.`);
+        }
+    }
+
+    async function saveCmsMapLayer(event) {
+        event.preventDefault();
+        const layer = selectedCmsMapLayer();
+
+        if (!layer) return;
+        cmsMapLayerSubmit.disabled = true;
+        cmsMapLayerReload.disabled = true;
+        cmsMapLayerStatus.textContent = `Salvataggio di «${layer.title}»…`;
+
+        try {
+            const data = await request(
+                `/api/admin/cms/map-layers/${encodeURIComponent(layer.id)}`,
+                {
+                    method: "PATCH",
+                    body: JSON.stringify({
+                        title: cmsMapLayerTitle.value,
+                        description: cmsMapLayerDescription.value,
+                        style: parseCmsMapJson(
+                            cmsMapLayerStyle.value,
+                            "Lo stile"
+                        ),
+                        status: cmsMapLayerPublicationStatus.value,
+                        expectedUpdatedAt: layer.updatedAt
+                    })
+                }
+            );
+            await loadCmsMapLayers(layer.id, cmsMapFeatureSelect.value);
+            cmsMapLayerStatus.textContent = data.unchanged
+                ? "Nessuna modifica da salvare."
+                : "Livello salvato e revisione registrata.";
+        } catch (error) {
+            cmsMapLayerStatus.textContent =
+                error.message || "Non è stato possibile salvare il livello.";
+        } finally {
+            cmsMapLayerSubmit.disabled = false;
+            cmsMapLayerReload.disabled = false;
+        }
+    }
+
+    async function saveCmsMapFeature(event) {
+        event.preventDefault();
+        const feature = selectedCmsMapFeature();
+        cmsMapFeatureSubmit.disabled = true;
+        cmsMapFeatureReset.disabled = true;
+        cmsMapFeatureReload.disabled = true;
+        cmsMapFeatureStatus.textContent = feature
+            ? `Salvataggio di «${feature.title}»…`
+            : "Creazione della geometria…";
+
+        try {
+            const body = {
+                layerId: cmsMapFeatureLayer.value,
+                position: Number(cmsMapFeaturePosition.value),
+                title: cmsMapFeatureTitle.value,
+                description: cmsMapFeatureDescription.value,
+                status: cmsMapFeaturePublicationStatus.value,
+                geometry: parseCmsMapJson(
+                    cmsMapFeatureGeometry.value,
+                    "La geometria",
+                    true
+                ),
+                properties: parseCmsMapJson(
+                    cmsMapFeatureProperties.value,
+                    "Le proprietà"
+                )
+            };
+            if (feature) {
+                body.expectedUpdatedAt = feature.updatedAt;
+            }
+            const data = await request(feature
+                ? `/api/admin/cms/map-features/${encodeURIComponent(feature.id)}`
+                : "/api/admin/cms/map-features", {
+                method: feature ? "PATCH" : "POST",
+                body: JSON.stringify(body)
+            });
+            await loadCmsMapLayers(data.feature.layerId, data.feature.id);
+            cmsMapFeatureStatus.textContent = data.unchanged
+                ? "Nessuna modifica da salvare."
+                : feature
+                    ? "Geometria salvata e revisione registrata."
+                    : "Geometria creata con un nuovo identificativo stabile.";
+        } catch (error) {
+            cmsMapFeatureStatus.textContent = error.message ||
+                "Non è stato possibile salvare la geometria.";
+        } finally {
+            cmsMapFeatureSubmit.disabled = false;
+            cmsMapFeatureReset.disabled = false;
+            cmsMapFeatureReload.disabled = false;
         }
     }
 
@@ -2082,6 +2382,34 @@
     cmsNavigationReload.addEventListener("click", loadCmsNavigation);
     cmsOnboardingForm.addEventListener("submit", saveCmsOnboarding);
     cmsOnboardingReload.addEventListener("click", loadCmsOnboarding);
+    cmsMapLayerForm.addEventListener("submit", saveCmsMapLayer);
+    cmsMapLayerSelect.addEventListener("change", () => {
+        renderCmsMapLayerForm();
+        if (!selectedCmsMapFeature()) {
+            renderCmsMapFeatureForm();
+        }
+    });
+    cmsMapLayerReload.addEventListener("click", () => {
+        loadCmsMapLayers(cmsMapLayerSelect.value, cmsMapFeatureSelect.value);
+    });
+    cmsMapFeatureForm.addEventListener("submit", saveCmsMapFeature);
+    cmsMapFeatureSelect.addEventListener("change", renderCmsMapFeatureForm);
+    cmsMapFeatureLayer.addEventListener("change", () => {
+        if (!selectedCmsMapFeature()) {
+            cmsMapFeaturePosition.value = String(
+                nextCmsMapFeaturePosition(cmsMapFeatureLayer.value)
+            );
+        }
+    });
+    cmsMapFeatureReset.addEventListener("click", () => {
+        cmsMapFeatureSelect.value = "";
+        renderCmsMapFeatureForm();
+        cmsMapFeatureStatus.textContent = "Nuova geometria pronta.";
+        cmsMapFeatureTitle.focus();
+    });
+    cmsMapFeatureReload.addEventListener("click", () => {
+        loadCmsMapLayers(cmsMapLayerSelect.value, cmsMapFeatureSelect.value);
+    });
     narrativeCancel.addEventListener("click", () => {
         resetNarrativeForm();
         narrativeStatus.textContent = "Modifica annullata.";

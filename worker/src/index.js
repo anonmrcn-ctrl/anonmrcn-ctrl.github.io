@@ -100,6 +100,10 @@ const MAX_CMS_PAGE_BLOCK_TEXT_LENGTH = 20000;
 const MAX_CMS_POEM_REQUEST_BYTES = 512000;
 const MAX_CMS_POEM_LINES = 1000;
 const MAX_CMS_CONFIGURATION_REQUEST_BYTES = 192000;
+const MAX_CMS_MAP_REQUEST_BYTES = 1200000;
+const MAX_CMS_MAP_STYLE_LENGTH = 50000;
+const MAX_CMS_MAP_GEOMETRY_LENGTH = 1000000;
+const MAX_CMS_MAP_PROPERTIES_LENGTH = 100000;
 
 class RequestBodyTooLargeError extends Error {}
 
@@ -696,6 +700,30 @@ export default {
 
             if (request.method === "PATCH" && path === "/api/admin/cms/onboarding") {
                 return await adminUpdateCmsOnboarding(request, env);
+            }
+
+            if (request.method === "GET" && path === "/api/admin/cms/map-layers") {
+                return await adminGetCmsMapLayers(request, env);
+            }
+
+            if (
+                request.method === "PATCH" &&
+                /^\/api\/admin\/cms\/map-layers\/[a-z0-9]+(?:-[a-z0-9]+)*$/.test(path)
+            ) {
+                const layerId = path.split("/").pop();
+                return await adminUpdateCmsMapLayer(request, env, layerId);
+            }
+
+            if (request.method === "POST" && path === "/api/admin/cms/map-features") {
+                return await adminCreateCmsMapFeature(request, env);
+            }
+
+            if (
+                request.method === "PATCH" &&
+                /^\/api\/admin\/cms\/map-features\/[a-z0-9]+(?:-[a-z0-9]+)*$/.test(path)
+            ) {
+                const featureId = path.split("/").pop();
+                return await adminUpdateCmsMapFeature(request, env, featureId);
             }
 
             if (
@@ -3785,6 +3813,463 @@ function revisionInsert(env, type, id, snapshot, state, now) {
         FROM content_revisions
         WHERE entity_type = ? AND entity_id = ?
     `).bind(type, id, JSON.stringify(snapshot), state, now, type, id);
+}
+
+async function adminGetCmsMapLayers(request, env) {
+    if (!(await adminAuthorized(request, env))) {
+        return unauthorized(request, env);
+    }
+    await ensureCmsStorage(env);
+    return json(request, env, await readCmsMapLayers(env));
+}
+
+async function readCmsMapLayers(env) {
+    const [layerResult, featureResult] = await Promise.all([
+        env.DB.prepare(`
+            SELECT
+                id, slug, title, description, layer_type, position,
+                style_json, status, created_at, updated_at, published_at
+            FROM map_layers
+            ORDER BY position ASC, id ASC
+        `).all(),
+        env.DB.prepare(`
+            SELECT
+                id, layer_id, position, title, description, geometry_json,
+                properties_json, status, created_at, updated_at, published_at
+            FROM map_features
+            ORDER BY layer_id ASC, position ASC, id ASC
+        `).all()
+    ]);
+    const featuresByLayer = new Map();
+
+    for (const row of featureResult.results || []) {
+        const features = featuresByLayer.get(row.layer_id) || [];
+        features.push(mapFeatureRecord(row));
+        featuresByLayer.set(row.layer_id, features);
+    }
+
+    const layers = (layerResult.results || []).map((row) => ({
+        id: row.id,
+        slug: row.slug,
+        title: row.title,
+        description: row.description,
+        type: row.layer_type,
+        position: Number(row.position),
+        style: parseJsonValue(row.style_json, {}),
+        status: row.status,
+        createdAt: Number(row.created_at),
+        updatedAt: Number(row.updated_at),
+        publishedAt: row.published_at === null
+            ? null
+            : Number(row.published_at),
+        features: featuresByLayer.get(row.id) || []
+    }));
+
+    return {
+        layers,
+        updatedAt: Math.max(
+            0,
+            ...layers.map((layer) => layer.updatedAt),
+            ...layers.flatMap((layer) =>
+                layer.features.map((feature) => feature.updatedAt)
+            )
+        )
+    };
+}
+
+function mapFeatureRecord(row) {
+    return {
+        id: row.id,
+        layerId: row.layer_id,
+        position: Number(row.position),
+        title: row.title,
+        description: row.description,
+        geometry: parseJsonValue(row.geometry_json, null),
+        properties: parseJsonValue(row.properties_json, {}),
+        status: row.status,
+        createdAt: Number(row.created_at),
+        updatedAt: Number(row.updated_at),
+        publishedAt: row.published_at === null
+            ? null
+            : Number(row.published_at)
+    };
+}
+
+async function adminUpdateCmsMapLayer(request, env, layerId) {
+    if (!(await adminAuthorized(request, env))) {
+        return unauthorized(request, env);
+    }
+    await ensureCmsStorage(env);
+    const collection = await readCmsMapLayers(env);
+    const current = collection.layers.find((layer) => layer.id === layerId);
+
+    if (!current) {
+        return json(request, env, { error: "Livello non trovato." }, 404);
+    }
+
+    const input = normalizeCmsMapLayerInput(
+        await readJson(request, MAX_CMS_MAP_REQUEST_BYTES)
+    );
+
+    if (input.error) {
+        return json(request, env, { error: input.error }, 400);
+    }
+    if (input.expectedUpdatedAt !== current.updatedAt) {
+        return json(request, env, {
+            error: "Il livello è stato modificato altrove. Ricaricalo prima di salvare."
+        }, 409);
+    }
+
+    const unchanged = input.title === current.title &&
+        input.description === current.description &&
+        input.status === current.status &&
+        JSON.stringify(input.style) === JSON.stringify(current.style);
+
+    if (unchanged) {
+        return json(request, env, { layer: current, unchanged: true });
+    }
+
+    const now = Math.max(Date.now(), current.updatedAt + 1);
+    await env.DB.batch([
+        env.DB.prepare(`
+            UPDATE map_layers
+            SET title = ?, description = ?, style_json = ?, status = ?,
+                updated_at = ?, published_at = CASE
+                    WHEN ? = 'published' THEN COALESCE(published_at, ?)
+                    ELSE published_at
+                END
+            WHERE id = ?
+        `).bind(
+            input.title,
+            input.description,
+            JSON.stringify(input.style),
+            input.status,
+            now,
+            input.status,
+            now,
+            current.id
+        ),
+        revisionInsert(env, "map_layer", current.id, {
+            id: current.id,
+            slug: current.slug,
+            title: input.title,
+            description: input.description,
+            type: current.type,
+            position: current.position,
+            style: input.style,
+            status: input.status,
+            features: current.features.map((feature) => ({
+                id: feature.id,
+                position: feature.position,
+                title: feature.title,
+                description: feature.description,
+                geometry: feature.geometry,
+                properties: feature.properties,
+                status: feature.status
+            }))
+        }, input.status, now)
+    ]);
+
+    const updated = await readCmsMapLayers(env);
+    return json(request, env, {
+        layer: updated.layers.find((layer) => layer.id === current.id),
+        unchanged: false
+    });
+}
+
+function normalizeCmsMapLayerInput(value) {
+    const title = String(value?.title || "").trim();
+    const description = String(value?.description || "").trim();
+    const status = String(value?.status || "");
+    const expectedUpdatedAt = Number(value?.expectedUpdatedAt);
+    const style = value?.style;
+
+    if (!title || title.length > 200 || description.length > 3000) {
+        return { error: "Titolo o descrizione del livello non validi." };
+    }
+    if (!isCmsMapObject(style) ||
+        JSON.stringify(style).length > MAX_CMS_MAP_STYLE_LENGTH) {
+        return { error: "Lo stile del livello deve essere un oggetto JSON valido." };
+    }
+    if (!cmsMapStatusValid(status)) {
+        return { error: "Lo stato del livello non è valido." };
+    }
+    if (!Number.isSafeInteger(expectedUpdatedAt) || expectedUpdatedAt < 0) {
+        return { error: "La versione del livello non è valida." };
+    }
+
+    return { title, description, style, status, expectedUpdatedAt };
+}
+
+async function adminCreateCmsMapFeature(request, env) {
+    if (!(await adminAuthorized(request, env))) {
+        return unauthorized(request, env);
+    }
+    await ensureCmsStorage(env);
+    const input = normalizeCmsMapFeatureInput(
+        await readJson(request, MAX_CMS_MAP_REQUEST_BYTES),
+        false
+    );
+
+    if (input.error) {
+        return json(request, env, { error: input.error }, 400);
+    }
+
+    const conflict = await cmsMapFeatureTargetError(env, input);
+    if (conflict) {
+        return json(request, env, { error: conflict }, 409);
+    }
+
+    const id = `map-feature-${crypto.randomUUID()}`;
+    const now = Date.now();
+    const snapshot = cmsMapFeatureSnapshot(id, input);
+    await env.DB.batch([
+        env.DB.prepare(`
+            INSERT INTO map_features (
+                id, layer_id, position, title, description, geometry_json,
+                properties_json, status, created_at, updated_at, published_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `).bind(
+            id,
+            input.layerId,
+            input.position,
+            input.title,
+            input.description,
+            JSON.stringify(input.geometry),
+            JSON.stringify(input.properties),
+            input.status,
+            now,
+            now,
+            input.status === "published" ? now : null
+        ),
+        revisionInsert(env, "map_feature", id, snapshot, input.status, now)
+    ]);
+
+    return json(request, env, {
+        feature: { ...snapshot, createdAt: now, updatedAt: now,
+            publishedAt: input.status === "published" ? now : null },
+        created: true
+    }, 201);
+}
+
+async function adminUpdateCmsMapFeature(request, env, featureId) {
+    if (!(await adminAuthorized(request, env))) {
+        return unauthorized(request, env);
+    }
+    await ensureCmsStorage(env);
+    const row = await env.DB.prepare(`
+        SELECT
+            id, layer_id, position, title, description, geometry_json,
+            properties_json, status, created_at, updated_at, published_at
+        FROM map_features WHERE id = ? LIMIT 1
+    `).bind(featureId).first();
+
+    if (!row) {
+        return json(request, env, { error: "Geometria non trovata." }, 404);
+    }
+
+    const current = mapFeatureRecord(row);
+    const input = normalizeCmsMapFeatureInput(
+        await readJson(request, MAX_CMS_MAP_REQUEST_BYTES),
+        true
+    );
+
+    if (input.error) {
+        return json(request, env, { error: input.error }, 400);
+    }
+    if (input.expectedUpdatedAt !== current.updatedAt) {
+        return json(request, env, {
+            error: "La geometria è stata modificata altrove. Ricaricala prima di salvare."
+        }, 409);
+    }
+
+    const conflict = await cmsMapFeatureTargetError(env, input, current.id);
+    if (conflict) {
+        return json(request, env, { error: conflict }, 409);
+    }
+
+    const unchanged = input.layerId === current.layerId &&
+        input.position === current.position &&
+        input.title === current.title &&
+        input.description === current.description &&
+        input.status === current.status &&
+        JSON.stringify(input.geometry) === JSON.stringify(current.geometry) &&
+        JSON.stringify(input.properties) === JSON.stringify(current.properties);
+
+    if (unchanged) {
+        return json(request, env, { feature: current, unchanged: true });
+    }
+
+    const now = Math.max(Date.now(), current.updatedAt + 1);
+    const snapshot = cmsMapFeatureSnapshot(current.id, input);
+    await env.DB.batch([
+        env.DB.prepare(`
+            UPDATE map_features
+            SET layer_id = ?, position = ?, title = ?, description = ?,
+                geometry_json = ?, properties_json = ?, status = ?,
+                updated_at = ?, published_at = CASE
+                    WHEN ? = 'published' THEN COALESCE(published_at, ?)
+                    ELSE published_at
+                END
+            WHERE id = ?
+        `).bind(
+            input.layerId,
+            input.position,
+            input.title,
+            input.description,
+            JSON.stringify(input.geometry),
+            JSON.stringify(input.properties),
+            input.status,
+            now,
+            input.status,
+            now,
+            current.id
+        ),
+        revisionInsert(env, "map_feature", current.id, snapshot, input.status, now)
+    ]);
+
+    const updatedRow = await env.DB.prepare(`
+        SELECT
+            id, layer_id, position, title, description, geometry_json,
+            properties_json, status, created_at, updated_at, published_at
+        FROM map_features WHERE id = ? LIMIT 1
+    `).bind(current.id).first();
+    return json(request, env, {
+        feature: mapFeatureRecord(updatedRow),
+        unchanged: false
+    });
+}
+
+function normalizeCmsMapFeatureInput(value, requireVersion) {
+    const layerId = String(value?.layerId || "");
+    const position = Number(value?.position);
+    const title = String(value?.title || "").trim();
+    const description = String(value?.description || "").trim();
+    const geometry = value?.geometry ?? null;
+    const properties = value?.properties;
+    const status = String(value?.status || "");
+    const expectedUpdatedAt = Number(value?.expectedUpdatedAt);
+
+    if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/u.test(layerId) ||
+        !Number.isSafeInteger(position) || position < 1 || position > 999999) {
+        return { error: "Livello o posizione della geometria non validi." };
+    }
+    if (!title || title.length > 200 || description.length > 5000) {
+        return { error: "Titolo o descrizione della geometria non validi." };
+    }
+    if (!cmsMapStatusValid(status)) {
+        return { error: "Lo stato della geometria non è valido." };
+    }
+    if (geometry !== null && !validGeoJsonGeometry(geometry)) {
+        return { error: "La geometria GeoJSON non è valida." };
+    }
+    if (JSON.stringify(geometry).length > MAX_CMS_MAP_GEOMETRY_LENGTH) {
+        return { error: "La geometria GeoJSON è troppo grande." };
+    }
+    if (status === "published" && geometry === null) {
+        return { error: "Una geometria pubblicata deve contenere coordinate GeoJSON." };
+    }
+    if (!isCmsMapObject(properties) ||
+        JSON.stringify(properties).length > MAX_CMS_MAP_PROPERTIES_LENGTH) {
+        return { error: "Le proprietà devono essere un oggetto JSON valido." };
+    }
+    if (requireVersion &&
+        (!Number.isSafeInteger(expectedUpdatedAt) || expectedUpdatedAt < 0)) {
+        return { error: "La versione della geometria non è valida." };
+    }
+
+    return {
+        layerId,
+        position,
+        title,
+        description,
+        geometry,
+        properties,
+        status,
+        expectedUpdatedAt
+    };
+}
+
+async function cmsMapFeatureTargetError(env, input, excludedId = "") {
+    const layer = await env.DB.prepare(
+        "SELECT id FROM map_layers WHERE id = ? LIMIT 1"
+    ).bind(input.layerId).first();
+
+    if (!layer) {
+        return "Il livello scelto non esiste.";
+    }
+
+    const occupied = await env.DB.prepare(`
+        SELECT id FROM map_features
+        WHERE layer_id = ? AND position = ? AND id <> ?
+        LIMIT 1
+    `).bind(input.layerId, input.position, excludedId).first();
+    return occupied
+        ? "La posizione è già occupata in questo livello."
+        : "";
+}
+
+function cmsMapFeatureSnapshot(id, input) {
+    return {
+        id,
+        layerId: input.layerId,
+        position: input.position,
+        title: input.title,
+        description: input.description,
+        geometry: input.geometry,
+        properties: input.properties,
+        status: input.status
+    };
+}
+
+function cmsMapStatusValid(value) {
+    return ["draft", "published", "archived"].includes(value);
+}
+
+function isCmsMapObject(value) {
+    return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+function validGeoJsonGeometry(value) {
+    if (!isCmsMapObject(value)) {
+        return false;
+    }
+
+    if (value.type === "GeometryCollection") {
+        return Array.isArray(value.geometries) &&
+            value.geometries.every(validGeoJsonGeometry);
+    }
+
+    const coordinates = value.coordinates;
+    const position = (item) => Array.isArray(item) && item.length >= 2 &&
+        item.every((number) => Number.isFinite(number)) &&
+        item[0] >= -180 && item[0] <= 180 &&
+        item[1] >= -90 && item[1] <= 90;
+    const positions = (items, minimum = 1) => Array.isArray(items) &&
+        items.length >= minimum && items.every(position);
+    const lines = (items) => Array.isArray(items) && items.length >= 1 &&
+        items.every((line) => positions(line, 2));
+    const rings = (items) => Array.isArray(items) && items.length >= 1 &&
+        items.every((ring) => positions(ring, 4));
+    const polygons = (items) => Array.isArray(items) && items.length >= 1 &&
+        items.every(rings);
+
+    switch (value.type) {
+    case "Point":
+        return position(coordinates);
+    case "MultiPoint":
+        return positions(coordinates);
+    case "LineString":
+        return positions(coordinates, 2);
+    case "MultiLineString":
+        return lines(coordinates);
+    case "Polygon":
+        return rings(coordinates);
+    case "MultiPolygon":
+        return polygons(coordinates);
+    default:
+        return false;
+    }
 }
 
 async function getPublicMapLayer(request, env, slug) {

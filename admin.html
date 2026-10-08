@@ -263,6 +263,80 @@
                 </form>
             </section>
 
+            <section class="admin-voci-mappa" aria-labelledby="adminLivelliTitolo">
+                <h2 id="adminLivelliTitolo">Livelli e geometrie</h2>
+                <p>
+                    Gestisci i cataloghi cartografici e le relative feature GeoJSON.
+                    Le sette geometrie storiche ritirate restano archiviate: possono
+                    essere modificate o ripubblicate consapevolmente, ma non eliminate.
+                </p>
+
+                <form id="adminMapLayerForm">
+                    <h3>Livello cartografico</h3>
+                    <label for="adminMapLayerSelect">Livello</label>
+                    <select id="adminMapLayerSelect" required></select>
+                    <p class="admin-voci-mappa-aiuto" id="adminMapLayerIdentity"></p>
+                    <label for="adminMapLayerTitle">Titolo</label>
+                    <input id="adminMapLayerTitle" type="text" maxlength="200" required>
+                    <label for="adminMapLayerDescription">Descrizione</label>
+                    <textarea id="adminMapLayerDescription" maxlength="3000" rows="3"></textarea>
+                    <label for="adminMapLayerPublicationStatus">Pubblicazione</label>
+                    <select id="adminMapLayerPublicationStatus" required>
+                        <option value="published">Pubblicato</option>
+                        <option value="draft">Bozza</option>
+                        <option value="archived">Archiviato</option>
+                    </select>
+                    <label for="adminMapLayerStyle">Stile JSON</label>
+                    <textarea id="adminMapLayerStyle" rows="8" spellcheck="false" required></textarea>
+                    <p class="admin-voci-mappa-aiuto">
+                        ID, slug, tipo e posizione rimangono invariati per conservare
+                        collegamenti e compatibilità con le mappe esistenti.
+                    </p>
+                    <button id="adminMapLayerSubmit" type="submit">Salva livello</button>
+                    <button id="adminMapLayerReload" type="button">Ricarica livelli</button>
+                    <p class="admin-status" id="adminMapLayerStatus" aria-live="polite"></p>
+                </form>
+
+                <form id="adminMapFeatureForm">
+                    <h3>Geometria GeoJSON</h3>
+                    <label for="adminMapFeatureSelect">Geometria</label>
+                    <select id="adminMapFeatureSelect">
+                        <option value="">Nuova geometria</option>
+                    </select>
+                    <label for="adminMapFeatureLayer">Livello</label>
+                    <select id="adminMapFeatureLayer" required></select>
+                    <label for="adminMapFeaturePosition">Posizione nel livello</label>
+                    <input id="adminMapFeaturePosition" type="number" min="1" max="999999" required>
+                    <label for="adminMapFeatureTitle">Titolo</label>
+                    <input id="adminMapFeatureTitle" type="text" maxlength="200" required>
+                    <label for="adminMapFeatureDescription">Descrizione</label>
+                    <textarea id="adminMapFeatureDescription" maxlength="5000" rows="4"></textarea>
+                    <label for="adminMapFeaturePublicationStatus">Pubblicazione</label>
+                    <select id="adminMapFeaturePublicationStatus" required>
+                        <option value="draft">Bozza</option>
+                        <option value="published">Pubblicata</option>
+                        <option value="archived">Archiviata</option>
+                    </select>
+                    <label for="adminMapFeatureGeometry">Geometria JSON</label>
+                    <textarea
+                        id="adminMapFeatureGeometry"
+                        rows="10"
+                        spellcheck="false"
+                        placeholder='{"type":"Point","coordinates":[12.3,45.55]}'
+                    ></textarea>
+                    <p class="admin-voci-mappa-aiuto">
+                        Può restare vuota per bozze e archivi; la pubblicazione richiede
+                        una geometria GeoJSON valida.
+                    </p>
+                    <label for="adminMapFeatureProperties">Proprietà JSON</label>
+                    <textarea id="adminMapFeatureProperties" rows="8" spellcheck="false" required>{}</textarea>
+                    <button id="adminMapFeatureSubmit" type="submit">Crea geometria</button>
+                    <button id="adminMapFeatureReset" type="button">Nuova geometria</button>
+                    <button id="adminMapFeatureReload" type="button">Ricarica geometrie</button>
+                    <p class="admin-status" id="adminMapFeatureStatus" aria-live="polite"></p>
+                </form>
+            </section>
+
             <section class="admin-voci-mappa" aria-labelledby="adminVociMappaTitolo">
                 <h2 id="adminVociMappaTitolo">Elenco dei luoghi</h2>
                 <p>
@@ -601,6 +675,6 @@
         integrity="sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH"
         crossorigin="anonymous"
     ></script>
-    <script src="./admin.js?v=20261008-menu-cms1"></script>
+    <script src="./admin.js?v=20261008-map-layers-cms1"></script>
 </body>
 </html>

@@ -149,6 +149,14 @@ Le modifiche riguardano etichette, URL, visibilità, pubblicazione e testi;
 identificativi, ordine delle cinque schermate e indicatori grafici restano
 protetti e ogni cambiamento viene registrato come nuova revisione.
 
+Il pannello gestisce anche i quattro livelli cartografici e le relative feature:
+titolo, descrizione, stile, stato, posizione, geometria e proprietà GeoJSON
+possono essere aggiornati con controllo di concorrenza e revisioni append-only.
+Le nuove feature ricevono un ID stabile generato dal Worker. Non esiste una
+funzione di cancellazione: le sette geometrie storiche restano archiviate e
+senza coordinate finché non vengono ripubblicate esplicitamente con un GeoJSON
+valido.
+
 L'inventario si controlla con:
 
 ```bash
