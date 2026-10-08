@@ -9,7 +9,7 @@ schema, compatibilità, test e documentazione sono presenti nel repository.
 | N. | Passaggio | Stato | Prova nel repository |
 |---:|---|---|---|
 | 1 | Confine contenuti/software | Completo | `01-confine-contenuti-software.md`, `content-inventory.json`, `scripts/check-content-boundary.mjs` |
-| 2 | Centralizzazione in D1 | In corso | Fondazione, percorso poetico, pagine, poesia, navigazione, tour e cartografia completati; il primo punto incompleto è 2.8 |
+| 2 | Centralizzazione in D1 | In corso | Fondazione, percorso poetico, pagine, poesia, navigazione, tour, cartografia e fonti completati; il primo punto incompleto è 2.9 |
 | 3 | Ampliamento del pannello | Da iniziare | Si avvia soltanto dopo il completamento del punto 2 |
 | 4 | Bozze, anteprima e cronologia | Da iniziare | La tabella append-only `content_revisions` è predisposta, ma flussi e interfaccia non sono ancora realizzati |
 | 5 | Permanenza di QR e collegamenti | Da iniziare | La tabella `permalinks` è predisposta; migrazione e risoluzione degli URL storici non sono ancora realizzate |
@@ -28,7 +28,7 @@ schema, compatibilità, test e documentazione sono presenti nel repository.
 | 2.5 | Menu e collegamenti globali | Completo | `navigation-seed.js` importa 6 collegamenti; `GET /api/public/navigation`, `navigation-content.js` e `navigation.test.mjs` conservano etichette, ordine, destinazioni, visibilità, stato attivo, collegamento privato e ripiego su 10 pagine |
 | 2.6 | Tour e benvenuto | Completo | `onboarding-seed.js` importa introduzione e 5 schermate; `GET /api/public/onboarding/welcome`, `onboarding-content.js` e `onboarding.test.mjs` provano ordine, testi, URL, indicatori, filtro di pubblicazione e ripiego statico su tutte le 12 pagine che usano la sessione, senza cambiare `nnmrcn_session` né il completamento già salvato |
 | 2.7 | Livelli, percorsi e geometrie | Completo | `map-seed.js` importa 4 livelli con ID stabili e conserva 7 elementi dismessi come `archived`; `GET /api/public/map-layers/:slug`, `map-content.js` e `map-content.test.mjs` provano filtro di pubblicazione e ripiego GeoJSON. Le quattro raccolte azzerate il 6 ottobre 2026 restano intenzionalmente vuote: la migrazione non ripubblica geometrie ritirate e non modifica gli ID dei `map_entries` attivi |
-| 2.8 | Fonti e bibliografia | Da iniziare | Deduplicare senza perdere citazioni, etichette o collegamenti esistenti |
+| 2.8 | Fonti e bibliografia | Completo | `source-seed.js` registra le 17 fonti del percorso con ID stabili; l’inizializzazione deduplica per URL anche richiami delle Voci, fonti dei luoghi e collegamenti cartografici in `sources`/`content_source_links`. `GET /api/public/sources`, `sources.test.mjs` e le copie di compatibilità provano ordine, termini, etichette, autori, date, richiami ripetuti e filtro dei contenuti pubblicati senza modificare i campi originari |
 | 2.9 | Impostazioni e metadati | Da iniziare | Migrare soltanto valori editoriali, lasciando nel codice le impostazioni tecniche |
 | 2.10 | Revisioni iniziali | Da iniziare | Creare una prima fotografia immutabile per ogni contenuto importato |
 | 2.11 | Permalink esistenti | Da iniziare | Registrare URL e destinazioni già pubblicati prima di qualsiasi cambio di slug |

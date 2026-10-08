@@ -48,7 +48,7 @@ amministrative devono riusare le API e gli identificativi già esistenti.
 | Menu e collegamenti globali | `navigation_items` in D1, con ripiego nei menu HTML | Voci ordinate e visibilità | Migrati |
 | Invito alla condivisione | `onboarding_steps` in D1, con ripiego in `sessione.js` | Tour e impostazioni globali | Migrato nel tour |
 | Percorsi, livelli e geometrie | `map_layers` e `map_features` in D1, con ripiego GeoJSON e JavaScript | Livelli cartografici, elementi e geometrie | Migrati |
-| Fonti e bibliografia | `progetto.js`, Voci e collegamenti sparsi | Archivio fonti riutilizzabile | Alta |
+| Fonti e bibliografia | `sources` e `content_source_links` in D1, con richiami originali conservati in Voci, percorso e mappe | Archivio fonti riutilizzabile | Migrati |
 | Avvisi e testi di servizio specifici del progetto | HTML e JavaScript delle singole sezioni | Impostazioni o blocchi della pagina pertinente | Bassa |
 | Informativa sulla privacy | `privacy.html` | Documento legale versionato con pubblicazione protetta | Bassa e protetta |
 | Metadati del sito | titoli, descrizioni e manifesti nei file HTML/JSON | Impostazioni globali con valori predefiniti nel codice | Media |

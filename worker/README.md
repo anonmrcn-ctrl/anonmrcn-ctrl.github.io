@@ -104,6 +104,12 @@ ed elementi pubblicati in forma GeoJSON. I sette elementi già ritirati restano
 ripiego: il deploy non reintroduce geometrie eliminate. Le voci correnti in
 `map_entries` non vengono modificate.
 
+Il catalogo `sources` deduplica per URL le 17 fonti del percorso e importa i
+richiami già presenti nelle Voci, nei luoghi e nei metadati cartografici.
+`content_source_links` conserva ordine e contesto senza riscrivere i token o i
+campi originari. `GET /api/public/sources?contentType=…&contentId=…` risponde
+solo se il contenuto richiesto è pubblico.
+
 Se le location non sono ancora presenti, esegui successivamente il contenuto del
 file privato `nnmrcn_seed_private_d1_20260823.sql` aggiornato. Contiene le 20
 location, ma cancella prima messaggi, sessioni e location esistenti: usalo

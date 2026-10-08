@@ -124,13 +124,15 @@
       "label": "Fonti e bibliografia riutilizzabili",
       "classification": "content",
       "currentSources": [
+        "D1:sources/content_source_links",
         "progetto.js#SOURCES",
         "D1:wiki_entries",
-        "D1:map_entries"
+        "D1:map_entries",
+        "D1:map_features"
       ],
       "targetEntities": ["sources", "content_source_links"],
-      "priority": "high",
-      "migration": "required"
+      "priority": "complete",
+      "migration": "complete"
     },
     {
       "id": "site-metadata",

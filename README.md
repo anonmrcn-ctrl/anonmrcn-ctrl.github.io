@@ -113,6 +113,14 @@ motore può leggere `GET /api/public/map-layers/:slug` e usa gli stessi file
 GeoJSON locali se il Worker non è disponibile. Le voci attive continuano a
 usare i propri ID esistenti in `map_entries`.
 
+Le fonti sono inoltre indicizzate una sola volta in `sources` e collegate ai
+contenuti tramite `content_source_links`. I 17 URL del percorso poetico hanno
+ID stabili; il primo avvio raccoglie e deduplica anche i token `[fonte:…]`
+delle Voci, le fonti dei luoghi e i collegamenti dei livelli cartografici. I
+token, le etichette e i campi preesistenti restano al loro posto come copia di
+compatibilità. `GET /api/public/sources` restituisce le fonti soltanto per un
+contenuto pubblico identificato da `contentType` e `contentId`.
+
 L'inventario si controlla con:
 
 ```bash

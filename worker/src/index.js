@@ -15,6 +15,10 @@ import {
 } from "./onboarding-seed.js";
 import { PAGE_SEEDS } from "./page-seed.js";
 import { POEM_SEED } from "./poem-seed.js";
+import {
+    SHARED_SOURCE_IDS_BY_URL,
+    SHARED_SOURCE_SEEDS
+} from "./source-seed.js";
 
 // workerd refuses PBKDF2 requests above 100,000 iterations.
 const PBKDF2_ITERATIONS = 100000;
@@ -482,6 +486,10 @@ export default {
             ) {
                 const slug = path.split("/").pop();
                 return await getPublicMapLayer(request, env, slug);
+            }
+
+            if (request.method === "GET" && path === "/api/public/sources") {
+                return await getPublicSources(request, env, url);
             }
 
             if (
@@ -2821,6 +2829,111 @@ async function getPublicMapLayer(request, env, slug) {
     });
 }
 
+async function getPublicSources(request, env, url) {
+    await ensureCmsStorage(env);
+
+    const contentType = String(url.searchParams.get("contentType") || "");
+    const contentId = String(url.searchParams.get("contentId") || "");
+    const allowedTypes = new Set([
+        "narrative_step",
+        "wiki_entry",
+        "map_entry",
+        "map_feature"
+    ]);
+
+    if (
+        !allowedTypes.has(contentType) ||
+        !contentId ||
+        contentId.length > 160
+    ) {
+        return json(request, env, { error: "Contenuto non valido." }, 400);
+    }
+
+    if (!(await publicSourceTargetExists(env, contentType, contentId))) {
+        return json(request, env, { error: "Contenuto non trovato." }, 404);
+    }
+
+    const result = await env.DB.prepare(`
+        SELECT
+            link.position,
+            link.context,
+            source.id,
+            source.source_type,
+            source.title,
+            source.author,
+            source.publication_date,
+            source.url,
+            source.note,
+            source.updated_at
+        FROM content_source_links link
+        INNER JOIN sources source ON source.id = link.source_id
+        WHERE link.content_type = ? AND link.content_id = ?
+        ORDER BY link.position ASC, source.id ASC
+    `).bind(contentType, contentId).all();
+
+    return json(request, env, {
+        sources: (result.results || []).map((row) => ({
+            id: row.id,
+            position: Number(row.position),
+            type: row.source_type,
+            title: row.title,
+            author: row.author,
+            publicationDate: row.publication_date,
+            url: row.url,
+            note: row.note,
+            context: parseJsonValue(row.context, {}),
+            updatedAt: Number(row.updated_at)
+        }))
+    });
+}
+
+async function publicSourceTargetExists(env, contentType, contentId) {
+    if (contentType === "narrative_step") {
+        return Boolean(await env.DB.prepare(`
+            SELECT id FROM narrative_steps
+            WHERE stable_key = ? AND status = 'published'
+            LIMIT 1
+        `).bind(contentId).first());
+    }
+
+    if (!/^[1-9]\d*$/u.test(contentId) && contentType !== "map_feature") {
+        return false;
+    }
+
+    if (contentType === "wiki_entry") {
+        return Boolean(await env.DB.prepare(`
+            SELECT id FROM wiki_entries
+            WHERE id = ? AND status = 'published'
+            LIMIT 1
+        `).bind(Number(contentId)).first());
+    }
+
+    if (contentType === "map_entry") {
+        return Boolean(await env.DB.prepare(`
+            SELECT id FROM map_entries WHERE id = ? LIMIT 1
+        `).bind(Number(contentId)).first());
+    }
+
+    return Boolean(await env.DB.prepare(`
+        SELECT feature.id
+        FROM map_features feature
+        INNER JOIN map_layers layer ON layer.id = feature.layer_id
+        WHERE
+            feature.id = ?
+            AND feature.status = 'published'
+            AND layer.status = 'published'
+        LIMIT 1
+    `).bind(contentId).first());
+}
+
+function parseJsonValue(value, fallback) {
+    try {
+        return JSON.parse(value);
+    } catch (_) {
+        return fallback;
+    }
+}
+
 async function listPublicNarrativeSteps(request, env) {
     await ensureNarrativeStorage(env);
 
@@ -4228,6 +4341,7 @@ async function initializeCmsStorage(env) {
     await initializeNavigationContent(env);
     await initializeOnboardingContent(env);
     await initializeMapContent(env);
+    await initializeSourceContent(env);
 }
 
 async function initializePageContent(env) {
@@ -4576,6 +4690,267 @@ async function initializeMapContent(env) {
     for (let index = 0; index < inserts.length; index += 40) {
         await env.DB.batch(inserts.slice(index, index + 40));
     }
+}
+
+async function initializeSourceContent(env) {
+    const initialized = await env.DB.prepare(`
+        SELECT name
+        FROM content_initializations
+        WHERE name = 'shared_sources_v1'
+        LIMIT 1
+    `).first();
+
+    if (initialized) {
+        return;
+    }
+
+    await ensureNarrativeStorage(env);
+    await ensureWikiStorage(env);
+    await ensureMapEntryStorage(env);
+
+    const now = Date.now();
+    const statements = SHARED_SOURCE_SEEDS.map((source) =>
+        sourceInsertStatement(env, source, now)
+    );
+    const [narrativeResult, wikiResult, mapEntryResult, mapFeatureResult] =
+        await Promise.all([
+            env.DB.prepare(`
+                SELECT stable_key, sources_json
+                FROM narrative_steps
+                ORDER BY id
+            `).all(),
+            env.DB.prepare(`
+                SELECT id, body
+                FROM wiki_entries
+                ORDER BY id
+            `).all(),
+            env.DB.prepare(`
+                SELECT id, name, source_url, source_label
+                FROM map_entries
+                WHERE source_url <> ''
+                ORDER BY id
+            `).all(),
+            env.DB.prepare(`
+                SELECT id, title, properties_json
+                FROM map_features
+                ORDER BY layer_id, position, id
+            `).all()
+        ]);
+
+    for (const row of narrativeResult.results || []) {
+        const sources = parseJsonValue(row.sources_json, []).map((source) => ({
+            title: source.terms?.[0] || source.url,
+            url: source.url,
+            context: { terms: source.terms || [] }
+        }));
+        statements.push(...await sourceLinkStatements(
+            env,
+            "narrative_step",
+            row.stable_key,
+            sources,
+            now
+        ));
+    }
+
+    for (const row of wikiResult.results || []) {
+        statements.push(...await sourceLinkStatements(
+            env,
+            "wiki_entry",
+            String(row.id),
+            extractWikiSourceCitations(row.body),
+            now
+        ));
+    }
+
+    for (const row of mapEntryResult.results || []) {
+        statements.push(...await sourceLinkStatements(
+            env,
+            "map_entry",
+            String(row.id),
+            [{
+                title: row.source_label || row.name,
+                url: row.source_url,
+                context: { label: row.source_label || "" }
+            }],
+            now
+        ));
+    }
+
+    for (const row of mapFeatureResult.results || []) {
+        const properties = parseJsonValue(row.properties_json, {});
+        const sources = [
+            [properties.municipal_url, `${row.title} — Comune di Marcon`, "municipal"],
+            [properties.wikipedia_url, `${row.title} — Wikipedia`, "wikipedia"],
+            [properties.google_maps_url, `${row.title} — Google Maps`, "map"]
+        ].filter(([sourceUrl]) => sourceUrl).map(([sourceUrl, title, role]) => ({
+            title,
+            url: sourceUrl,
+            sourceType: role === "map" ? "map" : "web",
+            context: { role }
+        }));
+        statements.push(...await sourceLinkStatements(
+            env,
+            "map_feature",
+            row.id,
+            sources,
+            now
+        ));
+    }
+
+    statements.push(env.DB.prepare(`
+        INSERT OR IGNORE INTO content_initializations (name, applied_at)
+        VALUES ('shared_sources_v1', ?)
+    `).bind(now));
+
+    for (let index = 0; index < statements.length; index += 40) {
+        await env.DB.batch(statements.slice(index, index + 40));
+    }
+}
+
+function sourceInsertStatement(env, source, now) {
+    return env.DB.prepare(`
+        INSERT OR IGNORE INTO sources (
+            id,
+            source_type,
+            title,
+            author,
+            publication_date,
+            url,
+            note,
+            created_at,
+            updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).bind(
+        source.id,
+        source.sourceType || "web",
+        source.title,
+        source.author || "",
+        source.publicationDate || "",
+        source.url || "",
+        source.note || "",
+        now,
+        now
+    );
+}
+
+async function sourceLinkStatements(env, contentType, contentId, rawSources, now) {
+    const statements = [];
+    const unique = new Map();
+
+    for (const raw of rawSources) {
+        const source = normalizeSharedSource(raw);
+
+        if (!source) {
+            continue;
+        }
+
+        source.id = await sharedSourceId(source);
+        const existing = unique.get(source.id);
+
+        if (existing) {
+            existing.occurrences += 1;
+            continue;
+        }
+
+        unique.set(source.id, { source, occurrences: 1 });
+    }
+
+    let position = 0;
+    for (const { source, occurrences } of unique.values()) {
+        position += 1;
+        statements.push(sourceInsertStatement(env, source, now));
+        const context = {
+            ...(source.context || {}),
+            ...(occurrences > 1 ? { occurrences } : {})
+        };
+        const serializedContext = JSON.stringify(context);
+        statements.push(env.DB.prepare(`
+            INSERT OR IGNORE INTO content_source_links (
+                content_type,
+                content_id,
+                source_id,
+                position,
+                context
+            ) VALUES (?, ?, ?, ?, ?)
+        `).bind(
+            contentType,
+            contentId,
+            source.id,
+            position,
+            serializedContext.length <= 1000 ? serializedContext : "{}"
+        ));
+    }
+
+    return statements;
+}
+
+function normalizeSharedSource(value) {
+    const title = String(value?.title || "").trim();
+    const url = String(value?.url || "").trim();
+
+    if (!title) {
+        return null;
+    }
+
+    return {
+        sourceType: value?.sourceType || (url ? "web" : "book"),
+        title,
+        author: String(value?.author || "").trim(),
+        publicationDate: String(value?.publicationDate || "").trim(),
+        url,
+        note: String(value?.note || "").trim(),
+        context: value?.context || {}
+    };
+}
+
+async function sharedSourceId(source) {
+    if (source.url && SHARED_SOURCE_IDS_BY_URL[source.url]) {
+        return SHARED_SOURCE_IDS_BY_URL[source.url];
+    }
+
+    const identity = source.url
+        ? `url:${source.url}`
+        : `record:${source.title}\n${source.author}\n${source.publicationDate}`;
+    const digest = await crypto.subtle.digest(
+        "SHA-256",
+        new TextEncoder().encode(identity)
+    );
+    const hex = Array.from(new Uint8Array(digest), (byte) =>
+        byte.toString(16).padStart(2, "0")
+    ).join("");
+
+    return `source-${hex.slice(0, 32)}`;
+}
+
+function extractWikiSourceCitations(body) {
+    const matches = String(body || "").matchAll(/\[fonte:([^\]\n]+)\]/gu);
+    const sources = [];
+
+    for (const match of matches) {
+        const parts = match[1].split("|");
+
+        if (parts.length !== 4) {
+            continue;
+        }
+
+        try {
+            const [url, title, author, publicationDate] = parts.map((part) =>
+                decodeURIComponent(part).trim()
+            );
+
+            if (title) {
+                sources.push({
+                    title,
+                    author,
+                    publicationDate,
+                    url,
+                    context: { title, author, publicationDate }
+                });
+            }
+        } catch (_) {}
+    }
+
+    return sources;
 }
 
 async function ensureMayorStorage(env) {
