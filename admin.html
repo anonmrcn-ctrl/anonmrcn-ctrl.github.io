@@ -375,6 +375,66 @@
                 </form>
             </section>
 
+            <section class="admin-voci-mappa" aria-labelledby="adminFontiTitolo">
+                <h2 id="adminFontiTitolo">Fonti e impostazioni editoriali</h2>
+                <p>
+                    Cura il catalogo bibliografico e i metadati pubblici del sito.
+                    Identificativi, associazioni ai contenuti e configurazione tecnica
+                    restano protetti.
+                </p>
+
+                <form id="adminSourceForm">
+                    <h3>Catalogo fonti</h3>
+                    <label for="adminSourceSelect">Fonte</label>
+                    <select id="adminSourceSelect">
+                        <option value="">Nuova fonte</option>
+                    </select>
+                    <p class="admin-voci-mappa-aiuto" id="adminSourceIdentity"></p>
+                    <label for="adminSourceType">Tipo</label>
+                    <select id="adminSourceType" required>
+                        <option value="web">Pagina web</option>
+                        <option value="book">Libro</option>
+                        <option value="article">Articolo</option>
+                        <option value="archive">Archivio</option>
+                        <option value="map">Mappa</option>
+                        <option value="oral">Fonte orale</option>
+                        <option value="other">Altro</option>
+                    </select>
+                    <label for="adminSourceTitle">Titolo</label>
+                    <input id="adminSourceTitle" type="text" maxlength="500" required>
+                    <label for="adminSourceAuthor">Autore</label>
+                    <input id="adminSourceAuthor" type="text" maxlength="300">
+                    <label for="adminSourcePublicationDate">Data di pubblicazione</label>
+                    <input id="adminSourcePublicationDate" type="text" maxlength="100">
+                    <label for="adminSourceUrl">Collegamento HTTPS</label>
+                    <input id="adminSourceUrl" type="url" maxlength="2048" placeholder="https://…">
+                    <label for="adminSourceNote">Nota</label>
+                    <textarea id="adminSourceNote" maxlength="2000" rows="4"></textarea>
+                    <p class="admin-voci-mappa-aiuto" id="adminSourceLinks"></p>
+                    <button id="adminSourceSubmit" type="submit">Crea fonte</button>
+                    <button id="adminSourceReset" type="button">Nuova fonte</button>
+                    <button id="adminSourceReload" type="button">Ricarica fonti</button>
+                    <p class="admin-status" id="adminSourceStatus" aria-live="polite"></p>
+                </form>
+
+                <form id="adminSettingForm">
+                    <h3>Impostazioni editoriali</h3>
+                    <label for="adminSettingSelect">Gruppo</label>
+                    <select id="adminSettingSelect" required></select>
+                    <p class="admin-voci-mappa-aiuto" id="adminSettingIdentity"></p>
+                    <label for="adminSettingValue">Valore JSON</label>
+                    <textarea id="adminSettingValue" rows="16" spellcheck="false" required></textarea>
+                    <p class="admin-voci-mappa-aiuto">
+                        Sono disponibili soltanto identità, titoli, descrizioni e
+                        manifesti. URL del Worker, credenziali, analytics e altri
+                        parametri tecnici non vengono esposti.
+                    </p>
+                    <button id="adminSettingSubmit" type="submit">Salva impostazione</button>
+                    <button id="adminSettingReload" type="button">Ricarica impostazioni</button>
+                    <p class="admin-status" id="adminSettingStatus" aria-live="polite"></p>
+                </form>
+            </section>
+
             <section class="admin-voci-mappa" aria-labelledby="adminVociMappaTitolo">
                 <h2 id="adminVociMappaTitolo">Elenco dei luoghi</h2>
                 <p>
