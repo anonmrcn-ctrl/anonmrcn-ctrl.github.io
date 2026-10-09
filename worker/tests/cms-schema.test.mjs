@@ -299,6 +299,43 @@ test("la migrazione 0014 conserva le fonti e aggiunge lo stato pubblicato", asyn
     });
 });
 
+test("l’health check aggiorna una fondazione 0013 prima di creare indici nuovi", async () => {
+    const db = new D1DatabaseMock();
+    const foundation = await readFile(
+        new URL("../migrations/0013_cms_content_foundation.sql", import.meta.url),
+        "utf8"
+    );
+    db.database.exec(foundation);
+    db.database.prepare(`
+        INSERT INTO sources (id, title, created_at, updated_at)
+        VALUES ('fonte-produzione', 'Fonte produzione', 10, 10)
+    `).run();
+
+    const response = await worker.fetch(new Request(
+        "https://worker.test/api/health",
+        { headers: { Origin: "https://anonmrcn-ctrl.github.io" } }
+    ), {
+        DB: db,
+        ALLOWED_ORIGIN: "https://anonmrcn-ctrl.github.io"
+    }, {});
+    const data = await response.json();
+
+    assert.equal(response.status, 200);
+    assert.equal(data.ok, true);
+    assert.deepEqual({ ...db.database.prepare(`
+        SELECT id, status, published_at FROM sources
+        WHERE id = 'fonte-produzione'
+    `).get() }, {
+        id: "fonte-produzione",
+        status: "published",
+        published_at: 10
+    });
+    assert.ok(db.database.prepare(`
+        SELECT name FROM sqlite_master
+        WHERE type = 'index' AND name = 'idx_sources_public'
+    `).get());
+});
+
 test("l’health check installa la fondazione prima di dichiarare il servizio sano", async () => {
     const db = new D1DatabaseMock();
     const request = new Request("https://worker.test/api/health", {
