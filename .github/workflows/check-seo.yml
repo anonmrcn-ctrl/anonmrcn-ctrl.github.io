@@ -28,5 +28,8 @@ jobs:
       - name: Controlla la SEO
         run: node scripts/check-seo.mjs
 
+      - name: Prova la generazione delle pagine pubbliche
+        run: node --test scripts/public-pages.test.mjs
+
       - name: Controlla il confine contenuti-software
         run: node scripts/check-content-boundary.mjs

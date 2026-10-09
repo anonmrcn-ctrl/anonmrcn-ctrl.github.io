@@ -9,6 +9,11 @@ import {
 } from "../src/permalink-seed.js";
 import { NARRATIVE_STEP_SEEDS } from "../src/narrative-seed.js";
 
+if (typeof crypto.subtle.timingSafeEqual !== "function") {
+    crypto.subtle.timingSafeEqual = (first, second) =>
+        Buffer.from(first).equals(Buffer.from(second));
+}
+
 class D1StatementMock {
     constructor(database, sql) {
         this.database = database;
@@ -72,13 +77,19 @@ class D1DatabaseMock {
 function createEnvironment() {
     return {
         DB: new D1DatabaseMock(),
+        ADMIN_TOKEN: "test-admin",
         ALLOWED_ORIGIN: "https://anonmrcn-ctrl.github.io"
     };
 }
 
-async function request(env, path) {
+async function request(env, path, options = {}) {
+    const headers = new Headers({ Origin: env.ALLOWED_ORIGIN });
+    if (options.admin) headers.set("X-Admin-Token", env.ADMIN_TOKEN);
+    if (options.body) headers.set("Content-Type", "application/json");
     return worker.fetch(new Request(`https://worker.test${path}`, {
-        headers: { Origin: env.ALLOWED_ORIGIN }
+        method: options.method || "GET",
+        headers,
+        body: options.body ? JSON.stringify(options.body) : undefined
     }), env, {});
 }
 
@@ -116,21 +127,22 @@ test("registra gli indirizzi pubblicati con destinazioni e identificativi stabil
         STATIC_PERMALINK_SEEDS.length +
         POEM_SECTION_PERMALINK_SEEDS.length +
         NARRATIVE_STEP_SEEDS.length +
-        1 +
-        2;
+        2 +
+        3;
 
     assert.equal(
         database.prepare("SELECT COUNT(*) AS total FROM permalinks").get().total,
         expectedCount
     );
     assert.deepEqual({ ...database.prepare(`
-        SELECT path, target_type, target_id, state
+        SELECT path, target_type, target_id, state, redirect_path
         FROM permalinks WHERE id = 'permalink-map-entry-qr-7'
     `).get() }, {
         path: "/luogo.html?luogo=7",
         target_type: "map_entry",
         target_id: "7",
-        state: "active"
+        state: "redirect",
+        redirect_path: "/luoghi/7.html"
     });
     assert.deepEqual({ ...database.prepare(`
         SELECT path, target_type, target_id
@@ -139,6 +151,37 @@ test("registra gli indirizzi pubblicati con destinazioni e identificativi stabil
         path: "/voci.html#voce-storica",
         target_type: "wiki_entry",
         target_id: "41"
+    });
+    assert.deepEqual({ ...database.prepare(`
+        SELECT path, target_type, target_id, state, redirect_path
+        FROM permalinks WHERE path = '/voci/voce-storica.html'
+    `).get() }, {
+        path: "/voci/voce-storica.html",
+        target_type: "wiki_entry",
+        target_id: "41",
+        state: "active",
+        redirect_path: null
+    });
+
+    const publicWiki = await (await request(env, "/api/public/wiki")).json();
+    const publicPlaces = await (await request(env, "/api/public/map-entries")).json();
+    assert.equal(
+        publicWiki.entries.find((entry) => entry.id === 41).preferredUrl,
+        "/voci/voce-storica.html"
+    );
+    assert.equal(
+        publicPlaces.entries.find((entry) => entry.id === 7).preferredUrl,
+        "/luoghi/7.html"
+    );
+    assert.deepEqual({ ...database.prepare(`
+        SELECT path, target_type, target_id, state, redirect_path
+        FROM permalinks WHERE path = '/luoghi/7.html'
+    `).get() }, {
+        path: "/luoghi/7.html",
+        target_type: "map_entry",
+        target_id: "7",
+        state: "active",
+        redirect_path: null
     });
 
     const narrative = NARRATIVE_STEP_SEEDS[0];
@@ -215,4 +258,62 @@ test("l'inventario iniziale è idempotente e i percorsi non sono riscrivibili", 
         UPDATE permalinks SET path = '/indirizzo-nuovo'
         WHERE id = 'permalink-map-entry-qr-7'
     `).run(), /permalink paths are immutable/u);
+});
+
+test("una pubblicazione crea il canonical e conserva gli alias dopo un cambio slug", async () => {
+    const env = createEnvironment();
+    await request(env, "/api/public/map-entries");
+    const created = await request(env, "/api/admin/wiki", {
+        admin: true,
+        method: "POST",
+        body: {
+            title: "Voce nuova",
+            slug: "voce-nuova",
+            summary: "Sommario",
+            body: "Testo pubblicato.",
+            status: "published",
+            images: []
+        }
+    });
+    const createdBody = await created.json();
+    assert.equal(created.status, 201);
+    assert.equal(createdBody.entry.preferredUrl, "/voci/voce-nuova.html");
+    const id = createdBody.entry.id;
+
+    const updated = await request(env, `/api/admin/wiki/${id}`, {
+        admin: true,
+        method: "PATCH",
+        body: {
+            title: "Voce rinominata",
+            slug: "voce-rinominata",
+            summary: "Sommario",
+            body: "Testo pubblicato.",
+            status: "published",
+            images: []
+        }
+    });
+    assert.equal(updated.status, 200);
+
+    const oldPreferred = env.DB.database.prepare(`
+        SELECT state, redirect_path FROM permalinks
+        WHERE path = '/voci/voce-nuova.html'
+    `).get();
+    const oldLegacy = env.DB.database.prepare(`
+        SELECT state, redirect_path FROM permalinks
+        WHERE path = '/voci.html#voce-nuova'
+    `).get();
+    const current = env.DB.database.prepare(`
+        SELECT state, redirect_path FROM permalinks
+        WHERE path = '/voci/voce-rinominata.html'
+    `).get();
+
+    assert.deepEqual({ ...oldPreferred }, {
+        state: "redirect",
+        redirect_path: "/voci/voce-rinominata.html"
+    });
+    assert.deepEqual({ ...oldLegacy }, {
+        state: "redirect",
+        redirect_path: "/voci/voce-rinominata.html"
+    });
+    assert.deepEqual({ ...current }, { state: "active", redirect_path: null });
 });

@@ -16,7 +16,7 @@ affiancare il primo passaggio tecnico incompleto, ma non sostituirlo.
 | 2 | Centralizzazione in D1 | Completo | Tutte le unità 2.1–2.12 sono importate, esposte e coperte da test; il primo punto incompleto è il 3 |
 | 3 | Pannello editoriale e controllo SEO | Completo | Le unità 3.1–3.7 sono amministrabili con validazione, anteprima, controllo di concorrenza e revisioni; il primo punto strutturale incompleto è il 5 |
 | 4 | Bozze, anteprima, cronologia e indicizzazione | Completo | Stati editoriali, anteprima protetta con `noindex`, confronto, ripristino append-only ed esclusione delle bozze dalle API pubbliche sono coperti da codice e test |
-| 5 | Permalink, QR e pagine indicizzabili | Da iniziare | `permalinks` è predisposta; mancano URL HTML autonomi, reindirizzamenti e sitemap generata per Voci e luoghi |
+| 5 | Permalink, QR e pagine indicizzabili | Completo | `generate-public-pages.mjs` pubblica 5 Voci e 2 luoghi D1 come HTML autonomo; manifest, sitemap, alias D1, test e sincronizzazione periodica conservano ID, URL storici e QR |
 | 6 | Media in R2 e immagini SEO | Da iniziare | Nessun dato è stato trasferito; mancano varianti responsive, immagini sociali e metadati dei media |
 | 7 | Sostituzione del token amministrativo | Da iniziare | L’accesso continua a usare `ADMIN_TOKEN` |
 | 8 | Esportazione, manutenzione e diagnostica CMS/SEO | Da iniziare | Gli strumenti esistenti non coprono l’intero CMS né indicizzazione, link, sitemap e pubblicazione statica |
@@ -29,10 +29,10 @@ affiancare il primo passaggio tecnico incompleto, ma non sostituirlo.
 
 | Codice | Traguardo | Stato | Dipendenza e criterio |
 |---:|---|---|---|
-| SEO-0 | Fondazione tecnica | In revisione | `robots.txt`, sitemap, canonical, metadati sociali, JSON-LD, `noindex`, `seo.config.json` e controllo automatico; diventa completa dopo pubblicazione e risposta HTTP 200 dei due file di scoperta |
-| SEO-1 | Baseline di indicizzazione | Da iniziare | Dopo SEO-0: verificare la proprietà, inviare la sitemap e registrare pagine indicizzate, query, impressioni, clic e CTR senza aggiungere tracciamento pubblicitario |
+| SEO-0 | Fondazione tecnica | Completo | `robots.txt`, sitemap, canonical, metadati sociali, JSON-LD, `noindex`, `seo.config.json` e `check-seo.mjs` sono pubblicati; `docs/seo/deployment-verification.md` registra workflow riusciti, health del Worker e risposte HTTP 200 |
+| SEO-1 | Baseline di indicizzazione | In attesa di accesso | `docs/seo/search-console-baseline.md` definisce proprietà, invio sitemap e misure aggregate senza tracciamento; verifica della proprietà e dati reali richiedono accesso a Google Search Console |
 | SEO-2 | Autonomia dei metadati | Completo | Il punto 3.7 gestisce title, descrizione e immagine sociale con valori predefiniti, unicità, anteprima autenticata, stati e revisioni |
-| SEO-3 | Contenuti autonomi e indicizzabili | Da iniziare | Punto 5: una pagina HTML completa per ogni Voce e luogo, vecchi URL conservati, canonical e sitemap automatici |
+| SEO-3 | Contenuti autonomi e indicizzabili | Completo | Punto 5: `public-content-manifest.json` censisce ogni pagina pubblicata, i percorsi `/voci/<slug>.html` e `/luoghi/<id>.html` hanno HTML, canonical e JSON-LD; alias storici e aggiornamento automatico sono provati |
 | SEO-4 | Media ottimizzati | Da iniziare | Punto 6: originale conservato, varianti responsive, dimensioni, testo alternativo e immagine sociale |
 | SEO-5 | Esperienza e prestazioni | Da iniziare | Punto 9: LCP ≤ 2,5 s, INP ≤ 200 ms e CLS ≤ 0,1 al 75º percentile per i modelli principali |
 | SEO-6 | Crescita editoriale verificabile | Da iniziare | Punto 10: pubblicazione basata sulle fonti e valutazione trimestrale rispetto alla baseline, senza obiettivi di traffico arbitrari |
@@ -116,7 +116,7 @@ punto 2 non è completa. Non vanno eliminati durante una migrazione parziale.
 | Punto | Criterio vincolante |
 |---:|---|
 | 4 | Ogni contenuto supportato ha bozza, anteprima autenticata con `noindex`, pubblicazione, archiviazione, cronologia e ripristino; una bozza non compare in sitemap né API pubbliche |
-| 5 | Ogni Voce e luogo pubblicato restituisce title, `h1` e testo principale anche senza JavaScript; gli URL storici e i QR si risolvono verso l’ID stabile; canonical, collegamenti interni e sitemap usano l’URL preferito |
+| 5 | Completo — Ogni Voce e luogo pubblicato restituisce title, `h1` e testo principale anche senza JavaScript; gli URL storici e i QR si risolvono verso l’ID stabile; canonical, collegamenti interni e sitemap usano l’URL preferito. Prove e procedura sono in `05-permalink-pagine-indicizzabili.md` |
 | 6 | R2 conserva gli originali e produce varianti responsive; D1 conserva metadati, testo alternativo, didascalia e relazione; rimozione e sostituzione rispettano revisioni e contenuti pubblicati |
 | 7 | Il pannello usa identità personale forte; anteprime e operazioni editoriali non sono raggiungibili tramite un token condiviso e le pagine amministrative restano `noindex` |
 | 8 | Esportazione e ripristino coprono D1 e media; diagnostica controlla API, build statica, sitemap, URL canonici, link interni, immagini mancanti e stato dell’ultima pubblicazione; il manuale descrive il flusso senza codice |

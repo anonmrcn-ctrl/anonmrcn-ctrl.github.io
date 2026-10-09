@@ -13,10 +13,10 @@
     let entriesPromise = null;
 
     function placeCardUrl(entryId) {
-        const url = new URL("./luogo.html", document.baseURI);
-
-        url.searchParams.set("luogo", String(entryId));
-        return url.href;
+        return new URL(
+            `./luoghi/${encodeURIComponent(String(entryId))}.html`,
+            document.baseURI
+        ).href;
     }
 
     function mapEntryUrl(entryId) {
@@ -28,10 +28,10 @@
     }
 
     function wikiEntryUrl(slug) {
-        const url = new URL("./voci.html", document.baseURI);
-
-        url.hash = encodeURIComponent(slug);
-        return url.href;
+        return new URL(
+            `./voci/${encodeURIComponent(String(slug))}.html`,
+            document.baseURI
+        ).href;
     }
 
     function normalizedTitle(value) {

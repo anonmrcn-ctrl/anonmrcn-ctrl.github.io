@@ -231,7 +231,7 @@
             const link = document.createElement("a");
             const title = document.createElement("span");
 
-            link.href = `#${entry.slug}`;
+            link.href = entry.preferredUrl || preferredWikiUrl(entry.slug);
             link.dataset.wikiSlug = entry.slug;
             title.textContent = entry.title;
             link.appendChild(title);
@@ -378,7 +378,7 @@
         }
 
         event.preventDefault();
-        location.hash = link.dataset.wikiSlug;
+        location.href = link.href || preferredWikiUrl(link.dataset.wikiSlug);
     }
 
     async function loadAdminEntries(selectId = 0) {
@@ -1906,7 +1906,7 @@
             }
 
             const link = document.createElement("a");
-            link.href = `#${target.slug}`;
+            link.href = target.preferredUrl || preferredWikiUrl(target.slug);
             link.dataset.wikiSlug = target.slug;
             link.textContent = linkText;
             return link;
@@ -2015,7 +2015,8 @@
             }
 
             const link = document.createElement("a");
-            link.href = `#${selectedTarget.slug}`;
+            link.href = selectedTarget.preferredUrl ||
+                preferredWikiUrl(selectedTarget.slug);
             link.dataset.wikiSlug = selectedTarget.slug;
             link.textContent = source.slice(
                 selectedIndex,
@@ -2055,6 +2056,14 @@
             entry.title.trim().toLocaleLowerCase("it") === normalizedLabel ||
             entry.slug === labelSlug
         ) || null;
+    }
+
+    function preferredWikiUrl(slug) {
+        const url = new URL(
+            `./voci/${encodeURIComponent(String(slug || ""))}.html`,
+            document.baseURI
+        );
+        return url.href;
     }
 
     function createCitationContext(scope) {

@@ -2,6 +2,7 @@
   "siteOrigin": "https://anonmrcn-ctrl.github.io",
   "siteName": "anonMrcn",
   "defaultImage": "https://anonmrcn-ctrl.github.io/logo.PNG",
+  "generatedManifest": "public-content-manifest.json",
   "indexablePages": [
     {
       "file": "index.html",
