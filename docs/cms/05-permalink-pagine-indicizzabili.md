@@ -78,3 +78,17 @@ node --test scripts/public-pages.test.mjs worker/tests/*.test.mjs
 cambio slug. `public-pages.test.mjs` prova HTML senza JavaScript, escaping e
 collegamenti preferiti. `check-seo.mjs` confronta manifest, file, canonical,
 sitemap, title, description, JSON-LD, immagini e link interni.
+
+## Prova di pubblicazione
+
+La PR [#5](https://github.com/anonmrcn-ctrl/anonmrcn-ctrl.github.io/pull/5)
+è stata unita con merge commit `24bda4229fee48baa04d3348c8f04d51327d6182`,
+conservando i due commit distinti. Il workflow «Controlla SEO e contenuti» ha
+concluso con successo l’esecuzione `37955448089`.
+
+Il 9 ottobre 2026 sono state verificate risposte HTTP 200 per Worker, sitemap e
+pagina autonoma `https://anonmrcn-ctrl.github.io/voci/cave-di-gaggio.html`. La
+pagina pubblicata contiene title, canonical e `h1` attesi. Sul Worker, il
+canonical `/voci/cave-di-gaggio.html` risulta `active` con `targetId` `1`; lo
+storico `/voci.html#cave-di-gaggio` conserva lo stesso `targetId` e risulta
+`redirect` verso il canonical.
