@@ -2908,6 +2908,86 @@ html[data-theme="dark"] .leaflet-control-layers label {
     font-weight: 700;
 }
 
+.admin-cms-preview {
+    grid-column: 1 / -1;
+    min-height: 10rem;
+    padding: clamp(1rem, 3vw, 2rem);
+    overflow: auto;
+    border: 1px solid var(--line);
+    background: color-mix(in srgb, var(--paper) 92%, var(--ink));
+}
+
+.admin-cms-preview > :first-child {
+    margin-top: 0;
+}
+
+.admin-cms-preview pre,
+.admin-cms-preview-verses {
+    margin: 0;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+.admin-cms-preview iframe {
+    width: 100%;
+    min-height: 28rem;
+    border: 0;
+    background: #fff;
+}
+
+#adminPreviewReload {
+    min-height: 2.85rem;
+    padding: 0.7rem 1rem;
+    border: 1px solid var(--ink);
+    background: transparent;
+    color: var(--ink);
+    font: inherit;
+    cursor: pointer;
+}
+
+#adminPreviewReload:hover,
+#adminPreviewReload:focus-visible {
+    background: var(--ink);
+    color: var(--paper);
+}
+
+.admin-cms-history-controls,
+.admin-cms-history-compare {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+}
+
+.admin-cms-history-controls label {
+    align-self: end;
+}
+
+.admin-cms-history-compare article {
+    min-width: 0;
+    padding: 1rem;
+    overflow: auto;
+    border: 1px solid var(--line);
+    background: color-mix(in srgb, var(--paper) 92%, var(--ink));
+}
+
+.admin-cms-history-compare h4 {
+    margin-top: 0;
+}
+
+.admin-cms-history-compare pre {
+    margin: 0;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+@media (max-width: 42rem) {
+    .admin-cms-history-controls,
+    .admin-cms-history-compare {
+        grid-template-columns: 1fr;
+    }
+}
+
 .admin-voci-mappa-aiuto {
     margin: -0.25rem 0 0;
     font-size: 0.78rem;

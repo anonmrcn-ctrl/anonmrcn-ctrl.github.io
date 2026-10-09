@@ -106,6 +106,8 @@ const MAX_CMS_MAP_GEOMETRY_LENGTH = 1000000;
 const MAX_CMS_MAP_PROPERTIES_LENGTH = 100000;
 const MAX_CMS_SOURCE_REQUEST_BYTES = 16000;
 const MAX_CMS_SETTING_REQUEST_BYTES = 64000;
+const MAX_CMS_LEGAL_REQUEST_BYTES = 512000;
+const MAX_CMS_PERMALINK_REQUEST_BYTES = 16000;
 
 class RequestBodyTooLargeError extends Error {}
 
@@ -756,6 +758,72 @@ export default {
                 return await adminUpdateCmsSetting(request, env, settingKey);
             }
 
+            if (request.method === "GET" && path === "/api/admin/cms/legal") {
+                return await adminGetCmsLegal(request, env);
+            }
+
+            if (
+                request.method === "POST" &&
+                /^\/api\/admin\/cms\/legal\/[a-z0-9]+(?:-[a-z0-9]+)*\/versions$/.test(path)
+            ) {
+                const documentId = path.split("/")[5];
+                return await adminCreateCmsLegalVersion(request, env, documentId);
+            }
+
+            if (
+                request.method === "PATCH" &&
+                /^\/api\/admin\/cms\/legal\/versions\/[a-z0-9]+(?:-[a-z0-9]+)*$/.test(path)
+            ) {
+                const versionId = path.split("/").pop();
+                return await adminUpdateCmsLegalVersion(request, env, versionId);
+            }
+
+            if (
+                request.method === "POST" &&
+                /^\/api\/admin\/cms\/legal\/versions\/[a-z0-9]+(?:-[a-z0-9]+)*\/publish$/.test(path)
+            ) {
+                const versionId = path.split("/")[6];
+                return await adminPublishCmsLegalVersion(request, env, versionId);
+            }
+
+            if (request.method === "GET" && path === "/api/admin/cms/permalinks") {
+                return await adminGetCmsPermalinks(request, env);
+            }
+
+            if (request.method === "GET" && path === "/api/admin/cms/preview") {
+                return await adminGetCmsPreview(request, env, url);
+            }
+
+            if (request.method === "GET" && path === "/api/admin/cms/revisions") {
+                return await adminGetCmsRevisions(request, env, url);
+            }
+
+            if (
+                request.method === "POST" &&
+                /^\/api\/admin\/cms\/revisions\/[a-z_]+\/[a-z0-9._-]+\/\d+\/restore$/.test(path)
+            ) {
+                const parts = path.split("/");
+                return await adminRestoreCmsRevision(
+                    request,
+                    env,
+                    parts[5],
+                    parts[6],
+                    Number(parts[7])
+                );
+            }
+
+            if (request.method === "POST" && path === "/api/admin/cms/permalinks") {
+                return await adminCreateCmsPermalink(request, env);
+            }
+
+            if (
+                request.method === "PATCH" &&
+                /^\/api\/admin\/cms\/permalinks\/[a-z0-9]+(?:-[a-z0-9]+)*$/.test(path)
+            ) {
+                const permalinkId = path.split("/").pop();
+                return await adminUpdateCmsPermalink(request, env, permalinkId);
+            }
+
             if (
                 request.method === "POST" &&
                 path === "/api/admin/narrative-steps"
@@ -854,7 +922,7 @@ export default {
                     ok: true,
                     service: "nnmrcn-rete",
                     privacyVersion: "2026-10-03",
-                    contentSchema: 1
+                    contentSchema: 2
                 });
             }
 
@@ -4378,7 +4446,7 @@ async function readCmsSources(env) {
     const [sourceResult, linkResult] = await Promise.all([
         env.DB.prepare(`
             SELECT id, source_type, title, author, publication_date, url, note,
-                created_at, updated_at
+                status, created_at, updated_at, published_at
             FROM sources ORDER BY title COLLATE NOCASE, id
         `).all(),
         env.DB.prepare(`
@@ -4408,8 +4476,10 @@ async function readCmsSources(env) {
         publicationDate: row.publication_date,
         url: row.url,
         note: row.note,
+        status: row.status,
         createdAt: Number(row.created_at),
         updatedAt: Number(row.updated_at),
+        publishedAt: row.published_at === null ? null : Number(row.published_at),
         links: linksBySource.get(row.id) || []
     }));
 }
@@ -4433,13 +4503,14 @@ async function adminCreateCmsSource(request, env) {
         env.DB.prepare(`
             INSERT INTO sources (
                 id, source_type, title, author, publication_date, url, note,
-                created_at, updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                status, created_at, updated_at, published_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `).bind(
             id, input.type, input.title, input.author, input.publicationDate,
-            input.url, input.note, now, now
+            input.url, input.note, input.status, now, now,
+            input.status === "published" ? now : null
         ),
-        revisionInsert(env, "source", id, snapshot, "published", now)
+        revisionInsert(env, "source", id, snapshot, input.status, now)
     ]);
     return json(request, env, {
         source: { ...snapshot, createdAt: now, updatedAt: now },
@@ -4473,7 +4544,8 @@ async function adminUpdateCmsSource(request, env, sourceId) {
     const unchanged = input.type === current.type &&
         input.title === current.title && input.author === current.author &&
         input.publicationDate === current.publicationDate &&
-        input.url === current.url && input.note === current.note;
+        input.url === current.url && input.note === current.note &&
+        input.status === current.status;
     if (unchanged) {
         return json(request, env, { source: current, unchanged: true });
     }
@@ -4482,13 +4554,18 @@ async function adminUpdateCmsSource(request, env, sourceId) {
     await env.DB.batch([
         env.DB.prepare(`
             UPDATE sources SET source_type = ?, title = ?, author = ?,
-                publication_date = ?, url = ?, note = ?, updated_at = ?
+                publication_date = ?, url = ?, note = ?, status = ?,
+                updated_at = ?, published_at = CASE
+                    WHEN ? = 'published' THEN COALESCE(published_at, ?)
+                    ELSE published_at
+                END
             WHERE id = ?
         `).bind(
             input.type, input.title, input.author, input.publicationDate,
-            input.url, input.note, now, current.id
+            input.url, input.note, input.status, now,
+            input.status, now, current.id
         ),
-        revisionInsert(env, "source", current.id, snapshot, "published", now)
+        revisionInsert(env, "source", current.id, snapshot, input.status, now)
     ]);
     const updated = (await readCmsSources(env)).find(
         (source) => source.id === current.id
@@ -4503,6 +4580,7 @@ function normalizeCmsSourceInput(value, requireVersion) {
     const publicationDate = String(value?.publicationDate || "").trim();
     const url = String(value?.url || "").trim();
     const note = String(value?.note || "").trim();
+    const status = String(value?.status || "draft");
     const expectedUpdatedAt = Number(value?.expectedUpdatedAt);
 
     if (!["book", "article", "archive", "web", "map", "oral", "other"].includes(type)) {
@@ -4515,11 +4593,16 @@ function normalizeCmsSourceInput(value, requireVersion) {
     if (url.length > 2048 || (url && !validCmsHttpsUrl(url))) {
         return { error: "Il collegamento della fonte deve usare HTTPS." };
     }
+    if (!["draft", "published", "archived"].includes(status)) {
+        return { error: "Lo stato editoriale della fonte non è valido." };
+    }
     if (requireVersion &&
         (!Number.isSafeInteger(expectedUpdatedAt) || expectedUpdatedAt < 0)) {
         return { error: "La versione della fonte non è valida." };
     }
-    return { type, title, author, publicationDate, url, note, expectedUpdatedAt };
+    return {
+        type, title, author, publicationDate, url, note, status, expectedUpdatedAt
+    };
 }
 
 function validCmsHttpsUrl(value) {
@@ -4539,6 +4622,7 @@ function cmsSourceSnapshot(id, input, links) {
         publicationDate: input.publicationDate,
         url: input.url,
         note: input.note,
+        status: input.status,
         links
     };
 }
@@ -4582,7 +4666,8 @@ async function adminUpdateCmsSetting(request, env, settingKey) {
     const input = normalizeCmsSettingInput(
         settingKey,
         await readJson(request, MAX_CMS_SETTING_REQUEST_BYTES),
-        current.value
+        current.value,
+        current.status
     );
     if (input.error) {
         return json(request, env, { error: input.error }, 400);
@@ -4592,20 +4677,28 @@ async function adminUpdateCmsSetting(request, env, settingKey) {
             error: "L’impostazione è stata modificata altrove. Ricaricala prima di salvare."
         }, 409);
     }
-    if (JSON.stringify(input.value) === JSON.stringify(current.value)) {
+    if (JSON.stringify(input.value) === JSON.stringify(current.value) &&
+        input.status === current.status) {
         return json(request, env, { setting: current, unchanged: true });
     }
     const now = Math.max(Date.now(), current.updatedAt + 1);
     await env.DB.batch([
         env.DB.prepare(`
-            UPDATE site_settings SET value_json = ?, updated_at = ?
+            UPDATE site_settings SET value_json = ?, status = ?, updated_at = ?,
+                published_at = CASE
+                    WHEN ? = 'published' THEN COALESCE(published_at, ?)
+                    ELSE published_at
+                END
             WHERE setting_key = ?
-        `).bind(JSON.stringify(input.value), now, current.key),
+        `).bind(
+            JSON.stringify(input.value), input.status, now,
+            input.status, now, current.key
+        ),
         revisionInsert(env, "site_setting", current.key, {
             key: current.key,
             value: input.value,
             visibility: current.visibility
-        }, current.status, now)
+        }, input.status, now)
     ]);
     const updated = (await readCmsSettings(env)).find(
         (setting) => setting.key === current.key
@@ -4613,14 +4706,18 @@ async function adminUpdateCmsSetting(request, env, settingKey) {
     return json(request, env, { setting: updated, unchanged: false });
 }
 
-function normalizeCmsSettingInput(key, input, currentValue) {
+function normalizeCmsSettingInput(key, input, currentValue, currentStatus) {
     const expectedUpdatedAt = Number(input?.expectedUpdatedAt);
     const value = input?.value;
+    const status = String(input?.status || currentStatus || "draft");
     if (!Number.isSafeInteger(expectedUpdatedAt) || expectedUpdatedAt < 0) {
         return { error: "La versione dell’impostazione non è valida." };
     }
     if (!isCmsMapObject(value) || JSON.stringify(value).length > 50000) {
         return { error: "Il valore editoriale deve essere un oggetto JSON valido." };
+    }
+    if (!["draft", "published", "archived"].includes(status)) {
+        return { error: "Lo stato editoriale dell’impostazione non è valido." };
     }
     if (key === "site.identity") {
         if (!validCmsSettingText(value.name, 80) ||
@@ -4653,7 +4750,7 @@ function normalizeCmsSettingInput(key, input, currentValue) {
     } else {
         return { error: "Questa impostazione non è modificabile dal pannello." };
     }
-    return { expectedUpdatedAt, value };
+    return { expectedUpdatedAt, value, status };
 }
 
 function validCmsSettingText(value, maxLength) {
@@ -4700,6 +4797,7 @@ async function getPublicSources(request, env, url) {
         FROM content_source_links link
         INNER JOIN sources source ON source.id = link.source_id
         WHERE link.content_type = ? AND link.content_id = ?
+            AND source.status = 'published'
         ORDER BY link.position ASC, source.id ASC
     `).bind(contentType, contentId).all();
 
@@ -4740,6 +4838,690 @@ async function getPublicSiteSettings(request, env) {
     }
 
     return json(request, env, { settings, updatedAt });
+}
+
+async function adminGetCmsPreview(request, env, url) {
+    if (!(await adminAuthorized(request, env))) {
+        return unauthorized(request, env);
+    }
+    await ensureCmsStorage(env);
+    const entityType = String(url.searchParams.get("entityType") || "");
+    const entityId = String(url.searchParams.get("entityId") || "");
+    if (Boolean(entityType) !== Boolean(entityId) ||
+        (entityType && !/^[a-z_]{1,80}$/u.test(entityType)) ||
+        (entityId && entityId.length > 160)) {
+        return json(request, env, { error: "Contenuto di anteprima non valido." }, 400);
+    }
+    const where = entityType && entityId
+        ? "WHERE revision.entity_type = ? AND revision.entity_id = ?"
+        : "";
+    const statement = env.DB.prepare(`
+        SELECT
+            revision.entity_type,
+            revision.entity_id,
+            revision.revision_number,
+            revision.snapshot_json,
+            revision.publication_state,
+            revision.created_at
+        FROM content_revisions revision
+        INNER JOIN (
+            SELECT entity_type, entity_id, MAX(revision_number) AS revision_number
+            FROM content_revisions
+            GROUP BY entity_type, entity_id
+        ) latest
+            ON latest.entity_type = revision.entity_type
+            AND latest.entity_id = revision.entity_id
+            AND latest.revision_number = revision.revision_number
+        ${where}
+        ORDER BY revision.entity_type, revision.entity_id
+    `);
+    const result = entityType && entityId
+        ? await statement.bind(entityType, entityId).all()
+        : await statement.all();
+    const previews = (result.results || []).map((row) => ({
+        entityType: row.entity_type,
+        entityId: row.entity_id,
+        revisionNumber: Number(row.revision_number),
+        state: row.publication_state,
+        createdAt: Number(row.created_at),
+        snapshot: parseJsonValue(row.snapshot_json, {})
+    }));
+    if (entityType && entityId && !previews.length) {
+        return json(request, env, { error: "Contenuto di anteprima non trovato." }, 404);
+    }
+    return json(request, env, { previews });
+}
+
+const CMS_RESTORABLE_REVISION_TYPES = new Set([
+    "site_page",
+    "poem_work",
+    "navigation_item",
+    "onboarding_step",
+    "site_setting",
+    "map_layer",
+    "map_feature",
+    "source"
+]);
+
+async function adminGetCmsRevisions(request, env, url) {
+    if (!(await adminAuthorized(request, env))) {
+        return unauthorized(request, env);
+    }
+    await ensureCmsStorage(env);
+    const entityType = String(url.searchParams.get("entityType") || "");
+    const entityId = String(url.searchParams.get("entityId") || "");
+    if (!/^[a-z_]{1,80}$/u.test(entityType) || !entityId ||
+        entityId.length > 160) {
+        return json(request, env, { error: "Contenuto della cronologia non valido." }, 400);
+    }
+    const result = await env.DB.prepare(`
+        SELECT revision_number, snapshot_json, publication_state, created_at
+        FROM content_revisions
+        WHERE entity_type = ? AND entity_id = ?
+        ORDER BY revision_number DESC
+    `).bind(entityType, entityId).all();
+    const revisions = (result.results || []).map((row) => ({
+        entityType,
+        entityId,
+        revisionNumber: Number(row.revision_number),
+        state: row.publication_state,
+        createdAt: Number(row.created_at),
+        restorable: CMS_RESTORABLE_REVISION_TYPES.has(entityType),
+        snapshot: parseJsonValue(row.snapshot_json, {})
+    }));
+    if (!revisions.length) {
+        return json(request, env, { error: "Cronologia non trovata." }, 404);
+    }
+    return json(request, env, { revisions });
+}
+
+function cmsRestoreRequest(request, body) {
+    const headers = new Headers(request.headers);
+    headers.set("Content-Type", "application/json");
+    return new Request(request.url, {
+        method: "PATCH",
+        headers,
+        body: JSON.stringify(body)
+    });
+}
+
+async function adminRestoreCmsRevision(
+    request,
+    env,
+    entityType,
+    entityId,
+    revisionNumber
+) {
+    if (!(await adminAuthorized(request, env))) {
+        return unauthorized(request, env);
+    }
+    await ensureCmsStorage(env);
+    if (!CMS_RESTORABLE_REVISION_TYPES.has(entityType) ||
+        !Number.isSafeInteger(revisionNumber) || revisionNumber < 1) {
+        return json(request, env, {
+            error: "Questo tipo di revisione non può essere ripristinato."
+        }, 400);
+    }
+    const revision = await env.DB.prepare(`
+        SELECT snapshot_json, publication_state
+        FROM content_revisions
+        WHERE entity_type = ? AND entity_id = ? AND revision_number = ?
+        LIMIT 1
+    `).bind(entityType, entityId, revisionNumber).first();
+    if (!revision) {
+        return json(request, env, { error: "Revisione non trovata." }, 404);
+    }
+    const snapshot = parseJsonValue(revision.snapshot_json, null);
+    if (!snapshot || typeof snapshot !== "object" || Array.isArray(snapshot)) {
+        return json(request, env, { error: "La revisione non è valida." }, 409);
+    }
+    const state = String(revision.publication_state || "draft");
+    let response;
+
+    if (entityType === "site_page") {
+        const current = await readCmsPage(env, entityId);
+        if (!current) return json(request, env, { error: "Pagina non trovata." }, 404);
+        response = await adminUpdateCmsPage(cmsRestoreRequest(request, {
+            title: snapshot.title,
+            description: snapshot.description,
+            status: state,
+            expectedUpdatedAt: current.updatedAt,
+            blocks: (snapshot.blocks || []).map((block) => ({
+                id: block.id,
+                text: block.content?.text ?? block.text ?? ""
+            }))
+        }), env, entityId);
+    } else if (entityType === "poem_work") {
+        const current = await readCmsPoem(env);
+        if (!current || current.id !== entityId) {
+            return json(request, env, { error: "Poesia non trovata." }, 404);
+        }
+        response = await adminUpdateCmsPoem(cmsRestoreRequest(request, {
+            title: snapshot.title,
+            subtitle: snapshot.subtitle,
+            status: state,
+            expectedUpdatedAt: current.updatedAt,
+            lines: (snapshot.sections || []).flatMap((section) =>
+                (section.lines || []).map((line) => ({
+                    id: line.id,
+                    text: line.text,
+                    indent: line.indent
+                }))
+            )
+        }), env);
+    } else if (entityType === "navigation_item") {
+        const current = await readCmsNavigation(env);
+        if (!current.items.some((item) => item.id === entityId)) {
+            return json(request, env, { error: "Voce di menu non trovata." }, 404);
+        }
+        response = await adminUpdateCmsNavigation(cmsRestoreRequest(request, {
+            expectedUpdatedAt: current.updatedAt,
+            items: current.items.map((item) => item.id === entityId ? {
+                ...item,
+                label: snapshot.label,
+                href: snapshot.href,
+                visibility: snapshot.visibility,
+                status: state === "published" ? "published" : "draft"
+            } : item)
+        }), env);
+    } else if (entityType === "onboarding_step") {
+        const current = await readCmsOnboarding(env);
+        if (!current.steps.some((step) => step.id === entityId)) {
+            return json(request, env, { error: "Schermata non trovata." }, 404);
+        }
+        const action = snapshot.action || {};
+        response = await adminUpdateCmsOnboarding(cmsRestoreRequest(request, {
+            expectedUpdatedAt: current.updatedAt,
+            intro: current.intro,
+            steps: current.steps.map((step) => step.id === entityId ? {
+                ...step,
+                title: snapshot.title,
+                description: snapshot.body,
+                details: Array.isArray(action.details) ? action.details : [],
+                preview: action.preview || "",
+                alt: action.alt || "",
+                status: state === "published" ? "published" : "draft"
+            } : step)
+        }), env);
+    } else if (entityType === "site_setting") {
+        const current = (await readCmsSettings(env)).find(
+            (setting) => setting.key === entityId
+        );
+        if (!current) {
+            return json(request, env, { error: "Impostazione non trovata." }, 404);
+        }
+        response = await adminUpdateCmsSetting(cmsRestoreRequest(request, {
+            value: snapshot.value,
+            status: state,
+            expectedUpdatedAt: current.updatedAt
+        }), env, entityId);
+    } else if (entityType === "map_layer") {
+        const current = (await readCmsMapLayers(env)).layers.find(
+            (layer) => layer.id === entityId
+        );
+        if (!current) return json(request, env, { error: "Livello non trovato." }, 404);
+        response = await adminUpdateCmsMapLayer(cmsRestoreRequest(request, {
+            title: snapshot.title,
+            description: snapshot.description,
+            style: snapshot.style,
+            status: state,
+            expectedUpdatedAt: current.updatedAt
+        }), env, entityId);
+    } else if (entityType === "map_feature") {
+        const collection = await readCmsMapLayers(env);
+        const current = collection.layers.flatMap((layer) => layer.features)
+            .find((feature) => feature.id === entityId);
+        if (!current) return json(request, env, { error: "Geometria non trovata." }, 404);
+        response = await adminUpdateCmsMapFeature(cmsRestoreRequest(request, {
+            layerId: snapshot.layerId,
+            position: snapshot.position,
+            title: snapshot.title,
+            description: snapshot.description,
+            geometry: snapshot.geometry,
+            properties: snapshot.properties,
+            status: state,
+            expectedUpdatedAt: current.updatedAt
+        }), env, entityId);
+    } else if (entityType === "source") {
+        const current = (await readCmsSources(env)).find(
+            (source) => source.id === entityId
+        );
+        if (!current) return json(request, env, { error: "Fonte non trovata." }, 404);
+        response = await adminUpdateCmsSource(cmsRestoreRequest(request, {
+            type: snapshot.type,
+            title: snapshot.title,
+            author: snapshot.author,
+            publicationDate: snapshot.publicationDate,
+            url: snapshot.url,
+            note: snapshot.note,
+            status: state,
+            expectedUpdatedAt: current.updatedAt
+        }), env, entityId);
+    }
+    return response;
+}
+
+async function adminGetCmsLegal(request, env) {
+    if (!(await adminAuthorized(request, env))) {
+        return unauthorized(request, env);
+    }
+    await ensureCmsStorage(env);
+    return json(request, env, { documents: await readCmsLegalDocuments(env) });
+}
+
+async function readCmsLegalDocuments(env) {
+    const [documentResult, versionResult] = await Promise.all([
+        env.DB.prepare(`
+            SELECT id, slug, title, current_version, created_at, updated_at
+            FROM legal_documents ORDER BY title COLLATE NOCASE, id
+        `).all(),
+        env.DB.prepare(`
+            SELECT id, document_id, version_number, effective_date, body_html,
+                checksum, status, created_at, published_at
+            FROM legal_document_versions
+            ORDER BY document_id, version_number DESC
+        `).all()
+    ]);
+    const versionsByDocument = new Map();
+    for (const row of versionResult.results || []) {
+        const versions = versionsByDocument.get(row.document_id) || [];
+        versions.push(cmsLegalVersionRecord(row));
+        versionsByDocument.set(row.document_id, versions);
+    }
+    return (documentResult.results || []).map((row) => ({
+        id: row.id,
+        slug: row.slug,
+        title: row.title,
+        currentVersion: Number(row.current_version),
+        createdAt: Number(row.created_at),
+        updatedAt: Number(row.updated_at),
+        versions: versionsByDocument.get(row.id) || []
+    }));
+}
+
+function cmsLegalVersionRecord(row) {
+    return {
+        id: row.id,
+        documentId: row.document_id,
+        number: Number(row.version_number),
+        effectiveDate: row.effective_date,
+        bodyHtml: row.body_html,
+        checksum: row.checksum,
+        status: row.status,
+        createdAt: Number(row.created_at),
+        publishedAt: row.published_at === null ? null : Number(row.published_at)
+    };
+}
+
+async function adminCreateCmsLegalVersion(request, env, documentId) {
+    if (!(await adminAuthorized(request, env))) {
+        return unauthorized(request, env);
+    }
+    await ensureCmsStorage(env);
+    const documents = await readCmsLegalDocuments(env);
+    const document = documents.find((item) => item.id === documentId);
+    if (!document) {
+        return json(request, env, { error: "Documento legale non trovato." }, 404);
+    }
+    if (document.versions.some((version) => version.status === "draft")) {
+        return json(request, env, {
+            error: "Esiste già una bozza: completala prima di crearne un’altra."
+        }, 409);
+    }
+    const source = document.versions.find(
+        (version) => version.number === document.currentVersion
+    ) || document.versions[0];
+    const input = normalizeCmsLegalVersionInput(
+        await readJson(request, MAX_CMS_LEGAL_REQUEST_BYTES),
+        source
+    );
+    if (input.error) {
+        return json(request, env, { error: input.error }, 400);
+    }
+    const number = Math.max(0, ...document.versions.map((version) => version.number)) + 1;
+    const id = `${document.id}-v${number}`;
+    const now = Date.now();
+    const checksum = await sha256Hex(input.bodyHtml);
+    const snapshot = cmsLegalSnapshot(
+        id, document.id, number, input.effectiveDate, input.bodyHtml, checksum, "draft"
+    );
+    await env.DB.batch([
+        env.DB.prepare(`
+            INSERT INTO legal_document_versions (
+                id, document_id, version_number, effective_date, body_html,
+                checksum, status, created_at, published_at
+            ) VALUES (?, ?, ?, ?, ?, ?, 'draft', ?, NULL)
+        `).bind(
+            id, document.id, number, input.effectiveDate,
+            input.bodyHtml, checksum, now
+        ),
+        revisionInsert(env, "legal_document_version", id, snapshot, "draft", now)
+    ]);
+    const updated = await readCmsLegalDocuments(env);
+    return json(request, env, {
+        document: updated.find((item) => item.id === document.id),
+        version: snapshot,
+        created: true
+    }, 201);
+}
+
+async function adminUpdateCmsLegalVersion(request, env, versionId) {
+    if (!(await adminAuthorized(request, env))) {
+        return unauthorized(request, env);
+    }
+    await ensureCmsStorage(env);
+    const row = await env.DB.prepare(`
+        SELECT id, document_id, version_number, effective_date, body_html,
+            checksum, status, created_at, published_at
+        FROM legal_document_versions WHERE id = ? LIMIT 1
+    `).bind(versionId).first();
+    if (!row) {
+        return json(request, env, { error: "Versione legale non trovata." }, 404);
+    }
+    const current = cmsLegalVersionRecord(row);
+    if (current.status !== "draft") {
+        return json(request, env, {
+            error: "Le versioni pubblicate sono immutabili. Crea una nuova bozza."
+        }, 409);
+    }
+    const input = normalizeCmsLegalVersionInput(
+        await readJson(request, MAX_CMS_LEGAL_REQUEST_BYTES),
+        current,
+        true
+    );
+    if (input.error) {
+        return json(request, env, { error: input.error }, 400);
+    }
+    if (input.expectedChecksum !== current.checksum ||
+        input.expectedEffectiveDate !== current.effectiveDate) {
+        return json(request, env, {
+            error: "La bozza è stata modificata altrove. Ricaricala prima di salvare."
+        }, 409);
+    }
+    const checksum = await sha256Hex(input.bodyHtml);
+    if (input.effectiveDate === current.effectiveDate && checksum === current.checksum) {
+        return json(request, env, { version: current, unchanged: true });
+    }
+    const now = Date.now();
+    const snapshot = cmsLegalSnapshot(
+        current.id, current.documentId, current.number,
+        input.effectiveDate, input.bodyHtml, checksum, "draft"
+    );
+    await env.DB.batch([
+        env.DB.prepare(`
+            UPDATE legal_document_versions
+            SET effective_date = ?, body_html = ?, checksum = ?
+            WHERE id = ? AND status = 'draft'
+        `).bind(input.effectiveDate, input.bodyHtml, checksum, current.id),
+        revisionInsert(
+            env, "legal_document_version", current.id, snapshot, "draft", now
+        )
+    ]);
+    return json(request, env, { version: snapshot, unchanged: false });
+}
+
+async function adminPublishCmsLegalVersion(request, env, versionId) {
+    if (!(await adminAuthorized(request, env))) {
+        return unauthorized(request, env);
+    }
+    await ensureCmsStorage(env);
+    const body = await readJson(request, MAX_CMS_LEGAL_REQUEST_BYTES);
+    const expectedChecksum = String(body?.expectedChecksum || "");
+    const expectedEffectiveDate = String(body?.expectedEffectiveDate || "");
+    const row = await env.DB.prepare(`
+        SELECT id, document_id, version_number, effective_date, body_html,
+            checksum, status, created_at, published_at
+        FROM legal_document_versions WHERE id = ? LIMIT 1
+    `).bind(versionId).first();
+    if (!row) {
+        return json(request, env, { error: "Versione legale non trovata." }, 404);
+    }
+    const current = cmsLegalVersionRecord(row);
+    if (current.status !== "draft") {
+        return json(request, env, {
+            error: "La versione risulta già pubblicata e non può essere riscritta."
+        }, 409);
+    }
+    if (expectedChecksum !== current.checksum ||
+        expectedEffectiveDate !== current.effectiveDate) {
+        return json(request, env, {
+            error: "La bozza è cambiata. Ricaricala prima di pubblicare."
+        }, 409);
+    }
+    const now = Date.now();
+    const snapshot = cmsLegalSnapshot(
+        current.id, current.documentId, current.number,
+        current.effectiveDate, current.bodyHtml, current.checksum, "published"
+    );
+    await env.DB.batch([
+        env.DB.prepare(`
+            UPDATE legal_document_versions
+            SET status = 'published', published_at = ?
+            WHERE id = ? AND status = 'draft'
+        `).bind(now, current.id),
+        env.DB.prepare(`
+            UPDATE legal_documents
+            SET current_version = ?, updated_at = ?
+            WHERE id = ?
+        `).bind(current.number, now, current.documentId),
+        revisionInsert(
+            env, "legal_document_version", current.id,
+            snapshot, "published", now
+        )
+    ]);
+    const documents = await readCmsLegalDocuments(env);
+    return json(request, env, {
+        document: documents.find((item) => item.id === current.documentId),
+        version: { ...snapshot, publishedAt: now },
+        published: true
+    });
+}
+
+function normalizeCmsLegalVersionInput(value, fallback, requireChecksum = false) {
+    const effectiveDate = String(
+        value?.effectiveDate ?? fallback?.effectiveDate ?? ""
+    ).trim();
+    const bodyHtml = String(value?.bodyHtml ?? fallback?.bodyHtml ?? "").trim();
+    const expectedChecksum = String(value?.expectedChecksum || "");
+    const expectedEffectiveDate = String(value?.expectedEffectiveDate || "");
+    if (!/^\d{4}-\d{2}-\d{2}$/u.test(effectiveDate) ||
+        Number.isNaN(Date.parse(`${effectiveDate}T00:00:00Z`))) {
+        return { error: "La data di entrata in vigore non è valida." };
+    }
+    if (!bodyHtml || bodyHtml.length > 500000 ||
+        /<(?:script|iframe|object|embed|form)\b/iu.test(bodyHtml) ||
+        /\son\w+\s*=/iu.test(bodyHtml) ||
+        /(?:javascript|data):/iu.test(bodyHtml)) {
+        return { error: "Il contenuto HTML del documento non è valido." };
+    }
+    if (requireChecksum && (!/^[0-9a-f]{64}$/u.test(expectedChecksum) ||
+        !/^\d{4}-\d{2}-\d{2}$/u.test(expectedEffectiveDate))) {
+        return { error: "La versione della bozza non è valida." };
+    }
+    return { effectiveDate, bodyHtml, expectedChecksum, expectedEffectiveDate };
+}
+
+function cmsLegalSnapshot(
+    id, documentId, number, effectiveDate, bodyHtml, checksum, status
+) {
+    return { id, documentId, number, effectiveDate, bodyHtml, checksum, status };
+}
+
+async function adminGetCmsPermalinks(request, env) {
+    if (!(await adminAuthorized(request, env))) {
+        return unauthorized(request, env);
+    }
+    await ensureCmsStorage(env);
+    return json(request, env, { permalinks: await readCmsPermalinks(env) });
+}
+
+async function readCmsPermalinks(env) {
+    const result = await env.DB.prepare(`
+        SELECT id, path, target_type, target_id, state, redirect_path,
+            created_at, updated_at
+        FROM permalinks ORDER BY path, id
+    `).all();
+    return (result.results || []).map(cmsPermalinkRecord);
+}
+
+function cmsPermalinkRecord(row) {
+    return {
+        id: row.id,
+        path: row.path,
+        targetType: row.target_type,
+        targetId: row.target_id,
+        state: row.state,
+        redirectPath: row.redirect_path,
+        createdAt: Number(row.created_at),
+        updatedAt: Number(row.updated_at)
+    };
+}
+
+async function adminCreateCmsPermalink(request, env) {
+    if (!(await adminAuthorized(request, env))) {
+        return unauthorized(request, env);
+    }
+    await ensureCmsStorage(env);
+    const input = normalizeCmsPermalinkInput(
+        await readJson(request, MAX_CMS_PERMALINK_REQUEST_BYTES), false
+    );
+    if (input.error) {
+        return json(request, env, { error: input.error }, 400);
+    }
+    const conflict = await cmsPermalinkConflict(env, input);
+    if (conflict) {
+        return json(request, env, { error: conflict }, 409);
+    }
+    const id = `permalink-${crypto.randomUUID()}`;
+    const now = Date.now();
+    await env.DB.prepare(`
+        INSERT INTO permalinks (
+            id, path, target_type, target_id, state, redirect_path,
+            created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `).bind(
+        id, input.path, input.targetType, input.targetId,
+        input.state, input.redirectPath, now, now
+    ).run();
+    return json(request, env, {
+        permalink: {
+            id, ...input, createdAt: now, updatedAt: now
+        },
+        created: true
+    }, 201);
+}
+
+async function adminUpdateCmsPermalink(request, env, permalinkId) {
+    if (!(await adminAuthorized(request, env))) {
+        return unauthorized(request, env);
+    }
+    await ensureCmsStorage(env);
+    const row = await env.DB.prepare(`
+        SELECT id, path, target_type, target_id, state, redirect_path,
+            created_at, updated_at
+        FROM permalinks WHERE id = ? LIMIT 1
+    `).bind(permalinkId).first();
+    if (!row) {
+        return json(request, env, { error: "Permalink non trovato." }, 404);
+    }
+    const current = cmsPermalinkRecord(row);
+    const input = normalizeCmsPermalinkInput(
+        { ...await readJson(request, MAX_CMS_PERMALINK_REQUEST_BYTES),
+            path: current.path,
+            targetType: current.targetType,
+            targetId: current.targetId },
+        true
+    );
+    if (input.error) {
+        return json(request, env, { error: input.error }, 400);
+    }
+    if (input.expectedUpdatedAt !== current.updatedAt) {
+        return json(request, env, {
+            error: "Il permalink è stato modificato altrove. Ricaricalo prima di salvare."
+        }, 409);
+    }
+    const conflict = await cmsPermalinkConflict(env, input, current.id);
+    if (conflict) {
+        return json(request, env, { error: conflict }, 409);
+    }
+    if (input.state === current.state && input.redirectPath === current.redirectPath) {
+        return json(request, env, { permalink: current, unchanged: true });
+    }
+    const now = Math.max(Date.now(), current.updatedAt + 1);
+    await env.DB.prepare(`
+        UPDATE permalinks SET state = ?, redirect_path = ?, updated_at = ?
+        WHERE id = ?
+    `).bind(input.state, input.redirectPath, now, current.id).run();
+    return json(request, env, {
+        permalink: {
+            ...current,
+            state: input.state,
+            redirectPath: input.redirectPath,
+            updatedAt: now
+        },
+        unchanged: false
+    });
+}
+
+function normalizeCmsPermalinkInput(value, requireVersion) {
+    const path = String(value?.path || "").trim();
+    const targetType = String(value?.targetType || "").trim();
+    const targetId = String(value?.targetId || "").trim();
+    const state = String(value?.state || "active");
+    const redirectPath = state === "redirect"
+        ? String(value?.redirectPath || "").trim()
+        : null;
+    const expectedUpdatedAt = Number(value?.expectedUpdatedAt);
+    if (!validCmsPermalinkPath(path) || containsSecretQuery(path)) {
+        return { error: "Il percorso permanente non è valido o contiene dati riservati." };
+    }
+    if (!targetType || targetType.length > 80 ||
+        !targetId || targetId.length > 160) {
+        return { error: "La destinazione del permalink non è valida." };
+    }
+    if (!['active', 'redirect', 'gone'].includes(state)) {
+        return { error: "Lo stato del permalink non è valido." };
+    }
+    if (state === "redirect" &&
+        (!validCmsPermalinkPath(redirectPath) || containsSecretQuery(redirectPath) ||
+            redirectPath === path)) {
+        return { error: "La destinazione del reindirizzamento non è valida." };
+    }
+    if (requireVersion &&
+        (!Number.isSafeInteger(expectedUpdatedAt) || expectedUpdatedAt < 0)) {
+        return { error: "La versione del permalink non è valida." };
+    }
+    return {
+        path, targetType, targetId, state, redirectPath, expectedUpdatedAt
+    };
+}
+
+function validCmsPermalinkPath(value) {
+    return typeof value === "string" && value.startsWith("/") &&
+        !value.startsWith("//") && value.length <= 2048 &&
+        !/[\u0000-\u001f\u007f]/u.test(value);
+}
+
+function containsSecretQuery(value) {
+    return /[?&](?:chiave|token|password|secret|code)=/iu.test(value);
+}
+
+async function cmsPermalinkConflict(env, input, excludedId = "") {
+    const duplicate = await env.DB.prepare(`
+        SELECT id FROM permalinks WHERE path = ? AND id <> ? LIMIT 1
+    `).bind(input.path, excludedId).first();
+    if (duplicate) return "Il percorso è già registrato.";
+    if (input.state === "redirect") {
+        const destination = await env.DB.prepare(`
+            SELECT id FROM permalinks
+            WHERE path = ? AND id <> ? AND state <> 'gone'
+            LIMIT 1
+        `).bind(input.redirectPath, excludedId).first();
+        if (!destination) {
+            return "Il reindirizzamento deve puntare a un permalink registrato.";
+        }
+    }
+    return "";
 }
 
 async function getPublicPermalink(request, env, url) {
@@ -6270,6 +7052,8 @@ async function initializeCmsStorage(env) {
         )
     );
 
+    await ensureSourcePublicationState(env);
+
     await initializePageContent(env);
     await initializePoemContent(env);
     await initializeNavigationContent(env);
@@ -6280,6 +7064,30 @@ async function initializeCmsStorage(env) {
     await initializeLegalContent(env);
     await initializeContentRevisions(env);
     await initializePermalinks(env);
+}
+
+async function ensureSourcePublicationState(env) {
+    const result = await env.DB.prepare("PRAGMA table_info(sources)").all();
+    const columns = new Set((result.results || []).map((row) => row.name));
+    if (!columns.has("status")) {
+        await env.DB.prepare(`
+            ALTER TABLE sources ADD COLUMN status TEXT NOT NULL DEFAULT 'published'
+                CHECK (status IN ('draft', 'published', 'archived'))
+        `).run();
+    }
+    if (!columns.has("published_at")) {
+        await env.DB.prepare(
+            "ALTER TABLE sources ADD COLUMN published_at INTEGER"
+        ).run();
+    }
+    await env.DB.prepare(`
+        UPDATE sources SET published_at = created_at
+        WHERE status = 'published' AND published_at IS NULL
+    `).run();
+    await env.DB.prepare(`
+        CREATE INDEX IF NOT EXISTS idx_sources_public
+        ON sources(status, title COLLATE NOCASE, id)
+    `).run();
 }
 
 async function initializeLegalContent(env) {
@@ -7022,7 +7830,7 @@ async function initializeContentRevisions(env) {
         env.DB.prepare(`
             SELECT
                 id, source_type, title, author,
-                publication_date, url, note
+                publication_date, url, note, status
             FROM sources ORDER BY id
         `).all(),
         env.DB.prepare(`
@@ -7253,7 +8061,7 @@ async function initializeContentRevisions(env) {
         revisions.push({
             type: "source",
             id: source.id,
-            state: "published",
+            state: source.status,
             snapshot: {
                 id: source.id,
                 type: source.source_type,
@@ -7262,6 +8070,7 @@ async function initializeContentRevisions(env) {
                 publicationDate: source.publication_date,
                 url: source.url,
                 note: source.note,
+                status: source.status,
                 links: (sourceLinks.results || [])
                     .filter((link) => link.source_id === source.id)
                     .map((link) => ({
@@ -7339,9 +8148,11 @@ function sourceInsertStatement(env, source, now) {
             publication_date,
             url,
             note,
+            status,
             created_at,
-            updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            updated_at,
+            published_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, 'published', ?, ?, ?)
     `).bind(
         source.id,
         source.sourceType || "web",
@@ -7350,6 +8161,7 @@ function sourceInsertStatement(env, source, now) {
         source.publicationDate || "",
         source.url || "",
         source.note || "",
+        now,
         now,
         now
     );

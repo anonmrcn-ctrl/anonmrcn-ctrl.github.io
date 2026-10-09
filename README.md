@@ -163,6 +163,32 @@ editor espone esclusivamente identità, titoli, descrizioni e manifesti `site.*`
 ogni modifica usa controllo di concorrenza e revisioni append-only, mentre URL
 del Worker, credenziali, analytics e configurazione tecnica restano esclusi.
 
+I documenti legali usano un flusso separato: si crea una nuova bozza, la si
+modifica con controllo su checksum e data e la si pubblica esplicitamente. Una
+versione pubblicata resta immutabile. Il registro dei permalink consente di
+aggiungere indirizzi e modificare soltanto stato o destinazione del redirect;
+il percorso originario non può essere riscritto e non esiste cancellazione.
+
+Tutti i contenuti modificabili hanno ora uno stato editoriale esplicito. La
+migrazione `0014_source_publication_state.sql` assegna `published` alle fonti
+esistenti senza cambiare dati o collegamenti; nuove fonti possono nascere come
+bozze. Fonti e impostazioni non pubblicate restano visibili nel pannello ma sono
+escluse dalle API pubbliche, come già avviene per le altre aree del CMS.
+
+Il pannello offre inoltre un’anteprima autenticata dell’ultima revisione di ogni
+contenuto. Pagine e poesia sono rese in forma leggibile, gli altri snapshot sono
+ispezionabili e l’HTML legale viene confinato in un iframe sandbox con CSP. Non
+viene creato alcun URL pubblico di anteprima e una bozza resta fuori dalle API
+pubbliche finché non viene pubblicata esplicitamente.
+
+La cronologia protetta permette di ispezionare e confrontare due fotografie di
+una stessa entità. Per pagine, poesia, menu, tour, impostazioni editoriali,
+cartografia e fonti una revisione precedente può essere applicata nuovamente:
+il Worker usa gli stessi controlli di validità e concorrenza dell’editor e
+registra il risultato come nuova revisione, senza modificare o cancellare la
+storia esistente. Le versioni legali pubblicate e le revisioni figlie restano
+consultabili ma non sono ripristinabili direttamente.
+
 L'inventario si controlla con:
 
 ```bash

@@ -410,6 +410,12 @@
                     <input id="adminSourceUrl" type="url" maxlength="2048" placeholder="https://…">
                     <label for="adminSourceNote">Nota</label>
                     <textarea id="adminSourceNote" maxlength="2000" rows="4"></textarea>
+                    <label for="adminSourcePublicationStatus">Stato editoriale</label>
+                    <select id="adminSourcePublicationStatus" required>
+                        <option value="draft">Bozza</option>
+                        <option value="published">Pubblicata</option>
+                        <option value="archived">Archiviata</option>
+                    </select>
                     <p class="admin-voci-mappa-aiuto" id="adminSourceLinks"></p>
                     <button id="adminSourceSubmit" type="submit">Crea fonte</button>
                     <button id="adminSourceReset" type="button">Nuova fonte</button>
@@ -422,6 +428,12 @@
                     <label for="adminSettingSelect">Gruppo</label>
                     <select id="adminSettingSelect" required></select>
                     <p class="admin-voci-mappa-aiuto" id="adminSettingIdentity"></p>
+                    <label for="adminSettingPublicationStatus">Stato editoriale</label>
+                    <select id="adminSettingPublicationStatus" required>
+                        <option value="draft">Bozza</option>
+                        <option value="published">Pubblicata</option>
+                        <option value="archived">Archiviata</option>
+                    </select>
                     <label for="adminSettingValue">Valore JSON</label>
                     <textarea id="adminSettingValue" rows="16" spellcheck="false" required></textarea>
                     <p class="admin-voci-mappa-aiuto">
@@ -433,6 +445,113 @@
                     <button id="adminSettingReload" type="button">Ricarica impostazioni</button>
                     <p class="admin-status" id="adminSettingStatus" aria-live="polite"></p>
                 </form>
+            </section>
+
+            <section class="admin-voci-mappa" aria-labelledby="adminLegaleTitolo">
+                <h2 id="adminLegaleTitolo">Documenti legali e permalink</h2>
+                <p>
+                    Prepara nuove versioni dei documenti legali e controlla gli
+                    indirizzi permanenti. Le versioni pubblicate e i percorsi già
+                    registrati non possono essere riscritti o eliminati.
+                </p>
+
+                <form id="adminLegalForm">
+                    <h3>Versioni legali</h3>
+                    <label for="adminLegalDocumentSelect">Documento</label>
+                    <select id="adminLegalDocumentSelect" required></select>
+                    <label for="adminLegalVersionSelect">Versione</label>
+                    <select id="adminLegalVersionSelect" required></select>
+                    <p class="admin-voci-mappa-aiuto" id="adminLegalIdentity"></p>
+                    <label for="adminLegalEffectiveDate">Entrata in vigore</label>
+                    <input id="adminLegalEffectiveDate" type="date" required>
+                    <label for="adminLegalBody">Contenuto HTML</label>
+                    <textarea id="adminLegalBody" rows="20" spellcheck="false" required></textarea>
+                    <p class="admin-voci-mappa-aiuto">
+                        Modifica soltanto una bozza. La pubblicazione è irreversibile:
+                        per correzioni successive va creata una nuova versione.
+                    </p>
+                    <button id="adminLegalSave" type="submit">Salva bozza</button>
+                    <button class="admin-button-secondary" id="adminLegalNew" type="button">
+                        Nuova versione
+                    </button>
+                    <button id="adminLegalPublish" type="button">Pubblica versione</button>
+                    <button class="admin-button-secondary" id="adminLegalReload" type="button">
+                        Ricarica documenti
+                    </button>
+                    <p class="admin-status" id="adminLegalStatus" aria-live="polite"></p>
+                </form>
+
+                <form id="adminPermalinkForm">
+                    <h3>Registro permalink</h3>
+                    <label for="adminPermalinkSelect">Indirizzo</label>
+                    <select id="adminPermalinkSelect">
+                        <option value="">Nuovo permalink</option>
+                    </select>
+                    <p class="admin-voci-mappa-aiuto" id="adminPermalinkIdentity"></p>
+                    <label for="adminPermalinkPath">Percorso permanente</label>
+                    <input id="adminPermalinkPath" type="text" maxlength="2048" placeholder="/pagina.html" required>
+                    <label for="adminPermalinkTargetType">Tipo di destinazione</label>
+                    <input id="adminPermalinkTargetType" type="text" maxlength="80" required>
+                    <label for="adminPermalinkTargetId">Identificativo destinazione</label>
+                    <input id="adminPermalinkTargetId" type="text" maxlength="160" required>
+                    <label for="adminPermalinkState">Stato</label>
+                    <select id="adminPermalinkState" required>
+                        <option value="active">Attivo</option>
+                        <option value="redirect">Reindirizzamento</option>
+                        <option value="gone">Ritirato</option>
+                    </select>
+                    <label for="adminPermalinkRedirect">Destinazione del reindirizzamento</label>
+                    <input id="adminPermalinkRedirect" type="text" maxlength="2048" placeholder="/destinazione.html">
+                    <p class="admin-voci-mappa-aiuto">
+                        Un reindirizzamento deve puntare a un altro percorso già
+                        registrato. Token, password e altri segreti sono rifiutati.
+                    </p>
+                    <button id="adminPermalinkSubmit" type="submit">Crea permalink</button>
+                    <button class="admin-button-secondary" id="adminPermalinkNew" type="button">
+                        Nuovo permalink
+                    </button>
+                    <button class="admin-button-secondary" id="adminPermalinkReload" type="button">
+                        Ricarica registro
+                    </button>
+                    <p class="admin-status" id="adminPermalinkStatus" aria-live="polite"></p>
+                </form>
+            </section>
+
+            <section class="admin-voci-mappa" aria-labelledby="adminAnteprimaTitolo">
+                <h2 id="adminAnteprimaTitolo">Anteprima autenticata</h2>
+                <p>
+                    Controlla l’ultima revisione di lavoro senza pubblicarla. Il
+                    contenuto resta dentro il pannello protetto e non riceve un URL
+                    pubblico o indicizzabile.
+                </p>
+                <label for="adminPreviewSelect">Contenuto e revisione</label>
+                <select id="adminPreviewSelect" required></select>
+                <button class="admin-button-secondary" id="adminPreviewReload" type="button">
+                    Ricarica anteprima
+                </button>
+                <p class="admin-voci-mappa-aiuto" id="adminPreviewIdentity"></p>
+                <article class="admin-cms-preview" id="adminPreviewContent"></article>
+                <p class="admin-status" id="adminPreviewStatus" aria-live="polite"></p>
+
+                <h3>Cronologia revisioni</h3>
+                <p>
+                    Confronta due fotografie immutabili. Il ripristino non cancella
+                    la cronologia: applica la fotografia scelta come nuova revisione.
+                </p>
+                <div class="admin-cms-history-controls">
+                    <label for="adminRevisionRestore">Revisione da ripristinare</label>
+                    <select id="adminRevisionRestore"></select>
+                    <label for="adminRevisionCompare">Revisione di confronto</label>
+                    <select id="adminRevisionCompare"></select>
+                </div>
+                <div class="admin-cms-history-compare" id="adminRevisionComparison"></div>
+                <button id="adminRevisionRestoreButton" type="button">
+                    Ripristina come nuova revisione
+                </button>
+                <button class="admin-button-secondary" id="adminRevisionReload" type="button">
+                    Ricarica cronologia
+                </button>
+                <p class="admin-status" id="adminRevisionStatus" aria-live="polite"></p>
             </section>
 
             <section class="admin-voci-mappa" aria-labelledby="adminVociMappaTitolo">

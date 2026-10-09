@@ -82,6 +82,7 @@ function sourceUpdate(source, overrides = {}) {
         publicationDate: source.publicationDate,
         url: source.url,
         note: source.note,
+        status: source.status,
         expectedUpdatedAt: source.updatedAt,
         ...overrides
     };
@@ -243,4 +244,176 @@ test("il pannello espone editor separati per fonti e impostazioni", async () => 
     assert.match(script, /\/api\/admin\/cms\/sources/u);
     assert.match(script, /\/api\/admin\/cms\/settings/u);
     assert.match(html, /configurazione tecnica\s+restano protetti/u);
+    assert.match(html, /id="adminSourcePublicationStatus"/u);
+    assert.match(html, /id="adminSettingPublicationStatus"/u);
+});
+
+test("bozze di fonti e impostazioni restano escluse dalle API pubbliche", async () => {
+    const env = environment();
+    const sources = await call(env, "/api/admin/cms/sources", { admin: true });
+    const source = sources.data.sources.find(
+        (item) => item.id === "source-zero-wikipedia"
+    );
+    const draftedSource = await call(
+        env,
+        `/api/admin/cms/sources/${source.id}`,
+        { admin: true, method: "PATCH", body: sourceUpdate(source, {
+            status: "draft"
+        }) }
+    );
+    assert.equal(draftedSource.response.status, 200);
+    assert.equal(draftedSource.data.source.status, "draft");
+    const publicSources = await call(
+        env,
+        "/api/public/sources?contentType=narrative_step&contentId=zero"
+    );
+    assert.equal(
+        publicSources.data.sources.some((item) => item.id === source.id),
+        false
+    );
+
+    const settings = await call(env, "/api/admin/cms/settings", { admin: true });
+    const identity = settings.data.settings.find(
+        (setting) => setting.key === "site.identity"
+    );
+    const draftedSetting = await call(
+        env,
+        "/api/admin/cms/settings/site.identity",
+        { admin: true, method: "PATCH", body: {
+            value: identity.value,
+            status: "draft",
+            expectedUpdatedAt: identity.updatedAt
+        } }
+    );
+    assert.equal(draftedSetting.response.status, 200);
+    assert.equal(draftedSetting.data.setting.status, "draft");
+    const publicSettings = await call(env, "/api/public/settings/site");
+    assert.equal(publicSettings.data.settings["site.identity"], undefined);
+    assert.equal(env.DB.database.prepare(`
+        SELECT publication_state FROM content_revisions
+        WHERE entity_type = 'site_setting' AND entity_id = 'site.identity'
+        ORDER BY revision_number DESC LIMIT 1
+    `).get().publication_state, "draft");
+});
+
+test("l’anteprima protetta legge l’ultima revisione senza pubblicarla", async () => {
+    const env = environment();
+    const denied = await call(env, "/api/admin/cms/preview");
+    assert.equal(denied.response.status, 401);
+
+    const settings = await call(env, "/api/admin/cms/settings", { admin: true });
+    const identity = settings.data.settings.find(
+        (setting) => setting.key === "site.identity"
+    );
+    const draftValue = { ...identity.value, projectName: "Anteprima riservata" };
+    await call(env, "/api/admin/cms/settings/site.identity", {
+        admin: true,
+        method: "PATCH",
+        body: {
+            value: draftValue,
+            status: "draft",
+            expectedUpdatedAt: identity.updatedAt
+        }
+    });
+
+    const preview = await call(
+        env,
+        "/api/admin/cms/preview?entityType=site_setting&entityId=site.identity",
+        { admin: true }
+    );
+    assert.equal(preview.response.status, 200);
+    assert.equal(preview.data.previews.length, 1);
+    assert.equal(preview.data.previews[0].state, "draft");
+    assert.equal(
+        preview.data.previews[0].snapshot.value.projectName,
+        "Anteprima riservata"
+    );
+    const publicSettings = await call(env, "/api/public/settings/site");
+    assert.equal(publicSettings.data.settings["site.identity"], undefined);
+
+    const missingPair = await call(
+        env,
+        "/api/admin/cms/preview?entityType=site_setting",
+        { admin: true }
+    );
+    assert.equal(missingPair.response.status, 400);
+});
+
+test("consulta e ripristina la cronologia creando una nuova revisione", async () => {
+    const env = environment();
+    const denied = await call(
+        env,
+        "/api/admin/cms/revisions?entityType=site_setting&entityId=site.identity"
+    );
+    assert.equal(denied.response.status, 401);
+
+    const settings = await call(env, "/api/admin/cms/settings", { admin: true });
+    const identity = settings.data.settings.find(
+        (setting) => setting.key === "site.identity"
+    );
+    const originalValue = structuredClone(identity.value);
+    const changed = await call(env, "/api/admin/cms/settings/site.identity", {
+        admin: true,
+        method: "PATCH",
+        body: {
+            value: { ...identity.value, projectName: "Versione da annullare" },
+            status: "draft",
+            expectedUpdatedAt: identity.updatedAt
+        }
+    });
+    assert.equal(changed.response.status, 200);
+
+    const history = await call(
+        env,
+        "/api/admin/cms/revisions?entityType=site_setting&entityId=site.identity",
+        { admin: true }
+    );
+    assert.equal(history.response.status, 200);
+    assert.deepEqual(
+        history.data.revisions.map((revision) => revision.revisionNumber),
+        [2, 1]
+    );
+    assert.equal(history.data.revisions[0].state, "draft");
+    assert.equal(history.data.revisions[1].restorable, true);
+
+    const restored = await call(
+        env,
+        "/api/admin/cms/revisions/site_setting/site.identity/1/restore",
+        { admin: true, method: "POST" }
+    );
+    assert.equal(restored.response.status, 200);
+    assert.deepEqual(restored.data.setting.value, originalValue);
+    assert.equal(restored.data.setting.status, identity.status);
+
+    const rows = env.DB.database.prepare(`
+        SELECT revision_number, snapshot_json, publication_state
+        FROM content_revisions
+        WHERE entity_type = 'site_setting' AND entity_id = 'site.identity'
+        ORDER BY revision_number
+    `).all();
+    assert.equal(rows.length, 3);
+    assert.equal(rows[1].publication_state, "draft");
+    assert.deepEqual(JSON.parse(rows[2].snapshot_json), JSON.parse(rows[0].snapshot_json));
+    assert.equal(rows[2].publication_state, rows[0].publication_state);
+
+    const unsupported = await call(
+        env,
+        "/api/admin/cms/revisions/page_block/block-home-intro/1/restore",
+        { admin: true, method: "POST" }
+    );
+    assert.equal(unsupported.response.status, 400);
+});
+
+test("il pannello rende l’anteprima senza creare una pagina pubblica", async () => {
+    const [html, script] = await Promise.all([
+        readFile(new URL("../../admin.html", import.meta.url), "utf8"),
+        readFile(new URL("../../admin.js", import.meta.url), "utf8")
+    ]);
+    assert.match(html, /id="adminPreviewSelect"/u);
+    assert.match(html, /non riceve un URL\s+pubblico o indicizzabile/u);
+    assert.match(script, /\/api\/admin\/cms\/preview/u);
+    assert.match(script, /setAttribute\("sandbox", ""\)/u);
+    assert.match(html, /id="adminRevisionComparison"/u);
+    assert.match(html, /Ripristina come nuova revisione/u);
+    assert.match(script, /\/api\/admin\/cms\/revisions/u);
 });

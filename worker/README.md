@@ -67,7 +67,11 @@ cartografici, revisioni, permalink e documenti legali. Le revisioni sono
 append-only, il percorso di un permalink non è riscrivibile e una versione
 legale pubblicata non può essere modificata o eliminata. Il primo health check
 dopo il deploy installa in modo idempotente queste strutture e restituisce
-`"contentSchema": 1`.
+`"contentSchema": 2`.
+
+La migrazione non distruttiva `0014_source_publication_state.sql` aggiunge alle
+fonti lo stesso ciclo `draft`/`published`/`archived` usato dagli altri contenuti.
+Le fonti preesistenti restano pubblicate e conservano ID, URL e associazioni.
 
 Al primo accesso a una pagina pubblica, il Worker importa una sola volta in
 `site_pages` e `page_blocks` i 60 blocchi editoriali di Progetto, Autore, Logo,
@@ -108,7 +112,7 @@ Il catalogo `sources` deduplica per URL le 17 fonti del percorso e importa i
 richiami già presenti nelle Voci, nei luoghi e nei metadati cartografici.
 `content_source_links` conserva ordine e contesto senza riscrivere i token o i
 campi originari. `GET /api/public/sources?contentType=…&contentId=…` risponde
-solo se il contenuto richiesto è pubblico.
+solo se il contenuto richiesto e la fonte sono pubblici.
 
 Le quattro impostazioni `site.*` contengono soltanto identità e metadati
 editoriali delle pagine e dei manifesti. L'endpoint

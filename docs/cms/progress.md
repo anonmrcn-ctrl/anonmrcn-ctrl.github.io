@@ -10,8 +10,8 @@ schema, compatibilità, test e documentazione sono presenti nel repository.
 |---:|---|---|---|
 | 1 | Confine contenuti/software | Completo | `01-confine-contenuti-software.md`, `content-inventory.json`, `scripts/check-content-boundary.mjs` |
 | 2 | Centralizzazione in D1 | Completo | Tutte le unità 2.1–2.12 sono importate, esposte e coperte da test; il primo punto incompleto è il 3 |
-| 3 | Ampliamento del pannello | In corso | Pagine, poesia, menu, benvenuto, cartografia, fonti e impostazioni editoriali sono gestibili; il primo sottopunto incompleto è 3.6 |
-| 4 | Bozze, anteprima e cronologia | Da iniziare | La tabella append-only `content_revisions` è predisposta, ma flussi e interfaccia non sono ancora realizzati |
+| 3 | Ampliamento del pannello | Completo | Tutte le unità 3.1–3.6 sono amministrabili con protezione degli identificativi, controllo di concorrenza e revisioni; il primo punto incompleto è il 4 |
+| 4 | Bozze, anteprima e cronologia | Completo | Stati editoriali, anteprima protetta, confronto e ripristino append-only sono coperti da API, pannello e test; il primo punto incompleto è il 5 |
 | 5 | Permanenza di QR e collegamenti | Da iniziare | La tabella `permalinks` è predisposta; migrazione e risoluzione degli URL storici non sono ancora realizzate |
 | 6 | Media e documenti in R2 | Da iniziare | Nessun dato è stato ancora trasferito |
 | 7 | Sostituzione del token amministrativo | Da iniziare | L’accesso continua a usare `ADMIN_TOKEN` |
@@ -62,4 +62,12 @@ punto 2 non è completa. Non vanno eliminati durante una migrazione parziale.
 | 3.3 | Menu e benvenuto | Completo | `GET/PATCH /api/admin/cms/navigation` e `/api/admin/cms/onboarding` alimentano due moduli protetti. I test di navigazione e onboarding provano etichette, URL, visibilità, stato, introduzione, cinque schermate, controllo di concorrenza e revisioni, preservando ID, ordine, indicatori e ripieghi |
 | 3.4 | Livelli e geometrie | Completo | `GET/PATCH /api/admin/cms/map-layers`, `POST/PATCH /api/admin/cms/map-features` e due editor protetti gestiscono metadati, stile, stato e GeoJSON con concorrenza e revisioni append-only. `admin-map-layers.test.mjs` prova autorizzazione, validazione, nuovi ID stabili, filtro pubblico e assenza di cancellazione; i sette record storici restano `archived`, con geometria nulla, anche quando si modifica un livello o si pubblica una nuova feature |
 | 3.5 | Fonti e impostazioni | Completo | `GET/POST/PATCH /api/admin/cms/sources`, `GET/PATCH /api/admin/cms/settings` e due editor protetti gestiscono schede bibliografiche e soli gruppi `site.*`. `admin-sources-settings.test.mjs` prova autorizzazione, nuovi ID stabili, associazioni immutate, HTTPS, concorrenza, revisioni append-only, struttura dei metadati e propagazione pubblica; URL del Worker e configurazione tecnica non sono esposti |
-| 3.6 | Documenti legali e permalink | Da iniziare | Preparare nuove versioni legali e controllare gli URL permanenti senza riscrivere record protetti |
+| 3.6 | Documenti legali e permalink | Completo | `GET/POST/PATCH /api/admin/cms/legal`, la pubblicazione esplicita e `GET/POST/PATCH /api/admin/cms/permalinks` alimentano due moduli protetti. `admin-legal-permalinks.test.mjs` prova bozze, checksum e data di concorrenza, pubblicazione immutabile, vecchie versioni intatte, nuovi percorsi, reindirizzamenti solo verso URL registrati, esclusione dei segreti e impossibilità di cambiare o cancellare i percorsi |
+
+## Punto 4 — ordine vincolante
+
+| Ordine | Unità | Stato | Criterio e prova |
+|---:|---|---|---|
+| 4.1 | Stato bozza uniforme | Completo | Pagine, poesia, menu, tour, cartografia, fonti, impostazioni e documenti legali usano stati editoriali espliciti. `0014_source_publication_state.sql`, i selettori nel pannello e `admin-sources-settings.test.mjs` provano migrazione conservativa delle fonti, transizioni con concorrenza, revisioni con stato coerente ed esclusione di fonti e impostazioni in bozza dalle API pubbliche |
+| 4.2 | Anteprima autenticata | Completo | `GET /api/admin/cms/preview` restituisce soltanto con autorizzazione l’ultima fotografia append-only di ogni entità. Il modulo «Anteprima autenticata» rende pagine e poesia, mostra gli altri snapshot e isola l’HTML legale in un iframe sandbox con CSP; i test provano che la bozza resta esclusa dall’API pubblica e non esiste una pagina di anteprima indicizzabile |
+| 4.3 | Cronologia revisioni | Completo | `GET /api/admin/cms/revisions` espone la storia di una singola entità soltanto all’amministratore; il pannello confronta due snapshot e `POST /api/admin/cms/revisions/:tipo/:id/:numero/restore` instrada la fotografia scelta nei validatori degli editor, creando una nuova revisione senza riscrivere le precedenti. `admin-sources-settings.test.mjs` prova autorizzazione, ordine, stato, ripristino e immutabilità della storia |
