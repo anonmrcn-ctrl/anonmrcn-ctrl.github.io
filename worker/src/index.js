@@ -2503,6 +2503,8 @@ async function adminCreateMapEntry(request, env) {
 
     const id = Number(result.meta?.last_row_id);
     await updateMapEntryImage(env, id, input.image, input.removeImage, now);
+    await ensureCmsStorage(env);
+    await synchronizeContentPermalinks(env);
     const entry = await getMapEntryById(env, id);
 
     return json(request, env, {
@@ -2567,6 +2569,8 @@ async function adminUpdateMapEntry(request, env, entryId) {
         input.removeImage,
         now
     );
+    await ensureCmsStorage(env);
+    await synchronizeContentPermalinks(env);
 
     return json(request, env, {
         ok: true,
@@ -2651,6 +2655,8 @@ async function readMapEntries(env) {
 function mapEntryPayload(row) {
     return {
         id: Number(row.id),
+        preferredUrl: `/luoghi/${Number(row.id)}.html`,
+        legacyUrl: `/luogo.html?luogo=${Number(row.id)}`,
         name: row.name,
         category: row.category,
         description: row.description,
@@ -6295,6 +6301,8 @@ async function adminCreateWikiEntry(request, env) {
             now
         )
     ]);
+    await ensureCmsStorage(env);
+    await synchronizeContentPermalinks(env);
 
     return json(request, env, {
         ok: true,
@@ -6391,6 +6399,8 @@ async function adminUpdateWikiEntry(request, env, entryId) {
         ),
         wikiImageCleanupStatement(env, entryId, input.images)
     ]);
+    await ensureCmsStorage(env);
+    await synchronizeContentPermalinks(env);
 
     return json(request, env, {
         ok: true,
@@ -6842,6 +6852,8 @@ function wikiEntryPayload(row, includeBody) {
     const entry = {
         id: Number(row.id),
         slug: row.slug,
+        preferredUrl: `/voci/${encodeURIComponent(row.slug)}.html`,
+        legacyUrl: `/voci.html#${encodeURIComponent(row.slug)}`,
         title: row.title,
         summary: row.summary || "",
         status: row.status,
@@ -7177,6 +7189,10 @@ async function initializeLegalContent(env) {
 }
 
 async function initializePermalinks(env) {
+    await ensureWikiStorage(env);
+    await ensureMapEntryStorage(env);
+    await ensureNarrativeStorage(env);
+
     const initialized = await env.DB.prepare(`
         SELECT name
         FROM content_initializations
@@ -7184,73 +7200,47 @@ async function initializePermalinks(env) {
         LIMIT 1
     `).first();
 
-    if (initialized) {
-        return;
-    }
-
-    const [wikiEntries, mapEntries, narrativeSteps] = await Promise.all([
-        env.DB.prepare(`
-            SELECT id, slug
-            FROM wiki_entries
-            WHERE status = 'published'
-            ORDER BY id
-        `).all(),
-        env.DB.prepare(`
-            SELECT id
-            FROM map_entries
-            ORDER BY id
-        `).all(),
-        env.DB.prepare(`
+    if (!initialized) {
+        const narrativeSteps = await env.DB.prepare(`
             SELECT stable_key, lat, lon, zoom
             FROM narrative_steps
             WHERE status = 'published'
             ORDER BY position, id
-        `).all()
-    ]);
-    const records = [
-        ...STATIC_PERMALINK_SEEDS,
-        ...POEM_SECTION_PERMALINK_SEEDS
-    ];
+        `).all();
+        const records = [
+            ...STATIC_PERMALINK_SEEDS,
+            ...POEM_SECTION_PERMALINK_SEEDS
+        ];
 
-    for (const entry of wikiEntries.results || []) {
-        records.push({
-            id: `permalink-wiki-entry-${entry.id}`,
-            path: `/voci.html#${encodeURIComponent(entry.slug)}`,
-            targetType: "wiki_entry",
-            targetId: String(entry.id)
-        });
-    }
+        for (const step of narrativeSteps.results || []) {
+            records.push({
+                id: `permalink-narrative-${step.stable_key}`,
+                path:
+                    `/progetto.html?narrative=${encodeURIComponent(step.stable_key)}` +
+                    `&lat=${step.lat}&lon=${step.lon}&zoom=${step.zoom}`,
+                targetType: "narrative_step",
+                targetId: step.stable_key
+            });
+        }
 
-    for (const entry of mapEntries.results || []) {
-        records.push(
-            {
-                id: `permalink-map-entry-qr-${entry.id}`,
-                path: `/luogo.html?luogo=${entry.id}`,
-                targetType: "map_entry",
-                targetId: String(entry.id)
-            },
-            {
-                id: `permalink-map-entry-map-${entry.id}`,
-                path: `/progetto.html?luogo=${entry.id}#map`,
-                targetType: "map_entry",
-                targetId: String(entry.id)
-            }
+        const now = Date.now();
+        const statements = records.map((record) =>
+            insertPermalinkStatement(env, record, now)
         );
+
+        statements.push(env.DB.prepare(`
+            INSERT OR IGNORE INTO content_initializations (name, applied_at)
+            VALUES ('permalinks_v1', ?)
+        `).bind(now));
+
+        await env.DB.batch(statements);
     }
 
-    for (const step of narrativeSteps.results || []) {
-        records.push({
-            id: `permalink-narrative-${step.stable_key}`,
-            path:
-                `/progetto.html?narrative=${encodeURIComponent(step.stable_key)}` +
-                `&lat=${step.lat}&lon=${step.lon}&zoom=${step.zoom}`,
-            targetType: "narrative_step",
-            targetId: step.stable_key
-        });
-    }
+    await synchronizeContentPermalinks(env);
+}
 
-    const now = Date.now();
-    const statements = records.map((record) => env.DB.prepare(`
+function insertPermalinkStatement(env, record, now) {
+    return env.DB.prepare(`
         INSERT OR IGNORE INTO permalinks (
             id,
             path,
@@ -7268,11 +7258,131 @@ async function initializePermalinks(env) {
         record.targetId,
         now,
         now
-    ));
+    );
+}
+
+async function synchronizeContentPermalinks(env) {
+    const [wikiEntries, mapEntries] = await Promise.all([
+        env.DB.prepare(`
+            SELECT id, slug, status, updated_at
+            FROM wiki_entries
+            ORDER BY id
+        `).all(),
+        env.DB.prepare(`
+            SELECT id
+            FROM map_entries
+            ORDER BY id
+        `).all()
+    ]);
+    const now = Date.now();
+    const statements = [];
+
+    for (const entry of wikiEntries.results || []) {
+        const targetId = String(entry.id);
+
+        if (entry.status !== "published") {
+            statements.push(env.DB.prepare(`
+                UPDATE permalinks
+                SET state = 'gone', redirect_path = NULL, updated_at = ?
+                WHERE target_type = 'wiki_entry' AND target_id = ?
+            `).bind(now, targetId));
+            continue;
+        }
+
+        const version = Number(entry.updated_at) || now;
+        const legacyPath = `/voci.html#${encodeURIComponent(entry.slug)}`;
+        const preferredPath = `/voci/${encodeURIComponent(entry.slug)}.html`;
+        const records = [
+            {
+                id: `permalink-wiki-entry-${entry.id}`,
+                path: legacyPath,
+                targetType: "wiki_entry",
+                targetId
+            },
+            {
+                id: `permalink-wiki-alias-${entry.id}-${version}`,
+                path: legacyPath,
+                targetType: "wiki_entry",
+                targetId
+            },
+            {
+                id: `permalink-wiki-preferred-${entry.id}-${version}`,
+                path: preferredPath,
+                targetType: "wiki_entry",
+                targetId
+            }
+        ];
+
+        records.forEach((record) => {
+            statements.push(insertPermalinkStatement(env, record, now));
+        });
+        statements.push(env.DB.prepare(`
+            UPDATE permalinks
+            SET
+                state = CASE WHEN path = ? THEN 'active' ELSE 'redirect' END,
+                redirect_path = CASE WHEN path = ? THEN NULL ELSE ? END,
+                updated_at = ?
+            WHERE target_type = 'wiki_entry' AND target_id = ?
+        `).bind(
+            preferredPath,
+            preferredPath,
+            preferredPath,
+            now,
+            targetId
+        ));
+    }
+
+    for (const entry of mapEntries.results || []) {
+        const targetId = String(entry.id);
+        const legacyPath = `/luogo.html?luogo=${entry.id}`;
+        const preferredPath = `/luoghi/${entry.id}.html`;
+        const records = [
+            {
+                id: `permalink-map-entry-qr-${entry.id}`,
+                path: legacyPath,
+                targetType: "map_entry",
+                targetId
+            },
+            {
+                id: `permalink-map-entry-map-${entry.id}`,
+                path: `/progetto.html?luogo=${entry.id}#map`,
+                targetType: "map_entry",
+                targetId
+            },
+            {
+                id: `permalink-map-entry-preferred-${entry.id}`,
+                path: preferredPath,
+                targetType: "map_entry",
+                targetId
+            }
+        ];
+
+        records.forEach((record) => {
+            statements.push(insertPermalinkStatement(env, record, now));
+        });
+        statements.push(env.DB.prepare(`
+            UPDATE permalinks
+            SET
+                state = CASE WHEN path = ? THEN 'active' ELSE 'redirect' END,
+                redirect_path = CASE WHEN path = ? THEN NULL ELSE ? END,
+                updated_at = ?
+            WHERE
+                target_type = 'map_entry'
+                AND target_id = ?
+                AND (path = ? OR path LIKE '/luoghi/%')
+        `).bind(
+            preferredPath,
+            preferredPath,
+            preferredPath,
+            now,
+            targetId,
+            legacyPath
+        ));
+    }
 
     statements.push(env.DB.prepare(`
         INSERT OR IGNORE INTO content_initializations (name, applied_at)
-        VALUES ('permalinks_v1', ?)
+        VALUES ('permalinks_v2', ?)
     `).bind(now));
 
     await env.DB.batch(statements);

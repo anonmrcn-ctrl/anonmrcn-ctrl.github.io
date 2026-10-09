@@ -113,10 +113,10 @@
     }
 
     function wikiEntryUrl(slug) {
-        const url = new URL("./voci.html", document.baseURI);
-
-        url.hash = encodeURIComponent(slug);
-        return url.href;
+        return new URL(
+            `./voci/${encodeURIComponent(String(slug))}.html`,
+            document.baseURI
+        ).href;
     }
 
     function internalWikiUrl(value) {
@@ -128,10 +128,15 @@
             const url = new URL(value, document.baseURI);
             const expected = new URL("./voci.html", document.baseURI);
 
-            return url.origin === expected.origin &&
-                url.pathname === expected.pathname
-                ? url.href
-                : "";
+            if (
+                url.origin === expected.origin &&
+                url.pathname === expected.pathname &&
+                url.hash.length > 1
+            ) {
+                return wikiEntryUrl(decodeURIComponent(url.hash.slice(1)));
+            }
+
+            return "";
         } catch (_) {
             return "";
         }

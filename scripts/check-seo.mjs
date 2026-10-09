@@ -4,6 +4,14 @@ import process from "node:process";
 
 const root = path.resolve(import.meta.dirname, "..");
 const config = JSON.parse(await readFile(path.join(root, "seo.config.json"), "utf8"));
+const generatedManifest = JSON.parse(await readFile(
+    path.join(root, config.generatedManifest),
+    "utf8"
+));
+const generatedPages = [
+    ...(generatedManifest.wiki || []),
+    ...(generatedManifest.places || [])
+];
 const { SITE_SETTINGS_SEEDS } = await import(
     new URL("../worker/src/settings-seed.js", import.meta.url)
 );
@@ -149,6 +157,73 @@ for (const file of config.noindexPages) {
     }
 }
 
+for (const page of generatedPages) {
+    const html = await readFile(path.join(root, page.file), "utf8");
+    const canonical = `${config.siteOrigin}${page.path}`;
+    const actualTitle = titleText(html);
+    const actualDescription = metaContent(html, "name", "description");
+
+    if (actualTitle !== page.title) {
+        error(page.file, `title inatteso: "${actualTitle}"`);
+    }
+    if (actualDescription !== page.description) {
+        error(page.file, "meta description assente o diversa dal manifest");
+    }
+    if (linkHref(html, "canonical") !== canonical) {
+        error(page.file, `canonical assente o diverso da ${canonical}`);
+    }
+    if (!/index/i.test(metaContent(html, "name", "robots"))) {
+        error(page.file, "direttiva robots index assente");
+    }
+    if (count(html, /<h1\b/gi) !== 1) {
+        error(page.file, "deve contenere esattamente un h1");
+    }
+    if (!/<main\b[\s\S]*?<\/main>/iu.test(html)) {
+        error(page.file, "contenuto principale HTML assente");
+    }
+    if (metaContent(html, "property", "og:title") !== page.title) {
+        error(page.file, "og:title assente o incoerente");
+    }
+    if (metaContent(html, "property", "og:description") !== page.description) {
+        error(page.file, "og:description assente o incoerente");
+    }
+    if (metaContent(html, "property", "og:url") !== canonical) {
+        error(page.file, "og:url assente o incoerente");
+    }
+    if (!safeHttpsUrl(metaContent(html, "property", "og:image"))) {
+        error(page.file, "og:image HTTPS assente o non valida");
+    }
+    if (metaContent(html, "name", "twitter:card") !== "summary_large_image") {
+        error(page.file, "twitter:card assente o incoerente");
+    }
+
+    const structuredData = [...html.matchAll(
+        /<script\b[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi
+    )];
+    if (!structuredData.length) {
+        error(page.file, "JSON-LD assente");
+    }
+    structuredData.forEach((script) => {
+        try {
+            JSON.parse(script[1]);
+        } catch (parseError) {
+            error(page.file, `JSON-LD non valido: ${parseError.message}`);
+        }
+    });
+
+    for (const image of tags(html, "img")) {
+        if (!/\balt\s*=/.test(image)) {
+            error(page.file, `immagine senza attributo alt: ${image}`);
+        }
+    }
+
+    if (/\/(?:voci\.html#|luogo\.html\?luogo=)/u.test(canonical)) {
+        error(page.file, "canonical basato su un URL storico");
+    }
+    recordUnique(titles, actualTitle, page.file, "title");
+    recordUnique(descriptions, actualDescription, page.file, "meta description");
+}
+
 const sitemap = await readFile(path.join(root, "sitemap.xml"), "utf8");
 for (const page of config.indexablePages) {
     const canonical = `${config.siteOrigin}${page.path}`;
@@ -156,7 +231,13 @@ for (const page of config.indexablePages) {
         error("sitemap.xml", `URL mancante: ${canonical}`);
     }
 }
-if (count(sitemap, /<loc>/g) !== config.indexablePages.length) {
+for (const page of generatedPages) {
+    const canonical = `${config.siteOrigin}${page.path}`;
+    if (!sitemap.includes(`<loc>${canonical}</loc>`)) {
+        error("sitemap.xml", `URL generato mancante: ${canonical}`);
+    }
+}
+if (count(sitemap, /<loc>/g) !== config.indexablePages.length + generatedPages.length) {
     error("sitemap.xml", "contiene URL non previsti o duplicati");
 }
 
@@ -167,6 +248,7 @@ if (!robots.includes(`Sitemap: ${config.siteOrigin}/sitemap.xml`)) {
 
 const checkedHtml = new Set([
     ...config.indexablePages.map((page) => page.file),
+    ...generatedPages.map((page) => page.file),
     ...config.noindexPages
 ]);
 for (const file of checkedHtml) {
@@ -201,6 +283,15 @@ if (errors.length) {
 } else {
     console.log(
         `Controllo SEO superato: ${config.indexablePages.length} pagine indicizzabili, ` +
+        `${generatedPages.length} pagine D1 autonome, ` +
         `${config.noindexPages.length} pagine escluse e ${titles.size} title unici.`
     );
+}
+
+function safeHttpsUrl(value) {
+    try {
+        return new URL(value).protocol === "https:";
+    } catch (_) {
+        return false;
+    }
 }
