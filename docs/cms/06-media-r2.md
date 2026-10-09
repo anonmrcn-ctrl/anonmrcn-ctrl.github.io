@@ -4,9 +4,10 @@
 
 La prima unità del punto 6 sposta fuori da D1 gli originali delle fotografie
 delle Voci, delle immagini dei luoghi e degli allegati delle Memorie. Il bucket
-R2 resta privato: il browser continua a usare gli stessi endpoint del Worker e
-le stesse verifiche di pubblicazione o autorizzazione. Nessun URL pubblico, ID,
-QR o riferimento incorporato nei contenuti cambia.
+R2 `nnmrcn-media-eu` resta privato e usa la giurisdizione UE: il browser
+continua a usare gli stessi endpoint del Worker e le stesse verifiche di
+pubblicazione o autorizzazione. Nessun URL pubblico, ID, QR o riferimento
+incorporato nei contenuti cambia.
 
 La migrazione `0015_media_assets_r2.sql` aggiunge a D1 il catalogo
 `media_assets`. Ogni record collega un proprietario stabile all'oggetto R2 e

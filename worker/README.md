@@ -74,7 +74,8 @@ fonti lo stesso ciclo `draft`/`published`/`archived` usato dagli altri contenuti
 Le fonti preesistenti restano pubblicate e conservano ID, URL e associazioni.
 
 La migrazione `0015_media_assets_r2.sql` aggiunge il catalogo degli oggetti nel
-bucket R2 privato collegato come `MEDIA`. Il Worker trasferisce gli originali
+bucket R2 privato `nnmrcn-media-eu`, collegato come `MEDIA` e vincolato alla
+giurisdizione dell'Unione europea. Il Worker trasferisce gli originali
 delle Voci, dei luoghi e delle Memorie soltanto dopo aver verificato la scrittura
 e conserva in D1 il ripiego se R2 non è disponibile. Le letture degli oggetti
 esistenti completano la migrazione in modo progressivo; il job notturno ne
@@ -156,8 +157,9 @@ Il workflow `.github/workflows/deploy-cloudflare-worker.yml` pubblica il Worker
 `nnmrcn-rete` a ogni modifica della cartella `worker/` sul branch `main`. Può
 anche essere avviato manualmente dalla scheda **Actions** di GitHub. I binding
 D1 `DB` e R2 privato `MEDIA`, l'origine consentita di GitHub Pages e i log sono
-definiti in `wrangler.jsonc`. Wrangler crea il bucket collegato quando manca e
-ne conserva l'associazione nei deploy successivi.
+definiti in `wrangler.jsonc`. Il workflow verifica il bucket nominato, lo crea
+nella giurisdizione UE quando manca e poi distribuisce il Worker con
+un'associazione esplicita e ripetibile.
 
 La configurazione iniziale richiede due Secrets nel repository GitHub. Apri
 **Settings** → **Secrets and variables** → **Actions** →

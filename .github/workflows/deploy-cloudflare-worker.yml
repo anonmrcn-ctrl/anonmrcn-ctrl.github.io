@@ -41,6 +41,20 @@ jobs:
         if: steps.cloudflare.outputs.configured == 'true'
         uses: actions/checkout@v6
 
+      - name: Prepara il bucket R2 privato in UE
+        if: steps.cloudflare.outputs.configured == 'true'
+        working-directory: worker
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          buckets="$(npx --yes wrangler@4 r2 bucket list --jurisdiction eu)"
+          if ! grep -Eq '(^|[^a-z0-9-])nnmrcn-media-eu([^a-z0-9-]|$)' <<< "$buckets"; then
+            npx --yes wrangler@4 r2 bucket create nnmrcn-media-eu --jurisdiction eu
+          fi
+
       - name: Pubblica il Worker
         if: steps.cloudflare.outputs.configured == 'true'
         uses: cloudflare/wrangler-action@v4
