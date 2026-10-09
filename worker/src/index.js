@@ -790,6 +790,10 @@ export default {
                 return await adminGetCmsPermalinks(request, env);
             }
 
+            if (request.method === "GET" && path === "/api/admin/cms/preview") {
+                return await adminGetCmsPreview(request, env, url);
+            }
+
             if (request.method === "POST" && path === "/api/admin/cms/permalinks") {
                 return await adminCreateCmsPermalink(request, env);
             }
@@ -4816,6 +4820,58 @@ async function getPublicSiteSettings(request, env) {
     }
 
     return json(request, env, { settings, updatedAt });
+}
+
+async function adminGetCmsPreview(request, env, url) {
+    if (!(await adminAuthorized(request, env))) {
+        return unauthorized(request, env);
+    }
+    await ensureCmsStorage(env);
+    const entityType = String(url.searchParams.get("entityType") || "");
+    const entityId = String(url.searchParams.get("entityId") || "");
+    if (Boolean(entityType) !== Boolean(entityId) ||
+        (entityType && !/^[a-z_]{1,80}$/u.test(entityType)) ||
+        (entityId && entityId.length > 160)) {
+        return json(request, env, { error: "Contenuto di anteprima non valido." }, 400);
+    }
+    const where = entityType && entityId
+        ? "WHERE revision.entity_type = ? AND revision.entity_id = ?"
+        : "";
+    const statement = env.DB.prepare(`
+        SELECT
+            revision.entity_type,
+            revision.entity_id,
+            revision.revision_number,
+            revision.snapshot_json,
+            revision.publication_state,
+            revision.created_at
+        FROM content_revisions revision
+        INNER JOIN (
+            SELECT entity_type, entity_id, MAX(revision_number) AS revision_number
+            FROM content_revisions
+            GROUP BY entity_type, entity_id
+        ) latest
+            ON latest.entity_type = revision.entity_type
+            AND latest.entity_id = revision.entity_id
+            AND latest.revision_number = revision.revision_number
+        ${where}
+        ORDER BY revision.entity_type, revision.entity_id
+    `);
+    const result = entityType && entityId
+        ? await statement.bind(entityType, entityId).all()
+        : await statement.all();
+    const previews = (result.results || []).map((row) => ({
+        entityType: row.entity_type,
+        entityId: row.entity_id,
+        revisionNumber: Number(row.revision_number),
+        state: row.publication_state,
+        createdAt: Number(row.created_at),
+        snapshot: parseJsonValue(row.snapshot_json, {})
+    }));
+    if (entityType && entityId && !previews.length) {
+        return json(request, env, { error: "Contenuto di anteprima non trovato." }, 404);
+    }
+    return json(request, env, { previews });
 }
 
 async function adminGetCmsLegal(request, env) {

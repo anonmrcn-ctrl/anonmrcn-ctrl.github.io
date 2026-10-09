@@ -175,6 +175,12 @@ esistenti senza cambiare dati o collegamenti; nuove fonti possono nascere come
 bozze. Fonti e impostazioni non pubblicate restano visibili nel pannello ma sono
 escluse dalle API pubbliche, come già avviene per le altre aree del CMS.
 
+Il pannello offre inoltre un’anteprima autenticata dell’ultima revisione di ogni
+contenuto. Pagine e poesia sono rese in forma leggibile, gli altri snapshot sono
+ispezionabili e l’HTML legale viene confinato in un iframe sandbox con CSP. Non
+viene creato alcun URL pubblico di anteprima e una bozza resta fuori dalle API
+pubbliche finché non viene pubblicata esplicitamente.
+
 L'inventario si controlla con:
 
 ```bash

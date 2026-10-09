@@ -295,3 +295,57 @@ test("bozze di fonti e impostazioni restano escluse dalle API pubbliche", async 
         ORDER BY revision_number DESC LIMIT 1
     `).get().publication_state, "draft");
 });
+
+test("l’anteprima protetta legge l’ultima revisione senza pubblicarla", async () => {
+    const env = environment();
+    const denied = await call(env, "/api/admin/cms/preview");
+    assert.equal(denied.response.status, 401);
+
+    const settings = await call(env, "/api/admin/cms/settings", { admin: true });
+    const identity = settings.data.settings.find(
+        (setting) => setting.key === "site.identity"
+    );
+    const draftValue = { ...identity.value, projectName: "Anteprima riservata" };
+    await call(env, "/api/admin/cms/settings/site.identity", {
+        admin: true,
+        method: "PATCH",
+        body: {
+            value: draftValue,
+            status: "draft",
+            expectedUpdatedAt: identity.updatedAt
+        }
+    });
+
+    const preview = await call(
+        env,
+        "/api/admin/cms/preview?entityType=site_setting&entityId=site.identity",
+        { admin: true }
+    );
+    assert.equal(preview.response.status, 200);
+    assert.equal(preview.data.previews.length, 1);
+    assert.equal(preview.data.previews[0].state, "draft");
+    assert.equal(
+        preview.data.previews[0].snapshot.value.projectName,
+        "Anteprima riservata"
+    );
+    const publicSettings = await call(env, "/api/public/settings/site");
+    assert.equal(publicSettings.data.settings["site.identity"], undefined);
+
+    const missingPair = await call(
+        env,
+        "/api/admin/cms/preview?entityType=site_setting",
+        { admin: true }
+    );
+    assert.equal(missingPair.response.status, 400);
+});
+
+test("il pannello rende l’anteprima senza creare una pagina pubblica", async () => {
+    const [html, script] = await Promise.all([
+        readFile(new URL("../../admin.html", import.meta.url), "utf8"),
+        readFile(new URL("../../admin.js", import.meta.url), "utf8")
+    ]);
+    assert.match(html, /id="adminPreviewSelect"/u);
+    assert.match(html, /non riceve un URL\s+pubblico o indicizzabile/u);
+    assert.match(script, /\/api\/admin\/cms\/preview/u);
+    assert.match(script, /setAttribute\("sandbox", ""\)/u);
+});

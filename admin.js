@@ -172,6 +172,11 @@
     const cmsPermalinkNew = document.getElementById("adminPermalinkNew");
     const cmsPermalinkReload = document.getElementById("adminPermalinkReload");
     const cmsPermalinkStatus = document.getElementById("adminPermalinkStatus");
+    const cmsPreviewSelect = document.getElementById("adminPreviewSelect");
+    const cmsPreviewReload = document.getElementById("adminPreviewReload");
+    const cmsPreviewIdentity = document.getElementById("adminPreviewIdentity");
+    const cmsPreviewContent = document.getElementById("adminPreviewContent");
+    const cmsPreviewStatus = document.getElementById("adminPreviewStatus");
     const mapEntryForm = document.getElementById("adminMapEntryForm");
     const mapEntryName = document.getElementById("adminMapEntryName");
     const mapEntryCategory = document.getElementById("adminMapEntryCategory");
@@ -240,6 +245,7 @@
     let loadedCmsSettings = [];
     let loadedCmsLegalDocuments = [];
     let loadedCmsPermalinks = [];
+    let loadedCmsPreviews = [];
 
     const pushNotifications = window.NNMRCN_NOTIFICHE.create({
         button: pushButton,
@@ -290,6 +296,7 @@
                 loadCmsSettings(),
                 loadCmsLegal(),
                 loadCmsPermalinks(),
+                loadCmsPreviews(),
                 loadSummary(),
                 pushNotifications.sync()
             ]);
@@ -1471,6 +1478,112 @@
             cmsPermalinkNew.disabled = false;
             cmsPermalinkReload.disabled = false;
         }
+    }
+
+    function selectedCmsPreview() {
+        let entityType = "";
+        let entityId = "";
+        try {
+            [entityType, entityId] = JSON.parse(cmsPreviewSelect.value);
+        } catch (_) {}
+        return loadedCmsPreviews.find((preview) =>
+            preview.entityType === entityType && preview.entityId === entityId
+        );
+    }
+
+    function cmsPreviewLabel(preview) {
+        const snapshot = preview.snapshot || {};
+        const title = snapshot.title || snapshot.name || snapshot.label ||
+            snapshot.key || preview.entityId;
+        return `${preview.entityType} — ${title} — ${preview.state}`;
+    }
+
+    async function loadCmsPreviews(preferredValue = "") {
+        const selectedValue = preferredValue || cmsPreviewSelect.value;
+        cmsPreviewStatus.textContent = "Caricamento anteprime…";
+        try {
+            const data = await request("/api/admin/cms/preview");
+            loadedCmsPreviews = data.previews || [];
+            cmsPreviewSelect.replaceChildren();
+            for (const preview of loadedCmsPreviews) {
+                const option = document.createElement("option");
+                option.value = JSON.stringify([
+                    preview.entityType,
+                    preview.entityId
+                ]);
+                option.textContent = cmsPreviewLabel(preview);
+                cmsPreviewSelect.appendChild(option);
+            }
+            if (Array.from(cmsPreviewSelect.options).some(
+                (option) => option.value === selectedValue
+            )) cmsPreviewSelect.value = selectedValue;
+            renderCmsPreview();
+            cmsPreviewStatus.textContent = "";
+        } catch (error) {
+            cmsPreviewStatus.textContent = error.message ||
+                "Non è stato possibile caricare l’anteprima.";
+        }
+    }
+
+    function renderCmsPreview() {
+        const preview = selectedCmsPreview();
+        cmsPreviewContent.replaceChildren();
+        if (!preview) {
+            cmsPreviewIdentity.textContent = "Nessuna revisione disponibile.";
+            return;
+        }
+        cmsPreviewIdentity.textContent =
+            `${preview.entityType}/${preview.entityId} · revisione ` +
+            `${preview.revisionNumber} · ${preview.state}`;
+        const snapshot = preview.snapshot || {};
+
+        if (preview.entityType === "site_page") {
+            const title = document.createElement("h3");
+            title.textContent = snapshot.title || preview.entityId;
+            const description = document.createElement("p");
+            description.textContent = snapshot.description || "";
+            cmsPreviewContent.append(title, description);
+            for (const block of snapshot.blocks || []) {
+                const paragraph = document.createElement("p");
+                paragraph.textContent = block.content?.text || block.text || "";
+                cmsPreviewContent.appendChild(paragraph);
+            }
+            return;
+        }
+
+        if (preview.entityType === "poem_work") {
+            const title = document.createElement("h3");
+            title.textContent = snapshot.title || preview.entityId;
+            const subtitle = document.createElement("p");
+            subtitle.textContent = snapshot.subtitle || "";
+            cmsPreviewContent.append(title, subtitle);
+            for (const section of snapshot.sections || []) {
+                const heading = document.createElement("h4");
+                heading.textContent = section.title || "";
+                const verse = document.createElement("p");
+                verse.className = "admin-cms-preview-verses";
+                verse.textContent = (section.lines || [])
+                    .map((line) => line.text || "").join("\n");
+                cmsPreviewContent.append(heading, verse);
+            }
+            return;
+        }
+
+        if (preview.entityType === "legal_document_version" && snapshot.bodyHtml) {
+            const frame = document.createElement("iframe");
+            frame.title = `Anteprima ${preview.entityId}`;
+            frame.setAttribute("sandbox", "");
+            frame.referrerPolicy = "no-referrer";
+            frame.srcdoc = "<meta http-equiv=\"Content-Security-Policy\" " +
+                "content=\"default-src 'none'; style-src 'unsafe-inline'\">" +
+                snapshot.bodyHtml;
+            cmsPreviewContent.appendChild(frame);
+            return;
+        }
+
+        const data = document.createElement("pre");
+        data.textContent = JSON.stringify(snapshot, null, 2);
+        cmsPreviewContent.appendChild(data);
     }
 
     function showContactListMessage(message) {
@@ -2954,6 +3067,10 @@
     });
     cmsPermalinkReload.addEventListener("click", () => {
         loadCmsPermalinks(cmsPermalinkSelect.value);
+    });
+    cmsPreviewSelect.addEventListener("change", renderCmsPreview);
+    cmsPreviewReload.addEventListener("click", () => {
+        loadCmsPreviews(cmsPreviewSelect.value);
     });
     narrativeCancel.addEventListener("click", () => {
         resetNarrativeForm();

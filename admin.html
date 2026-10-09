@@ -517,6 +517,23 @@
                 </form>
             </section>
 
+            <section class="admin-voci-mappa" aria-labelledby="adminAnteprimaTitolo">
+                <h2 id="adminAnteprimaTitolo">Anteprima autenticata</h2>
+                <p>
+                    Controlla l’ultima revisione di lavoro senza pubblicarla. Il
+                    contenuto resta dentro il pannello protetto e non riceve un URL
+                    pubblico o indicizzabile.
+                </p>
+                <label for="adminPreviewSelect">Contenuto e revisione</label>
+                <select id="adminPreviewSelect" required></select>
+                <button class="admin-button-secondary" id="adminPreviewReload" type="button">
+                    Ricarica anteprima
+                </button>
+                <p class="admin-voci-mappa-aiuto" id="adminPreviewIdentity"></p>
+                <article class="admin-cms-preview" id="adminPreviewContent"></article>
+                <p class="admin-status" id="adminPreviewStatus" aria-live="polite"></p>
+            </section>
+
             <section class="admin-voci-mappa" aria-labelledby="adminVociMappaTitolo">
                 <h2 id="adminVociMappaTitolo">Elenco dei luoghi</h2>
                 <p>
