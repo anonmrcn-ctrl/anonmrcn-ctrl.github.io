@@ -155,8 +155,6 @@ export const CMS_STORAGE_STATEMENTS = Object.freeze([
     )`,
     `CREATE INDEX IF NOT EXISTS idx_sources_title
         ON sources(title COLLATE NOCASE, id)`,
-    `CREATE INDEX IF NOT EXISTS idx_sources_public
-        ON sources(status, title COLLATE NOCASE, id)`,
     `CREATE TABLE IF NOT EXISTS content_source_links (
         content_type TEXT NOT NULL CHECK (length(content_type) BETWEEN 1 AND 80),
         content_id TEXT NOT NULL CHECK (length(content_id) BETWEEN 1 AND 160),
