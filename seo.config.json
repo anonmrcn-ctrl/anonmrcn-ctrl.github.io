@@ -1,0 +1,67 @@
+{
+  "siteOrigin": "https://anonmrcn-ctrl.github.io",
+  "siteName": "anonMrcn",
+  "defaultImage": "https://anonmrcn-ctrl.github.io/logo.PNG",
+  "indexablePages": [
+    {
+      "file": "index.html",
+      "path": "/",
+      "title": "Il Gajo tra i Praelli — nnMrcn",
+      "description": "Il Gajo tra i Praelli: una poesia interattiva su Marcon, Gaggio e un territorio trasformato dal paesaggio e dalle infrastrutture."
+    },
+    {
+      "file": "autore.html",
+      "path": "/autore.html",
+      "title": "L’autore — nnMrcn",
+      "description": "L’autore di nnMrcn racconta il progetto artistico nato a Marcon per unire la comunità attraverso poesia, territorio e partecipazione."
+    },
+    {
+      "file": "progetto.html",
+      "path": "/progetto.html",
+      "title": "Mappa poetica e storica di Marcon — nnMrcn",
+      "description": "Esplora i luoghi della poesia, la mappa storica di Marcon del 1975 e le trasformazioni del territorio attraverso il progetto nnMrcn."
+    },
+    {
+      "file": "spazio-pubblico.html",
+      "path": "/spazio-pubblico.html",
+      "title": "Memorie, archivio e storia di Marcon — nnMrcn",
+      "description": "Lo spazio pubblico di nnMrcn raccoglie memorie, messaggi e voci dedicate ai luoghi, ai nomi e alla storia del territorio di Marcon."
+    },
+    {
+      "file": "memorie.html",
+      "path": "/memorie.html",
+      "title": "Memorie dei luoghi di Marcon — nnMrcn",
+      "description": "Ricordi, immagini e suoni degli abitanti legati ai luoghi di Marcon, raccolti in una mappa partecipativa e pubblicati dopo moderazione."
+    },
+    {
+      "file": "archivio.html",
+      "path": "/archivio.html",
+      "title": "Archivio dei messaggi — nnMrcn",
+      "description": "L’archivio anonimo dei messaggi pubblicati nel progetto nnMrcn con il consenso delle persone coinvolte."
+    },
+    {
+      "file": "voci.html",
+      "path": "/voci.html",
+      "title": "Luoghi, toponimi e storia di Marcon — nnMrcn",
+      "description": "Voci documentate sui luoghi, i toponimi, il paesaggio e la storia di Marcon, con fonti, fotografie e collegamenti alla mappa."
+    },
+    {
+      "file": "logo.html",
+      "path": "/logo.html",
+      "title": "Il logo di anonMrcn e il paesaggio di Marcon",
+      "description": "Il significato del logo di anonMrcn: prati, campi, infrastrutture e montagne nella forma stilizzata della mappa di Marcon."
+    },
+    {
+      "file": "privacy.html",
+      "path": "/privacy.html",
+      "title": "Informativa sulla privacy — anonMrcn",
+      "description": "Informativa sul trattamento dei dati personali nel progetto artistico e partecipativo anonMrcn."
+    }
+  ],
+  "noindexPages": [
+    "accesso.html",
+    "admin.html",
+    "spazio-personale.html",
+    "taccuino.html"
+  ]
+}

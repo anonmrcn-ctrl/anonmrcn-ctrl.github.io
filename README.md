@@ -194,3 +194,13 @@ L'inventario si controlla con:
 ```bash
 node scripts/check-content-boundary.mjs
 ```
+
+## Controllo SEO
+
+Le pagine pubbliche indicizzabili, i metadati attesi e gli URL canonici sono
+definiti in [`seo.config.json`](seo.config.json). Sitemap, direttive robots,
+metadati, JSON-LD, immagini e collegamenti interni si controllano con:
+
+```bash
+node scripts/check-seo.mjs
+```
