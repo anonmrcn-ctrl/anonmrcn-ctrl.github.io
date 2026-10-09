@@ -73,6 +73,14 @@ La migrazione non distruttiva `0014_source_publication_state.sql` aggiunge alle
 fonti lo stesso ciclo `draft`/`published`/`archived` usato dagli altri contenuti.
 Le fonti preesistenti restano pubblicate e conservano ID, URL e associazioni.
 
+La migrazione `0015_media_assets_r2.sql` aggiunge il catalogo degli oggetti nel
+bucket R2 privato collegato come `MEDIA`. Il Worker trasferisce gli originali
+delle Voci, dei luoghi e delle Memorie soltanto dopo aver verificato la scrittura
+e conserva in D1 il ripiego se R2 non è disponibile. Le letture degli oggetti
+esistenti completano la migrazione in modo progressivo; il job notturno ne
+trasferisce inoltre fino a 25 per esecuzione. La cancellazione di una Memoria
+elimina anche oggetti e metadati associati.
+
 Al primo accesso a una pagina pubblica, il Worker importa una sola volta in
 `site_pages` e `page_blocks` i 60 blocchi editoriali di Progetto, Autore, Logo,
 Spazio pubblico, Archivio, Memorie, Taccuino, Spazio personale e Accesso. Gli
@@ -146,9 +154,10 @@ Il risultato atteso è `20`.
 
 Il workflow `.github/workflows/deploy-cloudflare-worker.yml` pubblica il Worker
 `nnmrcn-rete` a ogni modifica della cartella `worker/` sul branch `main`. Può
-anche essere avviato manualmente dalla scheda **Actions** di GitHub. Il binding
-D1 `DB`, l'origine consentita di GitHub Pages e i log sono definiti in
-`wrangler.jsonc`.
+anche essere avviato manualmente dalla scheda **Actions** di GitHub. I binding
+D1 `DB` e R2 privato `MEDIA`, l'origine consentita di GitHub Pages e i log sono
+definiti in `wrangler.jsonc`. Wrangler crea il bucket collegato quando manca e
+ne conserva l'associazione nei deploy successivi.
 
 La configurazione iniziale richiede due Secrets nel repository GitHub. Apri
 **Settings** → **Secrets and variables** → **Actions** →

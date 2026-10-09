@@ -84,7 +84,7 @@ La separazione vincolante tra contenuti amministrabili e software è descritta i
 [`docs/cms/01-confine-contenuti-software.md`](docs/cms/01-confine-contenuti-software.md).
 L'inventario corrispondente, usato come base per schema e migrazioni, è in
 [`docs/cms/content-inventory.json`](docs/cms/content-inventory.json).
-Lo stato verificabile degli otto passaggi e il primo sottopunto da riprendere
+Lo stato verificabile dei dodici passaggi e il primo sottopunto da riprendere
 sono registrati in [`docs/cms/progress.md`](docs/cms/progress.md).
 
 I testi editoriali di nove pagine sono importati una sola volta in D1 come

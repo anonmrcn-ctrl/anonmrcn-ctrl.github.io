@@ -21,5 +21,10 @@
       "database_id": "43916c45-c2d5-47da-95f8-3577f421821f",
       "migrations_dir": "migrations"
     }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "MEDIA"
+    }
   ]
 }
