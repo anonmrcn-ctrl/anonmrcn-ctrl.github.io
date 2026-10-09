@@ -12,7 +12,7 @@
     <link rel="manifest" href="./admin.webmanifest">
     <script src="./tema.js?v=20261006-map-layers1"></script>
     <link rel="stylesheet" href="./leaflet.css?v=1.9.4">
-    <link rel="stylesheet" href="./style.css?v=20261008-admin-fix1">
+    <link rel="stylesheet" href="./style.css?v=20261009-admin-actions1">
 </head>
 
 <body>
@@ -165,7 +165,11 @@
                     <button id="adminPageSubmit" type="submit">
                         Salva pagina
                     </button>
-                    <button id="adminPageReload" type="button">
+                    <button
+                        class="admin-button-secondary"
+                        id="adminPageReload"
+                        type="button"
+                    >
                         Ricarica senza salvare
                     </button>
                     <p
@@ -215,7 +219,11 @@
                     <button id="adminPoemSubmit" type="submit">
                         Salva poesia
                     </button>
-                    <button id="adminPoemReload" type="button">
+                    <button
+                        class="admin-button-secondary"
+                        id="adminPoemReload"
+                        type="button"
+                    >
                         Ricarica senza salvare
                     </button>
                     <p
@@ -237,7 +245,13 @@
                     <h3>Collegamenti globali</h3>
                     <div class="admin-cms-collection" id="adminNavigationItems"></div>
                     <button id="adminNavigationSubmit" type="submit">Salva menu</button>
-                    <button id="adminNavigationReload" type="button">Ricarica menu</button>
+                    <button
+                        class="admin-button-secondary"
+                        id="adminNavigationReload"
+                        type="button"
+                    >
+                        Ricarica menu
+                    </button>
                     <p class="admin-status" id="adminNavigationStatus" aria-live="polite"></p>
                 </form>
 
@@ -258,7 +272,13 @@
                         modificare testi, elenco, destinazione e descrizione accessibile.
                     </p>
                     <button id="adminOnboardingSubmit" type="submit">Salva benvenuto</button>
-                    <button id="adminOnboardingReload" type="button">Ricarica benvenuto</button>
+                    <button
+                        class="admin-button-secondary"
+                        id="adminOnboardingReload"
+                        type="button"
+                    >
+                        Ricarica benvenuto
+                    </button>
                     <p class="admin-status" id="adminOnboardingStatusText" aria-live="polite"></p>
                 </form>
             </section>
@@ -293,7 +313,13 @@
                         collegamenti e compatibilità con le mappe esistenti.
                     </p>
                     <button id="adminMapLayerSubmit" type="submit">Salva livello</button>
-                    <button id="adminMapLayerReload" type="button">Ricarica livelli</button>
+                    <button
+                        class="admin-button-secondary"
+                        id="adminMapLayerReload"
+                        type="button"
+                    >
+                        Ricarica livelli
+                    </button>
                     <p class="admin-status" id="adminMapLayerStatus" aria-live="polite"></p>
                 </form>
 
@@ -331,8 +357,20 @@
                     <label for="adminMapFeatureProperties">Proprietà JSON</label>
                     <textarea id="adminMapFeatureProperties" rows="8" spellcheck="false" required>{}</textarea>
                     <button id="adminMapFeatureSubmit" type="submit">Crea geometria</button>
-                    <button id="adminMapFeatureReset" type="button">Nuova geometria</button>
-                    <button id="adminMapFeatureReload" type="button">Ricarica geometrie</button>
+                    <button
+                        class="admin-button-secondary"
+                        id="adminMapFeatureReset"
+                        type="button"
+                    >
+                        Nuova geometria
+                    </button>
+                    <button
+                        class="admin-button-secondary"
+                        id="adminMapFeatureReload"
+                        type="button"
+                    >
+                        Ricarica geometrie
+                    </button>
                     <p class="admin-status" id="adminMapFeatureStatus" aria-live="polite"></p>
                 </form>
             </section>
@@ -458,6 +496,7 @@
                         Aggiungi alla mappa
                     </button>
                     <button
+                        class="admin-button-secondary"
                         id="adminMapEntryCancel"
                         type="button"
                         hidden
@@ -608,7 +647,12 @@
                     <button id="adminNarrativeSubmit" type="submit">
                         Aggiungi tappa
                     </button>
-                    <button id="adminNarrativeCancel" type="button" hidden>
+                    <button
+                        class="admin-button-secondary"
+                        id="adminNarrativeCancel"
+                        type="button"
+                        hidden
+                    >
                         Annulla modifica
                     </button>
                     <p

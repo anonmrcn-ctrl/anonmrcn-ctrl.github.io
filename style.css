@@ -3016,6 +3016,17 @@ html[data-theme="dark"] .leaflet-control-layers label {
     color: var(--ink);
 }
 
+.admin-voci-mappa form > .admin-button-secondary {
+    background: transparent;
+    color: var(--ink);
+}
+
+.admin-voci-mappa form > .admin-button-secondary:hover,
+.admin-voci-mappa form > .admin-button-secondary:focus-visible {
+    background: var(--ink);
+    color: var(--paper);
+}
+
 .admin-voci-mappa form > button:disabled {
     cursor: wait;
     opacity: 0.55;
