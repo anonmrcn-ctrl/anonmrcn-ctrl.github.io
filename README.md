@@ -74,7 +74,11 @@ giorni dal Worker.
 
 Le locations private, le password e i secret non devono essere salvati nel repository pubblico.
 
-## Evoluzione verso il CMS
+## Roadmap CMS e SEO
+
+Lo stato e l’ordine vincolante del progetto complessivo sono descritti in
+[`docs/cms/progress.md`](docs/cms/progress.md). La roadmap integra CMS,
+indicizzazione, pagine permanenti, media, prestazioni e programma editoriale.
 
 La separazione vincolante tra contenuti amministrabili e software è descritta in
 [`docs/cms/01-confine-contenuti-software.md`](docs/cms/01-confine-contenuti-software.md).

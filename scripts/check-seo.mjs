@@ -4,6 +4,12 @@ import process from "node:process";
 
 const root = path.resolve(import.meta.dirname, "..");
 const config = JSON.parse(await readFile(path.join(root, "seo.config.json"), "utf8"));
+const { SITE_SETTINGS_SEEDS } = await import(
+    new URL("../worker/src/settings-seed.js", import.meta.url)
+);
+const cmsPages = SITE_SETTINGS_SEEDS.find(
+    (setting) => setting.key === "site.metadata.pages"
+)?.value || {};
 const errors = [];
 const titles = new Map();
 const descriptions = new Map();
@@ -73,12 +79,22 @@ for (const page of config.indexablePages) {
     const canonical = `${config.siteOrigin}${page.path}`;
     const actualTitle = titleText(html);
     const actualDescription = metaContent(html, "name", "description");
+    const pageKey = page.file === "index.html"
+        ? "index"
+        : page.file.replace(/\.html$/u, "");
+    const cmsMetadata = cmsPages[pageKey];
 
     if (actualTitle !== page.title) {
         error(page.file, `title inatteso: "${actualTitle}"`);
     }
     if (actualDescription !== page.description) {
         error(page.file, "meta description assente o diversa dalla configurazione");
+    }
+    if (
+        cmsMetadata?.title !== page.title ||
+        cmsMetadata?.description !== page.description
+    ) {
+        error(page.file, "metadati D1 diversi dalla configurazione SEO");
     }
     if (linkHref(html, "canonical") !== canonical) {
         error(page.file, `canonical assente o diverso da ${canonical}`);

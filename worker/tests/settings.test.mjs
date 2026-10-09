@@ -5,7 +5,11 @@ import test from "node:test";
 import vm from "node:vm";
 
 import worker from "../src/index.js";
-import { SITE_SETTINGS_SEEDS } from "../src/settings-seed.js";
+import { CMS_STORAGE_STATEMENTS } from "../src/cms-schema.js";
+import {
+    LEGACY_SITE_METADATA_PAGES_V1,
+    SITE_SETTINGS_SEEDS
+} from "../src/settings-seed.js";
 
 class D1StatementMock {
     constructor(database, sql) {
@@ -74,6 +78,21 @@ function createEnvironment() {
     };
 }
 
+function createLegacyEnvironment() {
+    const env = createEnvironment();
+    env.DB.database.exec(CMS_STORAGE_STATEMENTS.join(";\n"));
+    env.DB.database.prepare(`
+        INSERT INTO site_settings (
+            setting_key, value_json, visibility, status, updated_at, published_at
+        ) VALUES ('site.metadata.pages', ?, 'public', 'published', 1, 1)
+    `).run(JSON.stringify(LEGACY_SITE_METADATA_PAGES_V1));
+    env.DB.database.prepare(`
+        INSERT INTO content_initializations (name, applied_at)
+        VALUES ('site_settings_v1', 1)
+    `).run();
+    return env;
+}
+
 async function call(env) {
     const response = await worker.fetch(new Request(
         "https://worker.test/api/public/settings/site",
@@ -113,6 +132,44 @@ test("importa una sola volta soltanto impostazioni editoriali pubbliche", async 
             WHERE name = 'site_settings_v1'
         `).get().total,
         1
+    );
+    assert.equal(
+        env.DB.database.prepare(`
+            SELECT COUNT(*) AS total
+            FROM content_initializations
+            WHERE name = 'site_metadata_seo_v1'
+        `).get().total,
+        1
+    );
+});
+
+test("migra una sola volta i metadati legacy senza sovrascrivere personalizzazioni", async () => {
+    const legacy = createLegacyEnvironment();
+    const migrated = await call(legacy);
+    assert.deepEqual(
+        migrated.data.settings["site.metadata.pages"],
+        setting("site.metadata.pages")
+    );
+    assert.equal(
+        legacy.DB.database.prepare(`
+            SELECT COUNT(*) AS total FROM content_initializations
+            WHERE name = 'site_metadata_seo_v1'
+        `).get().total,
+        1
+    );
+
+    const customized = createLegacyEnvironment();
+    const customPages = structuredClone(LEGACY_SITE_METADATA_PAGES_V1);
+    customPages.index.title = "Titolo personalizzato";
+    customized.DB.database.prepare(`
+        UPDATE site_settings SET value_json = ?
+        WHERE setting_key = 'site.metadata.pages'
+    `).run(JSON.stringify(customPages));
+
+    const preserved = await call(customized);
+    assert.equal(
+        preserved.data.settings["site.metadata.pages"].index.title,
+        "Titolo personalizzato"
     );
 });
 
@@ -240,10 +297,10 @@ test("il client applica D1 e mantiene il metadato statico in caso di errore", as
     );
     const success = await executeLoader(async () => ({ settings }));
 
-    assert.equal(success.document.title, "Il progetto — nnMrcn");
+    assert.equal(success.document.title, "Mappa poetica e storica di Marcon — nnMrcn");
     assert.equal(
         success.description.content,
-        "Il progetto poetico nnMrcn, i luoghi di Marcon e la mappa storica del 1975"
+        "Esplora i luoghi della poesia, la mappa storica di Marcon del 1975 e le trasformazioni del territorio attraverso il progetto nnMrcn."
     );
     assert.equal(success.document.documentElement.dataset.cmsMetadataSource, "d1");
     assert.equal(success.events[0].detail.source, "d1");
