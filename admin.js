@@ -106,6 +106,29 @@
     const cmsMapFeatureReset = document.getElementById("adminMapFeatureReset");
     const cmsMapFeatureReload = document.getElementById("adminMapFeatureReload");
     const cmsMapFeatureStatus = document.getElementById("adminMapFeatureStatus");
+    const cmsSourceForm = document.getElementById("adminSourceForm");
+    const cmsSourceSelect = document.getElementById("adminSourceSelect");
+    const cmsSourceIdentity = document.getElementById("adminSourceIdentity");
+    const cmsSourceType = document.getElementById("adminSourceType");
+    const cmsSourceTitle = document.getElementById("adminSourceTitle");
+    const cmsSourceAuthor = document.getElementById("adminSourceAuthor");
+    const cmsSourcePublicationDate = document.getElementById(
+        "adminSourcePublicationDate"
+    );
+    const cmsSourceUrl = document.getElementById("adminSourceUrl");
+    const cmsSourceNote = document.getElementById("adminSourceNote");
+    const cmsSourceLinks = document.getElementById("adminSourceLinks");
+    const cmsSourceSubmit = document.getElementById("adminSourceSubmit");
+    const cmsSourceReset = document.getElementById("adminSourceReset");
+    const cmsSourceReload = document.getElementById("adminSourceReload");
+    const cmsSourceStatus = document.getElementById("adminSourceStatus");
+    const cmsSettingForm = document.getElementById("adminSettingForm");
+    const cmsSettingSelect = document.getElementById("adminSettingSelect");
+    const cmsSettingIdentity = document.getElementById("adminSettingIdentity");
+    const cmsSettingValue = document.getElementById("adminSettingValue");
+    const cmsSettingSubmit = document.getElementById("adminSettingSubmit");
+    const cmsSettingReload = document.getElementById("adminSettingReload");
+    const cmsSettingStatus = document.getElementById("adminSettingStatus");
     const mapEntryForm = document.getElementById("adminMapEntryForm");
     const mapEntryName = document.getElementById("adminMapEntryName");
     const mapEntryCategory = document.getElementById("adminMapEntryCategory");
@@ -170,6 +193,8 @@
     let loadedCmsNavigation = null;
     let loadedCmsOnboarding = null;
     let loadedCmsMapLayers = [];
+    let loadedCmsSources = [];
+    let loadedCmsSettings = [];
 
     const pushNotifications = window.NNMRCN_NOTIFICHE.create({
         button: pushButton,
@@ -216,6 +241,8 @@
                 loadCmsNavigation(),
                 loadCmsOnboarding(),
                 loadCmsMapLayers(),
+                loadCmsSources(),
+                loadCmsSettings(),
                 loadSummary(),
                 pushNotifications.sync()
             ]);
@@ -968,6 +995,171 @@
             cmsMapFeatureSubmit.disabled = false;
             cmsMapFeatureReset.disabled = false;
             cmsMapFeatureReload.disabled = false;
+        }
+    }
+
+    function selectedCmsSource() {
+        return loadedCmsSources.find(
+            (source) => source.id === cmsSourceSelect.value
+        );
+    }
+
+    async function loadCmsSources(preferredId = "") {
+        const selectedId = preferredId || cmsSourceSelect.value;
+        cmsSourceStatus.textContent = "Caricamento fonti…";
+        try {
+            const data = await request("/api/admin/cms/sources");
+            loadedCmsSources = data.sources || [];
+            const newOption = document.createElement("option");
+            newOption.value = "";
+            newOption.textContent = "Nuova fonte";
+            cmsSourceSelect.replaceChildren(newOption);
+            for (const source of loadedCmsSources) {
+                const option = document.createElement("option");
+                option.value = source.id;
+                option.textContent = `${source.title} — ${source.type}`;
+                cmsSourceSelect.appendChild(option);
+            }
+            cmsSourceSelect.value = loadedCmsSources.some(
+                (source) => source.id === selectedId
+            ) ? selectedId : "";
+            renderCmsSourceForm();
+            cmsSourceStatus.textContent = "";
+        } catch (error) {
+            cmsSourceStatus.textContent = error.message ||
+                "Non è stato possibile caricare le fonti.";
+        }
+    }
+
+    function renderCmsSourceForm() {
+        const source = selectedCmsSource();
+        cmsSourceIdentity.textContent = source
+            ? `${source.id} · ${source.links.length} collegamenti protetti`
+            : "Il nuovo identificativo stabile verrà creato al salvataggio.";
+        cmsSourceType.value = source?.type || "web";
+        cmsSourceTitle.value = source?.title || "";
+        cmsSourceAuthor.value = source?.author || "";
+        cmsSourcePublicationDate.value = source?.publicationDate || "";
+        cmsSourceUrl.value = source?.url || "";
+        cmsSourceNote.value = source?.note || "";
+        cmsSourceLinks.textContent = source?.links.length
+            ? "Usata da: " + source.links.map((link) =>
+                `${link.contentType}/${link.contentId}`
+            ).join(", ")
+            : "Nessuna associazione ai contenuti.";
+        cmsSourceSubmit.textContent = source ? "Salva fonte" : "Crea fonte";
+    }
+
+    async function saveCmsSource(event) {
+        event.preventDefault();
+        const source = selectedCmsSource();
+        cmsSourceSubmit.disabled = true;
+        cmsSourceReset.disabled = true;
+        cmsSourceReload.disabled = true;
+        try {
+            const body = {
+                type: cmsSourceType.value,
+                title: cmsSourceTitle.value,
+                author: cmsSourceAuthor.value,
+                publicationDate: cmsSourcePublicationDate.value,
+                url: cmsSourceUrl.value,
+                note: cmsSourceNote.value
+            };
+            if (source) body.expectedUpdatedAt = source.updatedAt;
+            const data = await request(source
+                ? `/api/admin/cms/sources/${encodeURIComponent(source.id)}`
+                : "/api/admin/cms/sources", {
+                method: source ? "PATCH" : "POST",
+                body: JSON.stringify(body)
+            });
+            await loadCmsSources(data.source.id);
+            cmsSourceStatus.textContent = data.unchanged
+                ? "Nessuna modifica da salvare."
+                : source
+                    ? "Fonte salvata e revisione registrata."
+                    : "Fonte creata con un nuovo identificativo stabile.";
+        } catch (error) {
+            cmsSourceStatus.textContent = error.message ||
+                "Non è stato possibile salvare la fonte.";
+        } finally {
+            cmsSourceSubmit.disabled = false;
+            cmsSourceReset.disabled = false;
+            cmsSourceReload.disabled = false;
+        }
+    }
+
+    function selectedCmsSetting() {
+        return loadedCmsSettings.find(
+            (setting) => setting.key === cmsSettingSelect.value
+        );
+    }
+
+    async function loadCmsSettings(preferredKey = "") {
+        const selectedKey = preferredKey || cmsSettingSelect.value;
+        cmsSettingStatus.textContent = "Caricamento impostazioni…";
+        try {
+            const data = await request("/api/admin/cms/settings");
+            loadedCmsSettings = data.settings || [];
+            cmsSettingSelect.replaceChildren();
+            for (const setting of loadedCmsSettings) {
+                const option = document.createElement("option");
+                option.value = setting.key;
+                option.textContent = setting.key;
+                cmsSettingSelect.appendChild(option);
+            }
+            if (loadedCmsSettings.some(
+                (setting) => setting.key === selectedKey
+            )) cmsSettingSelect.value = selectedKey;
+            renderCmsSettingForm();
+            cmsSettingStatus.textContent = "";
+        } catch (error) {
+            cmsSettingStatus.textContent = error.message ||
+                "Non è stato possibile caricare le impostazioni.";
+        }
+    }
+
+    function renderCmsSettingForm() {
+        const setting = selectedCmsSetting();
+        cmsSettingIdentity.textContent = setting
+            ? `${setting.key} · ${setting.visibility} · ${setting.status}`
+            : "Nessuna impostazione editoriale disponibile.";
+        cmsSettingValue.value = setting
+            ? JSON.stringify(setting.value, null, 2)
+            : "{}";
+        cmsSettingSubmit.disabled = !setting;
+    }
+
+    async function saveCmsSetting(event) {
+        event.preventDefault();
+        const setting = selectedCmsSetting();
+        if (!setting) return;
+        cmsSettingSubmit.disabled = true;
+        cmsSettingReload.disabled = true;
+        try {
+            const value = parseCmsMapJson(
+                cmsSettingValue.value,
+                "Il valore editoriale"
+            );
+            const data = await request(
+                `/api/admin/cms/settings/${encodeURIComponent(setting.key)}`,
+                {
+                    method: "PATCH",
+                    body: JSON.stringify({
+                        value,
+                        expectedUpdatedAt: setting.updatedAt
+                    })
+                }
+            );
+            await loadCmsSettings(setting.key);
+            cmsSettingStatus.textContent = data.unchanged
+                ? "Nessuna modifica da salvare."
+                : "Impostazione salvata e revisione registrata.";
+        } catch (error) {
+            cmsSettingStatus.textContent = error.message ||
+                "Non è stato possibile salvare l’impostazione.";
+        } finally {
+            cmsSettingSubmit.disabled = false;
+            cmsSettingReload.disabled = false;
         }
     }
 
@@ -2409,6 +2601,22 @@
     });
     cmsMapFeatureReload.addEventListener("click", () => {
         loadCmsMapLayers(cmsMapLayerSelect.value, cmsMapFeatureSelect.value);
+    });
+    cmsSourceForm.addEventListener("submit", saveCmsSource);
+    cmsSourceSelect.addEventListener("change", renderCmsSourceForm);
+    cmsSourceReset.addEventListener("click", () => {
+        cmsSourceSelect.value = "";
+        renderCmsSourceForm();
+        cmsSourceStatus.textContent = "Nuova fonte pronta.";
+        cmsSourceTitle.focus();
+    });
+    cmsSourceReload.addEventListener("click", () => {
+        loadCmsSources(cmsSourceSelect.value);
+    });
+    cmsSettingForm.addEventListener("submit", saveCmsSetting);
+    cmsSettingSelect.addEventListener("change", renderCmsSettingForm);
+    cmsSettingReload.addEventListener("click", () => {
+        loadCmsSettings(cmsSettingSelect.value);
     });
     narrativeCancel.addEventListener("click", () => {
         resetNarrativeForm();

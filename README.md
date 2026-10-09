@@ -157,6 +157,12 @@ funzione di cancellazione: le sette geometrie storiche restano archiviate e
 senza coordinate finché non vengono ripubblicate esplicitamente con un GeoJSON
 valido.
 
+Il catalogo delle fonti permette di creare e aggiornare schede bibliografiche
+senza cambiare gli ID o le associazioni già usate dai contenuti. Un secondo
+editor espone esclusivamente identità, titoli, descrizioni e manifesti `site.*`:
+ogni modifica usa controllo di concorrenza e revisioni append-only, mentre URL
+del Worker, credenziali, analytics e configurazione tecnica restano esclusi.
+
 L'inventario si controlla con:
 
 ```bash

@@ -104,6 +104,8 @@ const MAX_CMS_MAP_REQUEST_BYTES = 1200000;
 const MAX_CMS_MAP_STYLE_LENGTH = 50000;
 const MAX_CMS_MAP_GEOMETRY_LENGTH = 1000000;
 const MAX_CMS_MAP_PROPERTIES_LENGTH = 100000;
+const MAX_CMS_SOURCE_REQUEST_BYTES = 16000;
+const MAX_CMS_SETTING_REQUEST_BYTES = 64000;
 
 class RequestBodyTooLargeError extends Error {}
 
@@ -724,6 +726,34 @@ export default {
             ) {
                 const featureId = path.split("/").pop();
                 return await adminUpdateCmsMapFeature(request, env, featureId);
+            }
+
+            if (request.method === "GET" && path === "/api/admin/cms/sources") {
+                return await adminGetCmsSources(request, env);
+            }
+
+            if (request.method === "POST" && path === "/api/admin/cms/sources") {
+                return await adminCreateCmsSource(request, env);
+            }
+
+            if (
+                request.method === "PATCH" &&
+                /^\/api\/admin\/cms\/sources\/[a-z0-9]+(?:-[a-z0-9]+)*$/.test(path)
+            ) {
+                const sourceId = path.split("/").pop();
+                return await adminUpdateCmsSource(request, env, sourceId);
+            }
+
+            if (request.method === "GET" && path === "/api/admin/cms/settings") {
+                return await adminGetCmsSettings(request, env);
+            }
+
+            if (
+                request.method === "PATCH" &&
+                /^\/api\/admin\/cms\/settings\/[a-z0-9]+(?:[.-][a-z0-9]+)*$/.test(path)
+            ) {
+                const settingKey = path.split("/").pop();
+                return await adminUpdateCmsSetting(request, env, settingKey);
             }
 
             if (
@@ -4334,6 +4364,301 @@ async function getPublicMapLayer(request, env, slug) {
             }))
         }
     });
+}
+
+async function adminGetCmsSources(request, env) {
+    if (!(await adminAuthorized(request, env))) {
+        return unauthorized(request, env);
+    }
+    await ensureCmsStorage(env);
+    return json(request, env, { sources: await readCmsSources(env) });
+}
+
+async function readCmsSources(env) {
+    const [sourceResult, linkResult] = await Promise.all([
+        env.DB.prepare(`
+            SELECT id, source_type, title, author, publication_date, url, note,
+                created_at, updated_at
+            FROM sources ORDER BY title COLLATE NOCASE, id
+        `).all(),
+        env.DB.prepare(`
+            SELECT content_type, content_id, source_id, position, context
+            FROM content_source_links
+            ORDER BY source_id, content_type, content_id, position
+        `).all()
+    ]);
+    const linksBySource = new Map();
+
+    for (const row of linkResult.results || []) {
+        const links = linksBySource.get(row.source_id) || [];
+        links.push({
+            contentType: row.content_type,
+            contentId: row.content_id,
+            position: Number(row.position),
+            context: parseJsonValue(row.context, {})
+        });
+        linksBySource.set(row.source_id, links);
+    }
+
+    return (sourceResult.results || []).map((row) => ({
+        id: row.id,
+        type: row.source_type,
+        title: row.title,
+        author: row.author,
+        publicationDate: row.publication_date,
+        url: row.url,
+        note: row.note,
+        createdAt: Number(row.created_at),
+        updatedAt: Number(row.updated_at),
+        links: linksBySource.get(row.id) || []
+    }));
+}
+
+async function adminCreateCmsSource(request, env) {
+    if (!(await adminAuthorized(request, env))) {
+        return unauthorized(request, env);
+    }
+    await ensureCmsStorage(env);
+    const input = normalizeCmsSourceInput(
+        await readJson(request, MAX_CMS_SOURCE_REQUEST_BYTES),
+        false
+    );
+    if (input.error) {
+        return json(request, env, { error: input.error }, 400);
+    }
+    const id = `source-${crypto.randomUUID()}`;
+    const now = Date.now();
+    const snapshot = cmsSourceSnapshot(id, input, []);
+    await env.DB.batch([
+        env.DB.prepare(`
+            INSERT INTO sources (
+                id, source_type, title, author, publication_date, url, note,
+                created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `).bind(
+            id, input.type, input.title, input.author, input.publicationDate,
+            input.url, input.note, now, now
+        ),
+        revisionInsert(env, "source", id, snapshot, "published", now)
+    ]);
+    return json(request, env, {
+        source: { ...snapshot, createdAt: now, updatedAt: now },
+        created: true
+    }, 201);
+}
+
+async function adminUpdateCmsSource(request, env, sourceId) {
+    if (!(await adminAuthorized(request, env))) {
+        return unauthorized(request, env);
+    }
+    await ensureCmsStorage(env);
+    const current = (await readCmsSources(env)).find(
+        (source) => source.id === sourceId
+    );
+    if (!current) {
+        return json(request, env, { error: "Fonte non trovata." }, 404);
+    }
+    const input = normalizeCmsSourceInput(
+        await readJson(request, MAX_CMS_SOURCE_REQUEST_BYTES),
+        true
+    );
+    if (input.error) {
+        return json(request, env, { error: input.error }, 400);
+    }
+    if (input.expectedUpdatedAt !== current.updatedAt) {
+        return json(request, env, {
+            error: "La fonte è stata modificata altrove. Ricaricala prima di salvare."
+        }, 409);
+    }
+    const unchanged = input.type === current.type &&
+        input.title === current.title && input.author === current.author &&
+        input.publicationDate === current.publicationDate &&
+        input.url === current.url && input.note === current.note;
+    if (unchanged) {
+        return json(request, env, { source: current, unchanged: true });
+    }
+    const now = Math.max(Date.now(), current.updatedAt + 1);
+    const snapshot = cmsSourceSnapshot(current.id, input, current.links);
+    await env.DB.batch([
+        env.DB.prepare(`
+            UPDATE sources SET source_type = ?, title = ?, author = ?,
+                publication_date = ?, url = ?, note = ?, updated_at = ?
+            WHERE id = ?
+        `).bind(
+            input.type, input.title, input.author, input.publicationDate,
+            input.url, input.note, now, current.id
+        ),
+        revisionInsert(env, "source", current.id, snapshot, "published", now)
+    ]);
+    const updated = (await readCmsSources(env)).find(
+        (source) => source.id === current.id
+    );
+    return json(request, env, { source: updated, unchanged: false });
+}
+
+function normalizeCmsSourceInput(value, requireVersion) {
+    const type = String(value?.type || "");
+    const title = String(value?.title || "").trim();
+    const author = String(value?.author || "").trim();
+    const publicationDate = String(value?.publicationDate || "").trim();
+    const url = String(value?.url || "").trim();
+    const note = String(value?.note || "").trim();
+    const expectedUpdatedAt = Number(value?.expectedUpdatedAt);
+
+    if (!["book", "article", "archive", "web", "map", "oral", "other"].includes(type)) {
+        return { error: "Il tipo di fonte non è valido." };
+    }
+    if (!title || title.length > 500 || author.length > 300 ||
+        publicationDate.length > 100 || note.length > 2000) {
+        return { error: "I dati bibliografici della fonte non sono validi." };
+    }
+    if (url.length > 2048 || (url && !validCmsHttpsUrl(url))) {
+        return { error: "Il collegamento della fonte deve usare HTTPS." };
+    }
+    if (requireVersion &&
+        (!Number.isSafeInteger(expectedUpdatedAt) || expectedUpdatedAt < 0)) {
+        return { error: "La versione della fonte non è valida." };
+    }
+    return { type, title, author, publicationDate, url, note, expectedUpdatedAt };
+}
+
+function validCmsHttpsUrl(value) {
+    try {
+        return new URL(value).protocol === "https:";
+    } catch (_) {
+        return false;
+    }
+}
+
+function cmsSourceSnapshot(id, input, links) {
+    return {
+        id,
+        type: input.type,
+        title: input.title,
+        author: input.author,
+        publicationDate: input.publicationDate,
+        url: input.url,
+        note: input.note,
+        links
+    };
+}
+
+async function adminGetCmsSettings(request, env) {
+    if (!(await adminAuthorized(request, env))) {
+        return unauthorized(request, env);
+    }
+    await ensureCmsStorage(env);
+    return json(request, env, { settings: await readCmsSettings(env) });
+}
+
+async function readCmsSettings(env) {
+    const result = await env.DB.prepare(`
+        SELECT setting_key, value_json, visibility, status, updated_at, published_at
+        FROM site_settings
+        WHERE setting_key LIKE 'site.%'
+        ORDER BY setting_key
+    `).all();
+    return (result.results || []).map((row) => ({
+        key: row.setting_key,
+        value: parseJsonValue(row.value_json, {}),
+        visibility: row.visibility,
+        status: row.status,
+        updatedAt: Number(row.updated_at),
+        publishedAt: row.published_at === null ? null : Number(row.published_at)
+    }));
+}
+
+async function adminUpdateCmsSetting(request, env, settingKey) {
+    if (!(await adminAuthorized(request, env))) {
+        return unauthorized(request, env);
+    }
+    await ensureCmsStorage(env);
+    const current = (await readCmsSettings(env)).find(
+        (setting) => setting.key === settingKey
+    );
+    if (!current) {
+        return json(request, env, { error: "Impostazione editoriale non trovata." }, 404);
+    }
+    const input = normalizeCmsSettingInput(
+        settingKey,
+        await readJson(request, MAX_CMS_SETTING_REQUEST_BYTES),
+        current.value
+    );
+    if (input.error) {
+        return json(request, env, { error: input.error }, 400);
+    }
+    if (input.expectedUpdatedAt !== current.updatedAt) {
+        return json(request, env, {
+            error: "L’impostazione è stata modificata altrove. Ricaricala prima di salvare."
+        }, 409);
+    }
+    if (JSON.stringify(input.value) === JSON.stringify(current.value)) {
+        return json(request, env, { setting: current, unchanged: true });
+    }
+    const now = Math.max(Date.now(), current.updatedAt + 1);
+    await env.DB.batch([
+        env.DB.prepare(`
+            UPDATE site_settings SET value_json = ?, updated_at = ?
+            WHERE setting_key = ?
+        `).bind(JSON.stringify(input.value), now, current.key),
+        revisionInsert(env, "site_setting", current.key, {
+            key: current.key,
+            value: input.value,
+            visibility: current.visibility
+        }, current.status, now)
+    ]);
+    const updated = (await readCmsSettings(env)).find(
+        (setting) => setting.key === current.key
+    );
+    return json(request, env, { setting: updated, unchanged: false });
+}
+
+function normalizeCmsSettingInput(key, input, currentValue) {
+    const expectedUpdatedAt = Number(input?.expectedUpdatedAt);
+    const value = input?.value;
+    if (!Number.isSafeInteger(expectedUpdatedAt) || expectedUpdatedAt < 0) {
+        return { error: "La versione dell’impostazione non è valida." };
+    }
+    if (!isCmsMapObject(value) || JSON.stringify(value).length > 50000) {
+        return { error: "Il valore editoriale deve essere un oggetto JSON valido." };
+    }
+    if (key === "site.identity") {
+        if (!validCmsSettingText(value.name, 80) ||
+            !validCmsSettingText(value.projectName, 80) ||
+            Object.keys(value).sort().join(",") !== "name,projectName") {
+            return { error: "L’identità del sito non è valida." };
+        }
+    } else if (key === "site.metadata.pages") {
+        const currentKeys = Object.keys(currentValue).sort();
+        const nextKeys = Object.keys(value).sort();
+        if (JSON.stringify(currentKeys) !== JSON.stringify(nextKeys)) {
+            return { error: "L’elenco delle pagine deve restare invariato." };
+        }
+        for (const page of Object.values(value)) {
+            if (!isCmsMapObject(page) || !validCmsSettingText(page.title, 200) ||
+                typeof page.description !== "string" ||
+                page.description.length > 500 ||
+                Object.keys(page).sort().join(",") !== "description,title") {
+                return { error: "Titolo o descrizione di una pagina non validi." };
+            }
+        }
+    } else if (["site.manifest.public", "site.manifest.admin"].includes(key)) {
+        if (!validCmsSettingText(value.name, 200) ||
+            !validCmsSettingText(value.shortName, 80) ||
+            typeof value.description !== "string" ||
+            value.description.length > 500 ||
+            Object.keys(value).sort().join(",") !== "description,name,shortName") {
+            return { error: "I metadati del manifesto non sono validi." };
+        }
+    } else {
+        return { error: "Questa impostazione non è modificabile dal pannello." };
+    }
+    return { expectedUpdatedAt, value };
+}
+
+function validCmsSettingText(value, maxLength) {
+    return typeof value === "string" && value.trim().length > 0 &&
+        value.length <= maxLength;
 }
 
 async function getPublicSources(request, env, url) {
