@@ -1,10 +1,11 @@
 # Roadmap complessiva CMS e SEO
 
 Aggiornata il 9 ottobre 2026. Questa è la roadmap unica di anonMrcn: integra
-amministrazione dei contenuti, permanenza degli URL, indicizzazione, prestazioni
-e crescita editoriale. Si procede dalla prima riga incompleta e una riga diventa
-completa soltanto quando schema, compatibilità, test e documentazione sono
-presenti nel repository. Le misurazioni che non modificano dati possono
+amministrazione dei contenuti, permanenza degli URL, indicizzazione, prestazioni,
+crescita editoriale, usabilità amministrativa e privacy. Si procede dalla prima
+riga incompleta e una riga diventa completa soltanto quando schema,
+compatibilità, test e documentazione sono presenti nel repository. Le
+misurazioni e le correzioni trasversali che non modificano dati possono
 affiancare il primo passaggio tecnico incompleto, ma non sostituirlo.
 
 ## Passaggi principali
@@ -13,7 +14,7 @@ affiancare il primo passaggio tecnico incompleto, ma non sostituirlo.
 |---:|---|---|---|
 | 1 | Confine contenuti/software | Completo | `01-confine-contenuti-software.md`, `content-inventory.json`, `scripts/check-content-boundary.mjs` |
 | 2 | Centralizzazione in D1 | Completo | Tutte le unità 2.1–2.12 sono importate, esposte e coperte da test; il primo punto incompleto è il 3 |
-| 3 | Pannello editoriale e controllo SEO | In corso | Le unità 3.1–3.6 sono complete; il primo sottopunto incompleto è 3.7, metadati SEO e anteprima |
+| 3 | Pannello editoriale e controllo SEO | Completo | Le unità 3.1–3.7 sono amministrabili con validazione, anteprima, controllo di concorrenza e revisioni; il primo punto strutturale incompleto è il 5 |
 | 4 | Bozze, anteprima, cronologia e indicizzazione | Completo | Stati editoriali, anteprima protetta con `noindex`, confronto, ripristino append-only ed esclusione delle bozze dalle API pubbliche sono coperti da codice e test |
 | 5 | Permalink, QR e pagine indicizzabili | Da iniziare | `permalinks` è predisposta; mancano URL HTML autonomi, reindirizzamenti e sitemap generata per Voci e luoghi |
 | 6 | Media in R2 e immagini SEO | Da iniziare | Nessun dato è stato trasferito; mancano varianti responsive, immagini sociali e metadati dei media |
@@ -21,6 +22,8 @@ affiancare il primo passaggio tecnico incompleto, ma non sostituirlo.
 | 8 | Esportazione, manutenzione e diagnostica CMS/SEO | Da iniziare | Gli strumenti esistenti non coprono l’intero CMS né indicizzazione, link, sitemap e pubblicazione statica |
 | 9 | Prestazioni e Core Web Vitals | Da iniziare | Non esiste ancora una baseline distinta per homepage, mappa, Voci, luoghi e Memorie |
 | 10 | Programma editoriale e monitoraggio organico | Da iniziare | Cluster territoriali e fonti sono definiti, ma non esiste ancora un ciclo editoriale misurato |
+| 11 | Amministrazione più user friendly | Da iniziare | Il pannello copre le funzioni CMS, ma richiede una revisione completa di linguaggio, navigazione, gerarchia, feedback, errori, responsive e accessibilità |
+| 12 | Rafforzamento della privacy | Da iniziare | Esistono informativa, filtri e strumenti rispettosi della privacy; manca un audit complessivo con minimizzazione, retention, consenso, sicurezza dei metadati e diagnostica verificabile |
 
 ## Traguardi SEO trasversali
 
@@ -28,7 +31,7 @@ affiancare il primo passaggio tecnico incompleto, ma non sostituirlo.
 |---:|---|---|---|
 | SEO-0 | Fondazione tecnica | In revisione | `robots.txt`, sitemap, canonical, metadati sociali, JSON-LD, `noindex`, `seo.config.json` e controllo automatico; diventa completa dopo pubblicazione e risposta HTTP 200 dei due file di scoperta |
 | SEO-1 | Baseline di indicizzazione | Da iniziare | Dopo SEO-0: verificare la proprietà, inviare la sitemap e registrare pagine indicizzate, query, impressioni, clic e CTR senza aggiungere tracciamento pubblicitario |
-| SEO-2 | Autonomia dei metadati | Da iniziare | Punto 3.7: title, descrizione, immagine sociale e anteprima modificabili con valori predefiniti e revisioni |
+| SEO-2 | Autonomia dei metadati | Completo | Il punto 3.7 gestisce title, descrizione e immagine sociale con valori predefiniti, unicità, anteprima autenticata, stati e revisioni |
 | SEO-3 | Contenuti autonomi e indicizzabili | Da iniziare | Punto 5: una pagina HTML completa per ogni Voce e luogo, vecchi URL conservati, canonical e sitemap automatici |
 | SEO-4 | Media ottimizzati | Da iniziare | Punto 6: originale conservato, varianti responsive, dimensioni, testo alternativo e immagine sociale |
 | SEO-5 | Esperienza e prestazioni | Da iniziare | Punto 9: LCP ≤ 2,5 s, INP ≤ 200 ms e CLS ≤ 0,1 al 75º percentile per i modelli principali |
@@ -46,6 +49,10 @@ affiancare il primo passaggio tecnico incompleto, ma non sostituirlo.
 6. Completare autenticazione e diagnostica nei punti 7–8.
 7. Avviare il programma editoriale continuativo del punto 10 quando pagine,
    fonti, URL e media sono amministrabili senza commit manuali.
+8. Applicare durante ogni unità i criteri di usabilità e privacy; completare il
+   punto 11 con una revisione end-to-end del pannello ormai funzionalmente stabile.
+9. Chiudere il punto 12 con un audit finale documentato dopo autenticazione,
+   esportazione, retention e diagnostica, senza rimandare correzioni urgenti.
 
 ## Punto 2 — ordine vincolante
 
@@ -94,7 +101,7 @@ punto 2 non è completa. Non vanno eliminati durante una migrazione parziale.
 | 3.4 | Livelli e geometrie | Completo | `GET/PATCH /api/admin/cms/map-layers`, `POST/PATCH /api/admin/cms/map-features` e due editor protetti gestiscono metadati, stile, stato e GeoJSON con concorrenza e revisioni append-only. `admin-map-layers.test.mjs` prova autorizzazione, validazione, nuovi ID stabili, filtro pubblico e assenza di cancellazione; i sette record storici restano `archived`, con geometria nulla, anche quando si modifica un livello o si pubblica una nuova feature |
 | 3.5 | Fonti e impostazioni | Completo | `GET/POST/PATCH /api/admin/cms/sources`, `GET/PATCH /api/admin/cms/settings` e due editor protetti gestiscono schede bibliografiche e soli gruppi `site.*`. `admin-sources-settings.test.mjs` prova autorizzazione, nuovi ID stabili, associazioni immutate, HTTPS, concorrenza, revisioni append-only, struttura dei metadati e propagazione pubblica; URL del Worker e configurazione tecnica non sono esposti |
 | 3.6 | Documenti legali e permalink | Completo | `GET/POST/PATCH /api/admin/cms/legal`, la pubblicazione esplicita e `GET/POST/PATCH /api/admin/cms/permalinks` alimentano due moduli protetti. `admin-legal-permalinks.test.mjs` prova bozze, checksum e data di concorrenza, pubblicazione immutabile, vecchie versioni intatte, nuovi percorsi, reindirizzamenti solo verso URL registrati, esclusione dei segreti e impossibilità di cambiare o cancellare i percorsi |
-| 3.7 | Metadati SEO e anteprima | Da iniziare | Gestire title, descrizione e immagine sociale con valori automatici, controllo duplicati e anteprima; canonical, robots e dati strutturati restano software. Ogni modifica aggiunge una revisione e non può rendere indicizzabile una bozza |
+| 3.7 | Metadati SEO e anteprima | Completo | Il modulo «Metadati SEO e anteprima sociale» modifica title, descrizione, immagine HTTPS e stato del gruppo `site.metadata.pages`. Il Worker preserva le personalizzazioni durante l’aggiunta dei valori predefiniti, rifiuta duplicati tra pagine indicizzabili e registra revisioni; `site-metadata.js` applica soltanto valori pubblicati senza toccare canonical, robots o JSON-LD. `settings.test.mjs`, `admin-sources-settings.test.mjs` e `check-seo.mjs` coprono migrazione, ripiego, `noindex`, anteprima e unicità |
 
 ## Punto 4 — ordine vincolante
 
@@ -104,7 +111,7 @@ punto 2 non è completa. Non vanno eliminati durante una migrazione parziale.
 | 4.2 | Anteprima autenticata | Completo | `GET /api/admin/cms/preview` restituisce soltanto con autorizzazione l’ultima fotografia append-only di ogni entità. Il modulo «Anteprima autenticata» rende pagine e poesia, mostra gli altri snapshot e isola l’HTML legale in un iframe sandbox con CSP; i test provano che la bozza resta esclusa dall’API pubblica e non esiste una pagina di anteprima indicizzabile |
 | 4.3 | Cronologia revisioni | Completo | `GET /api/admin/cms/revisions` espone la storia di una singola entità soltanto all’amministratore; il pannello confronta due snapshot e `POST /api/admin/cms/revisions/:tipo/:id/:numero/restore` instrada la fotografia scelta nei validatori degli editor, creando una nuova revisione senza riscrivere le precedenti. `admin-sources-settings.test.mjs` prova autorizzazione, ordine, stato, ripristino e immutabilità della storia |
 
-## Punti 4–10 — criteri di completamento
+## Punti 4–12 — criteri di completamento
 
 | Punto | Criterio vincolante |
 |---:|---|
@@ -115,3 +122,5 @@ punto 2 non è completa. Non vanno eliminati durante una migrazione parziale.
 | 8 | Esportazione e ripristino coprono D1 e media; diagnostica controlla API, build statica, sitemap, URL canonici, link interni, immagini mancanti e stato dell’ultima pubblicazione; il manuale descrive il flusso senza codice |
 | 9 | Le cinque tipologie principali sono misurate su mobile e desktop; superano le soglie Core Web Vitals oppure ogni scostamento ha causa, intervento e nuova misurazione documentati |
 | 10 | Esiste un calendario basato sui cluster territoriali, ogni affermazione storica distingue fonte, testimonianza e interpretazione, nessuna Voce resta isolata e il rapporto trimestrale confronta indicizzazione e query con la baseline |
+| 11 | Il pannello usa linguaggio comprensibile, percorsi brevi, gerarchia coerente, salvataggi e conflitti spiegati, feedback accessibili, anteprime utili e interazioni complete su tastiera, smartphone e desktop; i test coprono i flussi principali senza richiedere conoscenze tecniche |
+| 12 | Raccolta e conservazione dei dati sono minimizzate e motivate; retention, consenso, cancellazione, esportazione, log, metadati, servizi esterni, cookie e credenziali sono verificati e documentati; nessun contenuto privato, bozza o segreto raggiunge pagine, sitemap, telemetria o cache pubbliche |

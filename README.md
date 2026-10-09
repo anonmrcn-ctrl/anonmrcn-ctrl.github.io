@@ -193,6 +193,13 @@ registra il risultato come nuova revisione, senza modificare o cancellare la
 storia esistente. Le versioni legali pubblicate e le revisioni figlie restano
 consultabili ma non sono ripristinabili direttamente.
 
+Un editor SEO dedicato espone i metadati delle pagine senza rendere modificabili
+canonical, direttive robots o dati strutturati. Title, descrizione e immagine
+sociale HTTPS hanno valori predefiniti, anteprima autenticata, controllo dei
+duplicati e revisioni append-only. Se il gruppo è in bozza il Worker non lo
+espone pubblicamente e le pagine mantengono i metadati statici pubblicati come
+ripiego.
+
 L'inventario si controlla con:
 
 ```bash

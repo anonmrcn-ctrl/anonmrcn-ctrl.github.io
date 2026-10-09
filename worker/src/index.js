@@ -4729,17 +4729,35 @@ function normalizeCmsSettingInput(key, input, currentValue, currentStatus) {
             return { error: "L’identità del sito non è valida." };
         }
     } else if (key === "site.metadata.pages") {
+        const indexableKeys = new Set([
+            "index", "autore", "progetto", "spazio-pubblico", "memorie",
+            "archivio", "voci", "logo", "privacy"
+        ]);
         const currentKeys = Object.keys(currentValue).sort();
         const nextKeys = Object.keys(value).sort();
         if (JSON.stringify(currentKeys) !== JSON.stringify(nextKeys)) {
             return { error: "L’elenco delle pagine deve restare invariato." };
         }
-        for (const page of Object.values(value)) {
+        const indexableTitles = new Set();
+        const indexableDescriptions = new Set();
+        for (const [pageKey, page] of Object.entries(value)) {
             if (!isCmsMapObject(page) || !validCmsSettingText(page.title, 200) ||
                 typeof page.description !== "string" ||
                 page.description.length > 500 ||
-                Object.keys(page).sort().join(",") !== "description,title") {
-                return { error: "Titolo o descrizione di una pagina non validi." };
+                !validCmsHttpsUrl(page.socialImage) ||
+                Object.keys(page).sort().join(",") !==
+                    "description,socialImage,title") {
+                return { error: "I metadati SEO di una pagina non sono validi." };
+            }
+            if (indexableKeys.has(pageKey)) {
+                const title = page.title.trim().toLocaleLowerCase("it");
+                const description = page.description.trim().toLocaleLowerCase("it");
+                if (!description || indexableTitles.has(title) ||
+                    indexableDescriptions.has(description)) {
+                    return { error: "Title e descrizioni indicizzabili devono essere unici." };
+                }
+                indexableTitles.add(title);
+                indexableDescriptions.add(description);
             }
         }
     } else if (["site.manifest.public", "site.manifest.admin"].includes(key)) {
@@ -7065,6 +7083,7 @@ async function initializeCmsStorage(env) {
     await initializeSourceContent(env);
     await initializeSiteSettings(env);
     await initializeSeoSiteMetadata(env);
+    await initializeSeoSocialMetadata(env);
     await initializeLegalContent(env);
     await initializeContentRevisions(env);
     await initializePermalinks(env);
@@ -7800,6 +7819,58 @@ async function initializeSeoSiteMetadata(env) {
         VALUES ('site_metadata_seo_v1', ?)
     `).bind(now));
 
+    await env.DB.batch(statements);
+}
+
+async function initializeSeoSocialMetadata(env) {
+    const initialized = await env.DB.prepare(`
+        SELECT name
+        FROM content_initializations
+        WHERE name = 'site_metadata_social_v2'
+        LIMIT 1
+    `).first();
+    if (initialized) return;
+
+    const current = await env.DB.prepare(`
+        SELECT value_json, visibility, status
+        FROM site_settings
+        WHERE setting_key = 'site.metadata.pages'
+        LIMIT 1
+    `).first();
+    const defaults = SITE_SETTINGS_SEEDS.find(
+        (setting) => setting.key === "site.metadata.pages"
+    )?.value || {};
+    const pages = parseJsonValue(current?.value_json, {});
+    let changed = false;
+
+    for (const [key, page] of Object.entries(pages)) {
+        if (isCmsMapObject(page) && typeof page.socialImage !== "string") {
+            pages[key] = {
+                ...page,
+                socialImage: defaults[key]?.socialImage || ""
+            };
+            changed = true;
+        }
+    }
+
+    const now = Date.now();
+    const statements = [];
+    if (current && changed) {
+        statements.push(env.DB.prepare(`
+            UPDATE site_settings SET value_json = ?, updated_at = ?
+            WHERE setting_key = 'site.metadata.pages'
+        `).bind(JSON.stringify(pages), now));
+        statements.push(revisionInsert(env, "site_setting", "site.metadata.pages", {
+            key: "site.metadata.pages",
+            value: pages,
+            visibility: current.visibility,
+            status: current.status
+        }, current.status === "published" ? "published" : "draft", now));
+    }
+    statements.push(env.DB.prepare(`
+        INSERT OR IGNORE INTO content_initializations (name, applied_at)
+        VALUES ('site_metadata_social_v2', ?)
+    `).bind(now));
     await env.DB.batch(statements);
 }
 

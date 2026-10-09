@@ -2947,6 +2947,36 @@ html[data-theme="dark"] .leaflet-control-layers label {
     background: #fff;
 }
 
+.admin-seo-preview {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: minmax(7rem, 0.35fr) minmax(0, 1fr);
+    gap: 1rem;
+    align-items: center;
+    min-height: 8rem;
+    padding: 1rem;
+    border: 1px solid var(--line);
+    background: color-mix(in srgb, var(--paper) 92%, var(--ink));
+}
+
+.admin-seo-preview img {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+    background: var(--line);
+}
+
+.admin-seo-preview h4,
+.admin-seo-preview p {
+    margin: 0;
+}
+
+.admin-seo-preview div {
+    display: grid;
+    gap: 0.5rem;
+    min-width: 0;
+}
+
 #adminPreviewReload {
     min-height: 2.85rem;
     padding: 0.7rem 1rem;
@@ -2996,6 +3026,10 @@ html[data-theme="dark"] .leaflet-control-layers label {
 @media (max-width: 42rem) {
     .admin-cms-history-controls,
     .admin-cms-history-compare {
+        grid-template-columns: 1fr;
+    }
+
+    .admin-seo-preview {
         grid-template-columns: 1fr;
     }
 }

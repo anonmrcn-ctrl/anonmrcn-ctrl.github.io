@@ -92,7 +92,8 @@ for (const page of config.indexablePages) {
     }
     if (
         cmsMetadata?.title !== page.title ||
-        cmsMetadata?.description !== page.description
+        cmsMetadata?.description !== page.description ||
+        cmsMetadata?.socialImage !== config.defaultImage
     ) {
         error(page.file, "metadati D1 diversi dalla configurazione SEO");
     }

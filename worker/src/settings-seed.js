@@ -1,52 +1,58 @@
-function page(title, description = "") {
+export const DEFAULT_SOCIAL_IMAGE = "https://anonmrcn-ctrl.github.io/logo.PNG";
+
+function legacyPage(title, description = "") {
     return Object.freeze({ title, description });
 }
 
+function page(title, description = "", socialImage = DEFAULT_SOCIAL_IMAGE) {
+    return Object.freeze({ title, description, socialImage });
+}
+
 export const LEGACY_SITE_METADATA_PAGES_V1 = Object.freeze({
-    accesso: page("Accesso — nnMrcn"),
-    admin: page("Amministrazione — nnMrcn"),
-    archivio: page(
+    accesso: legacyPage("Accesso — nnMrcn"),
+    admin: legacyPage("Amministrazione — nnMrcn"),
+    archivio: legacyPage(
         "Archivio — nnMrcn",
         "Archivio pubblico dei messaggi del progetto nnMrcn"
     ),
-    autore: page(
+    autore: legacyPage(
         "L’autore — nnMrcn",
         "L'autore del progetto poetico dedicato a Marcon"
     ),
-    index: page("nnMrcn", "Il Gajo tra i Praelli — poesia"),
-    logo: page(
+    index: legacyPage("nnMrcn", "Il Gajo tra i Praelli — poesia"),
+    logo: legacyPage(
         "Il logo — nnMrcn",
         "Il significato del logo del progetto artistico anonMrcn"
     ),
-    luogo: page(
+    luogo: legacyPage(
         "Un luogo — nnMrcn",
         "Una breve spiegazione dedicata a un luogo di Marcon"
     ),
-    memorie: page(
+    memorie: legacyPage(
         "Memorie — nnMrcn",
         "Memorie degli abitanti legate ai luoghi di Marcon"
     ),
-    privacy: page(
+    privacy: legacyPage(
         "Privacy Policy — anonMrcn",
         "Informativa sulla privacy del progetto artistico anonMrcn"
     ),
-    progetto: page(
+    progetto: legacyPage(
         "Il progetto — nnMrcn",
         "Il progetto poetico nnMrcn, i luoghi di Marcon e la mappa storica del 1975"
     ),
-    "spazio-personale": page(
+    "spazio-personale": legacyPage(
         "Spazio personale — nnMrcn",
         "Spazio personale di nnMrcn: messaggi e taccuino"
     ),
-    "spazio-pubblico": page(
+    "spazio-pubblico": legacyPage(
         "Spazio pubblico — nnMrcn",
         "Spazio pubblico di nnMrcn: memorie, archivio e voci sul territorio"
     ),
-    taccuino: page(
+    taccuino: legacyPage(
         "Taccuino — nnMrcn",
         "Taccuino personale dei luoghi e dei contenuti salvati su nnMrcn"
     ),
-    voci: page(
+    voci: legacyPage(
         "Voci — nnMrcn",
         "Voci pubbliche di nnMrcn dedicate al territorio di Marcon"
     )

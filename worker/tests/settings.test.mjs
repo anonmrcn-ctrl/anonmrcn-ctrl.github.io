@@ -141,6 +141,14 @@ test("importa una sola volta soltanto impostazioni editoriali pubbliche", async 
         `).get().total,
         1
     );
+    assert.equal(
+        env.DB.database.prepare(`
+            SELECT COUNT(*) AS total
+            FROM content_initializations
+            WHERE name = 'site_metadata_social_v2'
+        `).get().total,
+        1
+    );
 });
 
 test("migra una sola volta i metadati legacy senza sovrascrivere personalizzazioni", async () => {
@@ -170,6 +178,10 @@ test("migra una sola volta i metadati legacy senza sovrascrivere personalizzazio
     assert.equal(
         preserved.data.settings["site.metadata.pages"].index.title,
         "Titolo personalizzato"
+    );
+    assert.equal(
+        preserved.data.settings["site.metadata.pages"].index.socialImage,
+        "https://anonmrcn-ctrl.github.io/logo.PNG"
     );
 });
 
@@ -213,9 +225,14 @@ test("titoli e descrizioni D1 coincidono con i quattordici ripieghi HTML", async
 
         assert.equal(metadata.title, title, `${key}.html title`);
         assert.equal(metadata.description, description, `${key}.html description`);
+        assert.equal(
+            metadata.socialImage,
+            "https://anonmrcn-ctrl.github.io/logo.PNG",
+            `${key}.html social image`
+        );
         assert.match(
             html,
-            /<script src="\.\/api\.js"><\/script>[\s\S]*?<script src="\.\/site-metadata\.js\?v=20261008-settings1"><\/script>/u,
+            /<script src="\.\/api\.js"><\/script>[\s\S]*?<script src="\.\/site-metadata\.js\?v=20261009-seo2"><\/script>/u,
             key
         );
     }
@@ -263,13 +280,26 @@ async function executeLoader(request, pathname = "/progetto.html") {
         "utf8"
     );
     const description = { content: "Ripiego" };
+    const social = {
+        "og:title": { content: "Titolo statico" },
+        "og:description": { content: "Ripiego" },
+        "og:image": { content: "https://example.invalid/fallback.png" }
+    };
     const events = [];
     const document = {
         title: "Titolo statico",
         documentElement: { dataset: {} },
         head: { appendChild() {} },
-        querySelector: () => description,
-        createElement: () => ({})
+        querySelector: (selector) => {
+            if (selector === 'meta[name="description"]') return description;
+            const property = selector.match(/^meta\[property="([^"]+)"\]$/u)?.[1];
+            return property ? social[property] || null : null;
+        },
+        createElement: () => ({
+            setAttribute(name, value) {
+                this[name] = value;
+            }
+        })
     };
     const window = {
         location: { pathname },
@@ -288,7 +318,7 @@ async function executeLoader(request, pathname = "/progetto.html") {
         window
     });
     await new Promise((resolve) => setImmediate(resolve));
-    return { description, document, events, window };
+    return { description, document, events, social, window };
 }
 
 test("il client applica D1 e mantiene il metadato statico in caso di errore", async () => {
@@ -301,6 +331,10 @@ test("il client applica D1 e mantiene il metadato statico in caso di errore", as
     assert.equal(
         success.description.content,
         "Esplora i luoghi della poesia, la mappa storica di Marcon del 1975 e le trasformazioni del territorio attraverso il progetto nnMrcn."
+    );
+    assert.equal(
+        success.social["og:image"].content,
+        "https://anonmrcn-ctrl.github.io/logo.PNG"
     );
     assert.equal(success.document.documentElement.dataset.cmsMetadataSource, "d1");
     assert.equal(success.events[0].detail.source, "d1");
