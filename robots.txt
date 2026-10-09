@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /docs/
+Disallow: /scripts/
+Disallow: /worker/
+
+Sitemap: https://anonmrcn-ctrl.github.io/sitemap.xml

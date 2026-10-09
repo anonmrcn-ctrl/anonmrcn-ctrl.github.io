@@ -136,11 +136,12 @@
     },
     {
       "id": "site-metadata",
-      "label": "Titoli, descrizioni e metadati del sito",
+      "label": "Titoli, descrizioni e metadati editoriali SEO del sito",
       "classification": "content",
       "currentSources": [
         "D1:site_settings",
         "*.html",
+        "seo.config.json",
         "manifest.webmanifest",
         "admin.webmanifest"
       ],

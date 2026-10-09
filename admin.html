@@ -445,6 +445,36 @@
                     <button id="adminSettingReload" type="button">Ricarica impostazioni</button>
                     <p class="admin-status" id="adminSettingStatus" aria-live="polite"></p>
                 </form>
+
+                <form id="adminSeoForm">
+                    <h3>Metadati SEO e anteprima sociale</h3>
+                    <label for="adminSeoPage">Pagina</label>
+                    <select id="adminSeoPage" required></select>
+                    <p class="admin-voci-mappa-aiuto" id="adminSeoIdentity"></p>
+                    <label for="adminSeoTitle">Title</label>
+                    <input id="adminSeoTitle" type="text" maxlength="200" required>
+                    <label for="adminSeoDescription">Meta description</label>
+                    <textarea id="adminSeoDescription" maxlength="500" rows="5"></textarea>
+                    <label for="adminSeoImage">Immagine sociale HTTPS</label>
+                    <input id="adminSeoImage" type="url" maxlength="2048" required>
+                    <label for="adminSeoPublicationStatus">Stato del gruppo metadati</label>
+                    <select id="adminSeoPublicationStatus" required>
+                        <option value="draft">Bozza</option>
+                        <option value="published">Pubblicato</option>
+                        <option value="archived">Archiviato</option>
+                    </select>
+                    <article class="admin-seo-preview" id="adminSeoPreview" aria-label="Anteprima sociale"></article>
+                    <p class="admin-voci-mappa-aiuto">
+                        Title e descrizioni delle pagine indicizzabili devono essere
+                        unici. Canonical, robots e dati strutturati restano protetti
+                        nella configurazione software.
+                    </p>
+                    <button id="adminSeoSubmit" type="submit">Salva metadati SEO</button>
+                    <button class="admin-button-secondary" id="adminSeoReload" type="button">
+                        Ricarica metadati
+                    </button>
+                    <p class="admin-status" id="adminSeoStatus" aria-live="polite"></p>
+                </form>
             </section>
 
             <section class="admin-voci-mappa" aria-labelledby="adminLegaleTitolo">
@@ -889,7 +919,7 @@
 
     <script src="./config.js"></script>
     <script src="./api.js"></script>
-    <script src="./site-metadata.js?v=20261008-settings1"></script>
+    <script src="./site-metadata.js?v=20261009-seo2"></script>
     <script src="./onboarding-content.js?v=20261008-onboarding1"></script>
     <script src="./sessione.js?v=20261008-onboarding1"></script>
     <script src="./notifiche.js"></script>

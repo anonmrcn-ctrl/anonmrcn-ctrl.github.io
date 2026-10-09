@@ -74,7 +74,11 @@ giorni dal Worker.
 
 Le locations private, le password e i secret non devono essere salvati nel repository pubblico.
 
-## Evoluzione verso il CMS
+## Roadmap CMS e SEO
+
+Lo stato e l’ordine vincolante del progetto complessivo sono descritti in
+[`docs/cms/progress.md`](docs/cms/progress.md). La roadmap integra CMS,
+indicizzazione, pagine permanenti, media, prestazioni e programma editoriale.
 
 La separazione vincolante tra contenuti amministrabili e software è descritta in
 [`docs/cms/01-confine-contenuti-software.md`](docs/cms/01-confine-contenuti-software.md).
@@ -189,8 +193,25 @@ registra il risultato come nuova revisione, senza modificare o cancellare la
 storia esistente. Le versioni legali pubblicate e le revisioni figlie restano
 consultabili ma non sono ripristinabili direttamente.
 
+Un editor SEO dedicato espone i metadati delle pagine senza rendere modificabili
+canonical, direttive robots o dati strutturati. Title, descrizione e immagine
+sociale HTTPS hanno valori predefiniti, anteprima autenticata, controllo dei
+duplicati e revisioni append-only. Se il gruppo è in bozza il Worker non lo
+espone pubblicamente e le pagine mantengono i metadati statici pubblicati come
+ripiego.
+
 L'inventario si controlla con:
 
 ```bash
 node scripts/check-content-boundary.mjs
+```
+
+## Controllo SEO
+
+Le pagine pubbliche indicizzabili, i metadati attesi e gli URL canonici sono
+definiti in [`seo.config.json`](seo.config.json). Sitemap, direttive robots,
+metadati, JSON-LD, immagini e collegamenti interni si controllano con:
+
+```bash
+node scripts/check-seo.mjs
 ```

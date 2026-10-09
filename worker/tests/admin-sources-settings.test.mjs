@@ -234,6 +234,55 @@ test("impedisce di alterare struttura e versione dei metadati pagina", async () 
     assert.equal(stale.response.status, 409);
 });
 
+test("salva metadati SEO con immagine sociale e blocca duplicati", async () => {
+    const env = environment();
+    const listed = await call(env, "/api/admin/cms/settings", { admin: true });
+    const pages = listed.data.settings.find(
+        (setting) => setting.key === "site.metadata.pages"
+    );
+    const value = structuredClone(pages.value);
+    value.index = {
+        ...value.index,
+        title: "Poesia e territorio di Marcon — nnMrcn",
+        socialImage: "https://anonmrcn-ctrl.github.io/logo.PNG"
+    };
+    const saved = await call(
+        env,
+        "/api/admin/cms/settings/site.metadata.pages",
+        { admin: true, method: "PATCH", body: {
+            value,
+            status: "draft",
+            expectedUpdatedAt: pages.updatedAt
+        } }
+    );
+    assert.equal(saved.response.status, 200);
+    assert.equal(saved.data.setting.value.index.title, value.index.title);
+    assert.equal(saved.data.setting.value.index.socialImage, value.index.socialImage);
+    assert.equal(saved.data.setting.status, "draft");
+    assert.equal(env.DB.database.prepare(`
+        SELECT publication_state FROM content_revisions
+        WHERE entity_type = 'site_setting' AND entity_id = 'site.metadata.pages'
+        ORDER BY revision_number DESC LIMIT 1
+    `).get().publication_state, "draft");
+
+    const duplicate = structuredClone(saved.data.setting.value);
+    duplicate.autore.title = duplicate.index.title;
+    const rejected = await call(
+        env,
+        "/api/admin/cms/settings/site.metadata.pages",
+        { admin: true, method: "PATCH", body: {
+            value: duplicate,
+            status: "draft",
+            expectedUpdatedAt: saved.data.setting.updatedAt
+        } }
+    );
+    assert.equal(rejected.response.status, 400);
+    assert.match(rejected.data.error, /devono essere unici/u);
+
+    const publicSettings = await call(env, "/api/public/settings/site");
+    assert.equal(publicSettings.data.settings["site.metadata.pages"], undefined);
+});
+
 test("il pannello espone editor separati per fonti e impostazioni", async () => {
     const [html, script] = await Promise.all([
         readFile(new URL("../../admin.html", import.meta.url), "utf8"),
@@ -246,6 +295,9 @@ test("il pannello espone editor separati per fonti e impostazioni", async () => 
     assert.match(html, /configurazione tecnica\s+restano protetti/u);
     assert.match(html, /id="adminSourcePublicationStatus"/u);
     assert.match(html, /id="adminSettingPublicationStatus"/u);
+    assert.match(html, /id="adminSeoForm"/u);
+    assert.match(html, /id="adminSeoPreview"/u);
+    assert.match(script, /Metadati salvati e revisione SEO registrata/u);
 });
 
 test("bozze di fonti e impostazioni restano escluse dalle API pubbliche", async () => {

@@ -23,6 +23,9 @@
 
             document.title = metadata.title;
             applyDescription(metadata.description);
+            applyProperty("og:title", metadata.title);
+            applyProperty("og:description", metadata.description);
+            applyProperty("og:image", metadata.socialImage);
             window.NNMRCN_SITE_SETTINGS = Object.freeze(data.settings);
             finish("d1");
         } catch (_) {
@@ -50,6 +53,17 @@
             document.head.appendChild(element);
         }
 
+        element.content = value;
+    }
+
+    function applyProperty(property, value) {
+        if (typeof value !== "string" || !value) return;
+        let element = document.querySelector(`meta[property="${property}"]`);
+        if (!element) {
+            element = document.createElement("meta");
+            element.setAttribute("property", property);
+            document.head.appendChild(element);
+        }
         element.content = value;
     }
 

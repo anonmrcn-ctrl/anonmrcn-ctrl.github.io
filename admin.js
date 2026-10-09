@@ -135,6 +135,19 @@
     const cmsSettingSubmit = document.getElementById("adminSettingSubmit");
     const cmsSettingReload = document.getElementById("adminSettingReload");
     const cmsSettingStatus = document.getElementById("adminSettingStatus");
+    const cmsSeoForm = document.getElementById("adminSeoForm");
+    const cmsSeoPage = document.getElementById("adminSeoPage");
+    const cmsSeoIdentity = document.getElementById("adminSeoIdentity");
+    const cmsSeoTitle = document.getElementById("adminSeoTitle");
+    const cmsSeoDescription = document.getElementById("adminSeoDescription");
+    const cmsSeoImage = document.getElementById("adminSeoImage");
+    const cmsSeoPublicationStatus = document.getElementById(
+        "adminSeoPublicationStatus"
+    );
+    const cmsSeoPreview = document.getElementById("adminSeoPreview");
+    const cmsSeoSubmit = document.getElementById("adminSeoSubmit");
+    const cmsSeoReload = document.getElementById("adminSeoReload");
+    const cmsSeoStatus = document.getElementById("adminSeoStatus");
     const cmsLegalForm = document.getElementById("adminLegalForm");
     const cmsLegalDocumentSelect = document.getElementById(
         "adminLegalDocumentSelect"
@@ -1178,6 +1191,7 @@
                 (setting) => setting.key === selectedKey
             )) cmsSettingSelect.value = selectedKey;
             renderCmsSettingForm();
+            renderCmsSeoForm();
             cmsSettingStatus.textContent = "";
         } catch (error) {
             cmsSettingStatus.textContent = error.message ||
@@ -1229,6 +1243,102 @@
         } finally {
             cmsSettingSubmit.disabled = false;
             cmsSettingReload.disabled = false;
+        }
+    }
+
+    function cmsSeoSetting() {
+        return loadedCmsSettings.find(
+            (setting) => setting.key === "site.metadata.pages"
+        );
+    }
+
+    function cmsSeoPageLabel(key) {
+        const indexable = new Set([
+            "index", "autore", "progetto", "spazio-pubblico", "memorie",
+            "archivio", "voci", "logo", "privacy"
+        ]);
+        return `${key}.html — ${indexable.has(key) ? "indicizzabile" : "noindex"}`;
+    }
+
+    function renderCmsSeoForm(preferredPage = "") {
+        const setting = cmsSeoSetting();
+        const selectedPage = preferredPage || cmsSeoPage.value;
+        cmsSeoPage.replaceChildren();
+        for (const key of Object.keys(setting?.value || {}).sort()) {
+            const option = document.createElement("option");
+            option.value = key;
+            option.textContent = cmsSeoPageLabel(key);
+            cmsSeoPage.appendChild(option);
+        }
+        if (Object.hasOwn(setting?.value || {}, selectedPage)) {
+            cmsSeoPage.value = selectedPage;
+        }
+        const key = cmsSeoPage.value;
+        const metadata = setting?.value?.[key];
+        cmsSeoIdentity.textContent = setting && metadata
+            ? `${key}.html · ${setting.status} · revisione ${setting.updatedAt}`
+            : "Metadati SEO non disponibili.";
+        cmsSeoTitle.value = metadata?.title || "";
+        cmsSeoDescription.value = metadata?.description || "";
+        cmsSeoImage.value = metadata?.socialImage || "";
+        cmsSeoPublicationStatus.value = setting?.status || "draft";
+        cmsSeoSubmit.disabled = !setting || !metadata;
+        renderCmsSeoPreview();
+    }
+
+    function renderCmsSeoPreview() {
+        cmsSeoPreview.replaceChildren();
+        const image = document.createElement("img");
+        image.src = cmsSeoImage.value;
+        image.alt = "";
+        image.referrerPolicy = "no-referrer";
+        const content = document.createElement("div");
+        const title = document.createElement("h4");
+        title.textContent = cmsSeoTitle.value || "Title della pagina";
+        const description = document.createElement("p");
+        description.textContent = cmsSeoDescription.value ||
+            "Descrizione mostrata nei risultati e nelle condivisioni.";
+        content.append(title, description);
+        cmsSeoPreview.append(image, content);
+    }
+
+    async function saveCmsSeo(event) {
+        event.preventDefault();
+        const setting = cmsSeoSetting();
+        const key = cmsSeoPage.value;
+        if (!setting || !Object.hasOwn(setting.value, key)) return;
+        cmsSeoSubmit.disabled = true;
+        cmsSeoReload.disabled = true;
+        cmsSeoStatus.textContent = "Salvataggio metadati…";
+        try {
+            const value = structuredClone(setting.value);
+            value[key] = {
+                title: cmsSeoTitle.value.trim(),
+                description: cmsSeoDescription.value.trim(),
+                socialImage: cmsSeoImage.value.trim()
+            };
+            const data = await request(
+                "/api/admin/cms/settings/site.metadata.pages",
+                {
+                    method: "PATCH",
+                    body: JSON.stringify({
+                        value,
+                        status: cmsSeoPublicationStatus.value,
+                        expectedUpdatedAt: setting.updatedAt
+                    })
+                }
+            );
+            await loadCmsSettings("site.metadata.pages");
+            renderCmsSeoForm(key);
+            cmsSeoStatus.textContent = data.unchanged
+                ? "Nessuna modifica da salvare."
+                : "Metadati salvati e revisione SEO registrata.";
+        } catch (error) {
+            cmsSeoStatus.textContent = error.message ||
+                "Non è stato possibile salvare i metadati SEO.";
+            cmsSeoSubmit.disabled = false;
+        } finally {
+            cmsSeoReload.disabled = false;
         }
     }
 
@@ -3177,6 +3287,16 @@
     cmsSettingSelect.addEventListener("change", renderCmsSettingForm);
     cmsSettingReload.addEventListener("click", () => {
         loadCmsSettings(cmsSettingSelect.value);
+    });
+    cmsSeoForm.addEventListener("submit", saveCmsSeo);
+    cmsSeoPage.addEventListener("change", () => {
+        renderCmsSeoForm(cmsSeoPage.value);
+    });
+    for (const input of [cmsSeoTitle, cmsSeoDescription, cmsSeoImage]) {
+        input.addEventListener("input", renderCmsSeoPreview);
+    }
+    cmsSeoReload.addEventListener("click", () => {
+        loadCmsSettings("site.metadata.pages");
     });
     cmsLegalForm.addEventListener("submit", saveCmsLegalVersion);
     cmsLegalDocumentSelect.addEventListener("change", () => {
