@@ -339,6 +339,71 @@ test("l’anteprima protetta legge l’ultima revisione senza pubblicarla", asyn
     assert.equal(missingPair.response.status, 400);
 });
 
+test("consulta e ripristina la cronologia creando una nuova revisione", async () => {
+    const env = environment();
+    const denied = await call(
+        env,
+        "/api/admin/cms/revisions?entityType=site_setting&entityId=site.identity"
+    );
+    assert.equal(denied.response.status, 401);
+
+    const settings = await call(env, "/api/admin/cms/settings", { admin: true });
+    const identity = settings.data.settings.find(
+        (setting) => setting.key === "site.identity"
+    );
+    const originalValue = structuredClone(identity.value);
+    const changed = await call(env, "/api/admin/cms/settings/site.identity", {
+        admin: true,
+        method: "PATCH",
+        body: {
+            value: { ...identity.value, projectName: "Versione da annullare" },
+            status: "draft",
+            expectedUpdatedAt: identity.updatedAt
+        }
+    });
+    assert.equal(changed.response.status, 200);
+
+    const history = await call(
+        env,
+        "/api/admin/cms/revisions?entityType=site_setting&entityId=site.identity",
+        { admin: true }
+    );
+    assert.equal(history.response.status, 200);
+    assert.deepEqual(
+        history.data.revisions.map((revision) => revision.revisionNumber),
+        [2, 1]
+    );
+    assert.equal(history.data.revisions[0].state, "draft");
+    assert.equal(history.data.revisions[1].restorable, true);
+
+    const restored = await call(
+        env,
+        "/api/admin/cms/revisions/site_setting/site.identity/1/restore",
+        { admin: true, method: "POST" }
+    );
+    assert.equal(restored.response.status, 200);
+    assert.deepEqual(restored.data.setting.value, originalValue);
+    assert.equal(restored.data.setting.status, identity.status);
+
+    const rows = env.DB.database.prepare(`
+        SELECT revision_number, snapshot_json, publication_state
+        FROM content_revisions
+        WHERE entity_type = 'site_setting' AND entity_id = 'site.identity'
+        ORDER BY revision_number
+    `).all();
+    assert.equal(rows.length, 3);
+    assert.equal(rows[1].publication_state, "draft");
+    assert.deepEqual(JSON.parse(rows[2].snapshot_json), JSON.parse(rows[0].snapshot_json));
+    assert.equal(rows[2].publication_state, rows[0].publication_state);
+
+    const unsupported = await call(
+        env,
+        "/api/admin/cms/revisions/page_block/block-home-intro/1/restore",
+        { admin: true, method: "POST" }
+    );
+    assert.equal(unsupported.response.status, 400);
+});
+
 test("il pannello rende l’anteprima senza creare una pagina pubblica", async () => {
     const [html, script] = await Promise.all([
         readFile(new URL("../../admin.html", import.meta.url), "utf8"),
@@ -348,4 +413,7 @@ test("il pannello rende l’anteprima senza creare una pagina pubblica", async (
     assert.match(html, /non riceve un URL\s+pubblico o indicizzabile/u);
     assert.match(script, /\/api\/admin\/cms\/preview/u);
     assert.match(script, /setAttribute\("sandbox", ""\)/u);
+    assert.match(html, /id="adminRevisionComparison"/u);
+    assert.match(html, /Ripristina come nuova revisione/u);
+    assert.match(script, /\/api\/admin\/cms\/revisions/u);
 });

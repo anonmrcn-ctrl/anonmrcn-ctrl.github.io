@@ -2951,6 +2951,43 @@ html[data-theme="dark"] .leaflet-control-layers label {
     color: var(--paper);
 }
 
+.admin-cms-history-controls,
+.admin-cms-history-compare {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+}
+
+.admin-cms-history-controls label {
+    align-self: end;
+}
+
+.admin-cms-history-compare article {
+    min-width: 0;
+    padding: 1rem;
+    overflow: auto;
+    border: 1px solid var(--line);
+    background: color-mix(in srgb, var(--paper) 92%, var(--ink));
+}
+
+.admin-cms-history-compare h4 {
+    margin-top: 0;
+}
+
+.admin-cms-history-compare pre {
+    margin: 0;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+@media (max-width: 42rem) {
+    .admin-cms-history-controls,
+    .admin-cms-history-compare {
+        grid-template-columns: 1fr;
+    }
+}
+
 .admin-voci-mappa-aiuto {
     margin: -0.25rem 0 0;
     font-size: 0.78rem;

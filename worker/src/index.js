@@ -794,6 +794,24 @@ export default {
                 return await adminGetCmsPreview(request, env, url);
             }
 
+            if (request.method === "GET" && path === "/api/admin/cms/revisions") {
+                return await adminGetCmsRevisions(request, env, url);
+            }
+
+            if (
+                request.method === "POST" &&
+                /^\/api\/admin\/cms\/revisions\/[a-z_]+\/[a-z0-9._-]+\/\d+\/restore$/.test(path)
+            ) {
+                const parts = path.split("/");
+                return await adminRestoreCmsRevision(
+                    request,
+                    env,
+                    parts[5],
+                    parts[6],
+                    Number(parts[7])
+                );
+            }
+
             if (request.method === "POST" && path === "/api/admin/cms/permalinks") {
                 return await adminCreateCmsPermalink(request, env);
             }
@@ -4872,6 +4890,215 @@ async function adminGetCmsPreview(request, env, url) {
         return json(request, env, { error: "Contenuto di anteprima non trovato." }, 404);
     }
     return json(request, env, { previews });
+}
+
+const CMS_RESTORABLE_REVISION_TYPES = new Set([
+    "site_page",
+    "poem_work",
+    "navigation_item",
+    "onboarding_step",
+    "site_setting",
+    "map_layer",
+    "map_feature",
+    "source"
+]);
+
+async function adminGetCmsRevisions(request, env, url) {
+    if (!(await adminAuthorized(request, env))) {
+        return unauthorized(request, env);
+    }
+    await ensureCmsStorage(env);
+    const entityType = String(url.searchParams.get("entityType") || "");
+    const entityId = String(url.searchParams.get("entityId") || "");
+    if (!/^[a-z_]{1,80}$/u.test(entityType) || !entityId ||
+        entityId.length > 160) {
+        return json(request, env, { error: "Contenuto della cronologia non valido." }, 400);
+    }
+    const result = await env.DB.prepare(`
+        SELECT revision_number, snapshot_json, publication_state, created_at
+        FROM content_revisions
+        WHERE entity_type = ? AND entity_id = ?
+        ORDER BY revision_number DESC
+    `).bind(entityType, entityId).all();
+    const revisions = (result.results || []).map((row) => ({
+        entityType,
+        entityId,
+        revisionNumber: Number(row.revision_number),
+        state: row.publication_state,
+        createdAt: Number(row.created_at),
+        restorable: CMS_RESTORABLE_REVISION_TYPES.has(entityType),
+        snapshot: parseJsonValue(row.snapshot_json, {})
+    }));
+    if (!revisions.length) {
+        return json(request, env, { error: "Cronologia non trovata." }, 404);
+    }
+    return json(request, env, { revisions });
+}
+
+function cmsRestoreRequest(request, body) {
+    const headers = new Headers(request.headers);
+    headers.set("Content-Type", "application/json");
+    return new Request(request.url, {
+        method: "PATCH",
+        headers,
+        body: JSON.stringify(body)
+    });
+}
+
+async function adminRestoreCmsRevision(
+    request,
+    env,
+    entityType,
+    entityId,
+    revisionNumber
+) {
+    if (!(await adminAuthorized(request, env))) {
+        return unauthorized(request, env);
+    }
+    await ensureCmsStorage(env);
+    if (!CMS_RESTORABLE_REVISION_TYPES.has(entityType) ||
+        !Number.isSafeInteger(revisionNumber) || revisionNumber < 1) {
+        return json(request, env, {
+            error: "Questo tipo di revisione non può essere ripristinato."
+        }, 400);
+    }
+    const revision = await env.DB.prepare(`
+        SELECT snapshot_json, publication_state
+        FROM content_revisions
+        WHERE entity_type = ? AND entity_id = ? AND revision_number = ?
+        LIMIT 1
+    `).bind(entityType, entityId, revisionNumber).first();
+    if (!revision) {
+        return json(request, env, { error: "Revisione non trovata." }, 404);
+    }
+    const snapshot = parseJsonValue(revision.snapshot_json, null);
+    if (!snapshot || typeof snapshot !== "object" || Array.isArray(snapshot)) {
+        return json(request, env, { error: "La revisione non è valida." }, 409);
+    }
+    const state = String(revision.publication_state || "draft");
+    let response;
+
+    if (entityType === "site_page") {
+        const current = await readCmsPage(env, entityId);
+        if (!current) return json(request, env, { error: "Pagina non trovata." }, 404);
+        response = await adminUpdateCmsPage(cmsRestoreRequest(request, {
+            title: snapshot.title,
+            description: snapshot.description,
+            status: state,
+            expectedUpdatedAt: current.updatedAt,
+            blocks: (snapshot.blocks || []).map((block) => ({
+                id: block.id,
+                text: block.content?.text ?? block.text ?? ""
+            }))
+        }), env, entityId);
+    } else if (entityType === "poem_work") {
+        const current = await readCmsPoem(env);
+        if (!current || current.id !== entityId) {
+            return json(request, env, { error: "Poesia non trovata." }, 404);
+        }
+        response = await adminUpdateCmsPoem(cmsRestoreRequest(request, {
+            title: snapshot.title,
+            subtitle: snapshot.subtitle,
+            status: state,
+            expectedUpdatedAt: current.updatedAt,
+            lines: (snapshot.sections || []).flatMap((section) =>
+                (section.lines || []).map((line) => ({
+                    id: line.id,
+                    text: line.text,
+                    indent: line.indent
+                }))
+            )
+        }), env);
+    } else if (entityType === "navigation_item") {
+        const current = await readCmsNavigation(env);
+        if (!current.items.some((item) => item.id === entityId)) {
+            return json(request, env, { error: "Voce di menu non trovata." }, 404);
+        }
+        response = await adminUpdateCmsNavigation(cmsRestoreRequest(request, {
+            expectedUpdatedAt: current.updatedAt,
+            items: current.items.map((item) => item.id === entityId ? {
+                ...item,
+                label: snapshot.label,
+                href: snapshot.href,
+                visibility: snapshot.visibility,
+                status: state === "published" ? "published" : "draft"
+            } : item)
+        }), env);
+    } else if (entityType === "onboarding_step") {
+        const current = await readCmsOnboarding(env);
+        if (!current.steps.some((step) => step.id === entityId)) {
+            return json(request, env, { error: "Schermata non trovata." }, 404);
+        }
+        const action = snapshot.action || {};
+        response = await adminUpdateCmsOnboarding(cmsRestoreRequest(request, {
+            expectedUpdatedAt: current.updatedAt,
+            intro: current.intro,
+            steps: current.steps.map((step) => step.id === entityId ? {
+                ...step,
+                title: snapshot.title,
+                description: snapshot.body,
+                details: Array.isArray(action.details) ? action.details : [],
+                preview: action.preview || "",
+                alt: action.alt || "",
+                status: state === "published" ? "published" : "draft"
+            } : step)
+        }), env);
+    } else if (entityType === "site_setting") {
+        const current = (await readCmsSettings(env)).find(
+            (setting) => setting.key === entityId
+        );
+        if (!current) {
+            return json(request, env, { error: "Impostazione non trovata." }, 404);
+        }
+        response = await adminUpdateCmsSetting(cmsRestoreRequest(request, {
+            value: snapshot.value,
+            status: state,
+            expectedUpdatedAt: current.updatedAt
+        }), env, entityId);
+    } else if (entityType === "map_layer") {
+        const current = (await readCmsMapLayers(env)).layers.find(
+            (layer) => layer.id === entityId
+        );
+        if (!current) return json(request, env, { error: "Livello non trovato." }, 404);
+        response = await adminUpdateCmsMapLayer(cmsRestoreRequest(request, {
+            title: snapshot.title,
+            description: snapshot.description,
+            style: snapshot.style,
+            status: state,
+            expectedUpdatedAt: current.updatedAt
+        }), env, entityId);
+    } else if (entityType === "map_feature") {
+        const collection = await readCmsMapLayers(env);
+        const current = collection.layers.flatMap((layer) => layer.features)
+            .find((feature) => feature.id === entityId);
+        if (!current) return json(request, env, { error: "Geometria non trovata." }, 404);
+        response = await adminUpdateCmsMapFeature(cmsRestoreRequest(request, {
+            layerId: snapshot.layerId,
+            position: snapshot.position,
+            title: snapshot.title,
+            description: snapshot.description,
+            geometry: snapshot.geometry,
+            properties: snapshot.properties,
+            status: state,
+            expectedUpdatedAt: current.updatedAt
+        }), env, entityId);
+    } else if (entityType === "source") {
+        const current = (await readCmsSources(env)).find(
+            (source) => source.id === entityId
+        );
+        if (!current) return json(request, env, { error: "Fonte non trovata." }, 404);
+        response = await adminUpdateCmsSource(cmsRestoreRequest(request, {
+            type: snapshot.type,
+            title: snapshot.title,
+            author: snapshot.author,
+            publicationDate: snapshot.publicationDate,
+            url: snapshot.url,
+            note: snapshot.note,
+            status: state,
+            expectedUpdatedAt: current.updatedAt
+        }), env, entityId);
+    }
+    return response;
 }
 
 async function adminGetCmsLegal(request, env) {

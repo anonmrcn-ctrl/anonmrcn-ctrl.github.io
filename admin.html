@@ -532,6 +532,26 @@
                 <p class="admin-voci-mappa-aiuto" id="adminPreviewIdentity"></p>
                 <article class="admin-cms-preview" id="adminPreviewContent"></article>
                 <p class="admin-status" id="adminPreviewStatus" aria-live="polite"></p>
+
+                <h3>Cronologia revisioni</h3>
+                <p>
+                    Confronta due fotografie immutabili. Il ripristino non cancella
+                    la cronologia: applica la fotografia scelta come nuova revisione.
+                </p>
+                <div class="admin-cms-history-controls">
+                    <label for="adminRevisionRestore">Revisione da ripristinare</label>
+                    <select id="adminRevisionRestore"></select>
+                    <label for="adminRevisionCompare">Revisione di confronto</label>
+                    <select id="adminRevisionCompare"></select>
+                </div>
+                <div class="admin-cms-history-compare" id="adminRevisionComparison"></div>
+                <button id="adminRevisionRestoreButton" type="button">
+                    Ripristina come nuova revisione
+                </button>
+                <button class="admin-button-secondary" id="adminRevisionReload" type="button">
+                    Ricarica cronologia
+                </button>
+                <p class="admin-status" id="adminRevisionStatus" aria-live="polite"></p>
             </section>
 
             <section class="admin-voci-mappa" aria-labelledby="adminVociMappaTitolo">

@@ -181,6 +181,14 @@ ispezionabili e l’HTML legale viene confinato in un iframe sandbox con CSP. No
 viene creato alcun URL pubblico di anteprima e una bozza resta fuori dalle API
 pubbliche finché non viene pubblicata esplicitamente.
 
+La cronologia protetta permette di ispezionare e confrontare due fotografie di
+una stessa entità. Per pagine, poesia, menu, tour, impostazioni editoriali,
+cartografia e fonti una revisione precedente può essere applicata nuovamente:
+il Worker usa gli stessi controlli di validità e concorrenza dell’editor e
+registra il risultato come nuova revisione, senza modificare o cancellare la
+storia esistente. Le versioni legali pubblicate e le revisioni figlie restano
+consultabili ma non sono ripristinabili direttamente.
+
 L'inventario si controlla con:
 
 ```bash

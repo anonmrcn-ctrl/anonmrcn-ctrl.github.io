@@ -177,6 +177,16 @@
     const cmsPreviewIdentity = document.getElementById("adminPreviewIdentity");
     const cmsPreviewContent = document.getElementById("adminPreviewContent");
     const cmsPreviewStatus = document.getElementById("adminPreviewStatus");
+    const cmsRevisionRestore = document.getElementById("adminRevisionRestore");
+    const cmsRevisionCompare = document.getElementById("adminRevisionCompare");
+    const cmsRevisionComparison = document.getElementById(
+        "adminRevisionComparison"
+    );
+    const cmsRevisionRestoreButton = document.getElementById(
+        "adminRevisionRestoreButton"
+    );
+    const cmsRevisionReload = document.getElementById("adminRevisionReload");
+    const cmsRevisionStatus = document.getElementById("adminRevisionStatus");
     const mapEntryForm = document.getElementById("adminMapEntryForm");
     const mapEntryName = document.getElementById("adminMapEntryName");
     const mapEntryCategory = document.getElementById("adminMapEntryCategory");
@@ -246,6 +256,7 @@
     let loadedCmsLegalDocuments = [];
     let loadedCmsPermalinks = [];
     let loadedCmsPreviews = [];
+    let loadedCmsRevisions = [];
 
     const pushNotifications = window.NNMRCN_NOTIFICHE.create({
         button: pushButton,
@@ -1518,6 +1529,7 @@
                 (option) => option.value === selectedValue
             )) cmsPreviewSelect.value = selectedValue;
             renderCmsPreview();
+            await loadCmsRevisions();
             cmsPreviewStatus.textContent = "";
         } catch (error) {
             cmsPreviewStatus.textContent = error.message ||
@@ -1584,6 +1596,131 @@
         const data = document.createElement("pre");
         data.textContent = JSON.stringify(snapshot, null, 2);
         cmsPreviewContent.appendChild(data);
+    }
+
+    function cmsRevisionLabel(revision) {
+        const date = new Date(revision.createdAt).toLocaleString("it-IT");
+        return `Revisione ${revision.revisionNumber} — ${revision.state} — ${date}`;
+    }
+
+    function selectedCmsRevision(select) {
+        const revisionNumber = Number(select.value);
+        return loadedCmsRevisions.find(
+            (revision) => revision.revisionNumber === revisionNumber
+        );
+    }
+
+    function renderCmsRevisionComparison() {
+        const revisions = [
+            selectedCmsRevision(cmsRevisionRestore),
+            selectedCmsRevision(cmsRevisionCompare)
+        ];
+        cmsRevisionComparison.replaceChildren();
+        for (const revision of revisions) {
+            const article = document.createElement("article");
+            if (!revision) {
+                article.textContent = "Revisione non disponibile.";
+            } else {
+                const title = document.createElement("h4");
+                title.textContent = cmsRevisionLabel(revision);
+                const snapshot = document.createElement("pre");
+                snapshot.textContent = JSON.stringify(revision.snapshot, null, 2);
+                article.append(title, snapshot);
+            }
+            cmsRevisionComparison.appendChild(article);
+        }
+        const restore = revisions[0];
+        const latest = loadedCmsRevisions[0];
+        cmsRevisionRestoreButton.disabled = !restore || !restore.restorable ||
+            restore.revisionNumber === latest?.revisionNumber;
+    }
+
+    async function loadCmsRevisions() {
+        const preview = selectedCmsPreview();
+        loadedCmsRevisions = [];
+        cmsRevisionRestore.replaceChildren();
+        cmsRevisionCompare.replaceChildren();
+        cmsRevisionComparison.replaceChildren();
+        cmsRevisionRestoreButton.disabled = true;
+        if (!preview) {
+            cmsRevisionStatus.textContent = "Nessuna cronologia disponibile.";
+            return;
+        }
+        cmsRevisionStatus.textContent = "Caricamento cronologia…";
+        try {
+            const query = new URLSearchParams({
+                entityType: preview.entityType,
+                entityId: preview.entityId
+            });
+            const data = await request(`/api/admin/cms/revisions?${query}`);
+            loadedCmsRevisions = data.revisions || [];
+            for (const revision of loadedCmsRevisions) {
+                for (const select of [cmsRevisionRestore, cmsRevisionCompare]) {
+                    const option = document.createElement("option");
+                    option.value = String(revision.revisionNumber);
+                    option.textContent = cmsRevisionLabel(revision);
+                    select.appendChild(option);
+                }
+            }
+            if (loadedCmsRevisions.length > 1) {
+                cmsRevisionRestore.value = String(
+                    loadedCmsRevisions[1].revisionNumber
+                );
+            }
+            if (loadedCmsRevisions.length) {
+                cmsRevisionCompare.value = String(
+                    loadedCmsRevisions[0].revisionNumber
+                );
+            }
+            renderCmsRevisionComparison();
+            cmsRevisionStatus.textContent = loadedCmsRevisions[0]?.restorable
+                ? ""
+                : "Questa cronologia è consultabile ma non ripristinabile.";
+        } catch (error) {
+            cmsRevisionStatus.textContent = error.message ||
+                "Non è stato possibile caricare la cronologia.";
+        }
+    }
+
+    async function restoreCmsRevision() {
+        const preview = selectedCmsPreview();
+        const revision = selectedCmsRevision(cmsRevisionRestore);
+        if (!preview || !revision || !revision.restorable) return;
+        if (!window.confirm(
+            `Ripristinare la revisione ${revision.revisionNumber} come nuova modifica?`
+        )) return;
+        cmsRevisionRestoreButton.disabled = true;
+        cmsRevisionReload.disabled = true;
+        cmsRevisionStatus.textContent = "Ripristino in corso…";
+        const selectedValue = cmsPreviewSelect.value;
+        try {
+            const path = [
+                "/api/admin/cms/revisions",
+                encodeURIComponent(preview.entityType),
+                encodeURIComponent(preview.entityId),
+                revision.revisionNumber,
+                "restore"
+            ].join("/");
+            await request(path, { method: "POST" });
+            await Promise.all([
+                loadCmsPages(),
+                loadCmsPoem(),
+                loadCmsNavigation(),
+                loadCmsOnboarding(),
+                loadCmsMapLayers(),
+                loadCmsSources(),
+                loadCmsSettings()
+            ]);
+            await loadCmsPreviews(selectedValue);
+            cmsRevisionStatus.textContent =
+                "Revisione ripristinata come nuova modifica append-only.";
+        } catch (error) {
+            cmsRevisionStatus.textContent = error.message ||
+                "Non è stato possibile ripristinare la revisione.";
+            renderCmsRevisionComparison();
+        } finally {
+            cmsRevisionReload.disabled = false;
+        }
     }
 
     function showContactListMessage(message) {
@@ -3068,10 +3205,17 @@
     cmsPermalinkReload.addEventListener("click", () => {
         loadCmsPermalinks(cmsPermalinkSelect.value);
     });
-    cmsPreviewSelect.addEventListener("change", renderCmsPreview);
+    cmsPreviewSelect.addEventListener("change", () => {
+        renderCmsPreview();
+        loadCmsRevisions();
+    });
     cmsPreviewReload.addEventListener("click", () => {
         loadCmsPreviews(cmsPreviewSelect.value);
     });
+    cmsRevisionRestore.addEventListener("change", renderCmsRevisionComparison);
+    cmsRevisionCompare.addEventListener("change", renderCmsRevisionComparison);
+    cmsRevisionRestoreButton.addEventListener("click", restoreCmsRevision);
+    cmsRevisionReload.addEventListener("click", loadCmsRevisions);
     narrativeCancel.addEventListener("click", () => {
         resetNarrativeForm();
         narrativeStatus.textContent = "Modifica annullata.";
