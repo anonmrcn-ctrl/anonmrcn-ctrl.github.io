@@ -24,7 +24,9 @@
   ],
   "r2_buckets": [
     {
-      "binding": "MEDIA"
+      "binding": "MEDIA",
+      "bucket_name": "nnmrcn-media-eu",
+      "jurisdiction": "eu"
     }
   ]
 }
