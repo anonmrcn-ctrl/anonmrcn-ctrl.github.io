@@ -29,8 +29,8 @@ affiancare il primo passaggio tecnico incompleto, ma non sostituirlo.
 
 | Codice | Traguardo | Stato | Dipendenza e criterio |
 |---:|---|---|---|
-| SEO-0 | Fondazione tecnica | In revisione | `robots.txt`, sitemap, canonical, metadati sociali, JSON-LD, `noindex`, `seo.config.json` e controllo automatico; diventa completa dopo pubblicazione e risposta HTTP 200 dei due file di scoperta |
-| SEO-1 | Baseline di indicizzazione | Da iniziare | Dopo SEO-0: verificare la proprietà, inviare la sitemap e registrare pagine indicizzate, query, impressioni, clic e CTR senza aggiungere tracciamento pubblicitario |
+| SEO-0 | Fondazione tecnica | Completo | `robots.txt`, sitemap, canonical, metadati sociali, JSON-LD, `noindex`, `seo.config.json` e `check-seo.mjs` sono pubblicati; `docs/seo/deployment-verification.md` registra workflow riusciti, health del Worker e risposte HTTP 200 |
+| SEO-1 | Baseline di indicizzazione | In attesa di accesso | `docs/seo/search-console-baseline.md` definisce proprietà, invio sitemap e misure aggregate senza tracciamento; verifica della proprietà e dati reali richiedono accesso a Google Search Console |
 | SEO-2 | Autonomia dei metadati | Completo | Il punto 3.7 gestisce title, descrizione e immagine sociale con valori predefiniti, unicità, anteprima autenticata, stati e revisioni |
 | SEO-3 | Contenuti autonomi e indicizzabili | Da iniziare | Punto 5: una pagina HTML completa per ogni Voce e luogo, vecchi URL conservati, canonical e sitemap automatici |
 | SEO-4 | Media ottimizzati | Da iniziare | Punto 6: originale conservato, varianti responsive, dimensioni, testo alternativo e immagine sociale |
