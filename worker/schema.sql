@@ -341,7 +341,7 @@ CREATE TABLE IF NOT EXISTS map_entry_images (
 );
 
 -- Fondazione comune dei contenuti amministrabili.
--- Mantenere questa sezione allineata a migrations/0013 e src/cms-schema.js.
+-- Mantenere questa sezione allineata a migrations/0013–0014 e src/cms-schema.js.
 
 CREATE TABLE IF NOT EXISTS site_pages (
         id TEXT PRIMARY KEY CHECK (length(id) BETWEEN 1 AND 160),
@@ -503,12 +503,18 @@ CREATE TABLE IF NOT EXISTS sources (
             CHECK (length(publication_date) <= 100),
         url TEXT NOT NULL DEFAULT '' CHECK (length(url) <= 2048),
         note TEXT NOT NULL DEFAULT '' CHECK (length(note) <= 2000),
+        status TEXT NOT NULL DEFAULT 'published'
+            CHECK (status IN ('draft', 'published', 'archived')),
         created_at INTEGER NOT NULL,
-        updated_at INTEGER NOT NULL
+        updated_at INTEGER NOT NULL,
+        published_at INTEGER
     );
 
 CREATE INDEX IF NOT EXISTS idx_sources_title
         ON sources(title COLLATE NOCASE, id);
+
+CREATE INDEX IF NOT EXISTS idx_sources_public
+        ON sources(status, title COLLATE NOCASE, id);
 
 CREATE TABLE IF NOT EXISTS content_source_links (
         content_type TEXT NOT NULL CHECK (length(content_type) BETWEEN 1 AND 80),

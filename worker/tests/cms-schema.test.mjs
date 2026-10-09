@@ -272,6 +272,33 @@ test("la migrazione SQL e lo schema completo espongono la stessa fondazione", as
     }
 });
 
+test("la migrazione 0014 conserva le fonti e aggiunge lo stato pubblicato", async () => {
+    const database = new DatabaseSync(":memory:");
+    const foundation = await readFile(
+        new URL("../migrations/0013_cms_content_foundation.sql", import.meta.url),
+        "utf8"
+    );
+    const migration = await readFile(
+        new URL("../migrations/0014_source_publication_state.sql", import.meta.url),
+        "utf8"
+    );
+    database.exec(foundation);
+    database.prepare(`
+        INSERT INTO sources (id, title, created_at, updated_at)
+        VALUES ('fonte-esistente', 'Fonte esistente', 10, 10)
+    `).run();
+    database.exec(migration);
+    const row = database.prepare(`
+        SELECT id, status, published_at FROM sources
+        WHERE id = 'fonte-esistente'
+    `).get();
+    assert.deepEqual({ ...row }, {
+        id: "fonte-esistente",
+        status: "published",
+        published_at: 10
+    });
+});
+
 test("l’health check installa la fondazione prima di dichiarare il servizio sano", async () => {
     const db = new D1DatabaseMock();
     const request = new Request("https://worker.test/api/health", {
@@ -285,6 +312,6 @@ test("l’health check installa la fondazione prima di dichiarare il servizio sa
 
     assert.equal(response.status, 200);
     assert.equal(data.ok, true);
-    assert.equal(data.contentSchema, 1);
+    assert.equal(data.contentSchema, 2);
     assert.deepEqual(listCmsTables(db.database), EXPECTED_TABLES);
 });

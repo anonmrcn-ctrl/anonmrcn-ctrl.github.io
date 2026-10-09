@@ -900,7 +900,7 @@ export default {
                     ok: true,
                     service: "nnmrcn-rete",
                     privacyVersion: "2026-10-03",
-                    contentSchema: 1
+                    contentSchema: 2
                 });
             }
 
@@ -4424,7 +4424,7 @@ async function readCmsSources(env) {
     const [sourceResult, linkResult] = await Promise.all([
         env.DB.prepare(`
             SELECT id, source_type, title, author, publication_date, url, note,
-                created_at, updated_at
+                status, created_at, updated_at, published_at
             FROM sources ORDER BY title COLLATE NOCASE, id
         `).all(),
         env.DB.prepare(`
@@ -4454,8 +4454,10 @@ async function readCmsSources(env) {
         publicationDate: row.publication_date,
         url: row.url,
         note: row.note,
+        status: row.status,
         createdAt: Number(row.created_at),
         updatedAt: Number(row.updated_at),
+        publishedAt: row.published_at === null ? null : Number(row.published_at),
         links: linksBySource.get(row.id) || []
     }));
 }
@@ -4479,13 +4481,14 @@ async function adminCreateCmsSource(request, env) {
         env.DB.prepare(`
             INSERT INTO sources (
                 id, source_type, title, author, publication_date, url, note,
-                created_at, updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                status, created_at, updated_at, published_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `).bind(
             id, input.type, input.title, input.author, input.publicationDate,
-            input.url, input.note, now, now
+            input.url, input.note, input.status, now, now,
+            input.status === "published" ? now : null
         ),
-        revisionInsert(env, "source", id, snapshot, "published", now)
+        revisionInsert(env, "source", id, snapshot, input.status, now)
     ]);
     return json(request, env, {
         source: { ...snapshot, createdAt: now, updatedAt: now },
@@ -4519,7 +4522,8 @@ async function adminUpdateCmsSource(request, env, sourceId) {
     const unchanged = input.type === current.type &&
         input.title === current.title && input.author === current.author &&
         input.publicationDate === current.publicationDate &&
-        input.url === current.url && input.note === current.note;
+        input.url === current.url && input.note === current.note &&
+        input.status === current.status;
     if (unchanged) {
         return json(request, env, { source: current, unchanged: true });
     }
@@ -4528,13 +4532,18 @@ async function adminUpdateCmsSource(request, env, sourceId) {
     await env.DB.batch([
         env.DB.prepare(`
             UPDATE sources SET source_type = ?, title = ?, author = ?,
-                publication_date = ?, url = ?, note = ?, updated_at = ?
+                publication_date = ?, url = ?, note = ?, status = ?,
+                updated_at = ?, published_at = CASE
+                    WHEN ? = 'published' THEN COALESCE(published_at, ?)
+                    ELSE published_at
+                END
             WHERE id = ?
         `).bind(
             input.type, input.title, input.author, input.publicationDate,
-            input.url, input.note, now, current.id
+            input.url, input.note, input.status, now,
+            input.status, now, current.id
         ),
-        revisionInsert(env, "source", current.id, snapshot, "published", now)
+        revisionInsert(env, "source", current.id, snapshot, input.status, now)
     ]);
     const updated = (await readCmsSources(env)).find(
         (source) => source.id === current.id
@@ -4549,6 +4558,7 @@ function normalizeCmsSourceInput(value, requireVersion) {
     const publicationDate = String(value?.publicationDate || "").trim();
     const url = String(value?.url || "").trim();
     const note = String(value?.note || "").trim();
+    const status = String(value?.status || "draft");
     const expectedUpdatedAt = Number(value?.expectedUpdatedAt);
 
     if (!["book", "article", "archive", "web", "map", "oral", "other"].includes(type)) {
@@ -4561,11 +4571,16 @@ function normalizeCmsSourceInput(value, requireVersion) {
     if (url.length > 2048 || (url && !validCmsHttpsUrl(url))) {
         return { error: "Il collegamento della fonte deve usare HTTPS." };
     }
+    if (!["draft", "published", "archived"].includes(status)) {
+        return { error: "Lo stato editoriale della fonte non è valido." };
+    }
     if (requireVersion &&
         (!Number.isSafeInteger(expectedUpdatedAt) || expectedUpdatedAt < 0)) {
         return { error: "La versione della fonte non è valida." };
     }
-    return { type, title, author, publicationDate, url, note, expectedUpdatedAt };
+    return {
+        type, title, author, publicationDate, url, note, status, expectedUpdatedAt
+    };
 }
 
 function validCmsHttpsUrl(value) {
@@ -4585,6 +4600,7 @@ function cmsSourceSnapshot(id, input, links) {
         publicationDate: input.publicationDate,
         url: input.url,
         note: input.note,
+        status: input.status,
         links
     };
 }
@@ -4628,7 +4644,8 @@ async function adminUpdateCmsSetting(request, env, settingKey) {
     const input = normalizeCmsSettingInput(
         settingKey,
         await readJson(request, MAX_CMS_SETTING_REQUEST_BYTES),
-        current.value
+        current.value,
+        current.status
     );
     if (input.error) {
         return json(request, env, { error: input.error }, 400);
@@ -4638,20 +4655,28 @@ async function adminUpdateCmsSetting(request, env, settingKey) {
             error: "L’impostazione è stata modificata altrove. Ricaricala prima di salvare."
         }, 409);
     }
-    if (JSON.stringify(input.value) === JSON.stringify(current.value)) {
+    if (JSON.stringify(input.value) === JSON.stringify(current.value) &&
+        input.status === current.status) {
         return json(request, env, { setting: current, unchanged: true });
     }
     const now = Math.max(Date.now(), current.updatedAt + 1);
     await env.DB.batch([
         env.DB.prepare(`
-            UPDATE site_settings SET value_json = ?, updated_at = ?
+            UPDATE site_settings SET value_json = ?, status = ?, updated_at = ?,
+                published_at = CASE
+                    WHEN ? = 'published' THEN COALESCE(published_at, ?)
+                    ELSE published_at
+                END
             WHERE setting_key = ?
-        `).bind(JSON.stringify(input.value), now, current.key),
+        `).bind(
+            JSON.stringify(input.value), input.status, now,
+            input.status, now, current.key
+        ),
         revisionInsert(env, "site_setting", current.key, {
             key: current.key,
             value: input.value,
             visibility: current.visibility
-        }, current.status, now)
+        }, input.status, now)
     ]);
     const updated = (await readCmsSettings(env)).find(
         (setting) => setting.key === current.key
@@ -4659,14 +4684,18 @@ async function adminUpdateCmsSetting(request, env, settingKey) {
     return json(request, env, { setting: updated, unchanged: false });
 }
 
-function normalizeCmsSettingInput(key, input, currentValue) {
+function normalizeCmsSettingInput(key, input, currentValue, currentStatus) {
     const expectedUpdatedAt = Number(input?.expectedUpdatedAt);
     const value = input?.value;
+    const status = String(input?.status || currentStatus || "draft");
     if (!Number.isSafeInteger(expectedUpdatedAt) || expectedUpdatedAt < 0) {
         return { error: "La versione dell’impostazione non è valida." };
     }
     if (!isCmsMapObject(value) || JSON.stringify(value).length > 50000) {
         return { error: "Il valore editoriale deve essere un oggetto JSON valido." };
+    }
+    if (!["draft", "published", "archived"].includes(status)) {
+        return { error: "Lo stato editoriale dell’impostazione non è valido." };
     }
     if (key === "site.identity") {
         if (!validCmsSettingText(value.name, 80) ||
@@ -4699,7 +4728,7 @@ function normalizeCmsSettingInput(key, input, currentValue) {
     } else {
         return { error: "Questa impostazione non è modificabile dal pannello." };
     }
-    return { expectedUpdatedAt, value };
+    return { expectedUpdatedAt, value, status };
 }
 
 function validCmsSettingText(value, maxLength) {
@@ -4746,6 +4775,7 @@ async function getPublicSources(request, env, url) {
         FROM content_source_links link
         INNER JOIN sources source ON source.id = link.source_id
         WHERE link.content_type = ? AND link.content_id = ?
+            AND source.status = 'published'
         ORDER BY link.position ASC, source.id ASC
     `).bind(contentType, contentId).all();
 
@@ -6739,6 +6769,8 @@ async function initializeCmsStorage(env) {
         )
     );
 
+    await ensureSourcePublicationState(env);
+
     await initializePageContent(env);
     await initializePoemContent(env);
     await initializeNavigationContent(env);
@@ -6749,6 +6781,30 @@ async function initializeCmsStorage(env) {
     await initializeLegalContent(env);
     await initializeContentRevisions(env);
     await initializePermalinks(env);
+}
+
+async function ensureSourcePublicationState(env) {
+    const result = await env.DB.prepare("PRAGMA table_info(sources)").all();
+    const columns = new Set((result.results || []).map((row) => row.name));
+    if (!columns.has("status")) {
+        await env.DB.prepare(`
+            ALTER TABLE sources ADD COLUMN status TEXT NOT NULL DEFAULT 'published'
+                CHECK (status IN ('draft', 'published', 'archived'))
+        `).run();
+    }
+    if (!columns.has("published_at")) {
+        await env.DB.prepare(
+            "ALTER TABLE sources ADD COLUMN published_at INTEGER"
+        ).run();
+    }
+    await env.DB.prepare(`
+        UPDATE sources SET published_at = created_at
+        WHERE status = 'published' AND published_at IS NULL
+    `).run();
+    await env.DB.prepare(`
+        CREATE INDEX IF NOT EXISTS idx_sources_public
+        ON sources(status, title COLLATE NOCASE, id)
+    `).run();
 }
 
 async function initializeLegalContent(env) {
@@ -7491,7 +7547,7 @@ async function initializeContentRevisions(env) {
         env.DB.prepare(`
             SELECT
                 id, source_type, title, author,
-                publication_date, url, note
+                publication_date, url, note, status
             FROM sources ORDER BY id
         `).all(),
         env.DB.prepare(`
@@ -7722,7 +7778,7 @@ async function initializeContentRevisions(env) {
         revisions.push({
             type: "source",
             id: source.id,
-            state: "published",
+            state: source.status,
             snapshot: {
                 id: source.id,
                 type: source.source_type,
@@ -7731,6 +7787,7 @@ async function initializeContentRevisions(env) {
                 publicationDate: source.publication_date,
                 url: source.url,
                 note: source.note,
+                status: source.status,
                 links: (sourceLinks.results || [])
                     .filter((link) => link.source_id === source.id)
                     .map((link) => ({
@@ -7808,9 +7865,11 @@ function sourceInsertStatement(env, source, now) {
             publication_date,
             url,
             note,
+            status,
             created_at,
-            updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            updated_at,
+            published_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, 'published', ?, ?, ?)
     `).bind(
         source.id,
         source.sourceType || "web",
@@ -7819,6 +7878,7 @@ function sourceInsertStatement(env, source, now) {
         source.publicationDate || "",
         source.url || "",
         source.note || "",
+        now,
         now,
         now
     );

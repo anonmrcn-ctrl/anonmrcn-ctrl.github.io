@@ -169,6 +169,12 @@ versione pubblicata resta immutabile. Il registro dei permalink consente di
 aggiungere indirizzi e modificare soltanto stato o destinazione del redirect;
 il percorso originario non può essere riscritto e non esiste cancellazione.
 
+Tutti i contenuti modificabili hanno ora uno stato editoriale esplicito. La
+migrazione `0014_source_publication_state.sql` assegna `published` alle fonti
+esistenti senza cambiare dati o collegamenti; nuove fonti possono nascere come
+bozze. Fonti e impostazioni non pubblicate restano visibili nel pannello ma sono
+escluse dalle API pubbliche, come già avviene per le altre aree del CMS.
+
 L'inventario si controlla con:
 
 ```bash

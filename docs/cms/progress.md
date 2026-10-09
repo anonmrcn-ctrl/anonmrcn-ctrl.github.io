@@ -11,7 +11,7 @@ schema, compatibilità, test e documentazione sono presenti nel repository.
 | 1 | Confine contenuti/software | Completo | `01-confine-contenuti-software.md`, `content-inventory.json`, `scripts/check-content-boundary.mjs` |
 | 2 | Centralizzazione in D1 | Completo | Tutte le unità 2.1–2.12 sono importate, esposte e coperte da test; il primo punto incompleto è il 3 |
 | 3 | Ampliamento del pannello | Completo | Tutte le unità 3.1–3.6 sono amministrabili con protezione degli identificativi, controllo di concorrenza e revisioni; il primo punto incompleto è il 4 |
-| 4 | Bozze, anteprima e cronologia | Da iniziare | La tabella append-only `content_revisions` è predisposta, ma flussi e interfaccia non sono ancora realizzati |
+| 4 | Bozze, anteprima e cronologia | In corso | Lo stato bozza è uniforme e filtrato dalle API pubbliche; il primo sottopunto incompleto è 4.2 |
 | 5 | Permanenza di QR e collegamenti | Da iniziare | La tabella `permalinks` è predisposta; migrazione e risoluzione degli URL storici non sono ancora realizzate |
 | 6 | Media e documenti in R2 | Da iniziare | Nessun dato è stato ancora trasferito |
 | 7 | Sostituzione del token amministrativo | Da iniziare | L’accesso continua a usare `ADMIN_TOKEN` |
@@ -68,6 +68,6 @@ punto 2 non è completa. Non vanno eliminati durante una migrazione parziale.
 
 | Ordine | Unità | Stato | Criterio e prova |
 |---:|---|---|---|
-| 4.1 | Stato bozza uniforme | Da iniziare | Uniformare stato e transizioni per tutti i contenuti modificabili senza esporre bozze nelle API pubbliche |
+| 4.1 | Stato bozza uniforme | Completo | Pagine, poesia, menu, tour, cartografia, fonti, impostazioni e documenti legali usano stati editoriali espliciti. `0014_source_publication_state.sql`, i selettori nel pannello e `admin-sources-settings.test.mjs` provano migrazione conservativa delle fonti, transizioni con concorrenza, revisioni con stato coerente ed esclusione di fonti e impostazioni in bozza dalle API pubbliche |
 | 4.2 | Anteprima autenticata | Da iniziare | Mostrare la versione di lavoro dal pannello senza sostituire quella pubblicata né creare URL pubblici indicizzabili |
 | 4.3 | Cronologia revisioni | Da iniziare | Consultare le revisioni append-only, confrontare fotografie e ripristinare una revisione creando una nuova modifica |

@@ -410,6 +410,12 @@
                     <input id="adminSourceUrl" type="url" maxlength="2048" placeholder="https://…">
                     <label for="adminSourceNote">Nota</label>
                     <textarea id="adminSourceNote" maxlength="2000" rows="4"></textarea>
+                    <label for="adminSourcePublicationStatus">Stato editoriale</label>
+                    <select id="adminSourcePublicationStatus" required>
+                        <option value="draft">Bozza</option>
+                        <option value="published">Pubblicata</option>
+                        <option value="archived">Archiviata</option>
+                    </select>
                     <p class="admin-voci-mappa-aiuto" id="adminSourceLinks"></p>
                     <button id="adminSourceSubmit" type="submit">Crea fonte</button>
                     <button id="adminSourceReset" type="button">Nuova fonte</button>
@@ -422,6 +428,12 @@
                     <label for="adminSettingSelect">Gruppo</label>
                     <select id="adminSettingSelect" required></select>
                     <p class="admin-voci-mappa-aiuto" id="adminSettingIdentity"></p>
+                    <label for="adminSettingPublicationStatus">Stato editoriale</label>
+                    <select id="adminSettingPublicationStatus" required>
+                        <option value="draft">Bozza</option>
+                        <option value="published">Pubblicata</option>
+                        <option value="archived">Archiviata</option>
+                    </select>
                     <label for="adminSettingValue">Valore JSON</label>
                     <textarea id="adminSettingValue" rows="16" spellcheck="false" required></textarea>
                     <p class="admin-voci-mappa-aiuto">

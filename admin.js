@@ -117,6 +117,9 @@
     );
     const cmsSourceUrl = document.getElementById("adminSourceUrl");
     const cmsSourceNote = document.getElementById("adminSourceNote");
+    const cmsSourcePublicationStatus = document.getElementById(
+        "adminSourcePublicationStatus"
+    );
     const cmsSourceLinks = document.getElementById("adminSourceLinks");
     const cmsSourceSubmit = document.getElementById("adminSourceSubmit");
     const cmsSourceReset = document.getElementById("adminSourceReset");
@@ -126,6 +129,9 @@
     const cmsSettingSelect = document.getElementById("adminSettingSelect");
     const cmsSettingIdentity = document.getElementById("adminSettingIdentity");
     const cmsSettingValue = document.getElementById("adminSettingValue");
+    const cmsSettingPublicationStatus = document.getElementById(
+        "adminSettingPublicationStatus"
+    );
     const cmsSettingSubmit = document.getElementById("adminSettingSubmit");
     const cmsSettingReload = document.getElementById("adminSettingReload");
     const cmsSettingStatus = document.getElementById("adminSettingStatus");
@@ -1083,6 +1089,7 @@
         cmsSourcePublicationDate.value = source?.publicationDate || "";
         cmsSourceUrl.value = source?.url || "";
         cmsSourceNote.value = source?.note || "";
+        cmsSourcePublicationStatus.value = source?.status || "draft";
         cmsSourceLinks.textContent = source?.links.length
             ? "Usata da: " + source.links.map((link) =>
                 `${link.contentType}/${link.contentId}`
@@ -1104,7 +1111,8 @@
                 author: cmsSourceAuthor.value,
                 publicationDate: cmsSourcePublicationDate.value,
                 url: cmsSourceUrl.value,
-                note: cmsSourceNote.value
+                note: cmsSourceNote.value,
+                status: cmsSourcePublicationStatus.value
             };
             if (source) body.expectedUpdatedAt = source.updatedAt;
             const data = await request(source
@@ -1167,6 +1175,7 @@
         cmsSettingValue.value = setting
             ? JSON.stringify(setting.value, null, 2)
             : "{}";
+        cmsSettingPublicationStatus.value = setting?.status || "draft";
         cmsSettingSubmit.disabled = !setting;
     }
 
@@ -1187,6 +1196,7 @@
                     method: "PATCH",
                     body: JSON.stringify({
                         value,
+                        status: cmsSettingPublicationStatus.value,
                         expectedUpdatedAt: setting.updatedAt
                     })
                 }

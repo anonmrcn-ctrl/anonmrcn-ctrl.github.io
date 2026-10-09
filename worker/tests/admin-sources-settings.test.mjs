@@ -82,6 +82,7 @@ function sourceUpdate(source, overrides = {}) {
         publicationDate: source.publicationDate,
         url: source.url,
         note: source.note,
+        status: source.status,
         expectedUpdatedAt: source.updatedAt,
         ...overrides
     };
@@ -243,4 +244,54 @@ test("il pannello espone editor separati per fonti e impostazioni", async () => 
     assert.match(script, /\/api\/admin\/cms\/sources/u);
     assert.match(script, /\/api\/admin\/cms\/settings/u);
     assert.match(html, /configurazione tecnica\s+restano protetti/u);
+    assert.match(html, /id="adminSourcePublicationStatus"/u);
+    assert.match(html, /id="adminSettingPublicationStatus"/u);
+});
+
+test("bozze di fonti e impostazioni restano escluse dalle API pubbliche", async () => {
+    const env = environment();
+    const sources = await call(env, "/api/admin/cms/sources", { admin: true });
+    const source = sources.data.sources.find(
+        (item) => item.id === "source-zero-wikipedia"
+    );
+    const draftedSource = await call(
+        env,
+        `/api/admin/cms/sources/${source.id}`,
+        { admin: true, method: "PATCH", body: sourceUpdate(source, {
+            status: "draft"
+        }) }
+    );
+    assert.equal(draftedSource.response.status, 200);
+    assert.equal(draftedSource.data.source.status, "draft");
+    const publicSources = await call(
+        env,
+        "/api/public/sources?contentType=narrative_step&contentId=zero"
+    );
+    assert.equal(
+        publicSources.data.sources.some((item) => item.id === source.id),
+        false
+    );
+
+    const settings = await call(env, "/api/admin/cms/settings", { admin: true });
+    const identity = settings.data.settings.find(
+        (setting) => setting.key === "site.identity"
+    );
+    const draftedSetting = await call(
+        env,
+        "/api/admin/cms/settings/site.identity",
+        { admin: true, method: "PATCH", body: {
+            value: identity.value,
+            status: "draft",
+            expectedUpdatedAt: identity.updatedAt
+        } }
+    );
+    assert.equal(draftedSetting.response.status, 200);
+    assert.equal(draftedSetting.data.setting.status, "draft");
+    const publicSettings = await call(env, "/api/public/settings/site");
+    assert.equal(publicSettings.data.settings["site.identity"], undefined);
+    assert.equal(env.DB.database.prepare(`
+        SELECT publication_state FROM content_revisions
+        WHERE entity_type = 'site_setting' AND entity_id = 'site.identity'
+        ORDER BY revision_number DESC LIMIT 1
+    `).get().publication_state, "draft");
 });
