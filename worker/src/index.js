@@ -106,6 +106,8 @@ const MAX_CMS_MAP_GEOMETRY_LENGTH = 1000000;
 const MAX_CMS_MAP_PROPERTIES_LENGTH = 100000;
 const MAX_CMS_SOURCE_REQUEST_BYTES = 16000;
 const MAX_CMS_SETTING_REQUEST_BYTES = 64000;
+const MAX_CMS_LEGAL_REQUEST_BYTES = 512000;
+const MAX_CMS_PERMALINK_REQUEST_BYTES = 16000;
 
 class RequestBodyTooLargeError extends Error {}
 
@@ -754,6 +756,50 @@ export default {
             ) {
                 const settingKey = path.split("/").pop();
                 return await adminUpdateCmsSetting(request, env, settingKey);
+            }
+
+            if (request.method === "GET" && path === "/api/admin/cms/legal") {
+                return await adminGetCmsLegal(request, env);
+            }
+
+            if (
+                request.method === "POST" &&
+                /^\/api\/admin\/cms\/legal\/[a-z0-9]+(?:-[a-z0-9]+)*\/versions$/.test(path)
+            ) {
+                const documentId = path.split("/")[5];
+                return await adminCreateCmsLegalVersion(request, env, documentId);
+            }
+
+            if (
+                request.method === "PATCH" &&
+                /^\/api\/admin\/cms\/legal\/versions\/[a-z0-9]+(?:-[a-z0-9]+)*$/.test(path)
+            ) {
+                const versionId = path.split("/").pop();
+                return await adminUpdateCmsLegalVersion(request, env, versionId);
+            }
+
+            if (
+                request.method === "POST" &&
+                /^\/api\/admin\/cms\/legal\/versions\/[a-z0-9]+(?:-[a-z0-9]+)*\/publish$/.test(path)
+            ) {
+                const versionId = path.split("/")[6];
+                return await adminPublishCmsLegalVersion(request, env, versionId);
+            }
+
+            if (request.method === "GET" && path === "/api/admin/cms/permalinks") {
+                return await adminGetCmsPermalinks(request, env);
+            }
+
+            if (request.method === "POST" && path === "/api/admin/cms/permalinks") {
+                return await adminCreateCmsPermalink(request, env);
+            }
+
+            if (
+                request.method === "PATCH" &&
+                /^\/api\/admin\/cms\/permalinks\/[a-z0-9]+(?:-[a-z0-9]+)*$/.test(path)
+            ) {
+                const permalinkId = path.split("/").pop();
+                return await adminUpdateCmsPermalink(request, env, permalinkId);
             }
 
             if (
@@ -4740,6 +4786,429 @@ async function getPublicSiteSettings(request, env) {
     }
 
     return json(request, env, { settings, updatedAt });
+}
+
+async function adminGetCmsLegal(request, env) {
+    if (!(await adminAuthorized(request, env))) {
+        return unauthorized(request, env);
+    }
+    await ensureCmsStorage(env);
+    return json(request, env, { documents: await readCmsLegalDocuments(env) });
+}
+
+async function readCmsLegalDocuments(env) {
+    const [documentResult, versionResult] = await Promise.all([
+        env.DB.prepare(`
+            SELECT id, slug, title, current_version, created_at, updated_at
+            FROM legal_documents ORDER BY title COLLATE NOCASE, id
+        `).all(),
+        env.DB.prepare(`
+            SELECT id, document_id, version_number, effective_date, body_html,
+                checksum, status, created_at, published_at
+            FROM legal_document_versions
+            ORDER BY document_id, version_number DESC
+        `).all()
+    ]);
+    const versionsByDocument = new Map();
+    for (const row of versionResult.results || []) {
+        const versions = versionsByDocument.get(row.document_id) || [];
+        versions.push(cmsLegalVersionRecord(row));
+        versionsByDocument.set(row.document_id, versions);
+    }
+    return (documentResult.results || []).map((row) => ({
+        id: row.id,
+        slug: row.slug,
+        title: row.title,
+        currentVersion: Number(row.current_version),
+        createdAt: Number(row.created_at),
+        updatedAt: Number(row.updated_at),
+        versions: versionsByDocument.get(row.id) || []
+    }));
+}
+
+function cmsLegalVersionRecord(row) {
+    return {
+        id: row.id,
+        documentId: row.document_id,
+        number: Number(row.version_number),
+        effectiveDate: row.effective_date,
+        bodyHtml: row.body_html,
+        checksum: row.checksum,
+        status: row.status,
+        createdAt: Number(row.created_at),
+        publishedAt: row.published_at === null ? null : Number(row.published_at)
+    };
+}
+
+async function adminCreateCmsLegalVersion(request, env, documentId) {
+    if (!(await adminAuthorized(request, env))) {
+        return unauthorized(request, env);
+    }
+    await ensureCmsStorage(env);
+    const documents = await readCmsLegalDocuments(env);
+    const document = documents.find((item) => item.id === documentId);
+    if (!document) {
+        return json(request, env, { error: "Documento legale non trovato." }, 404);
+    }
+    if (document.versions.some((version) => version.status === "draft")) {
+        return json(request, env, {
+            error: "Esiste già una bozza: completala prima di crearne un’altra."
+        }, 409);
+    }
+    const source = document.versions.find(
+        (version) => version.number === document.currentVersion
+    ) || document.versions[0];
+    const input = normalizeCmsLegalVersionInput(
+        await readJson(request, MAX_CMS_LEGAL_REQUEST_BYTES),
+        source
+    );
+    if (input.error) {
+        return json(request, env, { error: input.error }, 400);
+    }
+    const number = Math.max(0, ...document.versions.map((version) => version.number)) + 1;
+    const id = `${document.id}-v${number}`;
+    const now = Date.now();
+    const checksum = await sha256Hex(input.bodyHtml);
+    const snapshot = cmsLegalSnapshot(
+        id, document.id, number, input.effectiveDate, input.bodyHtml, checksum, "draft"
+    );
+    await env.DB.batch([
+        env.DB.prepare(`
+            INSERT INTO legal_document_versions (
+                id, document_id, version_number, effective_date, body_html,
+                checksum, status, created_at, published_at
+            ) VALUES (?, ?, ?, ?, ?, ?, 'draft', ?, NULL)
+        `).bind(
+            id, document.id, number, input.effectiveDate,
+            input.bodyHtml, checksum, now
+        ),
+        revisionInsert(env, "legal_document_version", id, snapshot, "draft", now)
+    ]);
+    const updated = await readCmsLegalDocuments(env);
+    return json(request, env, {
+        document: updated.find((item) => item.id === document.id),
+        version: snapshot,
+        created: true
+    }, 201);
+}
+
+async function adminUpdateCmsLegalVersion(request, env, versionId) {
+    if (!(await adminAuthorized(request, env))) {
+        return unauthorized(request, env);
+    }
+    await ensureCmsStorage(env);
+    const row = await env.DB.prepare(`
+        SELECT id, document_id, version_number, effective_date, body_html,
+            checksum, status, created_at, published_at
+        FROM legal_document_versions WHERE id = ? LIMIT 1
+    `).bind(versionId).first();
+    if (!row) {
+        return json(request, env, { error: "Versione legale non trovata." }, 404);
+    }
+    const current = cmsLegalVersionRecord(row);
+    if (current.status !== "draft") {
+        return json(request, env, {
+            error: "Le versioni pubblicate sono immutabili. Crea una nuova bozza."
+        }, 409);
+    }
+    const input = normalizeCmsLegalVersionInput(
+        await readJson(request, MAX_CMS_LEGAL_REQUEST_BYTES),
+        current,
+        true
+    );
+    if (input.error) {
+        return json(request, env, { error: input.error }, 400);
+    }
+    if (input.expectedChecksum !== current.checksum ||
+        input.expectedEffectiveDate !== current.effectiveDate) {
+        return json(request, env, {
+            error: "La bozza è stata modificata altrove. Ricaricala prima di salvare."
+        }, 409);
+    }
+    const checksum = await sha256Hex(input.bodyHtml);
+    if (input.effectiveDate === current.effectiveDate && checksum === current.checksum) {
+        return json(request, env, { version: current, unchanged: true });
+    }
+    const now = Date.now();
+    const snapshot = cmsLegalSnapshot(
+        current.id, current.documentId, current.number,
+        input.effectiveDate, input.bodyHtml, checksum, "draft"
+    );
+    await env.DB.batch([
+        env.DB.prepare(`
+            UPDATE legal_document_versions
+            SET effective_date = ?, body_html = ?, checksum = ?
+            WHERE id = ? AND status = 'draft'
+        `).bind(input.effectiveDate, input.bodyHtml, checksum, current.id),
+        revisionInsert(
+            env, "legal_document_version", current.id, snapshot, "draft", now
+        )
+    ]);
+    return json(request, env, { version: snapshot, unchanged: false });
+}
+
+async function adminPublishCmsLegalVersion(request, env, versionId) {
+    if (!(await adminAuthorized(request, env))) {
+        return unauthorized(request, env);
+    }
+    await ensureCmsStorage(env);
+    const body = await readJson(request, MAX_CMS_LEGAL_REQUEST_BYTES);
+    const expectedChecksum = String(body?.expectedChecksum || "");
+    const expectedEffectiveDate = String(body?.expectedEffectiveDate || "");
+    const row = await env.DB.prepare(`
+        SELECT id, document_id, version_number, effective_date, body_html,
+            checksum, status, created_at, published_at
+        FROM legal_document_versions WHERE id = ? LIMIT 1
+    `).bind(versionId).first();
+    if (!row) {
+        return json(request, env, { error: "Versione legale non trovata." }, 404);
+    }
+    const current = cmsLegalVersionRecord(row);
+    if (current.status !== "draft") {
+        return json(request, env, {
+            error: "La versione risulta già pubblicata e non può essere riscritta."
+        }, 409);
+    }
+    if (expectedChecksum !== current.checksum ||
+        expectedEffectiveDate !== current.effectiveDate) {
+        return json(request, env, {
+            error: "La bozza è cambiata. Ricaricala prima di pubblicare."
+        }, 409);
+    }
+    const now = Date.now();
+    const snapshot = cmsLegalSnapshot(
+        current.id, current.documentId, current.number,
+        current.effectiveDate, current.bodyHtml, current.checksum, "published"
+    );
+    await env.DB.batch([
+        env.DB.prepare(`
+            UPDATE legal_document_versions
+            SET status = 'published', published_at = ?
+            WHERE id = ? AND status = 'draft'
+        `).bind(now, current.id),
+        env.DB.prepare(`
+            UPDATE legal_documents
+            SET current_version = ?, updated_at = ?
+            WHERE id = ?
+        `).bind(current.number, now, current.documentId),
+        revisionInsert(
+            env, "legal_document_version", current.id,
+            snapshot, "published", now
+        )
+    ]);
+    const documents = await readCmsLegalDocuments(env);
+    return json(request, env, {
+        document: documents.find((item) => item.id === current.documentId),
+        version: { ...snapshot, publishedAt: now },
+        published: true
+    });
+}
+
+function normalizeCmsLegalVersionInput(value, fallback, requireChecksum = false) {
+    const effectiveDate = String(
+        value?.effectiveDate ?? fallback?.effectiveDate ?? ""
+    ).trim();
+    const bodyHtml = String(value?.bodyHtml ?? fallback?.bodyHtml ?? "").trim();
+    const expectedChecksum = String(value?.expectedChecksum || "");
+    const expectedEffectiveDate = String(value?.expectedEffectiveDate || "");
+    if (!/^\d{4}-\d{2}-\d{2}$/u.test(effectiveDate) ||
+        Number.isNaN(Date.parse(`${effectiveDate}T00:00:00Z`))) {
+        return { error: "La data di entrata in vigore non è valida." };
+    }
+    if (!bodyHtml || bodyHtml.length > 500000 ||
+        /<(?:script|iframe|object|embed|form)\b/iu.test(bodyHtml) ||
+        /\son\w+\s*=/iu.test(bodyHtml) ||
+        /(?:javascript|data):/iu.test(bodyHtml)) {
+        return { error: "Il contenuto HTML del documento non è valido." };
+    }
+    if (requireChecksum && (!/^[0-9a-f]{64}$/u.test(expectedChecksum) ||
+        !/^\d{4}-\d{2}-\d{2}$/u.test(expectedEffectiveDate))) {
+        return { error: "La versione della bozza non è valida." };
+    }
+    return { effectiveDate, bodyHtml, expectedChecksum, expectedEffectiveDate };
+}
+
+function cmsLegalSnapshot(
+    id, documentId, number, effectiveDate, bodyHtml, checksum, status
+) {
+    return { id, documentId, number, effectiveDate, bodyHtml, checksum, status };
+}
+
+async function adminGetCmsPermalinks(request, env) {
+    if (!(await adminAuthorized(request, env))) {
+        return unauthorized(request, env);
+    }
+    await ensureCmsStorage(env);
+    return json(request, env, { permalinks: await readCmsPermalinks(env) });
+}
+
+async function readCmsPermalinks(env) {
+    const result = await env.DB.prepare(`
+        SELECT id, path, target_type, target_id, state, redirect_path,
+            created_at, updated_at
+        FROM permalinks ORDER BY path, id
+    `).all();
+    return (result.results || []).map(cmsPermalinkRecord);
+}
+
+function cmsPermalinkRecord(row) {
+    return {
+        id: row.id,
+        path: row.path,
+        targetType: row.target_type,
+        targetId: row.target_id,
+        state: row.state,
+        redirectPath: row.redirect_path,
+        createdAt: Number(row.created_at),
+        updatedAt: Number(row.updated_at)
+    };
+}
+
+async function adminCreateCmsPermalink(request, env) {
+    if (!(await adminAuthorized(request, env))) {
+        return unauthorized(request, env);
+    }
+    await ensureCmsStorage(env);
+    const input = normalizeCmsPermalinkInput(
+        await readJson(request, MAX_CMS_PERMALINK_REQUEST_BYTES), false
+    );
+    if (input.error) {
+        return json(request, env, { error: input.error }, 400);
+    }
+    const conflict = await cmsPermalinkConflict(env, input);
+    if (conflict) {
+        return json(request, env, { error: conflict }, 409);
+    }
+    const id = `permalink-${crypto.randomUUID()}`;
+    const now = Date.now();
+    await env.DB.prepare(`
+        INSERT INTO permalinks (
+            id, path, target_type, target_id, state, redirect_path,
+            created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `).bind(
+        id, input.path, input.targetType, input.targetId,
+        input.state, input.redirectPath, now, now
+    ).run();
+    return json(request, env, {
+        permalink: {
+            id, ...input, createdAt: now, updatedAt: now
+        },
+        created: true
+    }, 201);
+}
+
+async function adminUpdateCmsPermalink(request, env, permalinkId) {
+    if (!(await adminAuthorized(request, env))) {
+        return unauthorized(request, env);
+    }
+    await ensureCmsStorage(env);
+    const row = await env.DB.prepare(`
+        SELECT id, path, target_type, target_id, state, redirect_path,
+            created_at, updated_at
+        FROM permalinks WHERE id = ? LIMIT 1
+    `).bind(permalinkId).first();
+    if (!row) {
+        return json(request, env, { error: "Permalink non trovato." }, 404);
+    }
+    const current = cmsPermalinkRecord(row);
+    const input = normalizeCmsPermalinkInput(
+        { ...await readJson(request, MAX_CMS_PERMALINK_REQUEST_BYTES),
+            path: current.path,
+            targetType: current.targetType,
+            targetId: current.targetId },
+        true
+    );
+    if (input.error) {
+        return json(request, env, { error: input.error }, 400);
+    }
+    if (input.expectedUpdatedAt !== current.updatedAt) {
+        return json(request, env, {
+            error: "Il permalink è stato modificato altrove. Ricaricalo prima di salvare."
+        }, 409);
+    }
+    const conflict = await cmsPermalinkConflict(env, input, current.id);
+    if (conflict) {
+        return json(request, env, { error: conflict }, 409);
+    }
+    if (input.state === current.state && input.redirectPath === current.redirectPath) {
+        return json(request, env, { permalink: current, unchanged: true });
+    }
+    const now = Math.max(Date.now(), current.updatedAt + 1);
+    await env.DB.prepare(`
+        UPDATE permalinks SET state = ?, redirect_path = ?, updated_at = ?
+        WHERE id = ?
+    `).bind(input.state, input.redirectPath, now, current.id).run();
+    return json(request, env, {
+        permalink: {
+            ...current,
+            state: input.state,
+            redirectPath: input.redirectPath,
+            updatedAt: now
+        },
+        unchanged: false
+    });
+}
+
+function normalizeCmsPermalinkInput(value, requireVersion) {
+    const path = String(value?.path || "").trim();
+    const targetType = String(value?.targetType || "").trim();
+    const targetId = String(value?.targetId || "").trim();
+    const state = String(value?.state || "active");
+    const redirectPath = state === "redirect"
+        ? String(value?.redirectPath || "").trim()
+        : null;
+    const expectedUpdatedAt = Number(value?.expectedUpdatedAt);
+    if (!validCmsPermalinkPath(path) || containsSecretQuery(path)) {
+        return { error: "Il percorso permanente non è valido o contiene dati riservati." };
+    }
+    if (!targetType || targetType.length > 80 ||
+        !targetId || targetId.length > 160) {
+        return { error: "La destinazione del permalink non è valida." };
+    }
+    if (!['active', 'redirect', 'gone'].includes(state)) {
+        return { error: "Lo stato del permalink non è valido." };
+    }
+    if (state === "redirect" &&
+        (!validCmsPermalinkPath(redirectPath) || containsSecretQuery(redirectPath) ||
+            redirectPath === path)) {
+        return { error: "La destinazione del reindirizzamento non è valida." };
+    }
+    if (requireVersion &&
+        (!Number.isSafeInteger(expectedUpdatedAt) || expectedUpdatedAt < 0)) {
+        return { error: "La versione del permalink non è valida." };
+    }
+    return {
+        path, targetType, targetId, state, redirectPath, expectedUpdatedAt
+    };
+}
+
+function validCmsPermalinkPath(value) {
+    return typeof value === "string" && value.startsWith("/") &&
+        !value.startsWith("//") && value.length <= 2048 &&
+        !/[\u0000-\u001f\u007f]/u.test(value);
+}
+
+function containsSecretQuery(value) {
+    return /[?&](?:chiave|token|password|secret|code)=/iu.test(value);
+}
+
+async function cmsPermalinkConflict(env, input, excludedId = "") {
+    const duplicate = await env.DB.prepare(`
+        SELECT id FROM permalinks WHERE path = ? AND id <> ? LIMIT 1
+    `).bind(input.path, excludedId).first();
+    if (duplicate) return "Il percorso è già registrato.";
+    if (input.state === "redirect") {
+        const destination = await env.DB.prepare(`
+            SELECT id FROM permalinks
+            WHERE path = ? AND id <> ? AND state <> 'gone'
+            LIMIT 1
+        `).bind(input.redirectPath, excludedId).first();
+        if (!destination) {
+            return "Il reindirizzamento deve puntare a un permalink registrato.";
+        }
+    }
+    return "";
 }
 
 async function getPublicPermalink(request, env, url) {

@@ -163,6 +163,12 @@ editor espone esclusivamente identità, titoli, descrizioni e manifesti `site.*`
 ogni modifica usa controllo di concorrenza e revisioni append-only, mentre URL
 del Worker, credenziali, analytics e configurazione tecnica restano esclusi.
 
+I documenti legali usano un flusso separato: si crea una nuova bozza, la si
+modifica con controllo su checksum e data e la si pubblica esplicitamente. Una
+versione pubblicata resta immutabile. Il registro dei permalink consente di
+aggiungere indirizzi e modificare soltanto stato o destinazione del redirect;
+il percorso originario non può essere riscritto e non esiste cancellazione.
+
 L'inventario si controlla con:
 
 ```bash

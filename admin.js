@@ -129,6 +129,43 @@
     const cmsSettingSubmit = document.getElementById("adminSettingSubmit");
     const cmsSettingReload = document.getElementById("adminSettingReload");
     const cmsSettingStatus = document.getElementById("adminSettingStatus");
+    const cmsLegalForm = document.getElementById("adminLegalForm");
+    const cmsLegalDocumentSelect = document.getElementById(
+        "adminLegalDocumentSelect"
+    );
+    const cmsLegalVersionSelect = document.getElementById(
+        "adminLegalVersionSelect"
+    );
+    const cmsLegalIdentity = document.getElementById("adminLegalIdentity");
+    const cmsLegalEffectiveDate = document.getElementById(
+        "adminLegalEffectiveDate"
+    );
+    const cmsLegalBody = document.getElementById("adminLegalBody");
+    const cmsLegalSave = document.getElementById("adminLegalSave");
+    const cmsLegalNew = document.getElementById("adminLegalNew");
+    const cmsLegalPublish = document.getElementById("adminLegalPublish");
+    const cmsLegalReload = document.getElementById("adminLegalReload");
+    const cmsLegalStatus = document.getElementById("adminLegalStatus");
+    const cmsPermalinkForm = document.getElementById("adminPermalinkForm");
+    const cmsPermalinkSelect = document.getElementById("adminPermalinkSelect");
+    const cmsPermalinkIdentity = document.getElementById(
+        "adminPermalinkIdentity"
+    );
+    const cmsPermalinkPath = document.getElementById("adminPermalinkPath");
+    const cmsPermalinkTargetType = document.getElementById(
+        "adminPermalinkTargetType"
+    );
+    const cmsPermalinkTargetId = document.getElementById(
+        "adminPermalinkTargetId"
+    );
+    const cmsPermalinkState = document.getElementById("adminPermalinkState");
+    const cmsPermalinkRedirect = document.getElementById(
+        "adminPermalinkRedirect"
+    );
+    const cmsPermalinkSubmit = document.getElementById("adminPermalinkSubmit");
+    const cmsPermalinkNew = document.getElementById("adminPermalinkNew");
+    const cmsPermalinkReload = document.getElementById("adminPermalinkReload");
+    const cmsPermalinkStatus = document.getElementById("adminPermalinkStatus");
     const mapEntryForm = document.getElementById("adminMapEntryForm");
     const mapEntryName = document.getElementById("adminMapEntryName");
     const mapEntryCategory = document.getElementById("adminMapEntryCategory");
@@ -195,6 +232,8 @@
     let loadedCmsMapLayers = [];
     let loadedCmsSources = [];
     let loadedCmsSettings = [];
+    let loadedCmsLegalDocuments = [];
+    let loadedCmsPermalinks = [];
 
     const pushNotifications = window.NNMRCN_NOTIFICHE.create({
         button: pushButton,
@@ -243,6 +282,8 @@
                 loadCmsMapLayers(),
                 loadCmsSources(),
                 loadCmsSettings(),
+                loadCmsLegal(),
+                loadCmsPermalinks(),
                 loadSummary(),
                 pushNotifications.sync()
             ]);
@@ -1160,6 +1201,265 @@
         } finally {
             cmsSettingSubmit.disabled = false;
             cmsSettingReload.disabled = false;
+        }
+    }
+
+    function selectedCmsLegalDocument() {
+        return loadedCmsLegalDocuments.find(
+            (document) => document.id === cmsLegalDocumentSelect.value
+        );
+    }
+
+    function selectedCmsLegalVersion() {
+        return selectedCmsLegalDocument()?.versions.find(
+            (version) => version.id === cmsLegalVersionSelect.value
+        );
+    }
+
+    async function loadCmsLegal(preferredDocumentId = "", preferredVersionId = "") {
+        const documentId = preferredDocumentId || cmsLegalDocumentSelect.value;
+        const versionId = preferredVersionId || cmsLegalVersionSelect.value;
+        cmsLegalStatus.textContent = "Caricamento documenti legali…";
+        try {
+            const data = await request("/api/admin/cms/legal");
+            loadedCmsLegalDocuments = data.documents || [];
+            cmsLegalDocumentSelect.replaceChildren();
+            for (const document of loadedCmsLegalDocuments) {
+                const option = window.document.createElement("option");
+                option.value = document.id;
+                option.textContent = document.title;
+                cmsLegalDocumentSelect.appendChild(option);
+            }
+            if (loadedCmsLegalDocuments.some(
+                (document) => document.id === documentId
+            )) cmsLegalDocumentSelect.value = documentId;
+            renderCmsLegalVersions(versionId);
+            cmsLegalStatus.textContent = "";
+        } catch (error) {
+            cmsLegalStatus.textContent = error.message ||
+                "Non è stato possibile caricare i documenti legali.";
+        }
+    }
+
+    function renderCmsLegalVersions(preferredVersionId = "") {
+        const document = selectedCmsLegalDocument();
+        cmsLegalVersionSelect.replaceChildren();
+        if (!document) {
+            renderCmsLegalForm();
+            return;
+        }
+        for (const version of document.versions) {
+            const option = window.document.createElement("option");
+            option.value = version.id;
+            option.textContent = `Versione ${version.number} — ${version.status}`;
+            cmsLegalVersionSelect.appendChild(option);
+        }
+        const defaultVersion = document.versions.find(
+            (version) => version.status === "draft"
+        ) || document.versions.find(
+            (version) => version.number === document.currentVersion
+        );
+        cmsLegalVersionSelect.value = document.versions.some(
+            (version) => version.id === preferredVersionId
+        ) ? preferredVersionId : defaultVersion?.id || "";
+        renderCmsLegalForm();
+    }
+
+    function renderCmsLegalForm() {
+        const document = selectedCmsLegalDocument();
+        const version = selectedCmsLegalVersion();
+        const editable = version?.status === "draft";
+        cmsLegalIdentity.textContent = version
+            ? `${version.id} · SHA-256 ${version.checksum}`
+            : "Nessuna versione disponibile.";
+        cmsLegalEffectiveDate.value = version?.effectiveDate || "";
+        cmsLegalBody.value = version?.bodyHtml || "";
+        cmsLegalEffectiveDate.readOnly = !editable;
+        cmsLegalBody.readOnly = !editable;
+        cmsLegalSave.disabled = !editable;
+        cmsLegalPublish.disabled = !editable;
+        cmsLegalNew.disabled = !document || document.versions.some(
+            (item) => item.status === "draft"
+        );
+    }
+
+    async function createCmsLegalVersion() {
+        const document = selectedCmsLegalDocument();
+        const source = selectedCmsLegalVersion();
+        if (!document || !source) return;
+        cmsLegalNew.disabled = true;
+        try {
+            const data = await request(
+                `/api/admin/cms/legal/${encodeURIComponent(document.id)}/versions`,
+                {
+                    method: "POST",
+                    body: JSON.stringify({
+                        effectiveDate: source.effectiveDate,
+                        bodyHtml: source.bodyHtml
+                    })
+                }
+            );
+            await loadCmsLegal(document.id, data.version.id);
+            cmsLegalStatus.textContent =
+                "Nuova bozza creata; modifica data e contenuto prima di pubblicare.";
+        } catch (error) {
+            cmsLegalStatus.textContent = error.message ||
+                "Non è stato possibile creare la nuova versione.";
+        } finally {
+            renderCmsLegalForm();
+        }
+    }
+
+    async function saveCmsLegalVersion(event) {
+        event.preventDefault();
+        const document = selectedCmsLegalDocument();
+        const version = selectedCmsLegalVersion();
+        if (!document || version?.status !== "draft") return;
+        cmsLegalSave.disabled = true;
+        try {
+            const data = await request(
+                `/api/admin/cms/legal/versions/${encodeURIComponent(version.id)}`,
+                {
+                    method: "PATCH",
+                    body: JSON.stringify({
+                        effectiveDate: cmsLegalEffectiveDate.value,
+                        bodyHtml: cmsLegalBody.value,
+                        expectedChecksum: version.checksum,
+                        expectedEffectiveDate: version.effectiveDate
+                    })
+                }
+            );
+            await loadCmsLegal(document.id, version.id);
+            cmsLegalStatus.textContent = data.unchanged
+                ? "Nessuna modifica da salvare."
+                : "Bozza salvata e revisione registrata.";
+        } catch (error) {
+            cmsLegalStatus.textContent = error.message ||
+                "Non è stato possibile salvare la bozza.";
+        } finally {
+            renderCmsLegalForm();
+        }
+    }
+
+    async function publishCmsLegalVersion() {
+        const document = selectedCmsLegalDocument();
+        const version = selectedCmsLegalVersion();
+        if (!document || version?.status !== "draft") return;
+        if (!window.confirm(
+            "Pubblicare questa versione? Dopo la pubblicazione non potrà più essere modificata."
+        )) return;
+        cmsLegalPublish.disabled = true;
+        cmsLegalSave.disabled = true;
+        try {
+            const data = await request(
+                `/api/admin/cms/legal/versions/${encodeURIComponent(version.id)}/publish`,
+                {
+                    method: "POST",
+                    body: JSON.stringify({
+                        expectedChecksum: version.checksum,
+                        expectedEffectiveDate: version.effectiveDate
+                    })
+                }
+            );
+            await loadCmsLegal(document.id, data.version.id);
+            cmsLegalStatus.textContent =
+                "Versione pubblicata e resa immutabile.";
+        } catch (error) {
+            cmsLegalStatus.textContent = error.message ||
+                "Non è stato possibile pubblicare la versione.";
+        } finally {
+            renderCmsLegalForm();
+        }
+    }
+
+    function selectedCmsPermalink() {
+        return loadedCmsPermalinks.find(
+            (permalink) => permalink.id === cmsPermalinkSelect.value
+        );
+    }
+
+    async function loadCmsPermalinks(preferredId = "") {
+        const selectedId = preferredId || cmsPermalinkSelect.value;
+        cmsPermalinkStatus.textContent = "Caricamento permalink…";
+        try {
+            const data = await request("/api/admin/cms/permalinks");
+            loadedCmsPermalinks = data.permalinks || [];
+            const newOption = document.createElement("option");
+            newOption.value = "";
+            newOption.textContent = "Nuovo permalink";
+            cmsPermalinkSelect.replaceChildren(newOption);
+            for (const permalink of loadedCmsPermalinks) {
+                const option = document.createElement("option");
+                option.value = permalink.id;
+                option.textContent = `${permalink.path} — ${permalink.state}`;
+                cmsPermalinkSelect.appendChild(option);
+            }
+            cmsPermalinkSelect.value = loadedCmsPermalinks.some(
+                (permalink) => permalink.id === selectedId
+            ) ? selectedId : "";
+            renderCmsPermalinkForm();
+            cmsPermalinkStatus.textContent = "";
+        } catch (error) {
+            cmsPermalinkStatus.textContent = error.message ||
+                "Non è stato possibile caricare il registro permalink.";
+        }
+    }
+
+    function renderCmsPermalinkForm() {
+        const permalink = selectedCmsPermalink();
+        cmsPermalinkIdentity.textContent = permalink
+            ? `${permalink.id} · creato ${new Date(permalink.createdAt).toLocaleDateString("it-IT")}`
+            : "Il percorso diventerà immutabile appena viene registrato.";
+        cmsPermalinkPath.value = permalink?.path || "";
+        cmsPermalinkTargetType.value = permalink?.targetType || "";
+        cmsPermalinkTargetId.value = permalink?.targetId || "";
+        cmsPermalinkState.value = permalink?.state || "active";
+        cmsPermalinkRedirect.value = permalink?.redirectPath || "";
+        cmsPermalinkPath.readOnly = Boolean(permalink);
+        cmsPermalinkTargetType.readOnly = Boolean(permalink);
+        cmsPermalinkTargetId.readOnly = Boolean(permalink);
+        cmsPermalinkRedirect.disabled = cmsPermalinkState.value !== "redirect";
+        cmsPermalinkSubmit.textContent = permalink
+            ? "Salva stato permalink"
+            : "Crea permalink";
+    }
+
+    async function saveCmsPermalink(event) {
+        event.preventDefault();
+        const permalink = selectedCmsPermalink();
+        cmsPermalinkSubmit.disabled = true;
+        cmsPermalinkNew.disabled = true;
+        cmsPermalinkReload.disabled = true;
+        try {
+            const body = {
+                path: cmsPermalinkPath.value,
+                targetType: cmsPermalinkTargetType.value,
+                targetId: cmsPermalinkTargetId.value,
+                state: cmsPermalinkState.value,
+                redirectPath: cmsPermalinkState.value === "redirect"
+                    ? cmsPermalinkRedirect.value
+                    : null
+            };
+            if (permalink) body.expectedUpdatedAt = permalink.updatedAt;
+            const data = await request(permalink
+                ? `/api/admin/cms/permalinks/${encodeURIComponent(permalink.id)}`
+                : "/api/admin/cms/permalinks", {
+                method: permalink ? "PATCH" : "POST",
+                body: JSON.stringify(body)
+            });
+            await loadCmsPermalinks(data.permalink.id);
+            cmsPermalinkStatus.textContent = data.unchanged
+                ? "Nessuna modifica da salvare."
+                : permalink
+                    ? "Stato aggiornato; il percorso è rimasto invariato."
+                    : "Permalink registrato con percorso immutabile.";
+        } catch (error) {
+            cmsPermalinkStatus.textContent = error.message ||
+                "Non è stato possibile salvare il permalink.";
+        } finally {
+            cmsPermalinkSubmit.disabled = false;
+            cmsPermalinkNew.disabled = false;
+            cmsPermalinkReload.disabled = false;
         }
     }
 
@@ -2617,6 +2917,33 @@
     cmsSettingSelect.addEventListener("change", renderCmsSettingForm);
     cmsSettingReload.addEventListener("click", () => {
         loadCmsSettings(cmsSettingSelect.value);
+    });
+    cmsLegalForm.addEventListener("submit", saveCmsLegalVersion);
+    cmsLegalDocumentSelect.addEventListener("change", () => {
+        renderCmsLegalVersions();
+    });
+    cmsLegalVersionSelect.addEventListener("change", renderCmsLegalForm);
+    cmsLegalNew.addEventListener("click", createCmsLegalVersion);
+    cmsLegalPublish.addEventListener("click", publishCmsLegalVersion);
+    cmsLegalReload.addEventListener("click", () => {
+        loadCmsLegal(
+            cmsLegalDocumentSelect.value,
+            cmsLegalVersionSelect.value
+        );
+    });
+    cmsPermalinkForm.addEventListener("submit", saveCmsPermalink);
+    cmsPermalinkSelect.addEventListener("change", renderCmsPermalinkForm);
+    cmsPermalinkState.addEventListener("change", () => {
+        cmsPermalinkRedirect.disabled = cmsPermalinkState.value !== "redirect";
+    });
+    cmsPermalinkNew.addEventListener("click", () => {
+        cmsPermalinkSelect.value = "";
+        renderCmsPermalinkForm();
+        cmsPermalinkStatus.textContent = "Nuovo permalink pronto.";
+        cmsPermalinkPath.focus();
+    });
+    cmsPermalinkReload.addEventListener("click", () => {
+        loadCmsPermalinks(cmsPermalinkSelect.value);
     });
     narrativeCancel.addEventListener("click", () => {
         resetNarrativeForm();

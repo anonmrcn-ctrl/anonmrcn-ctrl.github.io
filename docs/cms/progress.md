@@ -10,7 +10,7 @@ schema, compatibilità, test e documentazione sono presenti nel repository.
 |---:|---|---|---|
 | 1 | Confine contenuti/software | Completo | `01-confine-contenuti-software.md`, `content-inventory.json`, `scripts/check-content-boundary.mjs` |
 | 2 | Centralizzazione in D1 | Completo | Tutte le unità 2.1–2.12 sono importate, esposte e coperte da test; il primo punto incompleto è il 3 |
-| 3 | Ampliamento del pannello | In corso | Pagine, poesia, menu, benvenuto, cartografia, fonti e impostazioni editoriali sono gestibili; il primo sottopunto incompleto è 3.6 |
+| 3 | Ampliamento del pannello | Completo | Tutte le unità 3.1–3.6 sono amministrabili con protezione degli identificativi, controllo di concorrenza e revisioni; il primo punto incompleto è il 4 |
 | 4 | Bozze, anteprima e cronologia | Da iniziare | La tabella append-only `content_revisions` è predisposta, ma flussi e interfaccia non sono ancora realizzati |
 | 5 | Permanenza di QR e collegamenti | Da iniziare | La tabella `permalinks` è predisposta; migrazione e risoluzione degli URL storici non sono ancora realizzate |
 | 6 | Media e documenti in R2 | Da iniziare | Nessun dato è stato ancora trasferito |
@@ -62,4 +62,12 @@ punto 2 non è completa. Non vanno eliminati durante una migrazione parziale.
 | 3.3 | Menu e benvenuto | Completo | `GET/PATCH /api/admin/cms/navigation` e `/api/admin/cms/onboarding` alimentano due moduli protetti. I test di navigazione e onboarding provano etichette, URL, visibilità, stato, introduzione, cinque schermate, controllo di concorrenza e revisioni, preservando ID, ordine, indicatori e ripieghi |
 | 3.4 | Livelli e geometrie | Completo | `GET/PATCH /api/admin/cms/map-layers`, `POST/PATCH /api/admin/cms/map-features` e due editor protetti gestiscono metadati, stile, stato e GeoJSON con concorrenza e revisioni append-only. `admin-map-layers.test.mjs` prova autorizzazione, validazione, nuovi ID stabili, filtro pubblico e assenza di cancellazione; i sette record storici restano `archived`, con geometria nulla, anche quando si modifica un livello o si pubblica una nuova feature |
 | 3.5 | Fonti e impostazioni | Completo | `GET/POST/PATCH /api/admin/cms/sources`, `GET/PATCH /api/admin/cms/settings` e due editor protetti gestiscono schede bibliografiche e soli gruppi `site.*`. `admin-sources-settings.test.mjs` prova autorizzazione, nuovi ID stabili, associazioni immutate, HTTPS, concorrenza, revisioni append-only, struttura dei metadati e propagazione pubblica; URL del Worker e configurazione tecnica non sono esposti |
-| 3.6 | Documenti legali e permalink | Da iniziare | Preparare nuove versioni legali e controllare gli URL permanenti senza riscrivere record protetti |
+| 3.6 | Documenti legali e permalink | Completo | `GET/POST/PATCH /api/admin/cms/legal`, la pubblicazione esplicita e `GET/POST/PATCH /api/admin/cms/permalinks` alimentano due moduli protetti. `admin-legal-permalinks.test.mjs` prova bozze, checksum e data di concorrenza, pubblicazione immutabile, vecchie versioni intatte, nuovi percorsi, reindirizzamenti solo verso URL registrati, esclusione dei segreti e impossibilità di cambiare o cancellare i percorsi |
+
+## Punto 4 — ordine vincolante
+
+| Ordine | Unità | Stato | Criterio e prova |
+|---:|---|---|---|
+| 4.1 | Stato bozza uniforme | Da iniziare | Uniformare stato e transizioni per tutti i contenuti modificabili senza esporre bozze nelle API pubbliche |
+| 4.2 | Anteprima autenticata | Da iniziare | Mostrare la versione di lavoro dal pannello senza sostituire quella pubblicata né creare URL pubblici indicizzabili |
+| 4.3 | Cronologia revisioni | Da iniziare | Consultare le revisioni append-only, confrontare fotografie e ripristinare una revisione creando una nuova modifica |
