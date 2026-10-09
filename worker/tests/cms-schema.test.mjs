@@ -13,6 +13,7 @@ const EXPECTED_TABLES = Object.freeze([
     "legal_documents",
     "map_features",
     "map_layers",
+    "media_assets",
     "navigation_items",
     "onboarding_steps",
     "page_blocks",
@@ -24,6 +25,9 @@ const EXPECTED_TABLES = Object.freeze([
     "site_settings",
     "sources"
 ]);
+const EXPECTED_FOUNDATION_TABLES = Object.freeze(
+    EXPECTED_TABLES.filter((name) => name !== "media_assets")
+);
 
 function databaseWithCmsSchema() {
     const database = new DatabaseSync(":memory:");
@@ -261,14 +265,14 @@ test("protegge revisioni, versioni legali pubblicate e percorsi permanenti", () 
 });
 
 test("la migrazione SQL e lo schema completo espongono la stessa fondazione", async () => {
-    for (const relativePath of [
-        "../migrations/0013_cms_content_foundation.sql",
-        "../schema.sql"
+    for (const [relativePath, expected] of [
+        ["../migrations/0013_cms_content_foundation.sql", EXPECTED_FOUNDATION_TABLES],
+        ["../schema.sql", EXPECTED_TABLES]
     ]) {
         const database = new DatabaseSync(":memory:");
         const sql = await readFile(new URL(relativePath, import.meta.url), "utf8");
         database.exec(sql);
-        assert.deepEqual(listCmsTables(database), EXPECTED_TABLES, relativePath);
+        assert.deepEqual(listCmsTables(database), expected, relativePath);
     }
 });
 
@@ -297,6 +301,66 @@ test("la migrazione 0014 conserva le fonti e aggiunge lo stato pubblicato", asyn
         status: "published",
         published_at: 10
     });
+});
+
+test("la migrazione 0015 prepara il catalogo immutabile dei media R2", async () => {
+    const database = new DatabaseSync(":memory:");
+    const migration = await readFile(
+        new URL("../migrations/0015_media_assets_r2.sql", import.meta.url),
+        "utf8"
+    );
+    database.exec(migration);
+    const now = Date.now();
+
+    database.prepare(`
+        INSERT INTO media_assets (
+            id, owner_type, owner_id, object_key, media_type,
+            byte_size, checksum, created_at, updated_at
+        ) VALUES (?, 'wiki_image', ?, ?, 'image/webp', 12, ?, ?, ?)
+    `).run(
+        "media-1",
+        "foto-1",
+        "wiki_image/foto-1/original.webp",
+        "a".repeat(64),
+        now,
+        now
+    );
+
+    assert.throws(() => database.prepare(`
+        INSERT INTO media_assets (
+            id, owner_type, owner_id, object_key, media_type,
+            byte_size, checksum, created_at, updated_at
+        ) VALUES (?, 'wiki_image', ?, ?, 'image/webp', 12, ?, ?, ?)
+    `).run(
+        "media-2",
+        "foto-1",
+        "wiki_image/foto-1/second.webp",
+        "b".repeat(64),
+        now,
+        now
+    ), /UNIQUE constraint failed/u);
+
+    database.prepare(`
+        UPDATE media_assets SET state = 'retained' WHERE id = 'media-1'
+    `).run();
+    database.prepare(`
+        INSERT INTO media_assets (
+            id, owner_type, owner_id, object_key, media_type,
+            byte_size, checksum, created_at, updated_at
+        ) VALUES (?, 'wiki_image', ?, ?, 'image/webp', 12, ?, ?, ?)
+    `).run(
+        "media-2",
+        "foto-1",
+        "wiki_image/foto-1/second.webp",
+        "b".repeat(64),
+        now,
+        now
+    );
+
+    assert.equal(
+        database.prepare("SELECT COUNT(*) AS total FROM media_assets").get().total,
+        2
+    );
 });
 
 test("l’health check aggiorna una fondazione 0013 prima di creare indici nuovi", async () => {

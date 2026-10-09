@@ -925,7 +925,8 @@ export default {
                     ok: true,
                     service: "nnmrcn-rete",
                     privacyVersion: "2026-10-03",
-                    contentSchema: 2
+                    contentSchema: 2,
+                    mediaStorage: env.MEDIA ? "r2" : "d1-fallback"
                 });
             }
 
@@ -957,7 +958,11 @@ export default {
             await ensureContactStorage(env);
             await purgeExpiredContactMessages(env);
             await ensureLocationProfileStorage(env);
+            await ensureMemoryStorage(env);
+            await ensureWikiStorage(env);
+            await ensureMapEntryStorage(env);
             await ensureCmsStorage(env);
+            await migrateLegacyMediaBatch(env, 25);
         })());
     }
 };
@@ -1643,6 +1648,17 @@ async function createMemory(request, env, ctx) {
 
     const memoryId = result.meta?.last_row_id ?? null;
 
+    if (memoryId && media.data) {
+        await migrateMediaToR2Safely(env, {
+            ownerType: "memory",
+            ownerId: String(memoryId),
+            mediaType: media.type,
+            mediaName: media.name,
+            data: media.data,
+            now
+        });
+    }
+
     queuePushNotification(
         ctx,
         env,
@@ -1766,6 +1782,8 @@ async function withdrawMemory(request, env, memoryId) {
         return unauthorized(request, env);
     }
 
+    await deleteMediaAssets(env, "memory", String(memoryId));
+
     await env.DB.prepare(`
         DELETE FROM memories
         WHERE id = ?
@@ -1806,13 +1824,13 @@ async function getMemoryMedia(request, env, memoryId) {
     await ensureMemoryStorage(env);
 
     const memory = await env.DB.prepare(`
-        SELECT id, media_type, media_data, status
+        SELECT id, media_type, media_name, media_data, status
         FROM memories
         WHERE id = ?
         LIMIT 1
     `).bind(memoryId).first();
 
-    if (!memory || !memory.media_type || !memory.media_data) {
+    if (!memory || !memory.media_type) {
         return json(request, env, { error: "Allegato non disponibile." }, 404);
     }
 
@@ -1822,20 +1840,12 @@ async function getMemoryMedia(request, env, memoryId) {
         return unauthorized(request, env);
     }
 
-    const bytes = fromBase64(memory.media_data);
-    const extension = memoryMediaExtension(memory.media_type);
-
-    return new Response(bytes, {
-        headers: {
-            "Content-Type": memory.media_type,
-            "Content-Length": String(bytes.byteLength),
-            "Content-Disposition":
-                `inline; filename="memoria-${memoryId}.${extension}"`,
-            "Cache-Control": "no-store",
-            "X-Content-Type-Options": "nosniff",
-            ...corsHeaders(request, env)
-        }
-    });
+    return await storedMediaResponse(request, env, memory, {
+        ownerType: "memory",
+        ownerId: String(memoryId),
+        cacheControl: "no-store",
+        fallbackName: `memoria-${memoryId}`
+    }) || json(request, env, { error: "Allegato non disponibile." }, 404);
 }
 
 function memoryMediaExtension(type) {
@@ -1848,6 +1858,358 @@ function memoryMediaExtension(type) {
         "audio/webm": "webm",
         "audio/mp4": "m4a"
     }[type] || "bin";
+}
+
+async function migrateWikiImagesToR2(env, images, now) {
+    for (const image of images) {
+        if (image.data) {
+            await migrateMediaToR2Safely(env, {
+                ownerType: "wiki_image",
+                ownerId: image.id,
+                mediaType: image.type,
+                mediaName: image.name,
+                data: image.data,
+                altText: image.alt,
+                caption: image.caption,
+                now
+            });
+        }
+
+        await updateMediaAssetMetadata(
+            env,
+            "wiki_image",
+            image.id,
+            image.alt,
+            image.caption,
+            now
+        );
+    }
+}
+
+async function updateMediaAssetMetadata(
+    env,
+    ownerType,
+    ownerId,
+    altText,
+    caption,
+    now
+) {
+    await ensureCmsStorage(env);
+    await env.DB.prepare(`
+        UPDATE media_assets
+        SET alt_text = ?, caption = ?, updated_at = ?
+        WHERE owner_type = ? AND owner_id = ? AND state = 'current'
+    `).bind(
+        altText || "",
+        caption || "",
+        now,
+        ownerType,
+        String(ownerId)
+    ).run();
+}
+
+async function migrateMediaToR2Safely(env, media) {
+    if (!env.MEDIA || !media.data) {
+        return null;
+    }
+
+    try {
+        return await migrateMediaToR2(env, media);
+    } catch (error) {
+        console.error(JSON.stringify({
+            event: "media_r2_migration_failed",
+            ownerType: media.ownerType,
+            ownerId: media.ownerId,
+            error: error instanceof Error ? error.message : String(error)
+        }));
+        return null;
+    }
+}
+
+async function migrateMediaToR2(env, media) {
+    await ensureCmsStorage(env);
+    const bytes = fromBase64(media.data);
+    const checksum = await sha256BytesHex(bytes);
+    const extension = memoryMediaExtension(media.mediaType);
+    const ownerId = String(media.ownerId).replace(/[^a-z0-9-]+/giu, "-");
+    const now = Number(media.now) || Date.now();
+    const objectKey = [
+        media.ownerType,
+        ownerId,
+        `${now}-${crypto.randomUUID()}-${checksum.slice(0, 16)}.${extension}`
+    ].join("/");
+
+    await env.MEDIA.put(objectKey, bytes, {
+        httpMetadata: {
+            contentType: media.mediaType,
+            cacheControl: "private, max-age=0, no-store"
+        },
+        customMetadata: {
+            checksum,
+            ownerType: media.ownerType,
+            ownerId: String(media.ownerId),
+            variant: "original"
+        }
+    });
+    const stored = await env.MEDIA.head(objectKey);
+
+    if (!stored || Number(stored.size) !== bytes.byteLength) {
+        await env.MEDIA.delete(objectKey);
+        throw new Error("R2 verification failed after upload.");
+    }
+
+    const statements = [
+        env.DB.prepare(`
+            UPDATE media_assets
+            SET state = 'retained', updated_at = ?
+            WHERE
+                owner_type = ?
+                AND owner_id = ?
+                AND variant_key = 'original'
+                AND state = 'current'
+        `).bind(now, media.ownerType, String(media.ownerId)),
+        env.DB.prepare(`
+            INSERT INTO media_assets (
+                id, owner_type, owner_id, variant_key, object_key,
+                media_type, media_name, byte_size, checksum,
+                width, height, alt_text, caption, state,
+                created_at, updated_at
+            ) VALUES (?, ?, ?, 'original', ?, ?, ?, ?, ?, NULL, NULL, ?, ?,
+                'current', ?, ?)
+        `).bind(
+            `media-${crypto.randomUUID()}`,
+            media.ownerType,
+            String(media.ownerId),
+            objectKey,
+            media.mediaType,
+            media.mediaName || "",
+            bytes.byteLength,
+            checksum,
+            media.altText || "",
+            media.caption || "",
+            now,
+            now
+        )
+    ];
+
+    if (media.ownerType === "memory") {
+        statements.push(env.DB.prepare(`
+            UPDATE memories SET media_data = NULL
+            WHERE id = ? AND media_data = ?
+        `).bind(Number(media.ownerId), media.data));
+    } else if (media.ownerType === "wiki_image") {
+        statements.push(env.DB.prepare(`
+            UPDATE wiki_entry_images SET media_data = ''
+            WHERE id = ? AND media_data = ?
+        `).bind(String(media.ownerId), media.data));
+    } else if (media.ownerType === "map_entry") {
+        statements.push(env.DB.prepare(`
+            UPDATE map_entry_images SET media_data = ''
+            WHERE entry_id = ? AND media_data = ?
+        `).bind(Number(media.ownerId), media.data));
+    }
+
+    try {
+        await env.DB.batch(statements);
+    } catch (error) {
+        await env.MEDIA.delete(objectKey);
+        throw error;
+    }
+
+    return { objectKey, checksum, byteSize: bytes.byteLength };
+}
+
+async function currentMediaAsset(env, ownerType, ownerId) {
+    await ensureCmsStorage(env);
+    return await env.DB.prepare(`
+        SELECT
+            object_key, media_type, media_name, byte_size,
+            checksum, width, height, alt_text, caption
+        FROM media_assets
+        WHERE
+            owner_type = ?
+            AND owner_id = ?
+            AND variant_key = 'original'
+            AND state = 'current'
+        LIMIT 1
+    `).bind(ownerType, String(ownerId)).first();
+}
+
+async function retainMediaAssets(env, ownerType, ownerId, now = Date.now()) {
+    await ensureCmsStorage(env);
+    await env.DB.prepare(`
+        UPDATE media_assets
+        SET state = 'retained', updated_at = ?
+        WHERE owner_type = ? AND owner_id = ? AND state = 'current'
+    `).bind(now, ownerType, String(ownerId)).run();
+}
+
+async function deleteMediaAssets(env, ownerType, ownerId) {
+    await ensureCmsStorage(env);
+    const result = await env.DB.prepare(`
+        SELECT object_key
+        FROM media_assets
+        WHERE owner_type = ? AND owner_id = ?
+        ORDER BY created_at, id
+    `).bind(ownerType, String(ownerId)).all();
+    const keys = (result.results || []).map((asset) => asset.object_key);
+
+    if (keys.length && !env.MEDIA) {
+        throw new Error("R2 binding missing during media deletion.");
+    }
+    if (keys.length) {
+        await env.MEDIA.delete(keys);
+    }
+
+    await env.DB.prepare(`
+        DELETE FROM media_assets
+        WHERE owner_type = ? AND owner_id = ?
+    `).bind(ownerType, String(ownerId)).run();
+}
+
+async function storedMediaResponse(request, env, media, options) {
+    const asset = await currentMediaAsset(
+        env,
+        options.ownerType,
+        options.ownerId
+    );
+
+    if (asset && env.MEDIA) {
+        const object = await env.MEDIA.get(asset.object_key);
+
+        if (object) {
+            return mediaBinaryResponse(request, object.body, {
+                mediaType: asset.media_type,
+                mediaName: asset.media_name,
+                byteSize: Number(object.size),
+                cacheControl: options.cacheControl,
+                fallbackName: options.fallbackName,
+                storage: "r2"
+            }, env);
+        }
+    }
+
+    if (!media.media_data) {
+        return null;
+    }
+
+    const bytes = fromBase64(media.media_data);
+    await migrateMediaToR2Safely(env, {
+        ownerType: options.ownerType,
+        ownerId: String(options.ownerId),
+        mediaType: media.media_type,
+        mediaName: media.media_name || "",
+        data: media.media_data,
+        altText: options.altText || "",
+        caption: options.caption || "",
+        now: Date.now()
+    });
+
+    return mediaBinaryResponse(request, bytes, {
+        mediaType: media.media_type,
+        mediaName: media.media_name,
+        byteSize: bytes.byteLength,
+        cacheControl: options.cacheControl,
+        fallbackName: options.fallbackName,
+        storage: "d1"
+    }, env);
+}
+
+function mediaBinaryResponse(request, body, media, env) {
+    const extension = memoryMediaExtension(media.mediaType);
+    const safeName = String(media.mediaName || media.fallbackName || "media")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/gu, "")
+        .replace(/[^a-z0-9._-]+/giu, "-")
+        .replace(/^-+|-+$/gu, "")
+        .slice(0, 180);
+    const filename = safeName.includes(".")
+        ? safeName
+        : `${safeName}.${extension}`;
+
+    return new Response(body, {
+        headers: {
+            "Content-Type": media.mediaType,
+            "Content-Length": String(media.byteSize),
+            "Content-Disposition": `inline; filename="${filename}"`,
+            "Cache-Control": media.cacheControl,
+            "X-Media-Storage": media.storage,
+            "X-Content-Type-Options": "nosniff",
+            ...corsHeaders(request, env)
+        }
+    });
+}
+
+async function migrateLegacyMediaBatch(env, limit = 25) {
+    if (!env.MEDIA) {
+        return { migrated: 0 };
+    }
+
+    await ensureMemoryStorage(env);
+    await ensureWikiStorage(env);
+    await ensureMapEntryStorage(env);
+    await ensureCmsStorage(env);
+    const perType = Math.max(1, Math.ceil(limit / 3));
+    const [memories, wikiImages, mapImages] = await Promise.all([
+        env.DB.prepare(`
+            SELECT id, media_type, media_name, media_data, updated_at
+            FROM memories
+            WHERE media_data IS NOT NULL AND media_data <> ''
+            ORDER BY id LIMIT ?
+        `).bind(perType).all(),
+        env.DB.prepare(`
+            SELECT
+                id, media_type, media_name, media_data,
+                alt_text, caption, updated_at
+            FROM wiki_entry_images
+            WHERE media_data <> ''
+            ORDER BY created_at, id LIMIT ?
+        `).bind(perType).all(),
+        env.DB.prepare(`
+            SELECT
+                entry_id, media_type, media_name, media_data, updated_at
+            FROM map_entry_images
+            WHERE media_data <> ''
+            ORDER BY entry_id LIMIT ?
+        `).bind(perType).all()
+    ]);
+    const pending = [
+        ...(memories.results || []).map((row) => ({
+            ownerType: "memory",
+            ownerId: String(row.id),
+            mediaType: row.media_type,
+            mediaName: row.media_name,
+            data: row.media_data,
+            now: Number(row.updated_at) || Date.now()
+        })),
+        ...(wikiImages.results || []).map((row) => ({
+            ownerType: "wiki_image",
+            ownerId: row.id,
+            mediaType: row.media_type,
+            mediaName: row.media_name,
+            data: row.media_data,
+            altText: row.alt_text,
+            caption: row.caption,
+            now: Number(row.updated_at) || Date.now()
+        })),
+        ...(mapImages.results || []).map((row) => ({
+            ownerType: "map_entry",
+            ownerId: String(row.entry_id),
+            mediaType: row.media_type,
+            mediaName: row.media_name,
+            data: row.media_data,
+            now: Number(row.updated_at) || Date.now()
+        }))
+    ].slice(0, limit);
+    let migrated = 0;
+
+    for (const media of pending) {
+        if (await migrateMediaToR2Safely(env, media)) {
+            migrated += 1;
+        }
+    }
+
+    return { migrated };
 }
 
 async function createMessage(request, env, ctx) {
@@ -2503,6 +2865,16 @@ async function adminCreateMapEntry(request, env) {
 
     const id = Number(result.meta?.last_row_id);
     await updateMapEntryImage(env, id, input.image, input.removeImage, now);
+    if (input.image) {
+        await migrateMediaToR2Safely(env, {
+            ownerType: "map_entry",
+            ownerId: String(id),
+            mediaType: input.image.type,
+            mediaName: input.image.name,
+            data: input.image.data,
+            now
+        });
+    }
     await ensureCmsStorage(env);
     await synchronizeContentPermalinks(env);
     const entry = await getMapEntryById(env, id);
@@ -2569,6 +2941,18 @@ async function adminUpdateMapEntry(request, env, entryId) {
         input.removeImage,
         now
     );
+    if (input.removeImage) {
+        await retainMediaAssets(env, "map_entry", String(entryId), now);
+    } else if (input.image) {
+        await migrateMediaToR2Safely(env, {
+            ownerType: "map_entry",
+            ownerId: String(entryId),
+            mediaType: input.image.type,
+            mediaName: input.image.name,
+            data: input.image.data,
+            now
+        });
+    }
     await ensureCmsStorage(env);
     await synchronizeContentPermalinks(env);
 
@@ -2592,6 +2976,8 @@ async function adminDeleteMapEntry(request, env, entryId) {
     if (!(await getMapEntryById(env, entryId))) {
         return json(request, env, { error: "Voce non trovata." }, 404);
     }
+
+    await retainMediaAssets(env, "map_entry", String(entryId), Date.now());
 
     await env.DB.batch([
         env.DB.prepare(`
@@ -6118,31 +6504,23 @@ async function getPublicMapEntryImage(request, env, entryId) {
     await ensureMapEntryStorage(env);
 
     const image = await env.DB.prepare(`
-        SELECT image.media_type, image.media_data
+        SELECT image.media_type, image.media_name, image.media_data
         FROM map_entry_images image
         INNER JOIN map_entries entry ON entry.id = image.entry_id
         WHERE image.entry_id = ?
         LIMIT 1
     `).bind(entryId).first();
 
-    if (!image?.media_data) {
+    if (!image) {
         return json(request, env, { error: "Fotografia non disponibile." }, 404);
     }
 
-    const bytes = fromBase64(image.media_data);
-    const extension = memoryMediaExtension(image.media_type);
-
-    return new Response(bytes, {
-        headers: {
-            "Content-Type": image.media_type,
-            "Content-Length": String(bytes.byteLength),
-            "Content-Disposition":
-                `inline; filename="luogo-${entryId}.${extension}"`,
-            "Cache-Control": "public, max-age=3600",
-            "X-Content-Type-Options": "nosniff",
-            ...corsHeaders(request, env)
-        }
-    });
+    return await storedMediaResponse(request, env, image, {
+        ownerType: "map_entry",
+        ownerId: String(entryId),
+        cacheControl: "public, max-age=3600",
+        fallbackName: `luogo-${entryId}`
+    }) || json(request, env, { error: "Fotografia non disponibile." }, 404);
 }
 
 async function listPublicWikiEntries(request, env) {
@@ -6301,6 +6679,7 @@ async function adminCreateWikiEntry(request, env) {
             now
         )
     ]);
+    await migrateWikiImagesToR2(env, input.images, now);
     await ensureCmsStorage(env);
     await synchronizeContentPermalinks(env);
 
@@ -6399,6 +6778,13 @@ async function adminUpdateWikiEntry(request, env, entryId) {
         ),
         wikiImageCleanupStatement(env, entryId, input.images)
     ]);
+    const retainedImageIds = (existing.images || [])
+        .map((image) => image.id)
+        .filter((id) => !input.images.some((image) => image.id === id));
+    await Promise.all(retainedImageIds.map((id) =>
+        retainMediaAssets(env, "wiki_image", id, now)
+    ));
+    await migrateWikiImagesToR2(env, input.images, now);
     await ensureCmsStorage(env);
     await synchronizeContentPermalinks(env);
 
@@ -6923,7 +7309,10 @@ async function getWikiImage(request, env, imageId, adminOnly) {
         SELECT
             image.id,
             image.media_type,
+            image.media_name,
             image.media_data,
+            image.alt_text,
+            image.caption,
             entry.body,
             entry.status
         FROM wiki_entry_images image
@@ -6934,7 +7323,6 @@ async function getWikiImage(request, env, imageId, adminOnly) {
 
     if (
         !image ||
-        !image.media_data ||
         (!adminOnly && (
             image.status !== "published" ||
             !String(image.body || "").includes(`[foto:${imageId}]`)
@@ -6943,22 +7331,14 @@ async function getWikiImage(request, env, imageId, adminOnly) {
         return json(request, env, { error: "Fotografia non disponibile." }, 404);
     }
 
-    const bytes = fromBase64(image.media_data);
-    const extension = memoryMediaExtension(image.media_type);
-
-    return new Response(bytes, {
-        headers: {
-            "Content-Type": image.media_type,
-            "Content-Length": String(bytes.byteLength),
-            "Content-Disposition":
-                `inline; filename="voce-${imageId}.${extension}"`,
-            "Cache-Control": adminOnly
-                ? "no-store"
-                : "public, max-age=3600",
-            "X-Content-Type-Options": "nosniff",
-            ...corsHeaders(request, env)
-        }
-    });
+    return await storedMediaResponse(request, env, image, {
+        ownerType: "wiki_image",
+        ownerId: imageId,
+        cacheControl: adminOnly ? "no-store" : "public, max-age=3600",
+        fallbackName: `voce-${imageId}`,
+        altText: image.alt_text,
+        caption: image.caption
+    }) || json(request, env, { error: "Fotografia non disponibile." }, 404);
 }
 
 async function ensureWikiStorage(env) {
@@ -9620,6 +10000,12 @@ async function sha256Hex(value) {
         new TextEncoder().encode(value)
     );
 
+    return toHex(new Uint8Array(digest));
+}
+
+async function sha256BytesHex(value) {
+    const bytes = value instanceof Uint8Array ? value : new Uint8Array(value);
+    const digest = await crypto.subtle.digest("SHA-256", bytes);
     return toHex(new Uint8Array(digest));
 }
 
