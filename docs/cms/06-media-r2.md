@@ -208,17 +208,27 @@ anche il principio privacy di cancellazione effettiva.
 metadati, sostituzione, concorrenza, eliminazione completa, firma dei file,
 assenza di ripiego senza R2 e non indicizzazione. Insieme alla migrazione e ai
 test esistenti porta la suite a 105 test; build e controlli SEO/confine sono
-verdi. La chiusura dell'unità richiede ancora il deploy e una prova non
-distruttiva del Worker pubblicato.
+verdi.
 
-## Unità ancora da completare
+La pubblicazione è stata completata il 10 ottobre 2026: il run Worker
+`38066734695`, il deploy Pages `38066734264` e il controllo SEO
+`38066734691` sono riusciti. L'health check live restituisce
+`contentSchema: 3` e `mediaStorage: "r2"`; l'elenco documenti senza credenziale
+restituisce `401`, `Cache-Control: no-store` e `nosniff`, mentre il percorso
+pubblico equivalente restituisce `404`. La pagina amministrativa pubblicata
+contiene il modulo «Documenti privati» e carica la versione aggiornata dello
+script. Il ciclo autorizzato upload–sostituzione–download–cancellazione resta
+provato in isolamento da `documents-r2.test.mjs`, senza lasciare un documento
+di collaudo o dati privati nell'account di produzione.
+
+## Stato finale del punto 6
 
 | Ordine | Unità | Stato |
 |---:|---|---|
 | 6.1 | Originali, catalogo, migrazione compatibile e cancellazione privata | Completo e verificato sul Worker pubblicato |
 | 6.2 | Metadati dimensionali e varianti responsive | Completo e verificato sul Worker e sulla pagina generata |
 | 6.3 | Selezione e generazione delle immagini sociali | Completo e verificato sul Worker e sulla pagina pubblicata |
-| 6.4 | Documenti in R2, gestione amministrativa e verifica finale | Codice completo; pubblicazione da verificare |
+| 6.4 | Documenti in R2, gestione amministrativa e verifica finale | Completo e verificato sul Worker e sul pannello pubblicati |
 
-Il punto 6 e SEO-4 restano quindi **in corso** finché tutte le unità non sono
-complete e verificate sul servizio pubblicato.
+Il punto 6 e SEO-4 sono quindi **completi**. Il primo passaggio vincolante
+incompleto della roadmap è il punto 7, sostituzione del token amministrativo.
