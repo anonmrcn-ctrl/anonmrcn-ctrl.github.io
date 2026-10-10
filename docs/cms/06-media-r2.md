@@ -63,7 +63,7 @@ I test provano scrittura e lettura R2, sostituzione con versione trattenuta,
 ripiego D1, testo alternativo e didascalia delle Voci, nonché cancellazione
 integrale dell'allegato di una Memoria.
 
-## Blocco di pubblicazione verificato
+## Pubblicazione verificata
 
 Il 9 ottobre 2026 il codice dell'unità è stato integrato tramite PR #6. Il
 primo deploy (`37957506177`) ha mostrato un difetto del provisioning automatico:
@@ -72,33 +72,62 @@ presente nella versione precedente (`10057`). La PR #7 ha quindi sostituito il
 binding implicito con il bucket nominato `nnmrcn-media-eu`, la giurisdizione
 `eu` e una creazione idempotente prima del deploy.
 
-Il deploy successivo (`37996881926`) ha raggiunto l'API R2 e si è fermato con
-il codice Cloudflare `10042`: «Please enable R2 through the Cloudflare
-Dashboard». I controlli SEO (`37996881978`) e GitHub Pages (`37996880652`) sono
-invece riusciti. Il Worker pubblico conferma di eseguire ancora la versione
-precedente: `/api/health` non espone `mediaStorage` e la fotografia pubblica di
-prova viene restituita senza `X-Media-Storage`.
+Il primo tentativo del deploy `37996881926` ha raggiunto l'API R2 e si è fermato
+con il codice Cloudflare `10042`, perché R2 non era ancora abilitato
+nell'account. Dopo l'attivazione, il 10 ottobre 2026 è stato rieseguito soltanto
+il job fallito dello stesso run. Il nuovo tentativo ha completato la creazione
+o il rilevamento di `nnmrcn-media-eu` in giurisdizione UE, il deploy del Worker
+con binding `MEDIA` e la verifica del servizio.
 
-Per sbloccare la sequenza occorre abilitare R2 una sola volta nell'account
-Cloudflare. Subito dopo va rieseguita la workflow «Pubblica il Worker
-Cloudflare» e devono risultare, nell'ordine:
+Le prove pubbliche successive sono ripetibili senza credenziali:
 
-1. creazione o rilevamento di `nnmrcn-media-eu` nella giurisdizione UE;
-2. deploy riuscito con binding `MEDIA` esplicito;
-3. health pubblico con `"mediaStorage":"r2"`;
-4. seconda lettura della fotografia di prova con `X-Media-Storage: r2`;
-5. aggiornamento di questo registro con run, risposta e data verificati.
+1. `GET https://nnmrcn-rete.anonmrcn.workers.dev/api/health` restituisce `200`
+   e `"mediaStorage":"r2"`;
+2. la prima lettura della fotografia già esistente
+   `4d3c17cd-2668-41e1-ad51-d7f466f3c260` restituisce 104.360 byte con
+   `X-Media-Storage: d1`, eseguendo la migrazione compatibile;
+3. la seconda lettura dello stesso URL restituisce gli stessi 104.360 byte con
+   `X-Media-Storage: r2`;
+4. il confronto binario delle due risposte è identico.
 
-Le unità 6.2–6.4 non vengono dichiarate complete né pubblicate sopra un Worker
-fermo alla versione precedente: la generazione delle varianti dipende dal
-catalogo R2 effettivamente attivo.
+L'unità 6.1 è quindi completa anche sul servizio pubblicato. URL, ID e contenuto
+del media precedente sono rimasti invariati; le unità 6.2–6.4 possono ora usare
+il catalogo R2 attivo.
+
+## Unità 6.2 — Dimensioni e varianti responsive
+
+Per ogni nuova fotografia, il browser prepara l'originale ottimizzato e fino a
+due varianti con chiavi stabili `small` e `medium`, limitate rispettivamente a
+480 e 960 pixel sul lato maggiore. Il Worker non si fida dei metadati inviati:
+controlla la firma JPEG, PNG o WebP, legge larghezza e altezza dai byte, verifica
+che le varianti non superino l'originale e che ne conservino il rapporto. Ogni
+oggetto viene scritto e riletto da R2 prima che il catalogo D1 diventi corrente.
+
+Le API pubbliche continuano a esporre l'URL originale invariato e aggiungono
+soltanto campi compatibili: dimensioni, sorgenti disponibili e `sizes`. Le
+varianti usano lo stesso endpoint con `?variant=small` o `?variant=medium`;
+se il catalogo o l'oggetto richiesto manca, il Worker restituisce l'originale.
+Voci, luoghi, Memorie e pagine HTML generate applicano `srcset`, `sizes`,
+`width` e `height`, riducendo byte trasferiti e spostamenti di layout.
+
+Gli originali storici non vengono ricodificati né sostituiti. Alla prima
+lettura il Worker ricava e registra le dimensioni reali; finché non vengono
+caricate varianti, l'API pubblica propone il solo originale. Questo ripiego
+preserva byte, URL, checksum e qualità dei dati già pubblicati senza creare
+copie non verificabili.
+
+La prova automatica `media-r2.test.mjs` usa immagini con dimensioni note,
+controlla tre record correnti (`small`, `medium`, `original`), legge la variante
+piccola, verifica le intestazioni dimensionali e richiede una chiave sconosciuta
+per provare il ripiego. Lo stesso test controlla che i tre frontend e il
+generatore statico applichino gli attributi responsive.
 
 ## Unità ancora da completare
 
 | Ordine | Unità | Stato |
 |---:|---|---|
-| 6.1 | Originali, catalogo, migrazione compatibile e cancellazione privata | Codice completo; bloccato da attivazione R2 Cloudflare (`10042`) |
-| 6.2 | Metadati dimensionali e varianti responsive | Da iniziare |
+| 6.1 | Originali, catalogo, migrazione compatibile e cancellazione privata | Completo e verificato sul Worker pubblicato |
+| 6.2 | Metadati dimensionali e varianti responsive | Codice completo; pubblicazione da verificare |
 | 6.3 | Selezione e generazione delle immagini sociali | Da iniziare |
 | 6.4 | Documenti in R2, gestione amministrativa e verifica finale | Da iniziare |
 

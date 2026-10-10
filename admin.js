@@ -2588,7 +2588,8 @@
             value.image = {
                 name: mapEntryImage.name,
                 type: mapEntryImage.type,
-                data: mapEntryImage.data
+                data: mapEntryImage.data,
+                variants: mapEntryImage.variants || []
             };
         }
 
@@ -2644,27 +2645,39 @@
             throw new Error("Formato non supportato. Usa JPEG, PNG o WebP.");
         }
 
-        let blob = await resizeMapEntryImage(file, 1800, 0.82);
+        let original = await resizeMapEntryImage(file, 1800, 0.82);
 
-        if (blob.size > 700000) {
-            blob = await resizeMapEntryImage(file, 1400, 0.7);
+        if (original.blob.size > 700000) {
+            original = await resizeMapEntryImage(file, 1400, 0.7);
         }
 
-        if (blob.size > 700000) {
-            blob = await resizeMapEntryImage(file, 1000, 0.58);
+        if (original.blob.size > 700000) {
+            original = await resizeMapEntryImage(file, 1000, 0.58);
         }
 
-        if (!blob.size || blob.size > 700000) {
+        if (!original.blob.size || original.blob.size > 700000) {
             throw new Error(
                 "La fotografia resta troppo grande dopo la riduzione automatica."
             );
         }
 
+        const candidates = await Promise.all([
+            responsiveMapEntryVariant(file, "small", 480, 0.72),
+            responsiveMapEntryVariant(file, "medium", 960, 0.76)
+        ]);
+        const variants = candidates.filter((variant, index, all) =>
+            variant.width < original.width &&
+            all.findIndex((candidate) => candidate.width === variant.width) === index
+        );
+
         return {
             name: file.name || "fotografia",
-            type: blob.type,
-            data: await mapEntryBlobToBase64(blob),
-            blob
+            type: original.blob.type,
+            data: await mapEntryBlobToBase64(original.blob),
+            width: original.width,
+            height: original.height,
+            variants,
+            blob: original.blob
         };
     }
 
@@ -2710,7 +2723,18 @@
             throw new Error("Non è stato possibile preparare la fotografia.");
         }
 
-        return blob;
+        return { blob, width: canvas.width, height: canvas.height };
+    }
+
+    async function responsiveMapEntryVariant(file, key, maxDimension, quality) {
+        const variant = await resizeMapEntryImage(file, maxDimension, quality);
+        return {
+            key,
+            type: variant.blob.type,
+            width: variant.width,
+            height: variant.height,
+            data: await mapEntryBlobToBase64(variant.blob)
+        };
     }
 
     function mapEntryBlobToBase64(blob) {
