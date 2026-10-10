@@ -116,6 +116,8 @@ const MAX_CMS_SOURCE_REQUEST_BYTES = 16000;
 const MAX_CMS_SETTING_REQUEST_BYTES = 64000;
 const MAX_CMS_LEGAL_REQUEST_BYTES = 512000;
 const MAX_CMS_PERMALINK_REQUEST_BYTES = 16000;
+const MAX_CMS_DOCUMENT_BYTES = 8 * 1024 * 1024;
+const MAX_CMS_DOCUMENT_REQUEST_BYTES = 12 * 1024 * 1024;
 
 class RequestBodyTooLargeError extends Error {}
 
@@ -150,6 +152,13 @@ const WIKI_IMAGE_TYPES = new Set([
     "image/jpeg",
     "image/png",
     "image/webp"
+]);
+const CMS_DOCUMENT_TYPES = new Set([
+    "application/pdf",
+    "text/plain",
+    "text/markdown",
+    "application/vnd.oasis.opendocument.text",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
 ]);
 const MESSAGE_STATUSES = Object.freeze([
     "pending",
@@ -832,6 +841,38 @@ export default {
                 return await adminUpdateCmsPermalink(request, env, permalinkId);
             }
 
+            if (request.method === "GET" && path === "/api/admin/cms/documents") {
+                return await adminListCmsDocuments(request, env);
+            }
+
+            if (request.method === "POST" && path === "/api/admin/cms/documents") {
+                return await adminCreateCmsDocument(request, env);
+            }
+
+            if (
+                request.method === "GET" &&
+                /^\/api\/admin\/cms\/documents\/[0-9a-f-]{36}\/file$/.test(path)
+            ) {
+                const documentId = path.split("/")[5];
+                return await adminDownloadCmsDocument(request, env, documentId);
+            }
+
+            if (
+                request.method === "PATCH" &&
+                /^\/api\/admin\/cms\/documents\/[0-9a-f-]{36}$/.test(path)
+            ) {
+                const documentId = path.split("/").pop();
+                return await adminUpdateCmsDocument(request, env, documentId);
+            }
+
+            if (
+                request.method === "DELETE" &&
+                /^\/api\/admin\/cms\/documents\/[0-9a-f-]{36}$/.test(path)
+            ) {
+                const documentId = path.split("/").pop();
+                return await adminDeleteCmsDocument(request, env, documentId);
+            }
+
             if (
                 request.method === "POST" &&
                 path === "/api/admin/narrative-steps"
@@ -930,7 +971,7 @@ export default {
                     ok: true,
                     service: "nnmrcn-rete",
                     privacyVersion: "2026-10-03",
-                    contentSchema: 2,
+                    contentSchema: 3,
                     mediaStorage: env.MEDIA ? "r2" : "d1-fallback"
                 });
             }
@@ -2046,7 +2087,12 @@ function memoryMediaExtension(type) {
         "audio/mpeg": "mp3",
         "audio/ogg": "ogg",
         "audio/webm": "webm",
-        "audio/mp4": "m4a"
+        "audio/mp4": "m4a",
+        "application/pdf": "pdf",
+        "text/plain": "txt",
+        "text/markdown": "md",
+        "application/vnd.oasis.opendocument.text": "odt",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "docx"
     }[type] || "bin";
 }
 
@@ -2301,6 +2347,8 @@ async function deleteMediaAssets(env, ownerType, ownerId) {
         DELETE FROM media_assets
         WHERE owner_type = ? AND owner_id = ?
     `).bind(ownerType, String(ownerId)).run();
+
+    return keys.length;
 }
 
 async function storedMediaResponse(request, env, media, options) {
@@ -2356,7 +2404,8 @@ async function storedMediaResponse(request, env, media, options) {
                 variant: asset.variant_key,
                 cacheControl: options.cacheControl,
                 fallbackName: options.fallbackName,
-                storage: "r2"
+                storage: "r2",
+                disposition: options.disposition
             }, env);
         }
     }
@@ -2384,7 +2433,8 @@ async function storedMediaResponse(request, env, media, options) {
         variant: "original",
         cacheControl: options.cacheControl,
         fallbackName: options.fallbackName,
-        storage: "d1"
+        storage: "d1",
+        disposition: options.disposition
     }, env);
 }
 
@@ -2404,7 +2454,7 @@ function mediaBinaryResponse(request, body, media, env) {
         headers: {
             "Content-Type": media.mediaType,
             "Content-Length": String(media.byteSize),
-            "Content-Disposition": `inline; filename="${filename}"`,
+            "Content-Disposition": `${media.disposition === "attachment" ? "attachment" : "inline"}; filename="${filename}"`,
             "Cache-Control": media.cacheControl,
             "X-Media-Storage": media.storage,
             "X-Media-Variant": media.variant || "original",
@@ -6294,6 +6344,400 @@ function validCmsPermalinkPath(value) {
 
 function containsSecretQuery(value) {
     return /[?&](?:chiave|token|password|secret|code)=/iu.test(value);
+}
+
+async function adminListCmsDocuments(request, env) {
+    if (!(await adminAuthorized(request, env))) {
+        return unauthorized(request, env);
+    }
+    await ensureCmsStorage(env);
+    return json(request, env, { documents: await readCmsDocuments(env) });
+}
+
+async function readCmsDocuments(env) {
+    const result = await env.DB.prepare(`
+        SELECT
+            document.id,
+            document.title,
+            document.description,
+            document.accessibility_status,
+            document.accessibility_note,
+            document.media_type,
+            document.media_name,
+            document.byte_size,
+            document.checksum,
+            document.created_at,
+            document.updated_at,
+            COUNT(asset.id) AS version_count
+        FROM cms_documents document
+        LEFT JOIN media_assets asset ON
+            asset.owner_type = 'document'
+            AND asset.owner_id = document.id
+            AND asset.variant_key = 'original'
+        GROUP BY document.id
+        ORDER BY document.updated_at DESC, document.id
+    `).all();
+    return (result.results || []).map(cmsDocumentPayload);
+}
+
+function cmsDocumentPayload(row) {
+    return {
+        id: row.id,
+        title: row.title,
+        description: row.description,
+        accessibilityStatus: row.accessibility_status,
+        accessibilityNote: row.accessibility_note || "",
+        mediaType: row.media_type,
+        mediaName: row.media_name,
+        byteSize: Number(row.byte_size),
+        checksum: row.checksum,
+        versionCount: Number(row.version_count || 1),
+        downloadUrl: `/api/admin/cms/documents/${row.id}/file`,
+        createdAt: Number(row.created_at),
+        updatedAt: Number(row.updated_at)
+    };
+}
+
+async function getCmsDocumentRow(env, documentId) {
+    return await env.DB.prepare(`
+        SELECT
+            document.*,
+            (
+                SELECT COUNT(*) FROM media_assets asset
+                WHERE asset.owner_type = 'document'
+                    AND asset.owner_id = document.id
+                    AND asset.variant_key = 'original'
+            ) AS version_count
+        FROM cms_documents document
+        WHERE document.id = ?
+        LIMIT 1
+    `).bind(documentId).first();
+}
+
+async function adminCreateCmsDocument(request, env) {
+    if (!(await adminAuthorized(request, env))) {
+        return unauthorized(request, env);
+    }
+    if (!env.MEDIA) {
+        return json(request, env, {
+            error: "L’archivio R2 non è disponibile: il documento non è stato salvato."
+        }, 503);
+    }
+    await ensureCmsStorage(env);
+    const input = await normalizeCmsDocumentInput(
+        await readJson(request, MAX_CMS_DOCUMENT_REQUEST_BYTES),
+        true
+    );
+    if (input.error) {
+        return json(request, env, { error: input.error }, 400);
+    }
+    const id = crypto.randomUUID();
+    const now = Date.now();
+    await env.DB.prepare(`
+        INSERT INTO cms_documents (
+            id, title, description, accessibility_status, accessibility_note,
+            media_type, media_name, byte_size, checksum, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).bind(
+        id,
+        input.title,
+        input.description,
+        input.accessibilityStatus,
+        input.accessibilityNote,
+        input.file.type,
+        input.file.name,
+        input.file.byteSize,
+        input.file.checksum,
+        now,
+        now
+    ).run();
+    try {
+        await migrateMediaToR2(env, {
+            ownerType: "document",
+            ownerId: id,
+            mediaType: input.file.type,
+            mediaName: input.file.name,
+            data: input.file.data,
+            altText: input.title,
+            caption: input.description,
+            now
+        });
+    } catch (error) {
+        await env.DB.prepare("DELETE FROM cms_documents WHERE id = ?")
+            .bind(id).run();
+        throw error;
+    }
+    const row = await getCmsDocumentRow(env, id);
+    return json(request, env, {
+        document: cmsDocumentPayload(row),
+        created: true
+    }, 201);
+}
+
+async function adminUpdateCmsDocument(request, env, documentId) {
+    if (!(await adminAuthorized(request, env))) {
+        return unauthorized(request, env);
+    }
+    if (!env.MEDIA) {
+        return json(request, env, {
+            error: "L’archivio R2 non è disponibile: nessuna modifica è stata applicata."
+        }, 503);
+    }
+    await ensureCmsStorage(env);
+    const existingRow = await getCmsDocumentRow(env, documentId);
+    if (!existingRow) {
+        return json(request, env, { error: "Documento non trovato." }, 404);
+    }
+    const current = cmsDocumentPayload(existingRow);
+    const value = await readJson(request, MAX_CMS_DOCUMENT_REQUEST_BYTES);
+    const expectedUpdatedAt = Number(value?.expectedUpdatedAt);
+    if (!Number.isSafeInteger(expectedUpdatedAt) || expectedUpdatedAt !== current.updatedAt) {
+        return json(request, env, {
+            error: "Il documento è stato modificato altrove. Ricaricalo prima di salvare."
+        }, 409);
+    }
+    const input = await normalizeCmsDocumentInput(value, false);
+    if (input.error) {
+        return json(request, env, { error: input.error }, 400);
+    }
+    const file = input.file || {
+        type: current.mediaType,
+        name: current.mediaName,
+        byteSize: current.byteSize,
+        checksum: current.checksum,
+        data: ""
+    };
+    const now = Math.max(Date.now(), current.updatedAt + 1);
+    const result = await env.DB.prepare(`
+        UPDATE cms_documents
+        SET
+            title = ?,
+            description = ?,
+            accessibility_status = ?,
+            accessibility_note = ?,
+            media_type = ?,
+            media_name = ?,
+            byte_size = ?,
+            checksum = ?,
+            updated_at = ?
+        WHERE id = ? AND updated_at = ?
+    `).bind(
+        input.title,
+        input.description,
+        input.accessibilityStatus,
+        input.accessibilityNote,
+        file.type,
+        file.name,
+        file.byteSize,
+        file.checksum,
+        now,
+        current.id,
+        current.updatedAt
+    ).run();
+    if (!Number(result.meta?.changes)) {
+        return json(request, env, {
+            error: "Il documento è stato modificato altrove. Ricaricalo prima di salvare."
+        }, 409);
+    }
+    try {
+        if (input.file) {
+            await migrateMediaToR2(env, {
+                ownerType: "document",
+                ownerId: current.id,
+                mediaType: file.type,
+                mediaName: file.name,
+                data: file.data,
+                altText: input.title,
+                caption: input.description,
+                now
+            });
+        } else {
+            await updateMediaAssetMetadata(
+                env,
+                "document",
+                current.id,
+                input.title,
+                input.description,
+                now
+            );
+        }
+    } catch (error) {
+        await env.DB.prepare(`
+            UPDATE cms_documents
+            SET
+                title = ?, description = ?, accessibility_status = ?,
+                accessibility_note = ?, media_type = ?, media_name = ?,
+                byte_size = ?, checksum = ?, updated_at = ?
+            WHERE id = ? AND updated_at = ?
+        `).bind(
+            current.title,
+            current.description,
+            current.accessibilityStatus,
+            current.accessibilityNote,
+            current.mediaType,
+            current.mediaName,
+            current.byteSize,
+            current.checksum,
+            current.updatedAt,
+            current.id,
+            now
+        ).run();
+        throw error;
+    }
+    const row = await getCmsDocumentRow(env, current.id);
+    return json(request, env, {
+        document: cmsDocumentPayload(row),
+        replaced: Boolean(input.file)
+    });
+}
+
+async function adminDownloadCmsDocument(request, env, documentId) {
+    if (!(await adminAuthorized(request, env))) {
+        return unauthorized(request, env);
+    }
+    await ensureCmsStorage(env);
+    const row = await getCmsDocumentRow(env, documentId);
+    if (!row) {
+        return json(request, env, { error: "Documento non trovato." }, 404);
+    }
+    return await storedMediaResponse(request, env, {
+        media_data: null,
+        media_type: row.media_type,
+        media_name: row.media_name
+    }, {
+        ownerType: "document",
+        ownerId: documentId,
+        cacheControl: "private, no-store",
+        fallbackName: `documento-${documentId}`,
+        disposition: "attachment"
+    }) || json(request, env, { error: "File non disponibile." }, 404);
+}
+
+async function adminDeleteCmsDocument(request, env, documentId) {
+    if (!(await adminAuthorized(request, env))) {
+        return unauthorized(request, env);
+    }
+    if (!env.MEDIA) {
+        return json(request, env, {
+            error: "L’archivio R2 non è disponibile: il documento non è stato rimosso."
+        }, 503);
+    }
+    await ensureCmsStorage(env);
+    const row = await getCmsDocumentRow(env, documentId);
+    if (!row) {
+        return json(request, env, { error: "Documento non trovato." }, 404);
+    }
+    const value = await readJson(request, MAX_CMS_DOCUMENT_REQUEST_BYTES);
+    const expectedUpdatedAt = Number(value?.expectedUpdatedAt);
+    if (!Number.isSafeInteger(expectedUpdatedAt) ||
+        expectedUpdatedAt !== Number(row.updated_at)) {
+        return json(request, env, {
+            error: "Il documento è stato modificato altrove. Ricaricalo prima di rimuoverlo."
+        }, 409);
+    }
+    const deletedObjects = await deleteMediaAssets(env, "document", documentId);
+    const result = await env.DB.prepare(`
+        DELETE FROM cms_documents WHERE id = ? AND updated_at = ?
+    `).bind(documentId, expectedUpdatedAt).run();
+    if (!Number(result.meta?.changes)) {
+        throw new Error("Document metadata changed during deletion.");
+    }
+    return json(request, env, { ok: true, id: documentId, deletedObjects });
+}
+
+async function normalizeCmsDocumentInput(value, requireFile) {
+    const title = String(value?.title || "").trim();
+    const description = String(value?.description || "").trim();
+    const accessibilityStatus = String(
+        value?.accessibilityStatus || "unchecked"
+    ).trim();
+    const accessibilityNote = String(value?.accessibilityNote || "").trim();
+    if (!title || title.length > 200) {
+        return { error: "Il titolo deve contenere da 1 a 200 caratteri." };
+    }
+    if (!description || description.length > 2000) {
+        return { error: "La descrizione accessibile deve contenere da 1 a 2000 caratteri." };
+    }
+    if (!["unchecked", "reviewed"].includes(accessibilityStatus)) {
+        return { error: "Lo stato di accessibilità non è valido." };
+    }
+    if (accessibilityNote.length > 2000) {
+        return { error: "La nota di accessibilità non può superare 2000 caratteri." };
+    }
+    const file = value?.file
+        ? await validateCmsDocumentFile(value.file)
+        : null;
+    if (file?.error) {
+        return file;
+    }
+    if (requireFile && !file) {
+        return { error: "Seleziona il file del documento." };
+    }
+    return {
+        title,
+        description,
+        accessibilityStatus,
+        accessibilityNote,
+        file
+    };
+}
+
+async function validateCmsDocumentFile(value) {
+    if (!value || typeof value !== "object" || Array.isArray(value)) {
+        return { error: "Il file del documento non è valido." };
+    }
+    const type = String(value.type || "").trim().toLowerCase();
+    const name = String(value.name || "documento").trim().slice(0, 500);
+    const data = String(value.data || "").replace(/\s+/gu, "");
+    const maxBase64Length = Math.ceil(MAX_CMS_DOCUMENT_BYTES / 3) * 4 + 4;
+    if (!CMS_DOCUMENT_TYPES.has(type)) {
+        return {
+            error: "Formato non supportato. Usa PDF, TXT, Markdown, ODT o DOCX."
+        };
+    }
+    if (!name || !data || data.length > maxBase64Length ||
+        !/^[A-Za-z0-9+/]*={0,2}$/u.test(data)) {
+        return { error: "Il documento è troppo grande o non è valido." };
+    }
+    let bytes;
+    try {
+        bytes = fromBase64(data);
+    } catch (_) {
+        return { error: "Il documento non è valido." };
+    }
+    if (!bytes.length || bytes.length > MAX_CMS_DOCUMENT_BYTES ||
+        !cmsDocumentSignatureMatches(type, bytes)) {
+        return { error: "Il contenuto del file non corrisponde al formato indicato." };
+    }
+    return {
+        type,
+        name,
+        data,
+        byteSize: bytes.byteLength,
+        checksum: await sha256BytesHex(bytes)
+    };
+}
+
+function cmsDocumentSignatureMatches(type, bytes) {
+    const ascii = (offset, value) =>
+        Array.from(value).every((character, index) =>
+            bytes[offset + index] === character.charCodeAt(0)
+        );
+    if (type === "application/pdf") {
+        return bytes.length >= 5 && ascii(0, "%PDF-");
+    }
+    if (type === "text/plain" || type === "text/markdown") {
+        if (bytes.includes(0)) return false;
+        try {
+            new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+            return true;
+        } catch (_) {
+            return false;
+        }
+    }
+    return bytes.length >= 4 &&
+        bytes[0] === 0x50 && bytes[1] === 0x4b &&
+        bytes[2] === 0x03 && bytes[3] === 0x04;
 }
 
 async function cmsPermalinkConflict(env, input, excludedId = "") {

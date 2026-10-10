@@ -547,6 +547,79 @@
                 </form>
             </section>
 
+            <section class="admin-voci-mappa" aria-labelledby="adminDocumentiTitolo">
+                <h2 id="adminDocumentiTitolo">Documenti privati</h2>
+                <p>
+                    Conserva documenti di lavoro in R2. Elenco, download e file
+                    restano accessibili soltanto dopo l’accesso amministrativo e
+                    non entrano nelle pagine pubbliche o nella sitemap.
+                </p>
+                <form id="adminDocumentForm">
+                    <label for="adminDocumentSelect">Documento</label>
+                    <select id="adminDocumentSelect">
+                        <option value="">Nuovo documento</option>
+                    </select>
+                    <p class="admin-voci-mappa-aiuto" id="adminDocumentIdentity">
+                        Seleziona un documento oppure creane uno nuovo.
+                    </p>
+
+                    <label for="adminDocumentTitle">Titolo</label>
+                    <input id="adminDocumentTitle" type="text" maxlength="200" required>
+
+                    <label for="adminDocumentDescription">Descrizione accessibile</label>
+                    <textarea
+                        id="adminDocumentDescription"
+                        maxlength="2000"
+                        rows="4"
+                        required
+                        aria-describedby="adminDocumentDescriptionHelp"
+                    ></textarea>
+                    <p class="admin-voci-mappa-aiuto" id="adminDocumentDescriptionHelp">
+                        Spiega contenuto e scopo anche a chi non può aprire o leggere visivamente il file.
+                    </p>
+
+                    <label for="adminDocumentFile">File</label>
+                    <input
+                        id="adminDocumentFile"
+                        type="file"
+                        accept=".pdf,.txt,.md,.odt,.docx,application/pdf,text/plain,text/markdown,application/vnd.oasis.opendocument.text,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                        aria-describedby="adminDocumentFileHelp"
+                    >
+                    <p class="admin-voci-mappa-aiuto" id="adminDocumentFileHelp">
+                        PDF, TXT, Markdown, ODT o DOCX; massimo 8 MiB. Su un documento esistente il file è facoltativo: selezionandolo crei una nuova versione e conservi la precedente in R2.
+                    </p>
+
+                    <label for="adminDocumentAccessibility">Verifica di accessibilità</label>
+                    <select id="adminDocumentAccessibility" required>
+                        <option value="unchecked">Da verificare</option>
+                        <option value="reviewed">Verificata</option>
+                    </select>
+
+                    <label for="adminDocumentAccessibilityNote">Nota di accessibilità</label>
+                    <textarea
+                        id="adminDocumentAccessibilityNote"
+                        maxlength="2000"
+                        rows="3"
+                        placeholder="Per esempio: PDF ricercabile, lingua impostata, titoli e ordine di lettura controllati."
+                    ></textarea>
+
+                    <button id="adminDocumentSubmit" type="submit">Carica documento</button>
+                    <button class="admin-button-secondary" id="adminDocumentNew" type="button">
+                        Nuovo documento
+                    </button>
+                    <button class="admin-button-secondary" id="adminDocumentDownload" type="button" disabled>
+                        Scarica file
+                    </button>
+                    <button class="admin-button-secondary" id="adminDocumentDelete" type="button" disabled>
+                        Rimuovi definitivamente
+                    </button>
+                    <button class="admin-button-secondary" id="adminDocumentReload" type="button">
+                        Ricarica elenco
+                    </button>
+                    <p class="admin-status" id="adminDocumentStatus" aria-live="polite"></p>
+                </form>
+            </section>
+
             <section class="admin-voci-mappa" aria-labelledby="adminAnteprimaTitolo">
                 <h2 id="adminAnteprimaTitolo">Anteprima autenticata</h2>
                 <p>
@@ -928,6 +1001,6 @@
         integrity="sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH"
         crossorigin="anonymous"
     ></script>
-    <script src="./admin.js?v=20261010-social-media1"></script>
+    <script src="./admin.js?v=20261010-documents1"></script>
 </body>
 </html>
