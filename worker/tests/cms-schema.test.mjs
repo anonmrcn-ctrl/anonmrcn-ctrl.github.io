@@ -7,6 +7,10 @@ import { CMS_STORAGE_STATEMENTS } from "../src/cms-schema.js";
 import worker from "../src/index.js";
 
 const EXPECTED_TABLES = Object.freeze([
+    "admin_auth_challenges",
+    "admin_credentials",
+    "admin_identities",
+    "admin_sessions",
     "cms_documents",
     "content_revisions",
     "content_source_links",
@@ -27,7 +31,14 @@ const EXPECTED_TABLES = Object.freeze([
     "sources"
 ]);
 const EXPECTED_FOUNDATION_TABLES = Object.freeze(
-    EXPECTED_TABLES.filter((name) => !["cms_documents", "media_assets"].includes(name))
+    EXPECTED_TABLES.filter((name) => ![
+        "admin_auth_challenges",
+        "admin_credentials",
+        "admin_identities",
+        "admin_sessions",
+        "cms_documents",
+        "media_assets"
+    ].includes(name))
 );
 
 function databaseWithCmsSchema() {
@@ -399,6 +410,62 @@ test("la migrazione 0016 prepara i metadati privati dei documenti", async () => 
     `).run(), /CHECK constraint failed/u);
 });
 
+test("la migrazione 0017 separa identità, passkey, sfide e sessioni", async () => {
+    const database = new DatabaseSync(":memory:");
+    database.exec("PRAGMA foreign_keys = ON");
+    const migration = await readFile(
+        new URL("../migrations/0017_admin_passkeys.sql", import.meta.url),
+        "utf8"
+    );
+    database.exec(migration);
+    const now = Date.now();
+    const identityId = "123e4567-e89b-42d3-a456-426614174000";
+    database.prepare(`
+        INSERT INTO admin_identities (id, display_name, created_at)
+        VALUES (?, 'Amministratore', ?)
+    `).run(identityId, now);
+    database.prepare(`
+        INSERT INTO admin_credentials (
+            credential_id, identity_id, user_handle, public_key_spki,
+            sign_count, transports_json, rp_id, created_at
+        ) VALUES ('credenziale', ?, 'utente', 'chiave', 0, '["internal"]',
+            'anonmrcn-ctrl.github.io', ?)
+    `).run(identityId, now);
+    database.prepare(`
+        INSERT INTO admin_sessions (
+            session_hash, identity_id, created_at, expires_at, last_seen_at
+        ) VALUES (?, ?, ?, ?, ?)
+    `).run("a".repeat(64), identityId, now, now + 1000, now);
+
+    assert.equal(
+        database.prepare("SELECT COUNT(*) AS total FROM admin_credentials").get()
+            .total,
+        1
+    );
+    assert.throws(() => database.prepare(`
+        INSERT INTO admin_auth_challenges (
+            id, purpose, challenge_hash, created_at, expires_at
+        ) VALUES (?, 'password', ?, ?, ?)
+    `).run(
+        "123e4567-e89b-42d3-a456-426614174001",
+        "b".repeat(64),
+        now,
+        now + 1000
+    ), /CHECK constraint failed/u);
+
+    database.prepare("DELETE FROM admin_identities WHERE id = ?").run(identityId);
+    assert.equal(
+        database.prepare("SELECT COUNT(*) AS total FROM admin_credentials").get()
+            .total,
+        0
+    );
+    assert.equal(
+        database.prepare("SELECT COUNT(*) AS total FROM admin_sessions").get()
+            .total,
+        0
+    );
+});
+
 test("l’health check aggiorna una fondazione 0013 prima di creare indici nuovi", async () => {
     const db = new D1DatabaseMock();
     const foundation = await readFile(
@@ -449,6 +516,6 @@ test("l’health check installa la fondazione prima di dichiarare il servizio sa
 
     assert.equal(response.status, 200);
     assert.equal(data.ok, true);
-    assert.equal(data.contentSchema, 3);
+    assert.equal(data.contentSchema, 4);
     assert.deepEqual(listCmsTables(db.database), EXPECTED_TABLES);
 });
