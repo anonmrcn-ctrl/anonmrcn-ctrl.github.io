@@ -80,7 +80,22 @@ pagina rimanga esclusa dall’indicizzazione.
 
 ## Attivazione pubblica
 
-Il codice può essere verificato automaticamente; la prima passkey deve invece
+La PR #16 ha pubblicato il codice il 10 ottobre 2026 conservando tre commit
+distinti. I run Worker `38068531893`, Pages `38068531244` e controllo SEO
+`38068532070` sono riusciti. Le verifiche pubbliche confermano:
+
+- `/api/health` restituisce `contentSchema: 4` e `mediaStorage: "r2"`;
+- `/api/admin/auth/status` restituisce `200`, `configured: false`,
+  `Cache-Control: no-store` e `nosniff`;
+- `/api/admin/summary` senza sessione e il bootstrap con un valore non valido
+  restituiscono `401` e non espongono dati;
+- `admin.html` resta `noindex, nofollow`, mostra «Accedi con passkey» e la
+  procedura iniziale con etichette accessibili;
+- gli script live del pannello e delle Voci usano `nnmrcn_admin_session` e
+  `Authorization: Bearer`, senza la precedente chiave di archiviazione del
+  token.
+
+Il codice è quindi pubblicato e verificato; la prima passkey deve invece
 essere creata dall’amministratore con un gesto e la verifica locale del proprio
 dispositivo. Finché `/api/admin/auth/status` restituisce `configured: false`, il
 token rimane disponibile unicamente come credenziale di bootstrap e il punto 7
