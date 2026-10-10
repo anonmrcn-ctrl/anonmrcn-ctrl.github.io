@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import { DatabaseSync } from "node:sqlite";
 import test from "node:test";
 
@@ -89,12 +90,17 @@ function environment() {
     };
 }
 
-async function call(env, options = {}) {
+async function call(env, path = "/api/admin/maintenance/export", options = {}) {
     const headers = new Headers({ Origin: env.ALLOWED_ORIGIN });
     if (options.admin) headers.set("X-Admin-Token", env.ADMIN_TOKEN);
+    if (options.body !== undefined) headers.set("Content-Type", "application/json");
     return worker.fetch(new Request(
-        "https://worker.test/api/admin/maintenance/export",
-        { headers }
+        `https://worker.test${path}`,
+        {
+            method: options.method || "GET",
+            headers,
+            body: options.body === undefined ? undefined : JSON.stringify(options.body)
+        }
     ), env, { waitUntil() {} });
 }
 
@@ -103,7 +109,7 @@ test("esporta contenuti D1 e oggetti R2 senza credenziali o dati personali", asy
     const denied = await call(env);
     assert.equal(denied.status, 401);
 
-    const initial = await call(env, { admin: true });
+    const initial = await call(env, undefined, { admin: true });
     assert.equal(initial.status, 200);
 
     const bytes = new TextEncoder().encode("documento di prova");
@@ -145,7 +151,7 @@ test("esporta contenuti D1 e oggetti R2 senza credenziali o dati personali", asy
         now
     ).run();
 
-    const response = await call(env, { admin: true });
+    const response = await call(env, undefined, { admin: true });
     const backup = await response.json();
     assert.equal(response.status, 200);
     assert.match(
@@ -183,7 +189,7 @@ test("esporta contenuti D1 e oggetti R2 senza credenziali o dati personali", asy
 
 test("rifiuta un backup quando D1 e R2 non sono coerenti", async () => {
     const env = environment();
-    const initial = await call(env, { admin: true });
+    const initial = await call(env, undefined, { admin: true });
     assert.equal(initial.status, 200);
 
     const now = Date.now();
@@ -203,9 +209,135 @@ test("rifiuta un backup quando D1 e R2 non sono coerenti", async () => {
         now
     ).run();
 
-    const response = await call(env, { admin: true });
+    const response = await call(env, undefined, { admin: true });
     assert.equal(response.status, 409);
     assert.match((await response.json()).error, /Oggetto R2 mancante/u);
+});
+
+test("valida e ripristina D1 e R2 soltanto dopo una conferma esplicita", async () => {
+    const env = environment();
+    const bytes = new TextEncoder().encode("versione nel backup");
+    const checksum = await sha256Hex(bytes);
+    const now = Date.now();
+
+    const initialized = await call(env, undefined, { admin: true });
+    assert.equal(initialized.status, 200);
+    await env.MEDIA.put("documents/restore/original.txt", bytes);
+    await env.DB.prepare(`
+        INSERT INTO cms_documents (
+            id, title, description, accessibility_status, accessibility_note,
+            media_type, media_name, byte_size, checksum, created_at, updated_at
+        ) VALUES (?, ?, ?, 'reviewed', '', ?, ?, ?, ?, ?, ?)
+    `).bind(
+        "33333333-3333-4333-8333-333333333333",
+        "Documento da ripristinare",
+        "Verifica del ripristino controllato.",
+        "text/plain",
+        "ripristino.txt",
+        bytes.byteLength,
+        checksum,
+        now,
+        now
+    ).run();
+    await env.DB.prepare(`
+        INSERT INTO media_assets (
+            id, owner_type, owner_id, variant_key, object_key, media_type,
+            media_name, byte_size, checksum, alt_text, caption, state,
+            created_at, updated_at
+        ) VALUES (?, 'document', ?, 'original', ?, 'text/plain', ?, ?, ?, '', '',
+            'current', ?, ?)
+    `).bind(
+        "media-restore-example",
+        "33333333-3333-4333-8333-333333333333",
+        "documents/restore/original.txt",
+        "ripristino.txt",
+        bytes.byteLength,
+        checksum,
+        now,
+        now
+    ).run();
+
+    const exported = await call(env, undefined, { admin: true });
+    const backup = await exported.json();
+    assert.equal(exported.status, 200);
+
+    const validationResponse = await call(
+        env,
+        "/api/admin/maintenance/restore/validate",
+        { admin: true, method: "POST", body: backup }
+    );
+    const validation = await validationResponse.json();
+    assert.equal(validationResponse.status, 200);
+    assert.equal(validation.valid, true);
+    assert.match(validation.confirmation, /^RIPRISTINA [0-9a-f]{12}$/u);
+
+    await env.DB.prepare(`
+        UPDATE site_pages SET title = 'Modifica successiva al backup'
+        WHERE id = 'page-progetto'
+    `).run();
+
+    const refused = await call(env, "/api/admin/maintenance/restore", {
+        admin: true,
+        method: "POST",
+        body: { backup, confirmation: "RIPRISTINA SBAGLIATO" }
+    });
+    assert.equal(refused.status, 400);
+    assert.equal(
+        env.DB.database.prepare("SELECT title FROM site_pages WHERE id = 'page-progetto'").get().title,
+        "Modifica successiva al backup"
+    );
+
+    const restoredResponse = await call(env, "/api/admin/maintenance/restore", {
+        admin: true,
+        method: "POST",
+        body: { backup, confirmation: validation.confirmation }
+    });
+    const restored = await restoredResponse.json();
+    assert.equal(restoredResponse.status, 200);
+    assert.equal(restored.restored, true);
+    assert.equal(restored.checksum, validation.checksum);
+    assert.equal(restored.mediaCount, 1);
+    assert.equal(
+        env.DB.database.prepare("SELECT title FROM site_pages WHERE id = 'page-progetto'").get().title,
+        "Il progetto"
+    );
+
+    const media = env.DB.database.prepare(`
+        SELECT object_key, checksum FROM media_assets
+        WHERE id = 'media-restore-example'
+    `).get();
+    assert.match(media.object_key, /^restores\/[0-9a-f]{16}\//u);
+    assert.equal(media.checksum, checksum);
+    assert.ok(env.MEDIA.objects.has(media.object_key));
+    assert.ok(env.MEDIA.objects.has("documents/restore/original.txt"));
+
+    const immutableTriggers = env.DB.database.prepare(`
+        SELECT COUNT(*) AS total FROM sqlite_master
+        WHERE type = 'trigger' AND name IN (
+            'content_revisions_immutable_update',
+            'content_revisions_immutable_delete',
+            'legal_versions_published_immutable_update',
+            'legal_versions_published_immutable_delete',
+            'permalinks_path_immutable'
+        )
+    `).get();
+    assert.equal(immutableTriggers.total, 5);
+});
+
+test("il pannello separa verifica e conferma del ripristino", async () => {
+    const root = new URL("../../", import.meta.url);
+    const [html, script] = await Promise.all([
+        readFile(new URL("admin.html", root), "utf8"),
+        readFile(new URL("admin.js", root), "utf8")
+    ]);
+    assert.match(html, /id="adminCmsBackup"/u);
+    assert.match(html, /id="adminCmsRestoreFile"/u);
+    assert.match(html, /id="adminCmsRestoreValidate"/u);
+    assert.match(html, /id="adminCmsRestoreConfirmationInput"/u);
+    assert.match(html, /id="adminCmsRestore"/u);
+    assert.match(script, /\/api\/admin\/maintenance\/restore\/validate/u);
+    assert.match(script, /\/api\/admin\/maintenance\/restore/u);
+    assert.match(script, /window\.confirm/u);
 });
 
 async function sha256Hex(bytes) {

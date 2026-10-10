@@ -44,10 +44,51 @@ I test provano autorizzazione, intestazioni `no-store`, formato e checksum,
 presenza di D1 e R2, esclusione dei dati personali e rifiuto di un catalogo D1
 che riferisce un oggetto R2 mancante.
 
+## 8.2 — Verifica e ripristino controllato
+
+Nel pannello, «Verifica o ripristina un backup» accetta esclusivamente il
+formato `nnmrcn-cms-backup` versione 1. La verifica precede sempre il ripristino
+e controlla:
+
+- checksum complessivo, elenco esatto delle tabelle e compatibilità delle
+  colonne;
+- unicità, base64, dimensione, tipo e SHA-256 di ogni oggetto R2;
+- corrispondenza biunivoca fra catalogo `media_assets` e oggetti inclusi;
+- limiti di righe, numero di oggetti e dimensione totale;
+- assenza dei media delle Memorie, che appartengono ai dati personali
+  operativi esclusi dal backup CMS.
+
+Soltanto un file valido produce una frase `RIPRISTINA …`, che deve essere
+ricopiata prima di una seconda conferma esplicita del browser. Il Worker carica
+i media sotto nuove chiavi R2, ne verifica la dimensione e solo dopo sostituisce
+le tabelle CMS in una transazione D1. Le protezioni append-only vengono rimosse
+soltanto dentro la transazione e ricreate prima del commit. Se D1 fallisce, le
+nuove copie R2 vengono eliminate; se riesce, gli oggetti precedenti restano
+intatti per consentire il recupero. URL, ID, revisioni, canonical e checksum
+sono ripristinati dal file senza rigenerarli.
+
+Il ripristino dal pannello riguarda il perimetro CMS. Un'esportazione completa
+dell'istanza D1, che comprende dati operativi e personali, deve essere eseguita
+soltanto da un amministratore Cloudflare e conservata cifrata:
+
+```bash
+cd worker
+npx --yes wrangler@4 d1 export nnmrcn-rete --remote \
+  --output ../nnmrcn-d1-completo.sql
+```
+
+Il file SQL completo non va caricato nel repository né nei workflow. Prima di
+un recupero infrastrutturale si crea una nuova istanza D1, si importa lì il file
+con `wrangler d1 execute --remote --file`, si verificano contenuti e accessi e
+solo dopo si cambia il binding: non si importa alla cieca sul database di
+produzione.
+
+Le verifiche automatiche di 8.2 simulano un contenuto modificato dopo il
+backup, rifiutano una conferma errata, ripristinano D1 e R2, conservano i vecchi
+oggetti e provano che i cinque trigger di immutabilità siano ancora presenti.
+
 ## Unità successive
 
-- **8.2 — Verifica e ripristino:** validazione preventiva dell'archivio,
-  ripristino controllato di D1 e R2 e procedura infrastrutturale completa.
 - **8.3 — Diagnostica CMS/SEO:** API, build statica, sitemap, canonical,
   collegamenti, immagini e stato dell'ultima pubblicazione.
 - **8.4 — Manuale e manutenzione:** flussi senza codice, controlli periodici,

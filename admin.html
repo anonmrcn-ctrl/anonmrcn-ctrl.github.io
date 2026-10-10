@@ -170,6 +170,38 @@
                     Scarica backup CMS
                 </button>
                 <p class="admin-export-status" id="adminCmsBackupStatus" aria-live="polite"></p>
+                <details class="admin-backup-restore">
+                    <summary>Verifica o ripristina un backup</summary>
+                    <p>
+                        Prima viene controllata l'integrità del file. Il
+                        ripristino sostituisce i contenuti CMS in D1, copia i
+                        media in nuove chiavi R2 e conserva gli oggetti
+                        precedenti per un eventuale recupero.
+                    </p>
+                    <label for="adminCmsRestoreFile">File di backup JSON</label>
+                    <input
+                        id="adminCmsRestoreFile"
+                        type="file"
+                        accept="application/json,.json"
+                    >
+                    <button id="adminCmsRestoreValidate" type="button">
+                        Verifica backup
+                    </button>
+                    <div id="adminCmsRestoreConfirmation" hidden>
+                        <label for="adminCmsRestoreConfirmationInput">
+                            Scrivi la conferma indicata dopo la verifica
+                        </label>
+                        <input
+                            id="adminCmsRestoreConfirmationInput"
+                            type="text"
+                            autocomplete="off"
+                        >
+                        <button id="adminCmsRestore" type="button">
+                            Ripristina contenuti e media
+                        </button>
+                    </div>
+                    <p class="admin-export-status" id="adminCmsRestoreStatus" aria-live="polite"></p>
+                </details>
                 <p><a href="./voci.html#editor">Apri l’editor delle voci</a></p>
                 <p class="admin-export-status" id="adminExportStatus" aria-live="polite"></p>
             </section>
@@ -1061,6 +1093,6 @@
         integrity="sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH"
         crossorigin="anonymous"
     ></script>
-    <script src="./admin.js?v=20261010-passkeys1"></script>
+    <script src="./admin.js?v=20261011-maintenance1"></script>
 </body>
 </html>
