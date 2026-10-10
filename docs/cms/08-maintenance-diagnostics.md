@@ -123,3 +123,28 @@ L'unità diventa completa dopo la pubblicazione e la verifica del link al
 manuale, del pannello, dell'endpoint diagnostico e delle intestazioni private
 del Worker. Le prove di pubblicazione vengono registrate qui senza riportare
 sessioni o contenuti riservati.
+
+## Verifica della pubblicazione
+
+La PR #18 è stata integrata l'11 ottobre 2026 con un merge commit, conservando
+i cinque commit distinti delle unità 7.2 e 8.1–8.4. Sono riusciti:
+
+- Worker Cloudflare `38091623182`;
+- controllo SEO e contenuti `38091623204`;
+- GitHub Pages `38091622784`.
+
+Le verifiche sul servizio pubblicato hanno confermato:
+
+- `/api/health` restituisce `ok: true`, schema contenuti 4 e storage `r2`;
+- `/api/admin/auth/status` restituisce `configured: true`, `no-store` e
+  `nosniff`;
+- esportazione e diagnostica senza sessione restituiscono `401`, `no-store` e
+  `nosniff`, senza esporre dati;
+- `admin.html` conserva `noindex, nofollow` e contiene backup, verifica,
+  ripristino, diagnostica e collegamento al manuale;
+- la pagina usa la versione aggiornata `admin.js?v=20261011-maintenance1`.
+
+La suite completa conta 115 test superati; `check-content-boundary.mjs`,
+`check-seo.mjs` e il dry-run Wrangler sono riusciti. L'esecuzione di una
+diagnostica autenticata completa richiede intenzionalmente la passkey nel
+browser dell'amministratore; l'endpoint pubblicato non accetta il vecchio token.
