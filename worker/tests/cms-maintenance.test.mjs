@@ -4,6 +4,7 @@ import { DatabaseSync } from "node:sqlite";
 import test from "node:test";
 
 import worker from "../src/index.js";
+import { runCmsDiagnostics } from "../src/cms-diagnostics.js";
 
 class D1StatementMock {
     constructor(database, sql) {
@@ -335,9 +336,74 @@ test("il pannello separa verifica e conferma del ripristino", async () => {
     assert.match(html, /id="adminCmsRestoreValidate"/u);
     assert.match(html, /id="adminCmsRestoreConfirmationInput"/u);
     assert.match(html, /id="adminCmsRestore"/u);
+    assert.match(html, /id="adminCmsDiagnostics"/u);
     assert.match(script, /\/api\/admin\/maintenance\/restore\/validate/u);
     assert.match(script, /\/api\/admin\/maintenance\/restore/u);
+    assert.match(script, /\/api\/admin\/maintenance\/diagnostics/u);
     assert.match(script, /window\.confirm/u);
+});
+
+test("la diagnostica confronta D1, R2, sitemap, canonical e immagini", async () => {
+    const env = environment();
+    const denied = await call(env, "/api/admin/maintenance/diagnostics");
+    assert.equal(denied.status, 401);
+    const initialized = await call(env, undefined, { admin: true });
+    assert.equal(initialized.status, 200);
+
+    const fakeFetch = async (input, options = {}) => {
+        const url = String(input);
+        if (url.endsWith("/api/health")) {
+            return Response.json({ ok: true, contentSchema: 4, mediaStorage: "r2" });
+        }
+        if (url.endsWith("/public-content-manifest.json")) {
+            return Response.json(
+                { version: 1, source: "D1 public API", wiki: [], places: [] },
+                { headers: { "Last-Modified": "Sun, 11 Oct 2026 00:00:00 GMT" } }
+            );
+        }
+        if (url.endsWith("/sitemap.xml")) {
+            return new Response(
+                "<urlset><url><loc>https://anonmrcn-ctrl.github.io/</loc></url></urlset>",
+                { headers: { "Content-Type": "application/xml" } }
+            );
+        }
+        if (url.endsWith("/robots.txt")) {
+            return new Response(
+                "User-agent: *\nSitemap: https://anonmrcn-ctrl.github.io/sitemap.xml\n"
+            );
+        }
+        if (url === "https://anonmrcn-ctrl.github.io/") {
+            return new Response(`<!doctype html><html><head>
+                <title>anonMrcn</title>
+                <link rel="canonical" href="https://anonmrcn-ctrl.github.io/">
+                <meta property="og:image" content="https://anonmrcn-ctrl.github.io/logo.PNG">
+                </head><body><h1>anonMrcn</h1>
+                <img src="./logo.PNG" alt="Logo">
+                </body></html>`, { headers: { "Content-Type": "text/html" } });
+        }
+        if (url === "https://anonmrcn-ctrl.github.io/logo.PNG" && options.method === "HEAD") {
+            return new Response(null, { status: 200 });
+        }
+        return new Response("not found", { status: 404 });
+    };
+
+    const report = await runCmsDiagnostics(env, fakeFetch, Date.UTC(2026, 9, 11));
+    assert.equal(report.ok, true);
+    assert.equal(report.failures, 0);
+    assert.equal(report.publication.manifestLastModified, "Sun, 11 Oct 2026 00:00:00 GMT");
+    assert.deepEqual(
+        report.checks.map((check) => [check.code, check.status]),
+        [
+            ["d1-foreign-keys", "pass"],
+            ["r2-catalog", "pass"],
+            ["worker-health", "pass"],
+            ["static-manifest", "pass"],
+            ["sitemap", "pass"],
+            ["public-pages", "pass"],
+            ["internal-links", "pass"],
+            ["images", "pass"]
+        ]
+    );
 });
 
 async function sha256Hex(bytes) {

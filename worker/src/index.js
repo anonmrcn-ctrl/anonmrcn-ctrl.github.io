@@ -24,6 +24,7 @@ import {
     restoreCmsBackup,
     validateCmsBackup
 } from "./cms-maintenance.js";
+import { runCmsDiagnostics } from "./cms-diagnostics.js";
 import { PRIVACY_DOCUMENT_SEED } from "./legal-seed.js";
 import { MAP_LAYER_SEEDS } from "./map-seed.js";
 import { NARRATIVE_STEP_SEEDS } from "./narrative-seed.js";
@@ -972,6 +973,13 @@ export default {
                 path === "/api/admin/maintenance/restore"
             ) {
                 return await adminRestoreCmsBackup(request, env);
+            }
+
+            if (
+                request.method === "GET" &&
+                path === "/api/admin/maintenance/diagnostics"
+            ) {
+                return await adminCmsDiagnostics(request, env);
             }
 
             if (request.method === "GET" && path === "/api/admin/contact-messages") {
@@ -10380,6 +10388,18 @@ async function adminRestoreCmsBackup(request, env) {
         }
         throw error;
     }
+}
+
+async function adminCmsDiagnostics(request, env) {
+    if (!(await adminAuthorized(request, env))) {
+        return unauthorized(request, env);
+    }
+
+    await ensureWikiStorage(env);
+    await ensureMapEntryStorage(env);
+    await ensureNarrativeStorage(env);
+    await ensureCmsStorage(env);
+    return json(request, env, await runCmsDiagnostics(env));
 }
 
 function exportMessageRow(row) {

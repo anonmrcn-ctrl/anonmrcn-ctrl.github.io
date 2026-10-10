@@ -87,9 +87,31 @@ Le verifiche automatiche di 8.2 simulano un contenuto modificato dopo il
 backup, rifiutano una conferma errata, ripristinano D1 e R2, conservano i vecchi
 oggetti e provano che i cinque trigger di immutabilità siano ancora presenti.
 
+## 8.3 — Diagnostica CMS e SEO
+
+Il pulsante «Esegui diagnostica» chiama l'endpoint autenticato
+`GET /api/admin/maintenance/diagnostics`. Il rapporto non contiene testi,
+indirizzi, nomi dei file privati, chiavi R2 o credenziali e controlla:
+
+- `PRAGMA foreign_key_check` e presenza/dimensione in R2 di ogni media
+  catalogato in D1;
+- health del Worker, versione dello schema e binding R2;
+- corrispondenza fra Voci e luoghi pubblicati in D1 e
+  `public-content-manifest.json`, inclusi ID, slug e data di aggiornamento;
+- sitemap, collegamento da `robots.txt` ed esclusione delle aree private;
+- risposta HTTP, title, `h1`, canonical e robots delle pagine indicizzabili;
+- compatibilità dei collegamenti interni con sitemap, permalink e pagine
+  private note;
+- disponibilità di immagini HTML, varianti responsive e immagini sociali;
+- data HTTP del manifest e aggiornamento più recente dei contenuti generati.
+
+Il rapporto distingue `pass`, `warn` e `fail`. Per restare entro i limiti di
+subrequest del Worker analizza al massimo 40 pagine e 20 immagini per esecuzione;
+un superamento produce un errore o un avviso esplicito, non un falso esito
+positivo. Il controllo locale `scripts/check-seo.mjs` resta complementare:
+valida anche i file sorgente prima della pubblicazione.
+
 ## Unità successive
 
-- **8.3 — Diagnostica CMS/SEO:** API, build statica, sitemap, canonical,
-  collegamenti, immagini e stato dell'ultima pubblicazione.
 - **8.4 — Manuale e manutenzione:** flussi senza codice, controlli periodici,
   gestione degli errori e prova sul servizio pubblicato.

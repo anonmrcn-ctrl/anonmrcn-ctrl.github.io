@@ -43,6 +43,11 @@
     );
     const cmsRestoreButton = document.getElementById("adminCmsRestore");
     const cmsRestoreStatus = document.getElementById("adminCmsRestoreStatus");
+    const cmsDiagnosticsButton = document.getElementById("adminCmsDiagnostics");
+    const cmsDiagnosticsStatus = document.getElementById("adminCmsDiagnosticsStatus");
+    const cmsDiagnosticsResults = document.getElementById(
+        "adminCmsDiagnosticsResults"
+    );
     const countPending = document.getElementById("adminCountPending");
     const countDelivery = document.getElementById("adminCountDelivery");
     const countPublishable = document.getElementById("adminCountPublishable");
@@ -2999,6 +3004,34 @@
         }
     }
 
+    async function runCmsDiagnostics() {
+        cmsDiagnosticsButton.disabled = true;
+        cmsDiagnosticsResults.replaceChildren();
+        cmsDiagnosticsStatus.textContent =
+            "Controllo di database, media e pagine pubblicate…";
+        try {
+            const report = await request("/api/admin/maintenance/diagnostics");
+            for (const check of report.checks || []) {
+                const item = document.createElement("li");
+                const label = document.createElement("strong");
+                label.textContent = `${check.label}: `;
+                item.dataset.status = check.status;
+                item.append(label, document.createTextNode(check.detail));
+                cmsDiagnosticsResults.appendChild(item);
+            }
+            const outcome = report.ok ? "nessun errore" :
+                `${report.failures} errori`;
+            cmsDiagnosticsStatus.textContent =
+                `Diagnostica completata: ${outcome}` +
+                `${report.warnings ? ` e ${report.warnings} avvisi` : ""}.`;
+        } catch (error) {
+            cmsDiagnosticsStatus.textContent = error.message ||
+                "Non è stato possibile completare la diagnostica.";
+        } finally {
+            cmsDiagnosticsButton.disabled = false;
+        }
+    }
+
     function ensureMapEntryPicker() {
         const mapContainer = document.getElementById("adminMapEntryMap");
 
@@ -3965,6 +3998,7 @@
     cmsBackupButton.addEventListener("click", downloadCmsBackup);
     cmsRestoreValidate.addEventListener("click", validateCmsRestoreFile);
     cmsRestoreButton.addEventListener("click", restoreCmsBackup);
+    cmsDiagnosticsButton.addEventListener("click", runCmsDiagnostics);
     cmsRestoreFile.addEventListener("change", () => {
         validatedCmsBackup = null;
         cmsRestorePhrase = "";
