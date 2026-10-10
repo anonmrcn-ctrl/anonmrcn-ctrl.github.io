@@ -122,12 +122,29 @@ piccola, verifica le intestazioni dimensionali e richiede una chiave sconosciuta
 per provare il ripiego. Lo stesso test controlla che i tre frontend e il
 generatore statico applichino gli attributi responsive.
 
+La PR #9 ha pubblicato l'unità il 10 ottobre 2026 conservando separati i commit
+6.1 e 6.2. Il run Worker `38044904768` è riuscito insieme al controllo SEO
+`38044904844`. Sul servizio pubblico, l'originale storico
+`4d3c17cd-2668-41e1-ad51-d7f466f3c260` restituisce `X-Media-Storage: r2`,
+`X-Media-Variant: original`, `X-Media-Width: 1600` e
+`X-Media-Height: 599`. La richiesta dello stesso URL con `?variant=small`, per
+il quale non esiste una copia storica, restituisce gli stessi 104.360 byte e
+dichiara correttamente il ripiego `original`.
+
+`GET /api/public/wiki/cave-di-gaggio-nord` espone le stesse dimensioni e la
+sorgente disponibile. Una nuova esecuzione di `generate-public-pages.mjs` ha
+quindi scritto nella pagina autonoma `voci/cave-di-gaggio-nord.html` gli
+attributi `srcset`, `sizes`, `width="1600"` e `height="599"`. Le varianti
+effettive dei nuovi caricamenti restano provate senza modificare contenuti
+editoriali reali dal test che legge separatamente `small`, `medium` e
+`original` da R2.
+
 ## Unità ancora da completare
 
 | Ordine | Unità | Stato |
 |---:|---|---|
 | 6.1 | Originali, catalogo, migrazione compatibile e cancellazione privata | Completo e verificato sul Worker pubblicato |
-| 6.2 | Metadati dimensionali e varianti responsive | Codice completo; pubblicazione da verificare |
+| 6.2 | Metadati dimensionali e varianti responsive | Completo e verificato sul Worker e sulla pagina generata |
 | 6.3 | Selezione e generazione delle immagini sociali | Da iniziare |
 | 6.4 | Documenti in R2, gestione amministrativa e verifica finale | Da iniziare |
 
