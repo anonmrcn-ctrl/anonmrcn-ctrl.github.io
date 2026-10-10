@@ -185,6 +185,26 @@
     const cmsPermalinkNew = document.getElementById("adminPermalinkNew");
     const cmsPermalinkReload = document.getElementById("adminPermalinkReload");
     const cmsPermalinkStatus = document.getElementById("adminPermalinkStatus");
+    const cmsDocumentForm = document.getElementById("adminDocumentForm");
+    const cmsDocumentSelect = document.getElementById("adminDocumentSelect");
+    const cmsDocumentIdentity = document.getElementById("adminDocumentIdentity");
+    const cmsDocumentTitle = document.getElementById("adminDocumentTitle");
+    const cmsDocumentDescription = document.getElementById(
+        "adminDocumentDescription"
+    );
+    const cmsDocumentFile = document.getElementById("adminDocumentFile");
+    const cmsDocumentAccessibility = document.getElementById(
+        "adminDocumentAccessibility"
+    );
+    const cmsDocumentAccessibilityNote = document.getElementById(
+        "adminDocumentAccessibilityNote"
+    );
+    const cmsDocumentSubmit = document.getElementById("adminDocumentSubmit");
+    const cmsDocumentNew = document.getElementById("adminDocumentNew");
+    const cmsDocumentDownload = document.getElementById("adminDocumentDownload");
+    const cmsDocumentDelete = document.getElementById("adminDocumentDelete");
+    const cmsDocumentReload = document.getElementById("adminDocumentReload");
+    const cmsDocumentStatus = document.getElementById("adminDocumentStatus");
     const cmsPreviewSelect = document.getElementById("adminPreviewSelect");
     const cmsPreviewReload = document.getElementById("adminPreviewReload");
     const cmsPreviewIdentity = document.getElementById("adminPreviewIdentity");
@@ -268,6 +288,7 @@
     let loadedCmsSettings = [];
     let loadedCmsLegalDocuments = [];
     let loadedCmsPermalinks = [];
+    let loadedCmsDocuments = [];
     let loadedCmsPreviews = [];
     let loadedCmsRevisions = [];
 
@@ -320,6 +341,7 @@
                 loadCmsSettings(),
                 loadCmsLegal(),
                 loadCmsPermalinks(),
+                loadCmsDocuments(),
                 loadCmsPreviews(),
                 loadSummary(),
                 pushNotifications.sync()
@@ -1598,6 +1620,217 @@
             cmsPermalinkSubmit.disabled = false;
             cmsPermalinkNew.disabled = false;
             cmsPermalinkReload.disabled = false;
+        }
+    }
+
+    function selectedCmsDocument() {
+        return loadedCmsDocuments.find(
+            (item) => item.id === cmsDocumentSelect.value
+        );
+    }
+
+    function formatDocumentBytes(value) {
+        const bytes = Number(value) || 0;
+        if (bytes < 1024) return `${bytes} B`;
+        if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KiB`;
+        return `${(bytes / (1024 * 1024)).toFixed(1)} MiB`;
+    }
+
+    async function loadCmsDocuments(preferredId = "") {
+        const selectedId = preferredId || cmsDocumentSelect.value;
+        cmsDocumentStatus.textContent = "Caricamento documenti…";
+        try {
+            const data = await request("/api/admin/cms/documents");
+            loadedCmsDocuments = data.documents || [];
+            const newOption = document.createElement("option");
+            newOption.value = "";
+            newOption.textContent = "Nuovo documento";
+            cmsDocumentSelect.replaceChildren(newOption);
+            for (const item of loadedCmsDocuments) {
+                const option = document.createElement("option");
+                option.value = item.id;
+                option.textContent = `${item.title} — ${item.mediaName}`;
+                cmsDocumentSelect.appendChild(option);
+            }
+            cmsDocumentSelect.value = loadedCmsDocuments.some(
+                (item) => item.id === selectedId
+            ) ? selectedId : "";
+            renderCmsDocumentForm();
+            cmsDocumentStatus.textContent = "";
+        } catch (error) {
+            cmsDocumentStatus.textContent = error.message ||
+                "Non è stato possibile caricare i documenti.";
+        }
+    }
+
+    function renderCmsDocumentForm() {
+        const item = selectedCmsDocument();
+        cmsDocumentTitle.value = item?.title || "";
+        cmsDocumentDescription.value = item?.description || "";
+        cmsDocumentAccessibility.value = item?.accessibilityStatus || "unchecked";
+        cmsDocumentAccessibilityNote.value = item?.accessibilityNote || "";
+        cmsDocumentFile.value = "";
+        cmsDocumentFile.required = !item;
+        cmsDocumentSubmit.textContent = item
+            ? "Salva metadati o sostituisci file"
+            : "Carica documento";
+        cmsDocumentDownload.disabled = !item;
+        cmsDocumentDelete.disabled = !item;
+        cmsDocumentIdentity.textContent = item
+            ? [
+                item.id,
+                item.mediaName,
+                formatDocumentBytes(item.byteSize),
+                `${item.versionCount} ${item.versionCount === 1 ? "versione" : "versioni"} R2`,
+                item.accessibilityStatus === "reviewed"
+                    ? "accessibilità verificata"
+                    : "accessibilità da verificare"
+            ].join(" · ")
+            : "Il file sarà privato e riceverà un identificativo stabile.";
+    }
+
+    function cmsDocumentMimeType(file) {
+        if (file.type) return file.type.toLowerCase();
+        const extension = file.name.split(".").pop()?.toLowerCase();
+        return {
+            pdf: "application/pdf",
+            txt: "text/plain",
+            md: "text/markdown",
+            odt: "application/vnd.oasis.opendocument.text",
+            docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        }[extension] || "";
+    }
+
+    async function cmsDocumentFilePayload(file) {
+        if (file.size > 8 * 1024 * 1024) {
+            throw new Error("Il documento supera il limite di 8 MiB.");
+        }
+        const type = cmsDocumentMimeType(file);
+        const allowed = new Set([
+            "application/pdf",
+            "text/plain",
+            "text/markdown",
+            "application/vnd.oasis.opendocument.text",
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        ]);
+        if (!allowed.has(type)) {
+            throw new Error("Usa un file PDF, TXT, Markdown, ODT o DOCX.");
+        }
+        const data = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.addEventListener("load", () => {
+                const result = String(reader.result || "");
+                resolve(result.slice(result.indexOf(",") + 1));
+            }, { once: true });
+            reader.addEventListener("error", () => reject(
+                new Error("Non è stato possibile leggere il file.")
+            ), { once: true });
+            reader.readAsDataURL(file);
+        });
+        return { name: file.name, type, data };
+    }
+
+    async function saveCmsDocument(event) {
+        event.preventDefault();
+        const item = selectedCmsDocument();
+        const file = cmsDocumentFile.files?.[0] || null;
+        if (!item && !file) {
+            cmsDocumentStatus.textContent = "Seleziona il file da caricare.";
+            cmsDocumentFile.focus();
+            return;
+        }
+        cmsDocumentSubmit.disabled = true;
+        cmsDocumentNew.disabled = true;
+        cmsDocumentReload.disabled = true;
+        cmsDocumentStatus.textContent = file
+            ? "Verifica e caricamento del file in R2…"
+            : "Salvataggio dei metadati…";
+        try {
+            const body = {
+                title: cmsDocumentTitle.value,
+                description: cmsDocumentDescription.value,
+                accessibilityStatus: cmsDocumentAccessibility.value,
+                accessibilityNote: cmsDocumentAccessibilityNote.value
+            };
+            if (item) body.expectedUpdatedAt = item.updatedAt;
+            if (file) body.file = await cmsDocumentFilePayload(file);
+            const data = await request(item
+                ? `/api/admin/cms/documents/${encodeURIComponent(item.id)}`
+                : "/api/admin/cms/documents", {
+                method: item ? "PATCH" : "POST",
+                body: JSON.stringify(body)
+            });
+            await loadCmsDocuments(data.document.id);
+            cmsDocumentStatus.textContent = data.replaced
+                ? "Nuova versione verificata e salvata in R2; la precedente è conservata."
+                : item
+                    ? "Metadati salvati; il file è rimasto invariato."
+                    : "Documento verificato e salvato in R2.";
+        } catch (error) {
+            cmsDocumentStatus.textContent = error.message ||
+                "Non è stato possibile salvare il documento.";
+        } finally {
+            cmsDocumentSubmit.disabled = false;
+            cmsDocumentNew.disabled = false;
+            cmsDocumentReload.disabled = false;
+        }
+    }
+
+    async function downloadCmsDocument() {
+        const item = selectedCmsDocument();
+        if (!item) return;
+        cmsDocumentDownload.disabled = true;
+        cmsDocumentStatus.textContent = "Preparazione del download protetto…";
+        try {
+            const response = await fetch(`${api.baseUrl}${item.downloadUrl}`, {
+                headers: { "X-Admin-Token": adminToken }
+            });
+            if (!response.ok) {
+                const error = await response.json().catch(() => null);
+                throw new Error(error?.error || "Download non riuscito.");
+            }
+            const objectUrl = URL.createObjectURL(await response.blob());
+            const link = document.createElement("a");
+            link.href = objectUrl;
+            link.download = item.mediaName;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+            cmsDocumentStatus.textContent = "Download completato.";
+        } catch (error) {
+            cmsDocumentStatus.textContent = error.message ||
+                "Non è stato possibile scaricare il documento.";
+        } finally {
+            cmsDocumentDownload.disabled = false;
+        }
+    }
+
+    async function deleteCmsDocument() {
+        const item = selectedCmsDocument();
+        if (!item || !window.confirm(
+            `Rimuovere definitivamente «${item.title}» e tutte le sue versioni da R2?`
+        )) return;
+        cmsDocumentDelete.disabled = true;
+        cmsDocumentSubmit.disabled = true;
+        cmsDocumentStatus.textContent = "Rimozione di metadati e versioni R2…";
+        try {
+            const data = await request(
+                `/api/admin/cms/documents/${encodeURIComponent(item.id)}`,
+                {
+                    method: "DELETE",
+                    body: JSON.stringify({ expectedUpdatedAt: item.updatedAt })
+                }
+            );
+            await loadCmsDocuments();
+            cmsDocumentStatus.textContent =
+                `Documento rimosso: ${data.deletedObjects} ${data.deletedObjects === 1 ? "oggetto" : "oggetti"} cancellati da R2.`;
+        } catch (error) {
+            cmsDocumentStatus.textContent = error.message ||
+                "Non è stato possibile rimuovere il documento.";
+            cmsDocumentDelete.disabled = false;
+        } finally {
+            cmsDocumentSubmit.disabled = false;
         }
     }
 
@@ -3397,6 +3630,19 @@
     });
     cmsPermalinkReload.addEventListener("click", () => {
         loadCmsPermalinks(cmsPermalinkSelect.value);
+    });
+    cmsDocumentForm.addEventListener("submit", saveCmsDocument);
+    cmsDocumentSelect.addEventListener("change", renderCmsDocumentForm);
+    cmsDocumentNew.addEventListener("click", () => {
+        cmsDocumentSelect.value = "";
+        renderCmsDocumentForm();
+        cmsDocumentStatus.textContent = "Nuovo documento pronto.";
+        cmsDocumentTitle.focus();
+    });
+    cmsDocumentDownload.addEventListener("click", downloadCmsDocument);
+    cmsDocumentDelete.addEventListener("click", deleteCmsDocument);
+    cmsDocumentReload.addEventListener("click", () => {
+        loadCmsDocuments(cmsDocumentSelect.value);
     });
     cmsPreviewSelect.addEventListener("change", () => {
         renderCmsPreview();

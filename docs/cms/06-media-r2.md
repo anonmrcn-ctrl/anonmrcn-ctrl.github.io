@@ -178,6 +178,39 @@ alternativo «foto satellitare delle cave». La richiesta
 l'originale R2, mentre il test di upload prova la variante 1200:630 per i nuovi
 media. L'intera suite conta 99 test superati.
 
+## Unità 6.4 — Documenti privati
+
+La migrazione `0016_cms_documents_r2.sql` aggiunge `cms_documents`, che conserva
+in D1 soltanto identificativo stabile, titolo, descrizione accessibile, stato e
+nota della verifica di accessibilità, tipo, nome, dimensione, checksum e date.
+Il contenuto del file non ha una colonna D1: per PDF, testo, Markdown, ODT e
+DOCX fino a 8 MiB il binding R2 è obbligatorio e un errore o un binding assente
+interrompono il salvataggio senza creare un ripiego contenente dati privati.
+
+Il pannello «Documenti privati» rende espliciti formato, limite e conseguenze
+delle azioni. La creazione richiede titolo, descrizione e file; la sostituzione
+del file è facoltativa e crea un nuovo oggetto `current`, trasformando il
+precedente in `retained` senza cambiare l'UUID del documento. Il controllo
+`expectedUpdatedAt` impedisce di sovrascrivere una modifica più recente. Il
+download corrente è un'esportazione autenticata con `Content-Disposition:
+attachment`, `Cache-Control: private, no-store` e `nosniff`; non esiste un
+endpoint pubblico, e documenti e URL amministrativi non entrano nella sitemap.
+
+Prima dell'upload il Worker controlla dimensione, Base64 e firma coerente col
+MIME; per i formati testuali verifica UTF-8 e assenza di byte nulli. Il pannello
+richiede una descrizione utile anche senza accesso visivo al file e distingue
+«da verificare» da «verificata», con una nota libera per registrare lingua,
+testo ricercabile, titoli e ordine di lettura. La rimozione chiede conferma,
+verifica la versione e cancella metadati e tutte le versioni R2, applicando così
+anche il principio privacy di cancellazione effettiva.
+
+`documents-r2.test.mjs` prova autorizzazione, upload, download, intestazioni,
+metadati, sostituzione, concorrenza, eliminazione completa, firma dei file,
+assenza di ripiego senza R2 e non indicizzazione. Insieme alla migrazione e ai
+test esistenti porta la suite a 105 test; build e controlli SEO/confine sono
+verdi. La chiusura dell'unità richiede ancora il deploy e una prova non
+distruttiva del Worker pubblicato.
+
 ## Unità ancora da completare
 
 | Ordine | Unità | Stato |
@@ -185,7 +218,7 @@ media. L'intera suite conta 99 test superati.
 | 6.1 | Originali, catalogo, migrazione compatibile e cancellazione privata | Completo e verificato sul Worker pubblicato |
 | 6.2 | Metadati dimensionali e varianti responsive | Completo e verificato sul Worker e sulla pagina generata |
 | 6.3 | Selezione e generazione delle immagini sociali | Completo e verificato sul Worker e sulla pagina pubblicata |
-| 6.4 | Documenti in R2, gestione amministrativa e verifica finale | Da iniziare |
+| 6.4 | Documenti in R2, gestione amministrativa e verifica finale | Codice completo; pubblicazione da verificare |
 
 Il punto 6 e SEO-4 restano quindi **in corso** finché tutte le unità non sono
 complete e verificate sul servizio pubblicato.

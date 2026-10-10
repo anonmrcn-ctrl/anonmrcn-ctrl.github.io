@@ -7,6 +7,7 @@ import { CMS_STORAGE_STATEMENTS } from "../src/cms-schema.js";
 import worker from "../src/index.js";
 
 const EXPECTED_TABLES = Object.freeze([
+    "cms_documents",
     "content_revisions",
     "content_source_links",
     "legal_document_versions",
@@ -26,7 +27,7 @@ const EXPECTED_TABLES = Object.freeze([
     "sources"
 ]);
 const EXPECTED_FOUNDATION_TABLES = Object.freeze(
-    EXPECTED_TABLES.filter((name) => name !== "media_assets")
+    EXPECTED_TABLES.filter((name) => !["cms_documents", "media_assets"].includes(name))
 );
 
 function databaseWithCmsSchema() {
@@ -363,6 +364,41 @@ test("la migrazione 0015 prepara il catalogo immutabile dei media R2", async () 
     );
 });
 
+test("la migrazione 0016 prepara i metadati privati dei documenti", async () => {
+    const database = new DatabaseSync(":memory:");
+    const migration = await readFile(
+        new URL("../migrations/0016_cms_documents_r2.sql", import.meta.url),
+        "utf8"
+    );
+    database.exec(migration);
+    const now = Date.now();
+    database.prepare(`
+        INSERT INTO cms_documents (
+            id, title, description, accessibility_status,
+            media_type, media_name, byte_size, checksum,
+            created_at, updated_at
+        ) VALUES (?, ?, ?, 'reviewed', ?, ?, ?, ?, ?, ?)
+    `).run(
+        "123e4567-e89b-42d3-a456-426614174000",
+        "Documento",
+        "Descrizione accessibile",
+        "application/pdf",
+        "documento.pdf",
+        42,
+        "a".repeat(64),
+        now,
+        now
+    );
+    assert.equal(
+        database.prepare("SELECT accessibility_status FROM cms_documents").get()
+            .accessibility_status,
+        "reviewed"
+    );
+    assert.throws(() => database.prepare(`
+        UPDATE cms_documents SET accessibility_status = 'sconosciuto'
+    `).run(), /CHECK constraint failed/u);
+});
+
 test("l’health check aggiorna una fondazione 0013 prima di creare indici nuovi", async () => {
     const db = new D1DatabaseMock();
     const foundation = await readFile(
@@ -413,6 +449,6 @@ test("l’health check installa la fondazione prima di dichiarare il servizio sa
 
     assert.equal(response.status, 200);
     assert.equal(data.ok, true);
-    assert.equal(data.contentSchema, 2);
+    assert.equal(data.contentSchema, 3);
     assert.deepEqual(listCmsTables(db.database), EXPECTED_TABLES);
 });
