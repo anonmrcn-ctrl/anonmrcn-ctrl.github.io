@@ -20,7 +20,7 @@ affiancare il primo passaggio tecnico incompleto, ma non sostituirlo.
 | 6 | Media e documenti in R2, immagini SEO | Completo | Le unità 6.1–6.4 coprono originali, varianti responsive e sociali, metadati accessibili e documenti privati. Test, deploy e verifiche live di Worker, R2, pannello e protezione degli endpoint sono registrati in `06-media-r2.md` |
 | 7 | Sostituzione del token amministrativo | Completo | PR #16 e i run Worker `38068531893`, Pages `38068531244` e SEO `38068532070` pubblicano identità WebAuthn, sessioni di 8 ore e disattivazione automatica del token dopo la prima passkey. L'11 ottobre 2026 lo stato pubblico restituisce `configured: true`, una richiesta amministrativa con il solo header legacy restituisce `401` e l'amministratore conferma l'accesso con la passkey personale. La seconda passkey resta raccomandata ma non vincolante; l'unico recupero disponibile è quello infrastrutturale documentato |
 | 8 | Esportazione, manutenzione e diagnostica CMS/SEO | Completo | Le unità 8.1–8.4 forniscono backup e ripristino verificabili di D1/R2, diagnostica CMS/SEO, manuale senza codice e cadenza di manutenzione. PR #18, 115 test, i run Worker `38091623182`, SEO `38091623204` e Pages `38091622784` e le risposte live sono registrati in `08-maintenance-diagnostics.md` |
-| 9 | Prestazioni e Core Web Vitals | Da iniziare | Non esiste ancora una baseline distinta per homepage, mappa, Voci, luoghi e Memorie |
+| 9 | Prestazioni e Core Web Vitals | In corso | `performance-budget.json`, `scripts/check-performance.mjs` e il workflow `check-performance.yml` definiscono la baseline mobile/desktop delle cinque tipologie; restano da registrare misure, interventi e verifica pubblicata |
 | 10 | Programma editoriale e monitoraggio organico | Da iniziare | Cluster territoriali e fonti sono definiti, ma non esiste ancora un ciclo editoriale misurato |
 | 11 | Amministrazione più user friendly | Da iniziare | Il pannello copre le funzioni CMS, ma richiede una revisione completa di linguaggio, navigazione, gerarchia, feedback, errori, responsive e accessibilità |
 | 12 | Rafforzamento della privacy | Da iniziare | Esistono informativa, filtri e strumenti rispettosi della privacy; manca un audit complessivo con minimizzazione, retention, consenso, sicurezza dei metadati e diagnostica verificabile |
@@ -139,6 +139,15 @@ retention e recupero senza modificare contenuti o media, è in
 | 8.2 | Verifica e ripristino | Completa | Il pannello valida formato, tabelle, SHA-256 e corrispondenza D1/R2, richiede una frase legata al checksum e una conferma ulteriore, copia i media sotto nuove chiavi e sostituisce D1 in transazione. `cms-maintenance.test.mjs` prova rifiuto, ripristino, conservazione degli oggetti precedenti e ricreazione dei trigger; `08-maintenance-diagnostics.md` separa il recupero CMS dal backup infrastrutturale cifrato |
 | 8.3 | Diagnostica CMS/SEO | Completa | `GET /api/admin/maintenance/diagnostics`, il pulsante nel pannello e `runCmsDiagnostics` controllano relazioni D1, catalogo R2, health, allineamento D1/manifest, sitemap/robots, pagine, canonical, link, immagini e stato della pubblicazione senza esporre dati privati; test deterministici simulano l'intero sito pubblico |
 | 8.4 | Manuale e manutenzione | Completa | `manuale-amministratore.md` è collegato dal pannello e descrive tutti i flussi ordinari senza codice, cadenze e gestione degli errori. PR #18 ha conservato cinque commit; Worker, SEO e Pages sono riusciti e le verifiche live provano controlli visibili, `noindex`, passkey attiva ed endpoint protetti con `401`, `no-store` e `nosniff` |
+
+## Punto 9 — ordine vincolante
+
+| Ordine | Unità | Stato | Criterio e prova |
+|---:|---|---|---|
+| 9.1 | Baseline e budget ripetibili | In corso | Cinque tipologie per i profili mobile e desktop, soglie in `performance-budget.json`, controllo statico e Lighthouse in CI. L'unità si chiude quando i dieci rapporti sono stati prodotti e registrati |
+| 9.2 | Stabilità visiva e caricamento iniziale | Da iniziare | Le immagini riservano spazio, le risorse critiche sono esplicite e quelle non necessarie non bloccano la prima visualizzazione; nuova misura sulle dieci combinazioni |
+| 9.3 | Reattività di mappa e contenuti interattivi | Da iniziare | Le inizializzazioni costose sono differite o suddivise; TBT e prove d'interazione non regrediscono. L'INP resta distinto e viene verificato al 75º percentile quando disponibile sul campo |
+| 9.4 | Verifica pubblicata e monitoraggio | Da iniziare | Audit sul ramo pubblicato, cause e correzioni degli eventuali scostamenti, procedura di controllo periodico e passaggio di SEO-5 a completo |
 
 ## Punti 4–12 — criteri di completamento
 

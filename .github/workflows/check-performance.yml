@@ -1,0 +1,76 @@
+name: Controlla prestazioni
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  lighthouse:
+    name: Lighthouse mobile e desktop
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Scarica il repository
+        uses: actions/checkout@v6
+
+      - name: Configura Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+
+      - name: Verifica i budget statici
+        run: node scripts/check-performance.mjs
+
+      - name: Avvia il sito locale
+        shell: bash
+        run: |
+          python3 -m http.server 4173 --bind 127.0.0.1 > /tmp/nnmrcn-http.log 2>&1 &
+          echo $! > /tmp/nnmrcn-http.pid
+          for attempt in {1..20}; do
+            if curl --fail --silent http://127.0.0.1:4173/index.html > /dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/nnmrcn-http.log
+          exit 1
+
+      - name: Misura le cinque tipologie
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p performance-reports
+          while IFS='|' read -r id path; do
+            for profile in mobile desktop; do
+              extra=()
+              if [[ "$profile" == "desktop" ]]; then
+                extra+=(--preset=desktop)
+              fi
+              npx --yes lighthouse@12.8.2 "http://127.0.0.1:4173${path}" \
+                --quiet \
+                --chrome-flags="--headless --no-sandbox --disable-dev-shm-usage" \
+                --only-categories=performance \
+                --output=json \
+                --output-path="performance-reports/${id}.${profile}.json" \
+                "${extra[@]}"
+            done
+          done < <(node -e 'const c=require("./performance-budget.json"); for (const r of c.routes) console.log(`${r.id}|${r.path}`)')
+
+      - name: Applica le soglie
+        run: node scripts/check-performance.mjs performance-reports
+
+      - name: Conserva i rapporti
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: lighthouse-reports
+          path: performance-reports/*.json
+          if-no-files-found: error
+          retention-days: 30
