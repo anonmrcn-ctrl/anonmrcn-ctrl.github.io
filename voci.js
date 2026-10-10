@@ -957,28 +957,40 @@
             throw new Error("Formato non supportato. Usa JPEG, PNG o WebP.");
         }
 
-        let blob = await resizePhoto(file, 1600, 0.8);
+        let original = await resizePhoto(file, 1600, 0.8);
 
-        if (blob.size > MAX_IMAGE_BYTES) {
-            blob = await resizePhoto(file, 1200, 0.66);
+        if (original.blob.size > MAX_IMAGE_BYTES) {
+            original = await resizePhoto(file, 1200, 0.66);
         }
 
-        if (blob.size > MAX_IMAGE_BYTES) {
-            blob = await resizePhoto(file, 900, 0.55);
+        if (original.blob.size > MAX_IMAGE_BYTES) {
+            original = await resizePhoto(file, 900, 0.55);
         }
 
-        if (!blob.size || blob.size > MAX_IMAGE_BYTES) {
+        if (!original.blob.size || original.blob.size > MAX_IMAGE_BYTES) {
             throw new Error("La fotografia resta troppo grande dopo la riduzione automatica.");
         }
+
+        const variantCandidates = await Promise.all([
+            responsivePhotoVariant(file, "small", 480, 0.72),
+            responsivePhotoVariant(file, "medium", 960, 0.76)
+        ]);
+        const variants = variantCandidates.filter((variant, index, all) =>
+            variant.width < original.width &&
+            all.findIndex((candidate) => candidate.width === variant.width) === index
+        );
 
         return {
             id: photoId(),
             name: file.name || "fotografia",
-            type: blob.type,
+            type: original.blob.type,
             alt: "",
             caption: "",
-            data: await blobToBase64(blob),
-            previewUrl: URL.createObjectURL(blob),
+            data: await blobToBase64(original.blob),
+            width: original.width,
+            height: original.height,
+            variants,
+            previewUrl: URL.createObjectURL(original.blob),
             mediaUrl: "",
             adminMediaUrl: ""
         };
@@ -1012,7 +1024,18 @@
             throw new Error("Non è stato possibile preparare la fotografia.");
         }
 
-        return blob;
+        return { blob, width: canvas.width, height: canvas.height };
+    }
+
+    async function responsivePhotoVariant(file, key, maxDimension, quality) {
+        const variant = await resizePhoto(file, maxDimension, quality);
+        return {
+            key,
+            type: variant.blob.type,
+            width: variant.width,
+            height: variant.height,
+            data: await blobToBase64(variant.blob)
+        };
     }
 
     function loadPhoto(file) {
@@ -1208,7 +1231,8 @@
                 type: photo.type,
                 alt: photo.alt.trim(),
                 caption: photo.caption.trim(),
-                data: photo.data || ""
+                data: photo.data || "",
+                variants: photo.variants || []
             }));
 
         return {
@@ -1833,6 +1857,16 @@
             image.src = photo.previewUrl;
         } else if (photo.mediaUrl) {
             image.src = `${api.baseUrl}${photo.mediaUrl}`;
+            if (Array.isArray(photo.sources) && photo.sources.length) {
+                image.srcset = photo.sources.map((source) =>
+                    `${api.baseUrl}${source.url} ${source.width}w`
+                ).join(", ");
+                image.sizes = photo.sizes || "(max-width: 640px) 100vw, 960px";
+            }
+            if (photo.width && photo.height) {
+                image.width = photo.width;
+                image.height = photo.height;
+            }
         }
 
         figure.appendChild(image);

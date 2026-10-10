@@ -352,6 +352,6 @@ test("il pannello espone editor separati per livelli e geometrie", async () => {
     assert.doesNotMatch(source, /method:\s*"DELETE"[\s\S]{0,160}cms\/map-features/u);
     assert.match(
         html,
-        /<script src="\.\/admin\.js\?v=20261008-map-layers-cms1"><\/script>/u
+        /<script src="\.\/admin\.js\?v=20261010-responsive-media1"><\/script>/u
     );
 });

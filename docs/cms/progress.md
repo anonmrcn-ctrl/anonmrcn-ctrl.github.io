@@ -116,7 +116,7 @@ punto 2 non è completa. Non vanno eliminati durante una migrazione parziale.
 | Ordine | Unità | Stato | Criterio e prova |
 |---:|---|---|---|
 | 6.1 | Originali e catalogo R2 | Completo | `0015_media_assets_r2.sql`, binding `MEDIA`, migrazione verificata prima della rimozione del blob D1, ripiego compatibile, versioni `current`/`retained`, cancellazione delle Memorie e `media-r2.test.mjs`; il nuovo tentativo del run `37996881926` ha creato il bucket UE e pubblicato il Worker, poi health e doppia lettura hanno provato migrazione D1→R2 senza cambiare URL o byte (`06-media-r2.md`) |
-| 6.2 | Varianti responsive e dimensioni | Da iniziare | Generazione deterministica, larghezza e altezza note, `srcset`/`sizes` sulle pagine pubbliche e ripiego all'originale |
+| 6.2 | Varianti responsive e dimensioni | Codice completo; pubblicazione da verificare | Le nuove immagini producono varianti `small` e `medium`; il Worker verifica i byte, ricava dimensioni reali, cataloga ogni oggetto R2 e serve l'originale come ripiego. API, frontend e generatore HTML applicano `srcset`, `sizes`, `width` e `height`; `media-r2.test.mjs` copre catalogo, selezione e ripiego (`06-media-r2.md`) |
 | 6.3 | Immagini sociali | Da iniziare | Scelta amministrabile o predefinita, variante idonea e sincronizzazione dei metadati Open Graph/Twitter senza esporre bozze |
 | 6.4 | Documenti e verifica finale | Da iniziare | Upload e download R2 protetti, metadati D1, sostituzione/rimozione, accessibilità, esportazione e prova sul Worker pubblicato |
 

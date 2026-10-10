@@ -206,6 +206,17 @@
             image.src = source;
             image.alt = `Fotografia associata a «${memory.title}»`;
             image.loading = "lazy";
+            image.decoding = "async";
+            if (Array.isArray(memory.mediaSources) && memory.mediaSources.length) {
+                image.srcset = memory.mediaSources.map((item) =>
+                    `${api.baseUrl}${item.url} ${item.width}w`
+                ).join(", ");
+                image.sizes = memory.mediaSizes || "(max-width: 640px) 100vw, 960px";
+            }
+            if (memory.mediaWidth && memory.mediaHeight) {
+                image.width = memory.mediaWidth;
+                image.height = memory.mediaHeight;
+            }
             container.appendChild(image);
             return;
         }
@@ -429,15 +440,29 @@
 
         let blob = file;
         let type = file.type === "audio/x-m4a" ? "audio/mp4" : file.type;
+        let width = null;
+        let height = null;
+        let variants = [];
 
         if (type.startsWith("image/")) {
-            blob = await resizeImage(file, 1600, 0.8);
+            let original = await resizeImage(file, 1600, 0.8);
 
-            if (blob.size > MAX_MEDIA_BYTES) {
-                blob = await resizeImage(file, 1200, 0.66);
+            if (original.blob.size > MAX_MEDIA_BYTES) {
+                original = await resizeImage(file, 1200, 0.66);
             }
 
+            blob = original.blob;
             type = blob.type;
+            width = original.width;
+            height = original.height;
+            const candidates = await Promise.all([
+                responsiveMemoryVariant(file, "small", 480, 0.72),
+                responsiveMemoryVariant(file, "medium", 960, 0.76)
+            ]);
+            variants = candidates.filter((variant, index, all) =>
+                variant.width < width &&
+                all.findIndex((candidate) => candidate.width === variant.width) === index
+            );
         }
 
         const supported = [
@@ -461,7 +486,10 @@
         return {
             name: file.name || "allegato",
             type,
-            data: await blobToBase64(blob)
+            data: await blobToBase64(blob),
+            width,
+            height,
+            variants
         };
     }
 
@@ -488,7 +516,18 @@
             throw new Error("Non è stato possibile preparare la fotografia.");
         }
 
-        return blob;
+        return { blob, width: canvas.width, height: canvas.height };
+    }
+
+    async function responsiveMemoryVariant(file, key, maxDimension, quality) {
+        const variant = await resizeImage(file, maxDimension, quality);
+        return {
+            key,
+            type: variant.blob.type,
+            width: variant.width,
+            height: variant.height,
+            data: await blobToBase64(variant.blob)
+        };
     }
 
     function loadImage(file) {

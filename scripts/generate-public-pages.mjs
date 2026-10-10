@@ -333,7 +333,16 @@ function renderWikiBody(entry, wikis, citations, apiBase) {
                 ? new URL(image.mediaUrl, `${apiBase}/`).href
                 : "";
             if (image && imageUrl) {
-                html += `<figure class="voce-foto"><img src="${escapeHtml(imageUrl)}" alt="${escapeHtml(image.alt || "")}" loading="lazy" decoding="async">${image.caption ? `<figcaption>${renderInline(image.caption, citations, wikis)}</figcaption>` : ""}</figure>`;
+                const srcset = (image.sources || []).map((source) =>
+                    `${new URL(source.url, `${apiBase}/`).href} ${Number(source.width)}w`
+                ).join(", ");
+                const dimensions = image.width && image.height
+                    ? ` width="${Number(image.width)}" height="${Number(image.height)}"`
+                    : "";
+                const responsive = srcset
+                    ? ` srcset="${escapeHtml(srcset)}" sizes="${escapeHtml(image.sizes || "(max-width: 640px) 100vw, 960px")}"`
+                    : "";
+                html += `<figure class="voce-foto"><img src="${escapeHtml(imageUrl)}"${responsive}${dimensions} alt="${escapeHtml(image.alt || "")}" loading="lazy" decoding="async">${image.caption ? `<figcaption>${renderInline(image.caption, citations, wikis)}</figcaption>` : ""}</figure>`;
             }
         } else if (listItem) {
             flushParagraph();
@@ -477,6 +486,15 @@ export function renderPlacePage(place, wikis, options) {
     const image = place.imageUrl
         ? new URL(place.imageUrl, `${options.apiBase}/`).href
         : options.defaultImage;
+    const imageSrcset = (place.imageSources || []).map((source) =>
+        `${new URL(source.url, `${options.apiBase}/`).href} ${Number(source.width)}w`
+    ).join(", ");
+    const imageResponsive = imageSrcset
+        ? ` srcset="${escapeHtml(imageSrcset)}" sizes="${escapeHtml(place.imageSizes || "(max-width: 640px) 100vw, 960px")}"`
+        : "";
+    const imageDimensions = place.imageWidth && place.imageHeight
+        ? ` width="${Number(place.imageWidth)}" height="${Number(place.imageHeight)}"`
+        : "";
     const wiki = relatedWiki(place, wikis);
     const externalSource = !wiki ? safeHttpUrl(place.sourceUrl) : "";
     const detailLink = wiki
@@ -510,7 +528,7 @@ export function renderPlacePage(place, wikis, options) {
     <main class="luogo-scheda-pagina contenuto-statico">
         <a class="luogo-scheda-logo" href="/progetto.html" aria-label="Vai al progetto anonMrcn"><img src="/logo.webp" alt="anonMrcn"></a>
         <article class="luogo-scheda">
-            ${place.imageUrl ? `<figure class="luogo-scheda-banner"><img src="${escapeHtml(image)}" alt="Fotografia di ${escapeHtml(place.name)}" loading="eager" decoding="async"></figure>` : ""}
+            ${place.imageUrl ? `<figure class="luogo-scheda-banner"><img src="${escapeHtml(image)}"${imageResponsive}${imageDimensions} alt="Fotografia di ${escapeHtml(place.name)}" loading="eager" decoding="async"></figure>` : ""}
             <div class="luogo-scheda-corpo">
                 <p class="luogo-scheda-categoria">${escapeHtml(CATEGORY_LABELS[place.category] || "Luogo")}</p>
                 <h1>${escapeHtml(place.name)}</h1>

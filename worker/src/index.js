@@ -5,7 +5,10 @@ import {
     removePushSubscription,
     savePushSubscription
 } from "./push.js";
-import { CMS_STORAGE_STATEMENTS } from "./cms-schema.js";
+import {
+    CMS_STORAGE_STATEMENTS,
+    MEDIA_ASSET_STORAGE_STATEMENTS
+} from "./cms-schema.js";
 import { PRIVACY_DOCUMENT_SEED } from "./legal-seed.js";
 import { MAP_LAYER_SEEDS } from "./map-seed.js";
 import { NARRATIVE_STEP_SEEDS } from "./narrative-seed.js";
@@ -70,7 +73,7 @@ const MAX_MEMORY_TITLE_LENGTH = 100;
 const MAX_MEMORY_AUTHOR_LENGTH = 80;
 const MAX_MEMORY_TEXT_LENGTH = 3000;
 const MAX_MEMORY_MEDIA_BYTES = 900000;
-const MAX_MEMORY_REQUEST_BYTES = 1400000;
+const MAX_MEMORY_REQUEST_BYTES = 3200000;
 const MAX_WIKI_TITLE_LENGTH = 160;
 const MAX_WIKI_SLUG_LENGTH = 160;
 const MAX_WIKI_SUMMARY_LENGTH = 500;
@@ -84,13 +87,15 @@ const MAX_WIKI_SOURCE_URL_LENGTH = 2048;
 const MAX_WIKI_SOURCE_TITLE_LENGTH = 500;
 const MAX_WIKI_SOURCE_AUTHOR_LENGTH = 300;
 const MAX_WIKI_SOURCE_DATE_LENGTH = 100;
-const MAX_WIKI_REQUEST_BYTES = 8000000;
+const MAX_WIKI_REQUEST_BYTES = 20000000;
 const MAX_MAP_ENTRY_NAME_LENGTH = 160;
 const MAX_MAP_ENTRY_DESCRIPTION_LENGTH = 3000;
 const MAX_MAP_ENTRY_SOURCE_URL_LENGTH = 2048;
 const MAX_MAP_ENTRY_SOURCE_LABEL_LENGTH = 160;
 const MAX_MAP_ENTRY_IMAGE_BYTES = 700000;
-const MAX_MAP_ENTRY_REQUEST_BYTES = 1000000;
+const MAX_MAP_ENTRY_REQUEST_BYTES = 3200000;
+const RESPONSIVE_VARIANT_KEYS = Object.freeze(["small", "medium"]);
+const RESPONSIVE_IMAGE_SIZES = "(max-width: 640px) 100vw, 960px";
 const MAX_NARRATIVE_STEP_REQUEST_BYTES = 64000;
 const MAX_NARRATIVE_STEP_LABEL_LENGTH = 160;
 const MAX_NARRATIVE_STEP_VERSE_LENGTH = 240;
@@ -1473,41 +1478,70 @@ function parsePublicArchiveCursor(value) {
 
 async function listPublicMemories(request, env) {
     await ensureMemoryStorage(env);
+    await ensureMediaAssetStorage(env);
 
     const result = await env.DB.prepare(`
         SELECT
-            id,
-            title,
-            author_name,
-            text,
-            lat,
-            lon,
-            media_type,
-            created_at,
-            published_at
-        FROM memories
+            memory.id,
+            memory.title,
+            memory.author_name,
+            memory.text,
+            memory.lat,
+            memory.lon,
+            memory.media_type,
+            memory.created_at,
+            memory.published_at,
+            original.width AS media_width,
+            original.height AS media_height,
+            small.width AS media_small_width,
+            medium.width AS media_medium_width
+        FROM memories memory
+        LEFT JOIN media_assets original ON
+            original.owner_type = 'memory'
+            AND original.owner_id = CAST(memory.id AS TEXT)
+            AND original.variant_key = 'original'
+            AND original.state = 'current'
+        LEFT JOIN media_assets small ON
+            small.owner_type = 'memory'
+            AND small.owner_id = CAST(memory.id AS TEXT)
+            AND small.variant_key = 'small'
+            AND small.state = 'current'
+        LEFT JOIN media_assets medium ON
+            medium.owner_type = 'memory'
+            AND medium.owner_id = CAST(memory.id AS TEXT)
+            AND medium.variant_key = 'medium'
+            AND medium.state = 'current'
         WHERE
-            status = 'approved'
-            AND published_at IS NOT NULL
-        ORDER BY published_at DESC, id DESC
+            memory.status = 'approved'
+            AND memory.published_at IS NOT NULL
+        ORDER BY memory.published_at DESC, memory.id DESC
         LIMIT 250
     `).all();
 
     return json(request, env, {
-        memories: (result.results || []).map((row) => ({
-            id: row.id,
-            title: row.title,
-            authorName: row.author_name,
-            text: row.text,
-            lat: row.lat,
-            lon: row.lon,
-            mediaType: row.media_type,
-            mediaUrl: row.media_type
+        memories: (result.results || []).map((row) => {
+            const mediaUrl = row.media_type
                 ? `/api/memories/${row.id}/media`
-                : null,
-            createdAt: row.created_at,
-            publishedAt: row.published_at
-        }))
+                : null;
+            return {
+                id: row.id,
+                title: row.title,
+                authorName: row.author_name,
+                text: row.text,
+                lat: row.lat,
+                lon: row.lon,
+                mediaType: row.media_type,
+                mediaUrl,
+                mediaWidth: Number(row.media_width) || null,
+                mediaHeight: Number(row.media_height) || null,
+                mediaSources: mediaUrl
+                    ? responsiveMediaSources(row, mediaUrl, "media_")
+                    : [],
+                mediaSizes: RESPONSIVE_IMAGE_SIZES,
+                createdAt: row.created_at,
+                publishedAt: row.published_at
+            };
+        })
     });
 }
 
@@ -1655,6 +1689,9 @@ async function createMemory(request, env, ctx) {
             mediaType: media.type,
             mediaName: media.name,
             data: media.data,
+            width: media.width,
+            height: media.height,
+            variants: media.variants,
             now
         });
     }
@@ -1716,7 +1753,18 @@ function validateMemoryMedia(value) {
         return { error: "Il contenuto dell’allegato non corrisponde al formato indicato." };
     }
 
-    return { type, name, data, error: "" };
+    if (!type.startsWith("image/")) {
+        return { type, name, data, variants: [], error: "" };
+    }
+
+    const dimensions = imageDimensions(type, bytes);
+    if (!dimensions) {
+        return { error: "Non è stato possibile leggere le dimensioni della fotografia." };
+    }
+    const variants = normalizeResponsiveVariants(value.variants, dimensions);
+    if (variants.error) return variants;
+
+    return { type, name, data, variants, ...dimensions, error: "" };
 }
 
 function memoryMediaSignatureMatches(type, bytes) {
@@ -1757,6 +1805,148 @@ function memoryMediaSignatureMatches(type, bytes) {
     }
 
     return false;
+}
+
+function imageDimensions(type, bytes) {
+    const uint16be = (offset) => (bytes[offset] << 8) | bytes[offset + 1];
+    const uint24le = (offset) =>
+        bytes[offset] | (bytes[offset + 1] << 8) | (bytes[offset + 2] << 16);
+    const uint32be = (offset) =>
+        ((bytes[offset] << 24) >>> 0) +
+        (bytes[offset + 1] << 16) +
+        (bytes[offset + 2] << 8) +
+        bytes[offset + 3];
+
+    if (type === "image/png" && bytes.length >= 24) {
+        const width = uint32be(16);
+        const height = uint32be(20);
+        return width > 0 && height > 0 ? { width, height } : null;
+    }
+
+    if (type === "image/jpeg") {
+        let offset = 2;
+        const startOfFrame = new Set([
+            0xc0, 0xc1, 0xc2, 0xc3, 0xc5, 0xc6, 0xc7,
+            0xc9, 0xca, 0xcb, 0xcd, 0xce, 0xcf
+        ]);
+
+        while (offset + 8 < bytes.length) {
+            if (bytes[offset] !== 0xff) {
+                offset += 1;
+                continue;
+            }
+            while (bytes[offset] === 0xff) offset += 1;
+            const marker = bytes[offset];
+            if (marker === 0xd8 || marker === 0xd9) {
+                offset += 1;
+                continue;
+            }
+            if (offset + 2 >= bytes.length) break;
+            const length = uint16be(offset + 1);
+            if (length < 2 || offset + length >= bytes.length) break;
+            if (startOfFrame.has(marker)) {
+                const height = uint16be(offset + 4);
+                const width = uint16be(offset + 6);
+                return width > 0 && height > 0 ? { width, height } : null;
+            }
+            offset += length + 1;
+        }
+        return null;
+    }
+
+    if (type === "image/webp" && bytes.length >= 30) {
+        const chunk = String.fromCharCode(...bytes.slice(12, 16));
+        if (chunk === "VP8X") {
+            return {
+                width: uint24le(24) + 1,
+                height: uint24le(27) + 1
+            };
+        }
+        if (chunk === "VP8L" && bytes[20] === 0x2f) {
+            return {
+                width: 1 + (bytes[21] | ((bytes[22] & 0x3f) << 8)),
+                height: 1 + (
+                    (bytes[22] >> 6) |
+                    (bytes[23] << 2) |
+                    ((bytes[24] & 0x0f) << 10)
+                )
+            };
+        }
+        if (
+            chunk === "VP8 " &&
+            bytes[23] === 0x9d && bytes[24] === 0x01 && bytes[25] === 0x2a
+        ) {
+            return {
+                width: (bytes[26] | (bytes[27] << 8)) & 0x3fff,
+                height: (bytes[28] | (bytes[29] << 8)) & 0x3fff
+            };
+        }
+    }
+
+    return null;
+}
+
+function normalizeResponsiveVariants(value, original) {
+    if (value === undefined || value === null) return [];
+    if (!Array.isArray(value) || value.length > RESPONSIVE_VARIANT_KEYS.length) {
+        return { error: "Le varianti responsive non sono valide." };
+    }
+
+    const variants = [];
+    const seen = new Set();
+
+    for (const raw of value) {
+        const key = String(raw?.key || "").trim().toLowerCase();
+        if (!RESPONSIVE_VARIANT_KEYS.includes(key) || seen.has(key)) {
+            return { error: "Le varianti responsive non sono valide." };
+        }
+
+        const type = String(raw?.type || "").trim().toLowerCase();
+        const data = String(raw?.data || "").replace(/\s+/gu, "");
+        const maxBase64Length = Math.ceil(MAX_WIKI_IMAGE_BYTES / 3) * 4 + 4;
+        if (
+            !WIKI_IMAGE_TYPES.has(type) ||
+            !data ||
+            data.length > maxBase64Length ||
+            !/^[A-Za-z0-9+/]*={0,2}$/u.test(data)
+        ) {
+            return { error: "Una variante responsive è troppo grande o non è valida." };
+        }
+
+        let bytes;
+        try {
+            bytes = fromBase64(data);
+        } catch (_) {
+            return { error: "Una variante responsive non è valida." };
+        }
+        const dimensions = imageDimensions(type, bytes);
+        const originalRatio = original.width / original.height;
+        const variantRatio = dimensions
+            ? dimensions.width / dimensions.height
+            : 0;
+        if (
+            !bytes.length ||
+            bytes.length > MAX_WIKI_IMAGE_BYTES ||
+            !memoryMediaSignatureMatches(type, bytes) ||
+            !dimensions ||
+            dimensions.width > original.width ||
+            dimensions.height > original.height ||
+            Math.abs(originalRatio - variantRatio) > originalRatio * 0.02
+        ) {
+            return { error: "Una variante responsive non corrisponde all’immagine originale." };
+        }
+
+        seen.add(key);
+        variants.push({ key, type, data, ...dimensions });
+    }
+
+    variants.sort((first, second) => first.width - second.width);
+    for (let index = 1; index < variants.length; index += 1) {
+        if (variants[index - 1].width >= variants[index].width) {
+            return { error: "Le varianti responsive devono avere larghezze diverse." };
+        }
+    }
+    return variants;
 }
 
 async function getMemoryStatus(request, env, memoryId) {
@@ -1869,6 +2059,9 @@ async function migrateWikiImagesToR2(env, images, now) {
                 mediaType: image.type,
                 mediaName: image.name,
                 data: image.data,
+                width: image.width,
+                height: image.height,
+                variants: image.variants,
                 altText: image.alt,
                 caption: image.caption,
                 now
@@ -1894,7 +2087,7 @@ async function updateMediaAssetMetadata(
     caption,
     now
 ) {
-    await ensureCmsStorage(env);
+    await ensureMediaAssetStorage(env);
     await env.DB.prepare(`
         UPDATE media_assets
         SET alt_text = ?, caption = ?, updated_at = ?
@@ -1927,35 +2120,71 @@ async function migrateMediaToR2Safely(env, media) {
 }
 
 async function migrateMediaToR2(env, media) {
-    await ensureCmsStorage(env);
-    const bytes = fromBase64(media.data);
-    const checksum = await sha256BytesHex(bytes);
-    const extension = memoryMediaExtension(media.mediaType);
+    await ensureMediaAssetStorage(env);
+    const originalBytes = fromBase64(media.data);
+    const originalChecksum = await sha256BytesHex(originalBytes);
     const ownerId = String(media.ownerId).replace(/[^a-z0-9-]+/giu, "-");
     const now = Number(media.now) || Date.now();
-    const objectKey = [
-        media.ownerType,
-        ownerId,
-        `${now}-${crypto.randomUUID()}-${checksum.slice(0, 16)}.${extension}`
-    ].join("/");
+    const detectedDimensions = imageDimensions(media.mediaType, originalBytes);
+    const originalDimensions = detectedDimensions || {
+        width: Number(media.width) || null,
+        height: Number(media.height) || null
+    };
+    const versionKey = `${now}-${crypto.randomUUID()}-${originalChecksum.slice(0, 16)}`;
+    const uploads = [{
+        key: "original",
+        type: media.mediaType,
+        bytes: originalBytes,
+        checksum: originalChecksum,
+        width: originalDimensions.width,
+        height: originalDimensions.height
+    }];
 
-    await env.MEDIA.put(objectKey, bytes, {
-        httpMetadata: {
-            contentType: media.mediaType,
-            cacheControl: "private, max-age=0, no-store"
-        },
-        customMetadata: {
-            checksum,
-            ownerType: media.ownerType,
-            ownerId: String(media.ownerId),
-            variant: "original"
+    for (const variant of media.variants || []) {
+        const bytes = fromBase64(variant.data);
+        uploads.push({
+            key: variant.key,
+            type: variant.type,
+            bytes,
+            checksum: await sha256BytesHex(bytes),
+            width: Number(variant.width) || null,
+            height: Number(variant.height) || null
+        });
+    }
+
+    const uploadedKeys = [];
+    try {
+        for (const upload of uploads) {
+            const extension = memoryMediaExtension(upload.type);
+            upload.objectKey = [
+                media.ownerType,
+                ownerId,
+                versionKey,
+                `${upload.key}.${extension}`
+            ].join("/");
+            await env.MEDIA.put(upload.objectKey, upload.bytes, {
+                httpMetadata: {
+                    contentType: upload.type,
+                    cacheControl: "private, max-age=0, no-store"
+                },
+                customMetadata: {
+                    checksum: upload.checksum,
+                    ownerType: media.ownerType,
+                    ownerId: String(media.ownerId),
+                    variant: upload.key,
+                    width: String(upload.width || ""),
+                    height: String(upload.height || "")
+                }
+            });
+            uploadedKeys.push(upload.objectKey);
+            const stored = await env.MEDIA.head(upload.objectKey);
+            if (!stored || Number(stored.size) !== upload.bytes.byteLength) {
+                throw new Error("R2 verification failed after upload.");
+            }
         }
-    });
-    const stored = await env.MEDIA.head(objectKey);
-
-    if (!stored || Number(stored.size) !== bytes.byteLength) {
-        await env.MEDIA.delete(objectKey);
-        throw new Error("R2 verification failed after upload.");
+    } catch (error) {
+        if (uploadedKeys.length) await env.MEDIA.delete(uploadedKeys);
+        throw error;
     }
 
     const statements = [
@@ -1965,31 +2194,33 @@ async function migrateMediaToR2(env, media) {
             WHERE
                 owner_type = ?
                 AND owner_id = ?
-                AND variant_key = 'original'
                 AND state = 'current'
         `).bind(now, media.ownerType, String(media.ownerId)),
-        env.DB.prepare(`
+        ...uploads.map((upload) => env.DB.prepare(`
             INSERT INTO media_assets (
                 id, owner_type, owner_id, variant_key, object_key,
                 media_type, media_name, byte_size, checksum,
                 width, height, alt_text, caption, state,
                 created_at, updated_at
-            ) VALUES (?, ?, ?, 'original', ?, ?, ?, ?, ?, NULL, NULL, ?, ?,
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
                 'current', ?, ?)
         `).bind(
             `media-${crypto.randomUUID()}`,
             media.ownerType,
             String(media.ownerId),
-            objectKey,
-            media.mediaType,
+            upload.key,
+            upload.objectKey,
+            upload.type,
             media.mediaName || "",
-            bytes.byteLength,
-            checksum,
+            upload.bytes.byteLength,
+            upload.checksum,
+            upload.width,
+            upload.height,
             media.altText || "",
             media.caption || "",
             now,
             now
-        )
+        ))
     ];
 
     if (media.ownerType === "memory") {
@@ -2012,31 +2243,36 @@ async function migrateMediaToR2(env, media) {
     try {
         await env.DB.batch(statements);
     } catch (error) {
-        await env.MEDIA.delete(objectKey);
+        await env.MEDIA.delete(uploadedKeys);
         throw error;
     }
 
-    return { objectKey, checksum, byteSize: bytes.byteLength };
+    return {
+        objectKey: uploads[0].objectKey,
+        checksum: originalChecksum,
+        byteSize: originalBytes.byteLength,
+        variants: uploads.slice(1).map((upload) => upload.key)
+    };
 }
 
-async function currentMediaAsset(env, ownerType, ownerId) {
-    await ensureCmsStorage(env);
+async function currentMediaAsset(env, ownerType, ownerId, variantKey = "original") {
+    await ensureMediaAssetStorage(env);
     return await env.DB.prepare(`
         SELECT
-            object_key, media_type, media_name, byte_size,
+            id, variant_key, object_key, media_type, media_name, byte_size,
             checksum, width, height, alt_text, caption
         FROM media_assets
         WHERE
             owner_type = ?
             AND owner_id = ?
-            AND variant_key = 'original'
+            AND variant_key = ?
             AND state = 'current'
         LIMIT 1
-    `).bind(ownerType, String(ownerId)).first();
+    `).bind(ownerType, String(ownerId), variantKey).first();
 }
 
 async function retainMediaAssets(env, ownerType, ownerId, now = Date.now()) {
-    await ensureCmsStorage(env);
+    await ensureMediaAssetStorage(env);
     await env.DB.prepare(`
         UPDATE media_assets
         SET state = 'retained', updated_at = ?
@@ -2045,7 +2281,7 @@ async function retainMediaAssets(env, ownerType, ownerId, now = Date.now()) {
 }
 
 async function deleteMediaAssets(env, ownerType, ownerId) {
-    await ensureCmsStorage(env);
+    await ensureMediaAssetStorage(env);
     const result = await env.DB.prepare(`
         SELECT object_key
         FROM media_assets
@@ -2068,20 +2304,56 @@ async function deleteMediaAssets(env, ownerType, ownerId) {
 }
 
 async function storedMediaResponse(request, env, media, options) {
-    const asset = await currentMediaAsset(
+    const requestedVariant = String(
+        new URL(request.url).searchParams.get("variant") || ""
+    ).toLowerCase();
+    const variantKey = RESPONSIVE_VARIANT_KEYS.includes(requestedVariant)
+        ? requestedVariant
+        : "original";
+    let asset = await currentMediaAsset(
         env,
         options.ownerType,
-        options.ownerId
+        options.ownerId,
+        variantKey
     );
+    if (!asset && variantKey !== "original") {
+        asset = await currentMediaAsset(env, options.ownerType, options.ownerId);
+    }
 
     if (asset && env.MEDIA) {
-        const object = await env.MEDIA.get(asset.object_key);
+        let object = await env.MEDIA.get(asset.object_key);
+        if (!object && asset.variant_key !== "original") {
+            asset = await currentMediaAsset(env, options.ownerType, options.ownerId);
+            object = asset ? await env.MEDIA.get(asset.object_key) : null;
+        }
 
         if (object) {
-            return mediaBinaryResponse(request, object.body, {
+            let responseBody = object.body;
+            let width = Number(asset.width) || null;
+            let height = Number(asset.height) || null;
+
+            if (asset.media_type.startsWith("image/") && (!width || !height)) {
+                const bytes = new Uint8Array(await new Response(object.body).arrayBuffer());
+                responseBody = bytes;
+                const dimensions = imageDimensions(asset.media_type, bytes);
+                if (dimensions) {
+                    width = dimensions.width;
+                    height = dimensions.height;
+                    await env.DB.prepare(`
+                        UPDATE media_assets
+                        SET width = ?, height = ?, updated_at = ?
+                        WHERE id = ? AND (width IS NULL OR height IS NULL)
+                    `).bind(width, height, Date.now(), asset.id).run();
+                }
+            }
+
+            return mediaBinaryResponse(request, responseBody, {
                 mediaType: asset.media_type,
                 mediaName: asset.media_name,
                 byteSize: Number(object.size),
+                width,
+                height,
+                variant: asset.variant_key,
                 cacheControl: options.cacheControl,
                 fallbackName: options.fallbackName,
                 storage: "r2"
@@ -2109,6 +2381,7 @@ async function storedMediaResponse(request, env, media, options) {
         mediaType: media.media_type,
         mediaName: media.media_name,
         byteSize: bytes.byteLength,
+        variant: "original",
         cacheControl: options.cacheControl,
         fallbackName: options.fallbackName,
         storage: "d1"
@@ -2134,6 +2407,9 @@ function mediaBinaryResponse(request, body, media, env) {
             "Content-Disposition": `inline; filename="${filename}"`,
             "Cache-Control": media.cacheControl,
             "X-Media-Storage": media.storage,
+            "X-Media-Variant": media.variant || "original",
+            ...(media.width ? { "X-Media-Width": String(media.width) } : {}),
+            ...(media.height ? { "X-Media-Height": String(media.height) } : {}),
             "X-Content-Type-Options": "nosniff",
             ...corsHeaders(request, env)
         }
@@ -2872,6 +3148,9 @@ async function adminCreateMapEntry(request, env) {
             mediaType: input.image.type,
             mediaName: input.image.name,
             data: input.image.data,
+            width: input.image.width,
+            height: input.image.height,
+            variants: input.image.variants,
             now
         });
     }
@@ -2950,6 +3229,9 @@ async function adminUpdateMapEntry(request, env, entryId) {
             mediaType: input.image.type,
             mediaName: input.image.name,
             data: input.image.data,
+            width: input.image.width,
+            height: input.image.height,
+            variants: input.image.variants,
             now
         });
     }
@@ -2994,6 +3276,7 @@ async function adminDeleteMapEntry(request, env, entryId) {
 }
 
 async function getMapEntryById(env, entryId) {
+    await ensureMediaAssetStorage(env);
     return await env.DB.prepare(`
         SELECT
             entry.id,
@@ -3007,15 +3290,35 @@ async function getMapEntryById(env, entryId) {
             entry.created_at,
             entry.updated_at,
             image.entry_id AS image_entry_id,
-            image.updated_at AS image_updated_at
+            image.updated_at AS image_updated_at,
+            original.width AS image_width,
+            original.height AS image_height,
+            small.width AS image_small_width,
+            medium.width AS image_medium_width
         FROM map_entries entry
         LEFT JOIN map_entry_images image ON image.entry_id = entry.id
+        LEFT JOIN media_assets original ON
+            original.owner_type = 'map_entry'
+            AND original.owner_id = CAST(entry.id AS TEXT)
+            AND original.variant_key = 'original'
+            AND original.state = 'current'
+        LEFT JOIN media_assets small ON
+            small.owner_type = 'map_entry'
+            AND small.owner_id = CAST(entry.id AS TEXT)
+            AND small.variant_key = 'small'
+            AND small.state = 'current'
+        LEFT JOIN media_assets medium ON
+            medium.owner_type = 'map_entry'
+            AND medium.owner_id = CAST(entry.id AS TEXT)
+            AND medium.variant_key = 'medium'
+            AND medium.state = 'current'
         WHERE entry.id = ?
         LIMIT 1
     `).bind(entryId).first();
 }
 
 async function readMapEntries(env) {
+    await ensureMediaAssetStorage(env);
     const result = await env.DB.prepare(`
         SELECT
             entry.id,
@@ -3029,9 +3332,28 @@ async function readMapEntries(env) {
             entry.created_at,
             entry.updated_at,
             image.entry_id AS image_entry_id,
-            image.updated_at AS image_updated_at
+            image.updated_at AS image_updated_at,
+            original.width AS image_width,
+            original.height AS image_height,
+            small.width AS image_small_width,
+            medium.width AS image_medium_width
         FROM map_entries entry
         LEFT JOIN map_entry_images image ON image.entry_id = entry.id
+        LEFT JOIN media_assets original ON
+            original.owner_type = 'map_entry'
+            AND original.owner_id = CAST(entry.id AS TEXT)
+            AND original.variant_key = 'original'
+            AND original.state = 'current'
+        LEFT JOIN media_assets small ON
+            small.owner_type = 'map_entry'
+            AND small.owner_id = CAST(entry.id AS TEXT)
+            AND small.variant_key = 'small'
+            AND small.state = 'current'
+        LEFT JOIN media_assets medium ON
+            medium.owner_type = 'map_entry'
+            AND medium.owner_id = CAST(entry.id AS TEXT)
+            AND medium.variant_key = 'medium'
+            AND medium.state = 'current'
         ORDER BY entry.name COLLATE NOCASE, entry.id
     `).all();
 
@@ -3039,6 +3361,12 @@ async function readMapEntries(env) {
 }
 
 function mapEntryPayload(row) {
+    const imageUrl = row.image_entry_id === null || row.image_entry_id === undefined
+        ? ""
+        : `/api/public/map-entry-images/${row.id}?v=${Number(row.image_updated_at)}`;
+    const imageSources = imageUrl
+        ? responsiveMediaSources(row, imageUrl, "image_")
+        : [];
     return {
         id: Number(row.id),
         preferredUrl: `/luoghi/${Number(row.id)}.html`,
@@ -3052,10 +3380,34 @@ function mapEntryPayload(row) {
         sourceLabel: row.source_label,
         createdAt: Number(row.created_at),
         updatedAt: Number(row.updated_at),
-        imageUrl: row.image_entry_id === null || row.image_entry_id === undefined
-            ? ""
-            : `/api/public/map-entry-images/${row.id}?v=${Number(row.image_updated_at)}`
+        imageUrl,
+        imageWidth: Number(row.image_width) || null,
+        imageHeight: Number(row.image_height) || null,
+        imageSources,
+        imageSizes: RESPONSIVE_IMAGE_SIZES
     };
+}
+
+function responsiveMediaSources(row, originalUrl, prefix = "") {
+    const joiner = originalUrl.includes("?") ? "&" : "?";
+    const sources = [
+        {
+            url: `${originalUrl}${joiner}variant=small`,
+            width: Number(row[`${prefix}small_width`]) || 0
+        },
+        {
+            url: `${originalUrl}${joiner}variant=medium`,
+            width: Number(row[`${prefix}medium_width`]) || 0
+        },
+        {
+            url: originalUrl,
+            width: Number(row[`${prefix}width`]) || 0
+        }
+    ].filter((source) => source.width > 0);
+
+    return sources.filter((source, index) =>
+        sources.findIndex((candidate) => candidate.width === source.width) === index
+    ).sort((first, second) => first.width - second.width);
 }
 
 function normalizeMapEntryInput(value) {
@@ -3140,7 +3492,8 @@ function normalizeMapEntryImage(value) {
     const media = validateWikiImageMedia({
         name: value?.name || "fotografia",
         type: value?.type,
-        data: value?.data
+        data: value?.data,
+        variants: value?.variants
     });
 
     if (media.error) {
@@ -6991,13 +7344,28 @@ function normalizeWikiImage(value) {
         return { id, name, type, alt, caption, data: "" };
     }
 
-    const media = validateWikiImageMedia({ name, type, data });
+    const media = validateWikiImageMedia({
+        name,
+        type,
+        data,
+        variants: value.variants
+    });
 
     if (media.error) {
         return media;
     }
 
-    return { id, name: media.name, type: media.type, alt, caption, data: media.data };
+    return {
+        id,
+        name: media.name,
+        type: media.type,
+        alt,
+        caption,
+        data: media.data,
+        width: media.width,
+        height: media.height,
+        variants: media.variants
+    };
 }
 
 function validateWikiImageMedia(value) {
@@ -7032,7 +7400,14 @@ function validateWikiImageMedia(value) {
         };
     }
 
-    return { type, name, data, error: "" };
+    const dimensions = imageDimensions(type, bytes);
+    if (!dimensions) {
+        return { error: "Non è stato possibile leggere le dimensioni della fotografia." };
+    }
+    const variants = normalizeResponsiveVariants(value.variants, dimensions);
+    if (variants.error) return variants;
+
+    return { type, name, data, variants, ...dimensions, error: "" };
 }
 
 function extractWikiImageIds(body) {
@@ -7265,6 +7640,7 @@ async function wikiEntryWithImages(env, row, includeBody) {
 }
 
 async function getWikiEntryImages(env, entryId, body) {
+    await ensureMediaAssetStorage(env);
     const imageIds = extractWikiImageIds(body);
 
     if (!imageIds.length) {
@@ -7273,9 +7649,33 @@ async function getWikiEntryImages(env, entryId, body) {
 
     const placeholders = imageIds.map(() => "?").join(", ");
     const result = await env.DB.prepare(`
-        SELECT id, media_type, media_name, alt_text, caption
-        FROM wiki_entry_images
-        WHERE entry_id = ? AND id IN (${placeholders})
+        SELECT
+            image.id,
+            image.media_type,
+            image.media_name,
+            image.alt_text,
+            image.caption,
+            original.width,
+            original.height,
+            small.width AS small_width,
+            medium.width AS medium_width
+        FROM wiki_entry_images image
+        LEFT JOIN media_assets original ON
+            original.owner_type = 'wiki_image'
+            AND original.owner_id = image.id
+            AND original.variant_key = 'original'
+            AND original.state = 'current'
+        LEFT JOIN media_assets small ON
+            small.owner_type = 'wiki_image'
+            AND small.owner_id = image.id
+            AND small.variant_key = 'small'
+            AND small.state = 'current'
+        LEFT JOIN media_assets medium ON
+            medium.owner_type = 'wiki_image'
+            AND medium.owner_id = image.id
+            AND medium.variant_key = 'medium'
+            AND medium.state = 'current'
+        WHERE image.entry_id = ? AND image.id IN (${placeholders})
     `).bind(entryId, ...imageIds).all();
     const byId = new Map((result.results || []).map((row) => [row.id, row]));
 
@@ -7286,14 +7686,19 @@ async function getWikiEntryImages(env, entryId, body) {
             return [];
         }
 
+        const mediaUrl = `/api/public/wiki-images/${image.id}`;
         return [{
             id: image.id,
             type: image.media_type,
             name: image.media_name,
             alt: image.alt_text,
             caption: image.caption,
-            mediaUrl: `/api/public/wiki-images/${image.id}`,
-            adminMediaUrl: `/api/admin/wiki-images/${image.id}`
+            mediaUrl,
+            adminMediaUrl: `/api/admin/wiki-images/${image.id}`,
+            width: Number(image.width) || null,
+            height: Number(image.height) || null,
+            sources: responsiveMediaSources(image, mediaUrl),
+            sizes: RESPONSIVE_IMAGE_SIZES
         }];
     });
 }
@@ -7439,6 +7844,14 @@ async function purgeExpiredContactMessages(env, now = Date.now()) {
 async function ensureMemoryStorage(env) {
     await env.DB.batch(
         MEMORY_STORAGE_STATEMENTS.map((statement) =>
+            env.DB.prepare(statement)
+        )
+    );
+}
+
+async function ensureMediaAssetStorage(env) {
+    await env.DB.batch(
+        MEDIA_ASSET_STORAGE_STATEMENTS.map((statement) =>
             env.DB.prepare(statement)
         )
     );

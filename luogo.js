@@ -78,6 +78,14 @@
         if (entry.imageUrl) {
             elements.image.alt = `Fotografia di ${entry.name}`;
             elements.image.src = `${api.baseUrl}${entry.imageUrl}`;
+            elements.image.srcset = (entry.imageSources || []).map((source) =>
+                `${api.baseUrl}${source.url} ${source.width}w`
+            ).join(", ");
+            elements.image.sizes = entry.imageSizes || "(max-width: 640px) 100vw, 960px";
+            if (entry.imageWidth && entry.imageHeight) {
+                elements.image.width = entry.imageWidth;
+                elements.image.height = entry.imageHeight;
+            }
             elements.image.addEventListener("error", () => {
                 elements.banner.hidden = true;
             }, { once: true });
@@ -85,6 +93,7 @@
         } else {
             elements.banner.hidden = true;
             elements.image.removeAttribute("src");
+            elements.image.removeAttribute("srcset");
         }
 
         const expandUrl = wikiEntry
