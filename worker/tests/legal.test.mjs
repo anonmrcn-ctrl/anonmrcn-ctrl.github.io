@@ -171,7 +171,7 @@ test("la pagina conserva integralmente l'informativa statica come ripiego", asyn
     assert.match(html, /data-legal-effective-date/u);
     assert.match(
         html,
-        /<script src="\.\/api\.js"><\/script>[\s\S]*?<script src="\.\/privacy-content\.js\?v=20261008-legal1"><\/script>/u
+        /<script(?: defer)? src="\.\/api\.js"><\/script>[\s\S]*?<script(?: defer)? src="\.\/privacy-content\.js\?v=20261008-legal1"><\/script>/u
     );
 });
 
