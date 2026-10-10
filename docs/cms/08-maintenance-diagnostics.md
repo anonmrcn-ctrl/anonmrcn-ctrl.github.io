@@ -111,7 +111,15 @@ un superamento produce un errore o un avviso esplicito, non un falso esito
 positivo. Il controllo locale `scripts/check-seo.mjs` resta complementare:
 valida anche i file sorgente prima della pubblicazione.
 
-## Unità successive
+## 8.4 — Manuale e manutenzione
 
-- **8.4 — Manuale e manutenzione:** flussi senza codice, controlli periodici,
-  gestione degli errori e prova sul servizio pubblicato.
+`manuale-amministratore.md`, collegato direttamente dal pannello, descrive in
+linguaggio operativo accesso, bozze, anteprima, revisioni, contenuti, fonti,
+SEO, permalink, QR, media, documenti, backup, ripristino, diagnostica, errori e
+privacy. Include una cadenza settimanale, mensile, trimestrale e annuale e non
+richiede di modificare file o eseguire codice per le operazioni ordinarie.
+
+L'unità diventa completa dopo la pubblicazione e la verifica del link al
+manuale, del pannello, dell'endpoint diagnostico e delle intestazioni private
+del Worker. Le prove di pubblicazione vengono registrate qui senza riportare
+sessioni o contenuti riservati.

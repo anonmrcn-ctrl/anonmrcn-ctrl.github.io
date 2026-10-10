@@ -327,9 +327,10 @@ test("valida e ripristina D1 e R2 soltanto dopo una conferma esplicita", async (
 
 test("il pannello separa verifica e conferma del ripristino", async () => {
     const root = new URL("../../", import.meta.url);
-    const [html, script] = await Promise.all([
+    const [html, script, manual] = await Promise.all([
         readFile(new URL("admin.html", root), "utf8"),
-        readFile(new URL("admin.js", root), "utf8")
+        readFile(new URL("admin.js", root), "utf8"),
+        readFile(new URL("docs/cms/manuale-amministratore.md", root), "utf8")
     ]);
     assert.match(html, /id="adminCmsBackup"/u);
     assert.match(html, /id="adminCmsRestoreFile"/u);
@@ -341,6 +342,11 @@ test("il pannello separa verifica e conferma del ripristino", async () => {
     assert.match(script, /\/api\/admin\/maintenance\/restore/u);
     assert.match(script, /\/api\/admin\/maintenance\/diagnostics/u);
     assert.match(script, /window\.confirm/u);
+    assert.match(html, /manuale-amministratore\.md/u);
+    assert.match(manual, /## 8\. Backup ordinario/u);
+    assert.match(manual, /## 9\. Verifica e ripristino/u);
+    assert.match(manual, /## 10\. Diagnostica/u);
+    assert.match(manual, /## 13\. Privacy essenziale/u);
 });
 
 test("la diagnostica confronta D1, R2, sitemap, canonical e immagini", async () => {
