@@ -67,7 +67,7 @@ cartografici, revisioni, permalink e documenti legali. Le revisioni sono
 append-only, il percorso di un permalink non è riscrivibile e una versione
 legale pubblicata non può essere modificata o eliminata. Il primo health check
 dopo il deploy installa in modo idempotente queste strutture e restituisce
-`"contentSchema": 2`.
+`"contentSchema": 4`.
 
 La migrazione non distruttiva `0014_source_publication_state.sql` aggiunge alle
 fonti lo stesso ciclo `draft`/`published`/`archived` usato dagli altri contenuti.
@@ -81,6 +81,12 @@ e conserva in D1 il ripiego se R2 non è disponibile. Le letture degli oggetti
 esistenti completano la migrazione in modo progressivo; il job notturno ne
 trasferisce inoltre fino a 25 per esecuzione. La cancellazione di una Memoria
 elimina anche oggetti e metadati associati.
+
+La migrazione `0017_admin_passkeys.sql` separa identità amministrative,
+credenziali WebAuthn, sfide monouso e sessioni. Il valore `ADMIN_TOKEN` serve
+soltanto a registrare la prima passkey: appena D1 contiene una credenziale, il
+Worker rifiuta il token condiviso per tutte le operazioni e accetta soltanto
+sessioni personali firmate da una passkey con verifica dell’utente.
 
 Al primo accesso a una pagina pubblica, il Worker importa una sola volta in
 `site_pages` e `page_blocks` i 60 blocchi editoriali di Progetto, Autore, Logo,
@@ -195,7 +201,8 @@ Nel Worker apri **Settings** → **Variables and Secrets** → **Add**.
 Crea due variabili di tipo **Secret**, copiando i valori esistenti dal file
 privato `nnmrcn_worker_secrets_20260823.txt`:
 
-- `ADMIN_TOKEN`;
+- `ADMIN_TOKEN` (solo per la configurazione iniziale o il recupero controllato
+  delle passkey; non viene più usato dopo la prima registrazione);
 - `PASSWORD_PEPPER`.
 
 Non generare un nuovo `PASSWORD_PEPPER`: deve corrispondere alle location già
@@ -247,7 +254,21 @@ L'area riservata è:
 https://anonmrcn-ctrl.github.io/admin.html
 ```
 
-Per accedere usa il valore di `ADMIN_TOKEN`.
+Al primo accesso apri «Configura la prima passkey», assegna un nome personale e
+usa `ADMIN_TOKEN` un’ultima volta. Il browser registra poi una passkey protetta
+da impronta, volto o codice del dispositivo. Da quel momento usa «Accedi con
+passkey»: il pannello conserva in `sessionStorage` soltanto una sessione casuale
+di otto ore, mentre D1 ne conserva esclusivamente l’hash. Il dato biometrico non
+lascia mai il dispositivo.
+
+Registra subito una seconda passkey dal riquadro «Sessione amministrativa»,
+preferibilmente su un altro dispositivo. Se tutte le passkey vengono perse, la
+procedura di recupero richiede accesso diretto e autorizzato a D1: esporta prima
+le tabelle `admin_identities` e `admin_credentials`, elimina soltanto i record
+`admin_sessions`, `admin_auth_challenges`, `admin_credentials` e
+`admin_identities`, quindi ripeti la configurazione iniziale con il segreto
+`ADMIN_TOKEN`. Non copiare mai chiavi private o dati biometrici: il sistema non
+li memorizza.
 
 I messaggi online entrano nello stato `pending` e diventano visibili al
 destinatario solo dopo l'approvazione. Le lettere fisiche entrano nello stato
