@@ -9,6 +9,11 @@ import {
     CMS_STORAGE_STATEMENTS,
     MEDIA_ASSET_STORAGE_STATEMENTS
 } from "./cms-schema.js";
+import {
+    adminAuthorized,
+    handleAdminAuthRequest,
+    purgeExpiredAdminAuth
+} from "./admin-auth.js";
 import { PRIVACY_DOCUMENT_SEED } from "./legal-seed.js";
 import { MAP_LAYER_SEEDS } from "./map-seed.js";
 import { NARRATIVE_STEP_SEEDS } from "./narrative-seed.js";
@@ -426,6 +431,15 @@ export default {
 
             const url = new URL(request.url);
             const path = url.pathname;
+
+            const adminAuthResponse = await handleAdminAuthRequest(
+                request,
+                env,
+                path
+            );
+            if (adminAuthResponse) {
+                return adminAuthResponse;
+            }
 
             if (request.method === "POST" && path === "/api/login") {
                 return await login(request, env);
@@ -971,7 +985,7 @@ export default {
                     ok: true,
                     service: "nnmrcn-rete",
                     privacyVersion: "2026-10-03",
-                    contentSchema: 3,
+                    contentSchema: 4,
                     mediaStorage: env.MEDIA ? "r2" : "d1-fallback"
                 });
             }
@@ -1008,6 +1022,7 @@ export default {
             await ensureWikiStorage(env);
             await ensureMapEntryStorage(env);
             await ensureCmsStorage(env);
+            await purgeExpiredAdminAuth(env);
             await migrateLegacyMediaBatch(env, 25);
         })());
     }
@@ -10677,11 +10692,7 @@ async function unsubscribeFromPush(request, env) {
 }
 
 async function requirePushIdentity(request, env) {
-    if (request.headers.has("X-Admin-Token")) {
-        if (!(await adminAuthorized(request, env))) {
-            return null;
-        }
-
+    if (await adminAuthorized(request, env)) {
         return { audience: "admin", locationId: null };
     }
 
@@ -10811,23 +10822,6 @@ function unauthorized(request, env) {
     return json(request, env, {
         error: "Non autorizzato."
     }, 401);
-}
-
-async function adminAuthorized(request, env) {
-    const supplied = request.headers.get("X-Admin-Token") || "";
-    const expected = env.ADMIN_TOKEN || "";
-
-    if (!expected) {
-        return false;
-    }
-
-    const encoder = new TextEncoder();
-    const [suppliedHash, expectedHash] = await Promise.all([
-        crypto.subtle.digest("SHA-256", encoder.encode(supplied)),
-        crypto.subtle.digest("SHA-256", encoder.encode(expected))
-    ]);
-
-    return crypto.subtle.timingSafeEqual(suppliedHash, expectedHash);
 }
 
 function normalizePassword(value) {

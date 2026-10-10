@@ -2,7 +2,7 @@
     "use strict";
 
     const api = window.NNMRCN_API;
-    const ADMIN_TOKEN_KEY = "nnmrcn_admin_token";
+    const ADMIN_SESSION_KEY = "nnmrcn_admin_session";
 
     const elements = {
         search: document.getElementById("vociRicerca"),
@@ -168,7 +168,7 @@
     updateBodyCounter();
     loadPublicEntries();
 
-    if (sessionStorage.getItem(ADMIN_TOKEN_KEY)) {
+    if (sessionStorage.getItem(ADMIN_SESSION_KEY)) {
         loadAdminEntries();
     }
 
@@ -177,9 +177,9 @@
     }
 
     async function adminRequest(path, options = {}) {
-        const token = sessionStorage.getItem(ADMIN_TOKEN_KEY) || "";
+        const token = sessionStorage.getItem(ADMIN_SESSION_KEY) || "";
         const headers = new Headers(options.headers || {});
-        headers.set("X-Admin-Token", token);
+        headers.set("Authorization", `Bearer ${token}`);
 
         return api.request(path, {
             ...options,
@@ -403,7 +403,7 @@
             }
         } catch (error) {
             if (error.status === 401) {
-                sessionStorage.removeItem(ADMIN_TOKEN_KEY);
+                sessionStorage.removeItem(ADMIN_SESSION_KEY);
                 elements.admin.hidden = true;
                 return;
             }
@@ -1236,9 +1236,9 @@
             }
 
             try {
-                const token = sessionStorage.getItem(ADMIN_TOKEN_KEY) || "";
+                const token = sessionStorage.getItem(ADMIN_SESSION_KEY) || "";
                 const response = await fetch(`${api.baseUrl}${photo.adminMediaUrl}`, {
-                    headers: { "X-Admin-Token": token }
+                    headers: { "Authorization": `Bearer ${token}` }
                 });
 
                 if (!response.ok) {

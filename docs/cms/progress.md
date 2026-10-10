@@ -18,7 +18,7 @@ affiancare il primo passaggio tecnico incompleto, ma non sostituirlo.
 | 4 | Bozze, anteprima, cronologia e indicizzazione | Completo | Stati editoriali, anteprima protetta con `noindex`, confronto, ripristino append-only ed esclusione delle bozze dalle API pubbliche sono coperti da codice e test |
 | 5 | Permalink, QR e pagine indicizzabili | Completo | `generate-public-pages.mjs` pubblica 5 Voci e 2 luoghi D1 come HTML autonomo; manifest, sitemap, alias D1, test e sincronizzazione periodica conservano ID, URL storici e QR |
 | 6 | Media e documenti in R2, immagini SEO | Completo | Le unità 6.1–6.4 coprono originali, varianti responsive e sociali, metadati accessibili e documenti privati. Test, deploy e verifiche live di Worker, R2, pannello e protezione degli endpoint sono registrati in `06-media-r2.md` |
-| 7 | Sostituzione del token amministrativo | Da iniziare | L’accesso continua a usare `ADMIN_TOKEN` |
+| 7 | Sostituzione del token amministrativo | In corso — attivazione personale richiesta | `0017_admin_passkeys.sql`, `admin-auth.js`, `admin-auth.test.mjs` e `07-admin-passkeys.md` implementano identità WebAuthn, sessioni di 8 ore e disattivazione automatica del token dopo la prima passkey. Il codice e il deploy possono essere verificati automaticamente; il completamento richiede il gesto locale dell’amministratore per registrare la prima e una seconda passkey e la prova live `configured: true` |
 | 8 | Esportazione, manutenzione e diagnostica CMS/SEO | Da iniziare | Gli strumenti esistenti non coprono l’intero CMS né indicizzazione, link, sitemap e pubblicazione statica |
 | 9 | Prestazioni e Core Web Vitals | Da iniziare | Non esiste ancora una baseline distinta per homepage, mappa, Voci, luoghi e Memorie |
 | 10 | Programma editoriale e monitoraggio organico | Da iniziare | Cluster territoriali e fonti sono definiti, ma non esiste ancora un ciclo editoriale misurato |
@@ -119,6 +119,17 @@ punto 2 non è completa. Non vanno eliminati durante una migrazione parziale.
 | 6.2 | Varianti responsive e dimensioni | Completo | Le nuove immagini producono varianti `small` e `medium`; il Worker verifica byte e dimensioni, cataloga ogni oggetto R2 e serve l'originale come ripiego. Il run `38044904768`, le intestazioni pubbliche 1600×599, il ripiego binario e la pagina HTML rigenerata provano API, `srcset`, `sizes`, `width` e `height`; 95 test coprono catalogo e selezione (`06-media-r2.md`) |
 | 6.3 | Immagini sociali | Completo | La prima fotografia pubblicata è la scelta predefinita amministrabile tramite l’ordine della Voce; i nuovi upload creano la variante `social` 1200:630. I run `38045514506`, `38045514346`, `38045514514`, `38045948833` e `38045948910`, 99 test e la pagina live provano sincronizzazione di URL, alt, tipo e dimensioni tra Open Graph, Twitter e API, senza esporre bozze (`06-media-r2.md`) |
 | 6.4 | Documenti e verifica finale | Completo | `0016_cms_documents_r2.sql` e il pannello gestiscono PDF, testo, Markdown, ODT e DOCX privati: R2 obbligatorio, metadati e checksum in D1, download autenticato `no-store`, sostituzione con versione precedente conservata, cancellazione completa, descrizione e verifica di accessibilità. I run `38066734695`, `38066734264` e `38066734691`, 105 test e le risposte live provano schema 3, binding R2, protezione e assenza di una rotta pubblica (`06-media-r2.md`) |
+
+## Punto 7 — ordine vincolante
+
+| Ordine | Unità | Stato | Criterio e prova |
+|---:|---|---|---|
+| 7.1 | Identità, passkey e sessioni | Implementata, pubblicazione da verificare | La migrazione `0017`, il modulo `admin-auth.js` e il pannello sostituiscono l’uso ordinario di `ADMIN_TOKEN` con WebAuthn e sessioni hash di otto ore. `admin-auth.test.mjs` usa firme P-256 reali e prova origine, verifica utente, contatore, replay, sessione, seconda passkey e rifiuto del token condiviso |
+| 7.2 | Attivazione e prova di produzione | In attesa dell’amministratore | Dopo il deploy, aprire `admin.html`, configurare la prima passkey con il token corrente e aggiungerne una seconda. Registrare `configured: true`, accesso riuscito e rifiuto `401` del vecchio token senza riportare segreti nel registro |
+
+Il punto 8 dipende dalla chiusura operativa del punto 7. La procedura completa,
+incluse privacy, retention e recupero senza modificare contenuti o media, è in
+`07-admin-passkeys.md`.
 
 ## Punti 4–12 — criteri di completamento
 

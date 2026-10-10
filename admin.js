@@ -2,12 +2,21 @@
     "use strict";
 
     const api = window.NNMRCN_API;
-    const TOKEN_KEY = "nnmrcn_admin_token";
+    const SESSION_KEY = "nnmrcn_admin_session";
 
     const form = document.getElementById("adminLoginForm");
-    const tokenInput = document.getElementById("adminToken");
+    const passkeyLogin = document.getElementById("adminPasskeyLogin");
+    const bootstrapPanel = document.getElementById("adminBootstrapPanel");
+    const bootstrapForm = document.getElementById("adminBootstrapForm");
+    const bootstrapName = document.getElementById("adminBootstrapName");
+    const bootstrapToken = document.getElementById("adminBootstrapToken");
+    const bootstrapButton = document.getElementById("adminBootstrapButton");
     const statusText = document.getElementById("adminStatus");
     const panel = document.getElementById("adminPanel");
+    const adminIdentity = document.getElementById("adminIdentity");
+    const adminAddPasskey = document.getElementById("adminAddPasskey");
+    const adminLogout = document.getElementById("adminLogout");
+    const adminSecurityStatus = document.getElementById("adminSecurityStatus");
     const list = document.getElementById("adminList");
     const contactList = document.getElementById("adminContactList");
     const memorySection = document.getElementById("adminMemorie");
@@ -263,7 +272,7 @@
     const narrativeStatus = document.getElementById("adminNarrativeStatus");
     const narrativeList = document.getElementById("adminNarrativeList");
 
-    let adminToken = sessionStorage.getItem(TOKEN_KEY) || "";
+    let adminSession = sessionStorage.getItem(SESSION_KEY) || "";
     let loadedMessages = [];
     let memoryObjectUrls = [];
     let mapEntryMap = null;
@@ -296,17 +305,296 @@
         button: pushButton,
         status: pushStatus,
         request,
-        identity: () => adminToken ? "admin" : ""
+        identity: () => adminSession ? "admin" : ""
     });
 
     async function request(path, options = {}) {
         const headers = new Headers(options.headers || {});
-        headers.set("X-Admin-Token", adminToken);
+        headers.set("Authorization", `Bearer ${adminSession}`);
 
         return api.request(path, {
             ...options,
             headers
         });
+    }
+
+    function bufferToBase64Url(value) {
+        const bytes = new Uint8Array(value);
+        let binary = "";
+        bytes.forEach((byte) => {
+            binary += String.fromCharCode(byte);
+        });
+        return btoa(binary)
+            .replaceAll("+", "-")
+            .replaceAll("/", "_")
+            .replaceAll("=", "");
+    }
+
+    function base64UrlToBuffer(value) {
+        const normalized = String(value || "")
+            .replaceAll("-", "+")
+            .replaceAll("_", "/");
+        const padded = normalized.padEnd(
+            Math.ceil(normalized.length / 4) * 4,
+            "="
+        );
+        const binary = atob(padded);
+        return Uint8Array.from(binary, (character) => character.charCodeAt(0));
+    }
+
+    function registrationOptions(value) {
+        return {
+            ...value,
+            challenge: base64UrlToBuffer(value.challenge),
+            user: {
+                ...value.user,
+                id: base64UrlToBuffer(value.user.id)
+            },
+            excludeCredentials: (value.excludeCredentials || []).map((item) => ({
+                ...item,
+                id: base64UrlToBuffer(item.id)
+            }))
+        };
+    }
+
+    function assertionOptions(value) {
+        return {
+            ...value,
+            challenge: base64UrlToBuffer(value.challenge),
+            allowCredentials: (value.allowCredentials || []).map((item) => ({
+                ...item,
+                id: base64UrlToBuffer(item.id)
+            }))
+        };
+    }
+
+    function registrationPayload(credential) {
+        return {
+            id: credential.id,
+            rawId: bufferToBase64Url(credential.rawId),
+            type: credential.type,
+            response: {
+                clientDataJSON: bufferToBase64Url(
+                    credential.response.clientDataJSON
+                ),
+                attestationObject: bufferToBase64Url(
+                    credential.response.attestationObject
+                ),
+                transports: typeof credential.response.getTransports === "function"
+                    ? credential.response.getTransports()
+                    : []
+            }
+        };
+    }
+
+    function assertionPayload(credential) {
+        return {
+            id: credential.id,
+            rawId: bufferToBase64Url(credential.rawId),
+            type: credential.type,
+            response: {
+                clientDataJSON: bufferToBase64Url(
+                    credential.response.clientDataJSON
+                ),
+                authenticatorData: bufferToBase64Url(
+                    credential.response.authenticatorData
+                ),
+                signature: bufferToBase64Url(credential.response.signature),
+                userHandle: credential.response.userHandle
+                    ? bufferToBase64Url(credential.response.userHandle)
+                    : null
+            }
+        };
+    }
+
+    function passkeysAvailable() {
+        return Boolean(window.PublicKeyCredential && navigator.credentials);
+    }
+
+    function credentialErrorMessage(error) {
+        if (error?.name === "NotAllowedError") {
+            return "Operazione annullata o scaduta. Riprova quando sei pronto.";
+        }
+        if (error?.name === "InvalidStateError") {
+            return "Questa passkey risulta già registrata.";
+        }
+        return error?.message || "Non è stato possibile usare la passkey.";
+    }
+
+    function setAuthenticated(session) {
+        adminSession = session.token;
+        sessionStorage.setItem(SESSION_KEY, adminSession);
+        adminIdentity.textContent = session.identity?.displayName
+            ? `Accesso verificato: ${session.identity.displayName}.`
+            : "Accesso verificato.";
+        bootstrapPanel.hidden = true;
+        statusText.textContent = "";
+    }
+
+    function clearAuthenticated(message = "") {
+        adminSession = "";
+        sessionStorage.removeItem(SESSION_KEY);
+        panel.hidden = true;
+        pushNotifications.reset();
+        adminIdentity.textContent = "Accesso non attivo.";
+        statusText.textContent = message;
+    }
+
+    async function refreshAuthStatus() {
+        if (!api.baseUrl) {
+            statusText.textContent = "Backend non ancora collegato in config.js.";
+            return;
+        }
+        if (!passkeysAvailable()) {
+            statusText.textContent =
+                "Questo browser non supporta le passkey. Usa un browser aggiornato.";
+            passkeyLogin.disabled = true;
+            return;
+        }
+        try {
+            const data = await api.request("/api/admin/auth/status");
+            bootstrapPanel.hidden = Boolean(data.configured);
+            if (!data.configured) {
+                statusText.textContent =
+                    "Prima configurazione necessaria: crea la passkey amministrativa.";
+            }
+        } catch (error) {
+            statusText.textContent = error.message ||
+                "Non è stato possibile verificare la configurazione.";
+        }
+    }
+
+    async function loginWithPasskey() {
+        passkeyLogin.disabled = true;
+        statusText.textContent = "Verifica della passkey…";
+        try {
+            const options = await api.request("/api/admin/auth/options", {
+                method: "POST",
+                body: "{}"
+            });
+            const credential = await navigator.credentials.get({
+                publicKey: assertionOptions(options.publicKey)
+            });
+            const session = await api.request("/api/admin/auth/verify", {
+                method: "POST",
+                body: JSON.stringify({
+                    challengeId: options.challengeId,
+                    credential: assertionPayload(credential)
+                })
+            });
+            setAuthenticated(session);
+            await loadMessages();
+        } catch (error) {
+            statusText.textContent = credentialErrorMessage(error);
+            await refreshAuthStatus();
+        } finally {
+            passkeyLogin.disabled = false;
+        }
+    }
+
+    async function bootstrapPasskey() {
+        const displayName = bootstrapName.value.trim();
+        const legacyToken = bootstrapToken.value.trim();
+        if (!displayName || !legacyToken) return;
+        bootstrapButton.disabled = true;
+        statusText.textContent = "Creazione della passkey…";
+        const headers = { "X-Admin-Token": legacyToken };
+        try {
+            const options = await api.request(
+                "/api/admin/auth/bootstrap/options",
+                {
+                    method: "POST",
+                    headers,
+                    body: JSON.stringify({ displayName })
+                }
+            );
+            const credential = await navigator.credentials.create({
+                publicKey: registrationOptions(options.publicKey)
+            });
+            const session = await api.request(
+                "/api/admin/auth/bootstrap/verify",
+                {
+                    method: "POST",
+                    headers,
+                    body: JSON.stringify({
+                        displayName,
+                        challengeId: options.challengeId,
+                        credential: registrationPayload(credential)
+                    })
+                }
+            );
+            bootstrapToken.value = "";
+            setAuthenticated(session);
+            await loadMessages();
+        } catch (error) {
+            statusText.textContent = credentialErrorMessage(error);
+        } finally {
+            bootstrapButton.disabled = false;
+        }
+    }
+
+    async function addPasskey() {
+        adminAddPasskey.disabled = true;
+        adminSecurityStatus.textContent = "Preparazione della nuova passkey…";
+        try {
+            const options = await request(
+                "/api/admin/auth/credentials/options",
+                { method: "POST", body: "{}" }
+            );
+            const credential = await navigator.credentials.create({
+                publicKey: registrationOptions(options.publicKey)
+            });
+            await request("/api/admin/auth/credentials/verify", {
+                method: "POST",
+                body: JSON.stringify({
+                    challengeId: options.challengeId,
+                    credential: registrationPayload(credential)
+                })
+            });
+            adminSecurityStatus.textContent =
+                "Nuova passkey aggiunta. Puoi usarla dal prossimo accesso.";
+        } catch (error) {
+            adminSecurityStatus.textContent = credentialErrorMessage(error);
+        } finally {
+            adminAddPasskey.disabled = false;
+        }
+    }
+
+    async function resumeAdminSession() {
+        try {
+            const data = await request("/api/admin/auth/session");
+            adminIdentity.textContent = data.identity?.displayName
+                ? `Accesso verificato: ${data.identity.displayName}.`
+                : "Accesso verificato.";
+            await loadMessages();
+        } catch (error) {
+            if (error.status === 401) {
+                clearAuthenticated(
+                    "La sessione è scaduta. Accedi di nuovo con la passkey."
+                );
+                await refreshAuthStatus();
+            } else {
+                statusText.textContent =
+                    "Non è stato possibile riprendere la sessione. Ricarica la pagina.";
+            }
+        }
+    }
+
+    async function logoutAdmin() {
+        adminLogout.disabled = true;
+        try {
+            await request("/api/admin/auth/logout", {
+                method: "POST",
+                body: "{}"
+            });
+        } catch (_) {
+            // La sessione viene comunque rimossa dal browser.
+        } finally {
+            clearAuthenticated("Sessione chiusa.");
+            adminLogout.disabled = false;
+            await refreshAuthStatus();
+            passkeyLogin.focus();
+        }
     }
 
     function showListMessage(message) {
@@ -348,11 +636,9 @@
             ]);
         } catch (error) {
             if (error.status === 401) {
-                panel.hidden = true;
-                statusText.textContent = "Token non valido.";
-                sessionStorage.removeItem(TOKEN_KEY);
-                adminToken = "";
-                pushNotifications.reset();
+                clearAuthenticated(
+                    "La sessione è scaduta. Accedi di nuovo con la passkey."
+                );
             } else {
                 showListMessage("Errore nel caricamento.");
             }
@@ -1783,7 +2069,7 @@
         cmsDocumentStatus.textContent = "Preparazione del download protetto…";
         try {
             const response = await fetch(`${api.baseUrl}${item.downloadUrl}`, {
-                headers: { "X-Admin-Token": adminToken }
+                headers: { "Authorization": `Bearer ${adminSession}` }
             });
             if (!response.ok) {
                 const error = await response.json().catch(() => null);
@@ -2296,7 +2582,7 @@
             try {
                 const response = await fetch(`${api.baseUrl}${memory.mediaUrl}`, {
                     headers: {
-                        "X-Admin-Token": adminToken,
+                        "Authorization": `Bearer ${adminSession}`,
                         "Accept": memory.mediaType
                     }
                 });
@@ -2521,7 +2807,7 @@
                 `${api.baseUrl}/api/admin/export?format=${format}`,
                 {
                     headers: {
-                        "X-Admin-Token": adminToken,
+                        "Authorization": `Bearer ${adminSession}`,
                         "Accept": format === "json"
                             ? "application/json"
                             : "text/csv"
@@ -3501,17 +3787,14 @@
 
     form.addEventListener("submit", async (event) => {
         event.preventDefault();
-
-        adminToken = tokenInput.value.trim();
-
-        if (!adminToken) {
-            return;
-        }
-
-        sessionStorage.setItem(TOKEN_KEY, adminToken);
-        tokenInput.value = "";
-        await loadMessages();
+        await loginWithPasskey();
     });
+    bootstrapForm.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        await bootstrapPasskey();
+    });
+    adminAddPasskey.addEventListener("click", addPasskey);
+    adminLogout.addEventListener("click", logoutAdmin);
 
     refresh.addEventListener("click", loadMessages);
     filter.addEventListener("change", loadMessages);
@@ -3685,10 +3968,9 @@
         });
     });
 
-    if (adminToken) {
-        loadMessages();
-    } else if (!api.baseUrl) {
-        statusText.textContent =
-            "Backend non ancora collegato in config.js.";
+    if (adminSession) {
+        resumeAdminSession();
+    } else {
+        refreshAuthStatus();
     }
 })();
