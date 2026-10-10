@@ -31,6 +31,23 @@
     const exportCsv = document.getElementById("adminExportCsv");
     const exportJson = document.getElementById("adminExportJson");
     const exportStatus = document.getElementById("adminExportStatus");
+    const cmsBackupButton = document.getElementById("adminCmsBackup");
+    const cmsBackupStatus = document.getElementById("adminCmsBackupStatus");
+    const cmsRestoreFile = document.getElementById("adminCmsRestoreFile");
+    const cmsRestoreValidate = document.getElementById("adminCmsRestoreValidate");
+    const cmsRestoreConfirmation = document.getElementById(
+        "adminCmsRestoreConfirmation"
+    );
+    const cmsRestoreConfirmationInput = document.getElementById(
+        "adminCmsRestoreConfirmationInput"
+    );
+    const cmsRestoreButton = document.getElementById("adminCmsRestore");
+    const cmsRestoreStatus = document.getElementById("adminCmsRestoreStatus");
+    const cmsDiagnosticsButton = document.getElementById("adminCmsDiagnostics");
+    const cmsDiagnosticsStatus = document.getElementById("adminCmsDiagnosticsStatus");
+    const cmsDiagnosticsResults = document.getElementById(
+        "adminCmsDiagnosticsResults"
+    );
     const countPending = document.getElementById("adminCountPending");
     const countDelivery = document.getElementById("adminCountDelivery");
     const countPublishable = document.getElementById("adminCountPublishable");
@@ -273,6 +290,8 @@
     const narrativeList = document.getElementById("adminNarrativeList");
 
     let adminSession = sessionStorage.getItem(SESSION_KEY) || "";
+    let validatedCmsBackup = null;
+    let cmsRestorePhrase = "";
     let loadedMessages = [];
     let memoryObjectUrls = [];
     let mapEntryMap = null;
@@ -2840,6 +2859,179 @@
         }
     }
 
+    async function downloadCmsBackup() {
+        cmsBackupButton.disabled = true;
+        cmsBackupStatus.textContent =
+            "Preparazione del backup D1 e R2. Non chiudere questa pagina…";
+
+        try {
+            const response = await fetch(
+                `${api.baseUrl}/api/admin/maintenance/export`,
+                {
+                    headers: {
+                        "Authorization": `Bearer ${adminSession}`,
+                        "Accept": "application/json"
+                    }
+                }
+            );
+
+            if (!response.ok) {
+                const error = await response.json().catch(() => null);
+                throw new Error(error?.error || "Backup non riuscito.");
+            }
+
+            const blob = await response.blob();
+            const objectUrl = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            const date = new Date().toISOString().slice(0, 10);
+            link.href = objectUrl;
+            link.download = `nnmrcn-cms-${date}.json`;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+            cmsBackupStatus.textContent =
+                "Backup completato. Conserva il file in un luogo protetto.";
+        } catch (error) {
+            cmsBackupStatus.textContent =
+                error.message || "Non è stato possibile creare il backup.";
+        } finally {
+            cmsBackupButton.disabled = false;
+        }
+    }
+
+    async function validateCmsRestoreFile() {
+        const file = cmsRestoreFile.files?.[0];
+        validatedCmsBackup = null;
+        cmsRestorePhrase = "";
+        cmsRestoreConfirmation.hidden = true;
+        cmsRestoreConfirmationInput.value = "";
+
+        if (!file) {
+            cmsRestoreStatus.textContent = "Scegli prima un file JSON.";
+            return;
+        }
+        if (file.size > 80 * 1024 * 1024) {
+            cmsRestoreStatus.textContent = "Il file supera il limite di 80 MiB.";
+            return;
+        }
+
+        cmsRestoreValidate.disabled = true;
+        cmsRestoreStatus.textContent = "Verifica di struttura, checksum e media…";
+        try {
+            const backup = JSON.parse(await file.text());
+            const response = await fetch(
+                `${api.baseUrl}/api/admin/maintenance/restore/validate`,
+                {
+                    method: "POST",
+                    headers: {
+                        "Authorization": `Bearer ${adminSession}`,
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify(backup)
+                }
+            );
+            const result = await response.json().catch(() => null);
+            if (!response.ok) {
+                throw new Error(result?.error || "Backup non valido.");
+            }
+
+            validatedCmsBackup = backup;
+            cmsRestorePhrase = result.confirmation;
+            cmsRestoreConfirmation.hidden = false;
+            cmsRestoreStatus.textContent =
+                `Backup valido del ${new Date(result.createdAt).toLocaleString("it-IT")}: ` +
+                `${result.rowCount} righe D1 e ${result.mediaCount} oggetti R2. ` +
+                `Per ripristinarlo scrivi «${result.confirmation}».`;
+        } catch (error) {
+            cmsRestoreStatus.textContent =
+                error.message || "Non è stato possibile verificare il backup.";
+        } finally {
+            cmsRestoreValidate.disabled = false;
+        }
+    }
+
+    async function restoreCmsBackup() {
+        const confirmation = cmsRestoreConfirmationInput.value.trim();
+        if (!validatedCmsBackup || confirmation !== cmsRestorePhrase) {
+            cmsRestoreStatus.textContent = "La conferma non corrisponde.";
+            return;
+        }
+        if (!window.confirm(
+            "Ripristinare ora il backup? I contenuti CMS correnti in D1 saranno sostituiti."
+        )) {
+            return;
+        }
+
+        cmsRestoreButton.disabled = true;
+        cmsRestoreValidate.disabled = true;
+        cmsRestoreStatus.textContent =
+            "Ripristino D1 e copia protetta dei media R2 in corso…";
+        try {
+            const response = await fetch(
+                `${api.baseUrl}/api/admin/maintenance/restore`,
+                {
+                    method: "POST",
+                    headers: {
+                        "Authorization": `Bearer ${adminSession}`,
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        backup: validatedCmsBackup,
+                        confirmation
+                    })
+                }
+            );
+            const result = await response.json().catch(() => null);
+            if (!response.ok) {
+                throw new Error(result?.error || "Ripristino non riuscito.");
+            }
+
+            cmsRestoreStatus.textContent =
+                `Ripristino completato: ${result.rowCount} righe D1 e ` +
+                `${result.mediaCount} oggetti R2. Ricarica il pannello per vedere i dati.`;
+            validatedCmsBackup = null;
+            cmsRestorePhrase = "";
+            cmsRestoreConfirmation.hidden = true;
+            cmsRestoreConfirmationInput.value = "";
+            cmsRestoreFile.value = "";
+        } catch (error) {
+            cmsRestoreStatus.textContent =
+                error.message || "Non è stato possibile ripristinare il backup.";
+        } finally {
+            cmsRestoreButton.disabled = false;
+            cmsRestoreValidate.disabled = false;
+        }
+    }
+
+    async function runCmsDiagnostics() {
+        cmsDiagnosticsButton.disabled = true;
+        cmsDiagnosticsResults.replaceChildren();
+        cmsDiagnosticsStatus.textContent =
+            "Controllo di database, media e pagine pubblicate…";
+        try {
+            const report = await request("/api/admin/maintenance/diagnostics");
+            for (const check of report.checks || []) {
+                const item = document.createElement("li");
+                const label = document.createElement("strong");
+                label.textContent = `${check.label}: `;
+                item.dataset.status = check.status;
+                item.append(label, document.createTextNode(check.detail));
+                cmsDiagnosticsResults.appendChild(item);
+            }
+            const outcome = report.ok ? "nessun errore" :
+                `${report.failures} errori`;
+            cmsDiagnosticsStatus.textContent =
+                `Diagnostica completata: ${outcome}` +
+                `${report.warnings ? ` e ${report.warnings} avvisi` : ""}.`;
+        } catch (error) {
+            cmsDiagnosticsStatus.textContent = error.message ||
+                "Non è stato possibile completare la diagnostica.";
+        } finally {
+            cmsDiagnosticsButton.disabled = false;
+        }
+    }
+
     function ensureMapEntryPicker() {
         const mapContainer = document.getElementById("adminMapEntryMap");
 
@@ -3803,6 +3995,17 @@
     search.addEventListener("input", renderCurrentMessages);
     exportCsv.addEventListener("click", () => downloadExport("csv"));
     exportJson.addEventListener("click", () => downloadExport("json"));
+    cmsBackupButton.addEventListener("click", downloadCmsBackup);
+    cmsRestoreValidate.addEventListener("click", validateCmsRestoreFile);
+    cmsRestoreButton.addEventListener("click", restoreCmsBackup);
+    cmsDiagnosticsButton.addEventListener("click", runCmsDiagnostics);
+    cmsRestoreFile.addEventListener("change", () => {
+        validatedCmsBackup = null;
+        cmsRestorePhrase = "";
+        cmsRestoreConfirmation.hidden = true;
+        cmsRestoreConfirmationInput.value = "";
+        cmsRestoreStatus.textContent = "";
+    });
     mapEntryForm.addEventListener("submit", saveMapEntry);
     mapEntryCancel.addEventListener("click", () => {
         resetMapEntryForm();

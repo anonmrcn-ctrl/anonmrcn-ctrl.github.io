@@ -14,6 +14,17 @@ import {
     handleAdminAuthRequest,
     purgeExpiredAdminAuth
 } from "./admin-auth.js";
+import {
+    CmsBackupIntegrityError,
+    CmsBackupLimitError,
+    CmsBackupRestoreError,
+    CmsBackupValidationError,
+    cmsBackupFileName,
+    createCmsBackup,
+    restoreCmsBackup,
+    validateCmsBackup
+} from "./cms-maintenance.js";
+import { runCmsDiagnostics } from "./cms-diagnostics.js";
 import { PRIVACY_DOCUMENT_SEED } from "./legal-seed.js";
 import { MAP_LAYER_SEEDS } from "./map-seed.js";
 import { NARRATIVE_STEP_SEEDS } from "./narrative-seed.js";
@@ -123,6 +134,7 @@ const MAX_CMS_LEGAL_REQUEST_BYTES = 512000;
 const MAX_CMS_PERMALINK_REQUEST_BYTES = 16000;
 const MAX_CMS_DOCUMENT_BYTES = 8 * 1024 * 1024;
 const MAX_CMS_DOCUMENT_REQUEST_BYTES = 12 * 1024 * 1024;
+const MAX_CMS_BACKUP_REQUEST_BYTES = 80 * 1024 * 1024;
 
 class RequestBodyTooLargeError extends Error {}
 
@@ -940,6 +952,34 @@ export default {
 
             if (request.method === "GET" && path === "/api/admin/export") {
                 return await adminExportMessages(request, env, url);
+            }
+
+            if (
+                request.method === "GET" &&
+                path === "/api/admin/maintenance/export"
+            ) {
+                return await adminExportCmsBackup(request, env);
+            }
+
+            if (
+                request.method === "POST" &&
+                path === "/api/admin/maintenance/restore/validate"
+            ) {
+                return await adminValidateCmsBackup(request, env);
+            }
+
+            if (
+                request.method === "POST" &&
+                path === "/api/admin/maintenance/restore"
+            ) {
+                return await adminRestoreCmsBackup(request, env);
+            }
+
+            if (
+                request.method === "GET" &&
+                path === "/api/admin/maintenance/diagnostics"
+            ) {
+                return await adminCmsDiagnostics(request, env);
             }
 
             if (request.method === "GET" && path === "/api/admin/contact-messages") {
@@ -10265,6 +10305,101 @@ async function adminExportMessages(request, env, url) {
         `nnmrcn-messaggi-${date}.csv`,
         truncated
     );
+}
+
+async function adminExportCmsBackup(request, env) {
+    if (!(await adminAuthorized(request, env))) {
+        return unauthorized(request, env);
+    }
+
+    await ensureWikiStorage(env);
+    await ensureMapEntryStorage(env);
+    await ensureNarrativeStorage(env);
+    await ensureCmsStorage(env);
+
+    try {
+        const now = Date.now();
+        const backup = await createCmsBackup(env, now);
+        return downloadResponse(
+            request,
+            env,
+            JSON.stringify(backup, null, 2),
+            "application/json; charset=utf-8",
+            cmsBackupFileName(now)
+        );
+    } catch (error) {
+        if (error instanceof CmsBackupIntegrityError) {
+            return json(request, env, { error: error.message }, 409);
+        }
+        if (error instanceof CmsBackupLimitError) {
+            return json(request, env, { error: error.message }, 413);
+        }
+        throw error;
+    }
+}
+
+async function adminValidateCmsBackup(request, env) {
+    if (!(await adminAuthorized(request, env))) {
+        return unauthorized(request, env);
+    }
+    try {
+        const backup = await readJson(request, MAX_CMS_BACKUP_REQUEST_BYTES);
+        return json(request, env, await validateCmsBackup(backup));
+    } catch (error) {
+        if (
+            error instanceof CmsBackupValidationError ||
+            error instanceof CmsBackupIntegrityError ||
+            error instanceof CmsBackupLimitError
+        ) {
+            return json(request, env, { error: error.message }, 400);
+        }
+        throw error;
+    }
+}
+
+async function adminRestoreCmsBackup(request, env) {
+    if (!(await adminAuthorized(request, env))) {
+        return unauthorized(request, env);
+    }
+
+    await ensureWikiStorage(env);
+    await ensureMapEntryStorage(env);
+    await ensureNarrativeStorage(env);
+    await ensureCmsStorage(env);
+
+    try {
+        const body = await readJson(request, MAX_CMS_BACKUP_REQUEST_BYTES);
+        const result = await restoreCmsBackup(
+            env,
+            body?.backup,
+            String(body?.confirmation || "")
+        );
+        return json(request, env, result);
+    } catch (error) {
+        if (
+            error instanceof CmsBackupValidationError ||
+            error instanceof CmsBackupIntegrityError ||
+            error instanceof CmsBackupLimitError
+        ) {
+            return json(request, env, { error: error.message }, 400);
+        }
+        if (error instanceof CmsBackupRestoreError) {
+            return json(request, env, { error: error.message }, 409);
+        }
+        throw error;
+    }
+}
+
+async function adminCmsDiagnostics(request, env) {
+    if (!(await adminAuthorized(request, env))) {
+        return unauthorized(request, env);
+    }
+
+    await ensureWikiStorage(env);
+    await ensureMapEntryStorage(env);
+    await ensureNarrativeStorage(env);
+    await ensureCmsStorage(env);
+    return json(request, env, await runCmsDiagnostics(env));
 }
 
 function exportMessageRow(row) {

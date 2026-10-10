@@ -160,6 +160,66 @@
                     <button id="adminExportCsv" type="button">Esporta CSV</button>
                     <button id="adminExportJson" type="button">Esporta JSON</button>
                 </div>
+                <h3>Backup del CMS</h3>
+                <p>
+                    Scarica contenuti, revisioni, URL permanenti, documenti e
+                    media R2 in un archivio verificabile. Password, passkey,
+                    sessioni, messaggi, contatti e indirizzi sono esclusi.
+                </p>
+                <button id="adminCmsBackup" type="button">
+                    Scarica backup CMS
+                </button>
+                <p class="admin-export-status" id="adminCmsBackupStatus" aria-live="polite"></p>
+                <details class="admin-backup-restore">
+                    <summary>Verifica o ripristina un backup</summary>
+                    <p>
+                        Prima viene controllata l'integrità del file. Il
+                        ripristino sostituisce i contenuti CMS in D1, copia i
+                        media in nuove chiavi R2 e conserva gli oggetti
+                        precedenti per un eventuale recupero.
+                    </p>
+                    <label for="adminCmsRestoreFile">File di backup JSON</label>
+                    <input
+                        id="adminCmsRestoreFile"
+                        type="file"
+                        accept="application/json,.json"
+                    >
+                    <button id="adminCmsRestoreValidate" type="button">
+                        Verifica backup
+                    </button>
+                    <div id="adminCmsRestoreConfirmation" hidden>
+                        <label for="adminCmsRestoreConfirmationInput">
+                            Scrivi la conferma indicata dopo la verifica
+                        </label>
+                        <input
+                            id="adminCmsRestoreConfirmationInput"
+                            type="text"
+                            autocomplete="off"
+                        >
+                        <button id="adminCmsRestore" type="button">
+                            Ripristina contenuti e media
+                        </button>
+                    </div>
+                    <p class="admin-export-status" id="adminCmsRestoreStatus" aria-live="polite"></p>
+                </details>
+                <h3>Diagnostica CMS e SEO</h3>
+                <p>
+                    Controlla D1, R2, API pubblica, pubblicazione statica,
+                    sitemap, canonical, collegamenti e immagini senza mostrare
+                    contenuti privati.
+                </p>
+                <button id="adminCmsDiagnostics" type="button">
+                    Esegui diagnostica
+                </button>
+                <p class="admin-export-status" id="adminCmsDiagnosticsStatus" aria-live="polite"></p>
+                <ul id="adminCmsDiagnosticsResults"></ul>
+                <p>
+                    <a
+                        href="https://github.com/anonmrcn-ctrl/anonmrcn-ctrl.github.io/blob/main/docs/cms/manuale-amministratore.md"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                    >Apri il manuale dell'amministratore</a>
+                </p>
                 <p><a href="./voci.html#editor">Apri l’editor delle voci</a></p>
                 <p class="admin-export-status" id="adminExportStatus" aria-live="polite"></p>
             </section>
@@ -1051,6 +1111,6 @@
         integrity="sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH"
         crossorigin="anonymous"
     ></script>
-    <script src="./admin.js?v=20261010-passkeys1"></script>
+    <script src="./admin.js?v=20261011-maintenance1"></script>
 </body>
 </html>

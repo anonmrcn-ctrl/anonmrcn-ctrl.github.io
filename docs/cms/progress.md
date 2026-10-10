@@ -1,6 +1,6 @@
 # Roadmap complessiva CMS e SEO
 
-Aggiornata il 10 ottobre 2026. Questa è la roadmap unica di anonMrcn: integra
+Aggiornata l'11 ottobre 2026. Questa è la roadmap unica di anonMrcn: integra
 amministrazione dei contenuti, permanenza degli URL, indicizzazione, prestazioni,
 crescita editoriale, usabilità amministrativa e privacy. Si procede dalla prima
 riga incompleta e una riga diventa completa soltanto quando schema,
@@ -18,8 +18,8 @@ affiancare il primo passaggio tecnico incompleto, ma non sostituirlo.
 | 4 | Bozze, anteprima, cronologia e indicizzazione | Completo | Stati editoriali, anteprima protetta con `noindex`, confronto, ripristino append-only ed esclusione delle bozze dalle API pubbliche sono coperti da codice e test |
 | 5 | Permalink, QR e pagine indicizzabili | Completo | `generate-public-pages.mjs` pubblica 5 Voci e 2 luoghi D1 come HTML autonomo; manifest, sitemap, alias D1, test e sincronizzazione periodica conservano ID, URL storici e QR |
 | 6 | Media e documenti in R2, immagini SEO | Completo | Le unità 6.1–6.4 coprono originali, varianti responsive e sociali, metadati accessibili e documenti privati. Test, deploy e verifiche live di Worker, R2, pannello e protezione degli endpoint sono registrati in `06-media-r2.md` |
-| 7 | Sostituzione del token amministrativo | In corso — attivazione personale richiesta | PR #16 e i run Worker `38068531893`, Pages `38068531244` e SEO `38068532070` pubblicano identità WebAuthn, sessioni di 8 ore e disattivazione automatica del token dopo la prima passkey. Health schema 4, protezione `401`, `no-store`, pannello live e 106 test sono verificati; il completamento richiede il gesto locale dell’amministratore per registrare la prima e una seconda passkey e la prova live `configured: true` |
-| 8 | Esportazione, manutenzione e diagnostica CMS/SEO | Da iniziare | Gli strumenti esistenti non coprono l’intero CMS né indicizzazione, link, sitemap e pubblicazione statica |
+| 7 | Sostituzione del token amministrativo | Completo | PR #16 e i run Worker `38068531893`, Pages `38068531244` e SEO `38068532070` pubblicano identità WebAuthn, sessioni di 8 ore e disattivazione automatica del token dopo la prima passkey. L'11 ottobre 2026 lo stato pubblico restituisce `configured: true`, una richiesta amministrativa con il solo header legacy restituisce `401` e l'amministratore conferma l'accesso con la passkey personale. La seconda passkey resta raccomandata ma non vincolante; l'unico recupero disponibile è quello infrastrutturale documentato |
+| 8 | Esportazione, manutenzione e diagnostica CMS/SEO | In corso — 8.1–8.3 complete | Il pannello esporta, valida e ripristina D1/R2 e produce una diagnostica priva di dati privati su database, media, API, manifest, sitemap, canonical, link, immagini e ultima pubblicazione; resta il manuale operativo e la verifica del servizio pubblicato dell'unità 8.4 |
 | 9 | Prestazioni e Core Web Vitals | Da iniziare | Non esiste ancora una baseline distinta per homepage, mappa, Voci, luoghi e Memorie |
 | 10 | Programma editoriale e monitoraggio organico | Da iniziare | Cluster territoriali e fonti sono definiti, ma non esiste ancora un ciclo editoriale misurato |
 | 11 | Amministrazione più user friendly | Da iniziare | Il pannello copre le funzioni CMS, ma richiede una revisione completa di linguaggio, navigazione, gerarchia, feedback, errori, responsive e accessibilità |
@@ -125,11 +125,20 @@ punto 2 non è completa. Non vanno eliminati durante una migrazione parziale.
 | Ordine | Unità | Stato | Criterio e prova |
 |---:|---|---|---|
 | 7.1 | Identità, passkey e sessioni | Completa e verificata sul servizio pubblicato | La migrazione `0017`, il modulo `admin-auth.js` e il pannello sostituiscono l’uso ordinario di `ADMIN_TOKEN` con WebAuthn e sessioni hash di otto ore. `admin-auth.test.mjs` usa firme P-256 reali e prova origine, verifica utente, contatore, replay, sessione, seconda passkey e rifiuto del token condiviso; PR #16, i tre run riusciti e le risposte live sono registrati in `07-admin-passkeys.md` |
-| 7.2 | Attivazione e prova di produzione | In attesa dell’amministratore | Dopo il deploy, aprire `admin.html`, configurare la prima passkey con il token corrente e aggiungerne una seconda. Registrare `configured: true`, accesso riuscito e rifiuto `401` del vecchio token senza riportare segreti nel registro |
+| 7.2 | Attivazione e prova di produzione | Completa | L'11 ottobre 2026 `/api/admin/auth/status` ha restituito `200`, `configured: true`, `no-store` e `nosniff`; `/api/admin/summary` con il solo header legacy ha restituito `401`, mentre l'amministratore ha confermato l'accesso con la passkey personale. Non essendo disponibile un secondo autenticatore, una credenziale ulteriore resta raccomandata ma non blocca il punto: la perdita dell'unica passkey richiede il recupero infrastrutturale descritto in `07-admin-passkeys.md` |
 
-Il punto 8 dipende dalla chiusura operativa del punto 7. La procedura completa,
-incluse privacy, retention e recupero senza modificare contenuti o media, è in
+Il punto 8 è ora eseguibile. La procedura completa del punto 7, incluse privacy,
+retention e recupero senza modificare contenuti o media, è in
 `07-admin-passkeys.md`.
+
+## Punto 8 — ordine vincolante
+
+| Ordine | Unità | Stato | Criterio e prova |
+|---:|---|---|---|
+| 8.1 | Backup dei contenuti CMS e dei media | Completa | `GET /api/admin/maintenance/export`, il pulsante «Scarica backup CMS» e `cms-maintenance.test.mjs` producono e verificano un archivio JSON versionato di D1 e R2. Oggetti mancanti o incoerenti bloccano il download; autenticazione, sessioni e dati personali operativi restano esclusi secondo `08-maintenance-diagnostics.md` |
+| 8.2 | Verifica e ripristino | Completa | Il pannello valida formato, tabelle, SHA-256 e corrispondenza D1/R2, richiede una frase legata al checksum e una conferma ulteriore, copia i media sotto nuove chiavi e sostituisce D1 in transazione. `cms-maintenance.test.mjs` prova rifiuto, ripristino, conservazione degli oggetti precedenti e ricreazione dei trigger; `08-maintenance-diagnostics.md` separa il recupero CMS dal backup infrastrutturale cifrato |
+| 8.3 | Diagnostica CMS/SEO | Completa | `GET /api/admin/maintenance/diagnostics`, il pulsante nel pannello e `runCmsDiagnostics` controllano relazioni D1, catalogo R2, health, allineamento D1/manifest, sitemap/robots, pagine, canonical, link, immagini e stato della pubblicazione senza esporre dati privati; test deterministici simulano l'intero sito pubblico |
+| 8.4 | Manuale e manutenzione | Implementata — verifica pubblica richiesta | `manuale-amministratore.md`, collegato dal pannello, descrive tutti i flussi ordinari senza codice, cadenze e gestione degli errori; test e build locali sono completi. Il punto 8 sarà chiuso dopo il deploy e la prova live di pannello, endpoint e intestazioni private |
 
 ## Punti 4–12 — criteri di completamento
 
