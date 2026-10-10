@@ -439,7 +439,9 @@ export function renderWikiPage(entry, wikis, options) {
     const image = firstImage
         ? new URL(firstImage.socialUrl || firstImage.mediaUrl, `${options.apiBase}/`).href
         : options.defaultImage;
-    const imageAlt = firstImage?.alt || `Immagine di ${entry.title}`;
+    const imageAlt = firstImage?.alt || (firstImage
+        ? `Immagine di ${entry.title}`
+        : "Immagine del progetto anonMrcn");
     const citations = citationContext(`voce-${entry.id}`);
     const summary = entry.summary
         ? `<p class="voce-sommario">${renderInline(entry.summary, citations, wikis)}</p>`
@@ -470,6 +472,10 @@ export function renderWikiPage(entry, wikis, options) {
         description,
         canonical,
         image,
+        imageAlt,
+        imageWidth: firstImage?.socialWidth || firstImage?.width,
+        imageHeight: firstImage?.socialHeight || firstImage?.height,
+        imageType: firstImage?.socialType || firstImage?.type,
         type: "article",
         stylesheet: "voci.css?v=20260912-tabelle-a-capo2",
         jsonLd,

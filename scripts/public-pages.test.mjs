@@ -47,6 +47,33 @@ test("la Voce autonoma contiene testo, canonical e link preferiti senza JavaScri
     assert.equal(/<script\b(?![^>]*application\/ld\+json)/u.test(html), false);
 });
 
+test("la Voce sincronizza immagine sociale, alt, formato e dimensioni", () => {
+    const entry = {
+        ...wikis[0],
+        body: "Testo.\n\n[foto:media-1]",
+        images: [{
+            id: "media-1",
+            mediaUrl: "/api/public/wiki-images/media-1",
+            socialUrl: "/api/public/wiki-images/media-1?variant=social",
+            alt: "Veduta delle cave",
+            width: 1600,
+            height: 900,
+            type: "image/jpeg",
+            socialWidth: 1200,
+            socialHeight: 630,
+            socialType: "image/webp"
+        }]
+    };
+    const html = renderWikiPage(entry, [entry, wikis[1]], options);
+
+    assert.match(html, /property="og:image" content="https:\/\/worker\.example\/api\/public\/wiki-images\/media-1\?variant=social"/u);
+    assert.match(html, /property="og:image:type" content="image\/webp"/u);
+    assert.match(html, /property="og:image:width" content="1200"/u);
+    assert.match(html, /property="og:image:height" content="630"/u);
+    assert.match(html, /property="og:image:alt" content="Veduta delle cave"/u);
+    assert.match(html, /name="twitter:image:alt" content="Veduta delle cave"/u);
+});
+
 test("l’HTML generato neutralizza contenuto eseguibile", () => {
     const unsafe = {
         ...wikis[0],
