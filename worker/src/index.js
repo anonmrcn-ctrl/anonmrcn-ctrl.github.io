@@ -94,7 +94,7 @@ const MAX_MAP_ENTRY_SOURCE_URL_LENGTH = 2048;
 const MAX_MAP_ENTRY_SOURCE_LABEL_LENGTH = 160;
 const MAX_MAP_ENTRY_IMAGE_BYTES = 700000;
 const MAX_MAP_ENTRY_REQUEST_BYTES = 3200000;
-const RESPONSIVE_VARIANT_KEYS = Object.freeze(["small", "medium"]);
+const RESPONSIVE_VARIANT_KEYS = Object.freeze(["small", "medium", "social"]);
 const RESPONSIVE_IMAGE_SIZES = "(max-width: 640px) 100vw, 960px";
 const MAX_NARRATIVE_STEP_REQUEST_BYTES = 64000;
 const MAX_NARRATIVE_STEP_LABEL_LENGTH = 160;
@@ -1924,6 +1924,7 @@ function normalizeResponsiveVariants(value, original) {
         const variantRatio = dimensions
             ? dimensions.width / dimensions.height
             : 0;
+        const expectedRatio = key === "social" ? 1200 / 630 : originalRatio;
         if (
             !bytes.length ||
             bytes.length > MAX_WIKI_IMAGE_BYTES ||
@@ -1931,7 +1932,7 @@ function normalizeResponsiveVariants(value, original) {
             !dimensions ||
             dimensions.width > original.width ||
             dimensions.height > original.height ||
-            Math.abs(originalRatio - variantRatio) > originalRatio * 0.02
+            Math.abs(expectedRatio - variantRatio) > expectedRatio * 0.02
         ) {
             return { error: "Una variante responsive non corrisponde all’immagine originale." };
         }
@@ -1941,10 +1942,9 @@ function normalizeResponsiveVariants(value, original) {
     }
 
     variants.sort((first, second) => first.width - second.width);
-    for (let index = 1; index < variants.length; index += 1) {
-        if (variants[index - 1].width >= variants[index].width) {
-            return { error: "Le varianti responsive devono avere larghezze diverse." };
-        }
+    const responsive = variants.filter((variant) => variant.key !== "social");
+    if (responsive.length > 1 && responsive[0].width >= responsive[1].width) {
+        return { error: "Le varianti responsive devono avere larghezze diverse." };
     }
     return variants;
 }
@@ -3291,10 +3291,14 @@ async function getMapEntryById(env, entryId) {
             entry.updated_at,
             image.entry_id AS image_entry_id,
             image.updated_at AS image_updated_at,
+            image.media_type AS image_type,
             original.width AS image_width,
             original.height AS image_height,
             small.width AS image_small_width,
-            medium.width AS image_medium_width
+            medium.width AS image_medium_width,
+            social.width AS image_social_width,
+            social.height AS image_social_height,
+            social.media_type AS image_social_type
         FROM map_entries entry
         LEFT JOIN map_entry_images image ON image.entry_id = entry.id
         LEFT JOIN media_assets original ON
@@ -3312,6 +3316,11 @@ async function getMapEntryById(env, entryId) {
             AND medium.owner_id = CAST(entry.id AS TEXT)
             AND medium.variant_key = 'medium'
             AND medium.state = 'current'
+        LEFT JOIN media_assets social ON
+            social.owner_type = 'map_entry'
+            AND social.owner_id = CAST(entry.id AS TEXT)
+            AND social.variant_key = 'social'
+            AND social.state = 'current'
         WHERE entry.id = ?
         LIMIT 1
     `).bind(entryId).first();
@@ -3333,10 +3342,14 @@ async function readMapEntries(env) {
             entry.updated_at,
             image.entry_id AS image_entry_id,
             image.updated_at AS image_updated_at,
+            image.media_type AS image_type,
             original.width AS image_width,
             original.height AS image_height,
             small.width AS image_small_width,
-            medium.width AS image_medium_width
+            medium.width AS image_medium_width,
+            social.width AS image_social_width,
+            social.height AS image_social_height,
+            social.media_type AS image_social_type
         FROM map_entries entry
         LEFT JOIN map_entry_images image ON image.entry_id = entry.id
         LEFT JOIN media_assets original ON
@@ -3354,6 +3367,11 @@ async function readMapEntries(env) {
             AND medium.owner_id = CAST(entry.id AS TEXT)
             AND medium.variant_key = 'medium'
             AND medium.state = 'current'
+        LEFT JOIN media_assets social ON
+            social.owner_type = 'map_entry'
+            AND social.owner_id = CAST(entry.id AS TEXT)
+            AND social.variant_key = 'social'
+            AND social.state = 'current'
         ORDER BY entry.name COLLATE NOCASE, entry.id
     `).all();
 
@@ -3384,7 +3402,13 @@ function mapEntryPayload(row) {
         imageWidth: Number(row.image_width) || null,
         imageHeight: Number(row.image_height) || null,
         imageSources,
-        imageSizes: RESPONSIVE_IMAGE_SIZES
+        imageSizes: RESPONSIVE_IMAGE_SIZES,
+        socialImageUrl: Number(row.image_social_width)
+            ? `${imageUrl}${imageUrl.includes("?") ? "&" : "?"}variant=social`
+            : imageUrl,
+        socialImageWidth: Number(row.image_social_width || row.image_width) || null,
+        socialImageHeight: Number(row.image_social_height || row.image_height) || null,
+        socialImageType: row.image_social_type || row.image_type || null
     };
 }
 
@@ -7658,7 +7682,10 @@ async function getWikiEntryImages(env, entryId, body) {
             original.width,
             original.height,
             small.width AS small_width,
-            medium.width AS medium_width
+            medium.width AS medium_width,
+            social.width AS social_width,
+            social.height AS social_height,
+            social.media_type AS social_type
         FROM wiki_entry_images image
         LEFT JOIN media_assets original ON
             original.owner_type = 'wiki_image'
@@ -7675,6 +7702,11 @@ async function getWikiEntryImages(env, entryId, body) {
             AND medium.owner_id = image.id
             AND medium.variant_key = 'medium'
             AND medium.state = 'current'
+        LEFT JOIN media_assets social ON
+            social.owner_type = 'wiki_image'
+            AND social.owner_id = image.id
+            AND social.variant_key = 'social'
+            AND social.state = 'current'
         WHERE image.entry_id = ? AND image.id IN (${placeholders})
     `).bind(entryId, ...imageIds).all();
     const byId = new Map((result.results || []).map((row) => [row.id, row]));
@@ -7698,7 +7730,13 @@ async function getWikiEntryImages(env, entryId, body) {
             width: Number(image.width) || null,
             height: Number(image.height) || null,
             sources: responsiveMediaSources(image, mediaUrl),
-            sizes: RESPONSIVE_IMAGE_SIZES
+            sizes: RESPONSIVE_IMAGE_SIZES,
+            socialUrl: Number(image.social_width)
+                ? `${mediaUrl}?variant=social`
+                : mediaUrl,
+            socialWidth: Number(image.social_width || image.width) || null,
+            socialHeight: Number(image.social_height || image.height) || null,
+            socialType: image.social_type || image.media_type
         }];
     });
 }

@@ -372,7 +372,26 @@ function renderReferences(citations) {
     }).join("")}</ol></section>`;
 }
 
-function pageShell({ title, description, canonical, image, type, jsonLd, body, stylesheet }) {
+function pageShell({
+    title,
+    description,
+    canonical,
+    image,
+    imageAlt = "Immagine del progetto anonMrcn",
+    imageWidth = null,
+    imageHeight = null,
+    imageType = "",
+    type,
+    jsonLd,
+    body,
+    stylesheet
+}) {
+    const imageDetails = [
+        `<meta property="og:image:secure_url" content="${escapeHtml(image)}">`,
+        imageType ? `<meta property="og:image:type" content="${escapeHtml(imageType)}">` : "",
+        imageWidth ? `<meta property="og:image:width" content="${Number(imageWidth)}">` : "",
+        imageHeight ? `<meta property="og:image:height" content="${Number(imageHeight)}">` : ""
+    ].filter(Boolean).join("\n    ");
     return `<!DOCTYPE html>
 <html lang="it">
 <head>
@@ -390,8 +409,13 @@ function pageShell({ title, description, canonical, image, type, jsonLd, body, s
     <meta property="og:description" content="${escapeHtml(description)}">
     <meta property="og:url" content="${escapeHtml(canonical)}">
     <meta property="og:image" content="${escapeHtml(image)}">
-    <meta property="og:image:alt" content="Immagine del progetto anonMrcn">
+    ${imageDetails}
+    <meta property="og:image:alt" content="${escapeHtml(imageAlt)}">
     <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="${escapeHtml(title)}">
+    <meta name="twitter:description" content="${escapeHtml(description)}">
+    <meta name="twitter:image" content="${escapeHtml(image)}">
+    <meta name="twitter:image:alt" content="${escapeHtml(imageAlt)}">
     <link rel="icon" href="/favicon.ico?v=logo3" sizes="any">
     <link rel="stylesheet" href="/style.css?v=20261009-admin-actions1">
     <link rel="stylesheet" href="/${stylesheet}">
@@ -413,8 +437,9 @@ export function renderWikiPage(entry, wikis, options) {
     );
     const firstImage = (entry.images || []).find((image) => image.mediaUrl);
     const image = firstImage
-        ? new URL(firstImage.mediaUrl, `${options.apiBase}/`).href
+        ? new URL(firstImage.socialUrl || firstImage.mediaUrl, `${options.apiBase}/`).href
         : options.defaultImage;
+    const imageAlt = firstImage?.alt || `Immagine di ${entry.title}`;
     const citations = citationContext(`voce-${entry.id}`);
     const summary = entry.summary
         ? `<p class="voce-sommario">${renderInline(entry.summary, citations, wikis)}</p>`
@@ -431,6 +456,10 @@ export function renderWikiPage(entry, wikis, options) {
         inLanguage: "it-IT",
         mainEntityOfPage: canonical,
         image,
+        imageAlt,
+        imageWidth: firstImage?.socialWidth || firstImage?.width,
+        imageHeight: firstImage?.socialHeight || firstImage?.height,
+        imageType: firstImage?.socialType || firstImage?.type,
         publisher: { "@type": "Organization", name: "anonMrcn" },
         ...(entry.publishedAt ? { datePublished: new Date(Number(entry.publishedAt)).toISOString() } : {}),
         ...(entry.updatedAt ? { dateModified: new Date(Number(entry.updatedAt)).toISOString() } : {})
@@ -486,6 +515,9 @@ export function renderPlacePage(place, wikis, options) {
     const image = place.imageUrl
         ? new URL(place.imageUrl, `${options.apiBase}/`).href
         : options.defaultImage;
+    const socialImage = place.socialImageUrl
+        ? new URL(place.socialImageUrl, `${options.apiBase}/`).href
+        : image;
     const imageSrcset = (place.imageSources || []).map((source) =>
         `${new URL(source.url, `${options.apiBase}/`).href} ${Number(source.width)}w`
     ).join(", ");
@@ -508,7 +540,7 @@ export function renderPlacePage(place, wikis, options) {
         name: place.name,
         description,
         url: canonical,
-        image,
+        image: socialImage,
         geo: {
             "@type": "GeoCoordinates",
             latitude: Number(place.lat),
@@ -520,7 +552,13 @@ export function renderPlacePage(place, wikis, options) {
         title,
         description,
         canonical,
-        image,
+        image: socialImage,
+        imageAlt: place.imageUrl
+            ? `Fotografia di ${place.name}`
+            : "Immagine del progetto anonMrcn",
+        imageWidth: place.socialImageWidth,
+        imageHeight: place.socialImageHeight,
+        imageType: place.socialImageType,
         type: "article",
         stylesheet: "luogo.css?v=20261007-place-photo1",
         jsonLd,

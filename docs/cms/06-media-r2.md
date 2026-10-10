@@ -139,13 +139,39 @@ effettive dei nuovi caricamenti restano provate senza modificare contenuti
 editoriali reali dal test che legge separatamente `small`, `medium` e
 `original` da R2.
 
+## Unità 6.3 — Immagini sociali
+
+La prima fotografia che compare nel testo di una Voce pubblicata è la scelta
+predefinita per la condivisione. L'editor spiega questa regola: l'amministratore
+può quindi cambiare la scelta spostando il relativo segnaposto `[foto:ID]`,
+senza introdurre un secondo identificativo o un URL fragile. Per i luoghi viene
+usata l'unica fotografia associata; in assenza di immagini resta il logo
+predefinito configurato per il sito.
+
+I nuovi caricamenti generano nel browser anche la variante R2 `social`, con
+rapporto 1200:630 e ritaglio centrato. Il Worker ne legge le dimensioni dai
+byte, verifica rapporto e limiti rispetto all'originale, quindi la pubblica
+attraverso lo stesso endpoint privato con `?variant=social`. Le fotografie
+storiche prive della variante continuano a usare l'originale, senza copie o
+ricodifiche automatiche.
+
+Il generatore delle pagine autonome usa la variante sociale quando esiste e
+sincronizza lo stesso URL, testo alternativo, formato e dimensioni in
+`og:image`, `og:image:secure_url`, `og:image:type`, `og:image:width`,
+`og:image:height`, `twitter:image`, `twitter:image:alt` e JSON-LD. Titolo e
+descrizione Twitter coincidono con i metadati della pagina. Poiché il
+generatore interroga soltanto le API pubbliche e il Worker restituisce le
+fotografie di una Voce soltanto quando la Voce è `published` e il segnaposto è
+presente nel testo corrente, bozze e immagini rimosse non possono entrare nei
+metadati, nella sitemap o nella cache pubblica.
+
 ## Unità ancora da completare
 
 | Ordine | Unità | Stato |
 |---:|---|---|
 | 6.1 | Originali, catalogo, migrazione compatibile e cancellazione privata | Completo e verificato sul Worker pubblicato |
 | 6.2 | Metadati dimensionali e varianti responsive | Completo e verificato sul Worker e sulla pagina generata |
-| 6.3 | Selezione e generazione delle immagini sociali | Da iniziare |
+| 6.3 | Selezione e generazione delle immagini sociali | Codice completo; pubblicazione da verificare |
 | 6.4 | Documenti in R2, gestione amministrativa e verifica finale | Da iniziare |
 
 Il punto 6 e SEO-4 restano quindi **in corso** finché tutte le unità non sono

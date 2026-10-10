@@ -268,6 +268,6 @@ test("il pannello espone il modulo pagine e usa la nuova API CMS", async () => {
     assert.match(source, /expectedUpdatedAt: page\.updatedAt/u);
     assert.match(
         html,
-        /<script src="\.\/admin\.js\?v=20261010-responsive-media1"><\/script>/u
+        /<script src="\.\/admin\.js\?v=20261010-social-media1"><\/script>/u
     );
 });

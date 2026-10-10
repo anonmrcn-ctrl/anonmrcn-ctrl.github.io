@@ -457,11 +457,14 @@
             height = original.height;
             const candidates = await Promise.all([
                 responsiveMemoryVariant(file, "small", 480, 0.72),
-                responsiveMemoryVariant(file, "medium", 960, 0.76)
+                responsiveMemoryVariant(file, "medium", 960, 0.76),
+                socialMemoryVariant(file)
             ]);
             variants = candidates.filter((variant, index, all) =>
-                variant.width < width &&
-                all.findIndex((candidate) => candidate.width === variant.width) === index
+                (variant.key === "social"
+                    ? variant.width <= width && variant.height <= height
+                    : variant.width < width) &&
+                all.findIndex((candidate) => candidate.key === variant.key) === index
             );
         }
 
@@ -527,6 +530,42 @@
             width: variant.width,
             height: variant.height,
             data: await blobToBase64(variant.blob)
+        };
+    }
+
+    async function socialMemoryVariant(file) {
+        const image = await loadImage(file);
+        const targetRatio = 1200 / 630;
+        let sourceWidth = image.width;
+        let sourceHeight = image.height;
+        let sourceX = 0;
+        let sourceY = 0;
+        if (sourceWidth / sourceHeight > targetRatio) {
+            sourceWidth = sourceHeight * targetRatio;
+            sourceX = (image.width - sourceWidth) / 2;
+        } else {
+            sourceHeight = sourceWidth / targetRatio;
+            sourceY = (image.height - sourceHeight) / 2;
+        }
+        const width = Math.max(1, Math.min(1200, Math.round(sourceWidth)));
+        const height = Math.max(1, Math.round(width / targetRatio));
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const context = canvas.getContext("2d", { alpha: true });
+        if (!context) throw new Error("Il browser non può elaborare l’immagine sociale.");
+        context.drawImage(image, sourceX, sourceY, sourceWidth, sourceHeight, 0, 0, width, height);
+        const type = canvas.toDataURL("image/webp", 0.1).startsWith("data:image/webp")
+            ? "image/webp"
+            : "image/jpeg";
+        const blob = await new Promise((resolve) => canvas.toBlob(resolve, type, 0.82));
+        if (!blob) throw new Error("Non è stato possibile preparare l’immagine sociale.");
+        return {
+            key: "social",
+            type: blob.type,
+            width,
+            height,
+            data: await blobToBase64(blob)
         };
     }
 
