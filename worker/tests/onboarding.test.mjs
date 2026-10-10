@@ -328,7 +328,7 @@ test("ogni pagina che usa la sessione carica prima il tour amministrabile", asyn
         );
         assert.match(
             html,
-            /<script src="\.\/onboarding-content\.js\?v=20261008-onboarding1"><\/script>[\s\S]*?<script src="\.\/sessione\.js\?v=20261008-onboarding1"><\/script>/u,
+            /<script(?: defer)? src="\.\/onboarding-content\.js\?v=20261008-onboarding1"><\/script>[\s\S]*?<script(?: defer)? src="\.\/sessione\.js\?v=20261008-onboarding1"><\/script>/u,
             pageName
         );
     }

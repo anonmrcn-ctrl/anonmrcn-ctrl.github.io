@@ -570,7 +570,7 @@ export function renderPlacePage(place, wikis, options) {
         jsonLd,
         body: `<body class="pagina-luogo-scheda pagina-contenuto-statico">
     <main class="luogo-scheda-pagina contenuto-statico">
-        <a class="luogo-scheda-logo" href="/progetto.html" aria-label="Vai al progetto anonMrcn"><img src="/logo.webp" alt="anonMrcn"></a>
+        <a class="luogo-scheda-logo" href="/progetto.html" aria-label="Vai al progetto anonMrcn"><img src="/logo.webp" alt="anonMrcn" width="640" height="360" decoding="async" fetchpriority="high"></a>
         <article class="luogo-scheda">
             ${place.imageUrl ? `<figure class="luogo-scheda-banner"><img src="${escapeHtml(image)}"${imageResponsive}${imageDimensions} alt="Fotografia di ${escapeHtml(place.name)}" loading="eager" decoding="async"></figure>` : ""}
             <div class="luogo-scheda-corpo">

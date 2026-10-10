@@ -253,7 +253,7 @@ test("la pagina della mappa installa il caricatore D1 prima del motore", async (
 
     assert.match(
         html,
-        /<script src="\.\/map-content\.js\?v=20261008-map-content1"><\/script>\s*<script src="\.\/mappa\.js"><\/script>/u
+        /<script(?: defer)? src="\.\/map-content\.js\?v=20261008-map-content1"><\/script>\s*<script(?: defer)? src="\.\/mappa\.js"><\/script>/u
     );
     assert.match(mapSource, /window\.NNMRCN_MAP_CONTENT\?\.load/u);
 });
