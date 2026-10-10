@@ -12,29 +12,79 @@
     <link rel="manifest" href="./admin.webmanifest">
     <script src="./tema.js?v=20261006-map-layers1"></script>
     <link rel="stylesheet" href="./leaflet.css?v=1.9.4">
-    <link rel="stylesheet" href="./style.css?v=20261009-admin-actions1">
+    <link rel="stylesheet" href="./style.css?v=20261010-passkeys1">
 </head>
 
 <body>
     <main class="admin">
         <h1>Amministra&shy;zione</h1>
 
-        <section class="admin-accesso">
+        <section class="admin-accesso" aria-labelledby="adminAccessoTitolo">
+            <h2 id="adminAccessoTitolo">Accesso sicuro</h2>
+            <p>
+                Usa la passkey del dispositivo: impronta, volto o codice di
+                sblocco restano sul dispositivo e non vengono inviati al sito.
+            </p>
+
             <form id="adminLoginForm">
-                <label for="adminToken">Token amministratore</label>
-                <input
-                    id="adminToken"
-                    type="password"
-                    autocomplete="current-password"
-                    required
-                >
-                <button type="submit">Accedi</button>
+                <button id="adminPasskeyLogin" type="submit">
+                    Accedi con passkey
+                </button>
             </form>
+
+            <details class="admin-bootstrap" id="adminBootstrapPanel" hidden>
+                <summary>Configura la prima passkey</summary>
+                <p>
+                    Questa procedura usa il vecchio token una sola volta. Dopo
+                    la registrazione, il token condiviso non consentirà più
+                    l’accesso amministrativo.
+                </p>
+                <form id="adminBootstrapForm">
+                    <label for="adminBootstrapName">Nome amministratore</label>
+                    <input
+                        id="adminBootstrapName"
+                        type="text"
+                        maxlength="120"
+                        autocomplete="name"
+                        required
+                    >
+
+                    <label for="adminBootstrapToken">Token attuale</label>
+                    <input
+                        id="adminBootstrapToken"
+                        type="password"
+                        autocomplete="current-password"
+                        required
+                    >
+
+                    <button id="adminBootstrapButton" type="submit">
+                        Crea la prima passkey
+                    </button>
+                </form>
+            </details>
 
             <p class="admin-status" id="adminStatus" aria-live="polite"></p>
         </section>
 
         <section class="admin-panel" id="adminPanel" hidden>
+            <section class="admin-sicurezza" aria-labelledby="adminSicurezzaTitolo">
+                <h2 id="adminSicurezzaTitolo">Sessione amministrativa</h2>
+                <p id="adminIdentity">Accesso verificato.</p>
+                <div class="admin-sicurezza-azioni">
+                    <button id="adminAddPasskey" type="button">
+                        Aggiungi una passkey
+                    </button>
+                    <button
+                        class="admin-button-secondary"
+                        id="adminLogout"
+                        type="button"
+                    >
+                        Esci
+                    </button>
+                </div>
+                <p class="admin-status" id="adminSecurityStatus" aria-live="polite"></p>
+            </section>
+
             <section class="admin-anteprima-benvenuto" aria-labelledby="adminBenvenutoTitolo">
                 <h2 id="adminBenvenutoTitolo">Schermata di benvenuto</h2>
                 <p>
@@ -1001,6 +1051,6 @@
         integrity="sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH"
         crossorigin="anonymous"
     ></script>
-    <script src="./admin.js?v=20261010-documents1"></script>
+    <script src="./admin.js?v=20261010-passkeys1"></script>
 </body>
 </html>
