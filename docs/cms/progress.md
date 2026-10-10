@@ -1,6 +1,6 @@
 # Roadmap complessiva CMS e SEO
 
-Aggiornata il 10 ottobre 2026. Questa è la roadmap unica di anonMrcn: integra
+Aggiornata l'11 ottobre 2026. Questa è la roadmap unica di anonMrcn: integra
 amministrazione dei contenuti, permanenza degli URL, indicizzazione, prestazioni,
 crescita editoriale, usabilità amministrativa e privacy. Si procede dalla prima
 riga incompleta e una riga diventa completa soltanto quando schema,
@@ -18,7 +18,7 @@ affiancare il primo passaggio tecnico incompleto, ma non sostituirlo.
 | 4 | Bozze, anteprima, cronologia e indicizzazione | Completo | Stati editoriali, anteprima protetta con `noindex`, confronto, ripristino append-only ed esclusione delle bozze dalle API pubbliche sono coperti da codice e test |
 | 5 | Permalink, QR e pagine indicizzabili | Completo | `generate-public-pages.mjs` pubblica 5 Voci e 2 luoghi D1 come HTML autonomo; manifest, sitemap, alias D1, test e sincronizzazione periodica conservano ID, URL storici e QR |
 | 6 | Media e documenti in R2, immagini SEO | Completo | Le unità 6.1–6.4 coprono originali, varianti responsive e sociali, metadati accessibili e documenti privati. Test, deploy e verifiche live di Worker, R2, pannello e protezione degli endpoint sono registrati in `06-media-r2.md` |
-| 7 | Sostituzione del token amministrativo | In corso — attivazione personale richiesta | PR #16 e i run Worker `38068531893`, Pages `38068531244` e SEO `38068532070` pubblicano identità WebAuthn, sessioni di 8 ore e disattivazione automatica del token dopo la prima passkey. Health schema 4, protezione `401`, `no-store`, pannello live e 106 test sono verificati; il completamento richiede il gesto locale dell’amministratore per registrare la prima e una seconda passkey e la prova live `configured: true` |
+| 7 | Sostituzione del token amministrativo | Completo | PR #16 e i run Worker `38068531893`, Pages `38068531244` e SEO `38068532070` pubblicano identità WebAuthn, sessioni di 8 ore e disattivazione automatica del token dopo la prima passkey. L'11 ottobre 2026 lo stato pubblico restituisce `configured: true`, una richiesta amministrativa con il solo header legacy restituisce `401` e l'amministratore conferma l'accesso con la passkey personale. La seconda passkey resta raccomandata ma non vincolante; l'unico recupero disponibile è quello infrastrutturale documentato |
 | 8 | Esportazione, manutenzione e diagnostica CMS/SEO | Da iniziare | Gli strumenti esistenti non coprono l’intero CMS né indicizzazione, link, sitemap e pubblicazione statica |
 | 9 | Prestazioni e Core Web Vitals | Da iniziare | Non esiste ancora una baseline distinta per homepage, mappa, Voci, luoghi e Memorie |
 | 10 | Programma editoriale e monitoraggio organico | Da iniziare | Cluster territoriali e fonti sono definiti, ma non esiste ancora un ciclo editoriale misurato |
@@ -125,10 +125,10 @@ punto 2 non è completa. Non vanno eliminati durante una migrazione parziale.
 | Ordine | Unità | Stato | Criterio e prova |
 |---:|---|---|---|
 | 7.1 | Identità, passkey e sessioni | Completa e verificata sul servizio pubblicato | La migrazione `0017`, il modulo `admin-auth.js` e il pannello sostituiscono l’uso ordinario di `ADMIN_TOKEN` con WebAuthn e sessioni hash di otto ore. `admin-auth.test.mjs` usa firme P-256 reali e prova origine, verifica utente, contatore, replay, sessione, seconda passkey e rifiuto del token condiviso; PR #16, i tre run riusciti e le risposte live sono registrati in `07-admin-passkeys.md` |
-| 7.2 | Attivazione e prova di produzione | In attesa dell’amministratore | Dopo il deploy, aprire `admin.html`, configurare la prima passkey con il token corrente e aggiungerne una seconda. Registrare `configured: true`, accesso riuscito e rifiuto `401` del vecchio token senza riportare segreti nel registro |
+| 7.2 | Attivazione e prova di produzione | Completa | L'11 ottobre 2026 `/api/admin/auth/status` ha restituito `200`, `configured: true`, `no-store` e `nosniff`; `/api/admin/summary` con il solo header legacy ha restituito `401`, mentre l'amministratore ha confermato l'accesso con la passkey personale. Non essendo disponibile un secondo autenticatore, una credenziale ulteriore resta raccomandata ma non blocca il punto: la perdita dell'unica passkey richiede il recupero infrastrutturale descritto in `07-admin-passkeys.md` |
 
-Il punto 8 dipende dalla chiusura operativa del punto 7. La procedura completa,
-incluse privacy, retention e recupero senza modificare contenuti o media, è in
+Il punto 8 è ora eseguibile. La procedura completa del punto 7, incluse privacy,
+retention e recupero senza modificare contenuti o media, è in
 `07-admin-passkeys.md`.
 
 ## Punti 4–12 — criteri di completamento

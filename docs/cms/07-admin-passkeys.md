@@ -49,13 +49,16 @@ sitemap, telemetria o cache pubbliche.
 
 ## Recupero e continuità
 
-Subito dopo il primo accesso va aggiunta una seconda passkey, preferibilmente su
-un dispositivo differente. La chiave privata non è esportata dall’applicazione.
-Se tutte le passkey vengono perse, il recupero è deliberatamente un’operazione
-infrastrutturale: con accesso autorizzato a Cloudflare si esportano per prova le
-tabelle amministrative, si eliminano esclusivamente sessioni, sfide,
-credenziali e identità amministrative, quindi si ripete il bootstrap con
-`ADMIN_TOKEN`. Contenuti, media, URL e dati degli utenti non vengono toccati.
+Una seconda passkey, preferibilmente su un dispositivo differente, riduce il
+rischio di perdere l'accesso ma non è necessaria al funzionamento del sistema.
+L'amministratore non dispone attualmente di un secondo autenticatore e accetta
+quindi la singola credenziale come limite operativo documentato. La chiave
+privata non è esportata dall'applicazione. Se l'unica passkey viene persa, il
+recupero è deliberatamente un'operazione infrastrutturale: con accesso
+autorizzato a Cloudflare si esportano per prova le tabelle amministrative, si
+eliminano esclusivamente sessioni, sfide, credenziali e identità
+amministrative, quindi si ripete il bootstrap con `ADMIN_TOKEN`. Contenuti,
+media, URL e dati degli utenti non vengono toccati.
 
 ## Verifiche ripetibili
 
@@ -85,8 +88,8 @@ distinti. I run Worker `38068531893`, Pages `38068531244` e controllo SEO
 `38068532070` sono riusciti. Le verifiche pubbliche confermano:
 
 - `/api/health` restituisce `contentSchema: 4` e `mediaStorage: "r2"`;
-- `/api/admin/auth/status` restituisce `200`, `configured: false`,
-  `Cache-Control: no-store` e `nosniff`;
+- prima dell'attivazione `/api/admin/auth/status` restituiva `200`,
+  `configured: false`, `Cache-Control: no-store` e `nosniff`;
 - `/api/admin/summary` senza sessione e il bootstrap con un valore non valido
   restituiscono `401` e non espongono dati;
 - `admin.html` resta `noindex, nofollow`, mostra «Accedi con passkey» e la
@@ -95,14 +98,16 @@ distinti. I run Worker `38068531893`, Pages `38068531244` e controllo SEO
   `Authorization: Bearer`, senza la precedente chiave di archiviazione del
   token.
 
-Il codice è quindi pubblicato e verificato; la prima passkey deve invece
-essere creata dall’amministratore con un gesto e la verifica locale del proprio
-dispositivo. Finché `/api/admin/auth/status` restituisce `configured: false`, il
-token rimane disponibile unicamente come credenziale di bootstrap e il punto 7
-non è dichiarato completo. Dopo la registrazione, la verifica pubblica richiede:
+L'11 ottobre 2026 l'attivazione personale è stata completata. La verifica
+pubblica ha restituito `configured: true` sullo stato autenticazione e `401` da
+`/api/admin/summary` quando è stato inviato il solo header `X-Admin-Token`; le
+risposte hanno conservato `Cache-Control: no-store` e `nosniff`.
+L'amministratore ha inoltre confermato l'accesso riuscito con la passkey.
 
-1. `configured: true` sullo stato autenticazione;
-2. accesso riuscito con passkey e sessione;
-3. risposta `401` di una rotta amministrativa chiamata con il solo vecchio
-   token;
-4. aggiunta di una seconda passkey e uscita riuscita.
+Non è disponibile un secondo autenticatore. L'aggiunta di una seconda passkey
+resta pertanto una raccomandazione di continuità, non un requisito bloccante:
+l'assenza è registrata esplicitamente e il recupero infrastrutturale rimane
+l'unica procedura in caso di perdita della credenziale. Il punto 7 è completo
+perché il token condiviso non consente più l'accesso ordinario, la passkey
+personale è attiva e le pagine amministrative restano escluse
+dall'indicizzazione.
