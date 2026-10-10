@@ -19,7 +19,7 @@ affiancare il primo passaggio tecnico incompleto, ma non sostituirlo.
 | 5 | Permalink, QR e pagine indicizzabili | Completo | `generate-public-pages.mjs` pubblica 5 Voci e 2 luoghi D1 come HTML autonomo; manifest, sitemap, alias D1, test e sincronizzazione periodica conservano ID, URL storici e QR |
 | 6 | Media e documenti in R2, immagini SEO | Completo | Le unità 6.1–6.4 coprono originali, varianti responsive e sociali, metadati accessibili e documenti privati. Test, deploy e verifiche live di Worker, R2, pannello e protezione degli endpoint sono registrati in `06-media-r2.md` |
 | 7 | Sostituzione del token amministrativo | Completo | PR #16 e i run Worker `38068531893`, Pages `38068531244` e SEO `38068532070` pubblicano identità WebAuthn, sessioni di 8 ore e disattivazione automatica del token dopo la prima passkey. L'11 ottobre 2026 lo stato pubblico restituisce `configured: true`, una richiesta amministrativa con il solo header legacy restituisce `401` e l'amministratore conferma l'accesso con la passkey personale. La seconda passkey resta raccomandata ma non vincolante; l'unico recupero disponibile è quello infrastrutturale documentato |
-| 8 | Esportazione, manutenzione e diagnostica CMS/SEO | Da iniziare | Gli strumenti esistenti non coprono l’intero CMS né indicizzazione, link, sitemap e pubblicazione statica |
+| 8 | Esportazione, manutenzione e diagnostica CMS/SEO | In corso — 8.1 completa | Il pannello esporta un archivio versionato delle tabelle CMS in D1 e di tutti gli oggetti R2 catalogati, con checksum e confine di privacy; ripristino, diagnostica e manuale restano nelle unità 8.2–8.4 descritte in `08-maintenance-diagnostics.md` |
 | 9 | Prestazioni e Core Web Vitals | Da iniziare | Non esiste ancora una baseline distinta per homepage, mappa, Voci, luoghi e Memorie |
 | 10 | Programma editoriale e monitoraggio organico | Da iniziare | Cluster territoriali e fonti sono definiti, ma non esiste ancora un ciclo editoriale misurato |
 | 11 | Amministrazione più user friendly | Da iniziare | Il pannello copre le funzioni CMS, ma richiede una revisione completa di linguaggio, navigazione, gerarchia, feedback, errori, responsive e accessibilità |
@@ -130,6 +130,15 @@ punto 2 non è completa. Non vanno eliminati durante una migrazione parziale.
 Il punto 8 è ora eseguibile. La procedura completa del punto 7, incluse privacy,
 retention e recupero senza modificare contenuti o media, è in
 `07-admin-passkeys.md`.
+
+## Punto 8 — ordine vincolante
+
+| Ordine | Unità | Stato | Criterio e prova |
+|---:|---|---|---|
+| 8.1 | Backup dei contenuti CMS e dei media | Completa | `GET /api/admin/maintenance/export`, il pulsante «Scarica backup CMS» e `cms-maintenance.test.mjs` producono e verificano un archivio JSON versionato di D1 e R2. Oggetti mancanti o incoerenti bloccano il download; autenticazione, sessioni e dati personali operativi restano esclusi secondo `08-maintenance-diagnostics.md` |
+| 8.2 | Verifica e ripristino | Da iniziare | Validazione preventiva, ripristino controllato D1/R2 e procedura infrastrutturale completa senza sovrascritture accidentali |
+| 8.3 | Diagnostica CMS/SEO | Da iniziare | Controllo autenticato di API, build statica, sitemap, canonical, collegamenti, immagini e ultima pubblicazione |
+| 8.4 | Manuale e manutenzione | Da iniziare | Flusso senza codice, controlli periodici, errori comprensibili e prova sul servizio pubblicato |
 
 ## Punti 4–12 — criteri di completamento
 

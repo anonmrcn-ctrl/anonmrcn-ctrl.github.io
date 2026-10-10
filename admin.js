@@ -31,6 +31,8 @@
     const exportCsv = document.getElementById("adminExportCsv");
     const exportJson = document.getElementById("adminExportJson");
     const exportStatus = document.getElementById("adminExportStatus");
+    const cmsBackupButton = document.getElementById("adminCmsBackup");
+    const cmsBackupStatus = document.getElementById("adminCmsBackupStatus");
     const countPending = document.getElementById("adminCountPending");
     const countDelivery = document.getElementById("adminCountDelivery");
     const countPublishable = document.getElementById("adminCountPublishable");
@@ -2840,6 +2842,47 @@
         }
     }
 
+    async function downloadCmsBackup() {
+        cmsBackupButton.disabled = true;
+        cmsBackupStatus.textContent =
+            "Preparazione del backup D1 e R2. Non chiudere questa pagina…";
+
+        try {
+            const response = await fetch(
+                `${api.baseUrl}/api/admin/maintenance/export`,
+                {
+                    headers: {
+                        "Authorization": `Bearer ${adminSession}`,
+                        "Accept": "application/json"
+                    }
+                }
+            );
+
+            if (!response.ok) {
+                const error = await response.json().catch(() => null);
+                throw new Error(error?.error || "Backup non riuscito.");
+            }
+
+            const blob = await response.blob();
+            const objectUrl = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            const date = new Date().toISOString().slice(0, 10);
+            link.href = objectUrl;
+            link.download = `nnmrcn-cms-${date}.json`;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+            cmsBackupStatus.textContent =
+                "Backup completato. Conserva il file in un luogo protetto.";
+        } catch (error) {
+            cmsBackupStatus.textContent =
+                error.message || "Non è stato possibile creare il backup.";
+        } finally {
+            cmsBackupButton.disabled = false;
+        }
+    }
+
     function ensureMapEntryPicker() {
         const mapContainer = document.getElementById("adminMapEntryMap");
 
@@ -3803,6 +3846,7 @@
     search.addEventListener("input", renderCurrentMessages);
     exportCsv.addEventListener("click", () => downloadExport("csv"));
     exportJson.addEventListener("click", () => downloadExport("json"));
+    cmsBackupButton.addEventListener("click", downloadCmsBackup);
     mapEntryForm.addEventListener("submit", saveMapEntry);
     mapEntryCancel.addEventListener("click", () => {
         resetMapEntryForm();

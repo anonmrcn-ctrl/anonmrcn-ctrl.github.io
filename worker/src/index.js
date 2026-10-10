@@ -14,6 +14,12 @@ import {
     handleAdminAuthRequest,
     purgeExpiredAdminAuth
 } from "./admin-auth.js";
+import {
+    CmsBackupIntegrityError,
+    CmsBackupLimitError,
+    cmsBackupFileName,
+    createCmsBackup
+} from "./cms-maintenance.js";
 import { PRIVACY_DOCUMENT_SEED } from "./legal-seed.js";
 import { MAP_LAYER_SEEDS } from "./map-seed.js";
 import { NARRATIVE_STEP_SEEDS } from "./narrative-seed.js";
@@ -940,6 +946,13 @@ export default {
 
             if (request.method === "GET" && path === "/api/admin/export") {
                 return await adminExportMessages(request, env, url);
+            }
+
+            if (
+                request.method === "GET" &&
+                path === "/api/admin/maintenance/export"
+            ) {
+                return await adminExportCmsBackup(request, env);
             }
 
             if (request.method === "GET" && path === "/api/admin/contact-messages") {
@@ -10265,6 +10278,37 @@ async function adminExportMessages(request, env, url) {
         `nnmrcn-messaggi-${date}.csv`,
         truncated
     );
+}
+
+async function adminExportCmsBackup(request, env) {
+    if (!(await adminAuthorized(request, env))) {
+        return unauthorized(request, env);
+    }
+
+    await ensureWikiStorage(env);
+    await ensureMapEntryStorage(env);
+    await ensureNarrativeStorage(env);
+    await ensureCmsStorage(env);
+
+    try {
+        const now = Date.now();
+        const backup = await createCmsBackup(env, now);
+        return downloadResponse(
+            request,
+            env,
+            JSON.stringify(backup, null, 2),
+            "application/json; charset=utf-8",
+            cmsBackupFileName(now)
+        );
+    } catch (error) {
+        if (error instanceof CmsBackupIntegrityError) {
+            return json(request, env, { error: error.message }, 409);
+        }
+        if (error instanceof CmsBackupLimitError) {
+            return json(request, env, { error: error.message }, 413);
+        }
+        throw error;
+    }
 }
 
 function exportMessageRow(row) {
