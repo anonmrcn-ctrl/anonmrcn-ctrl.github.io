@@ -224,6 +224,7 @@ test("cataloga dimensioni e serve varianti responsive con ripiego all’original
     const original = image("paesaggio.png", "originale", 1200, 800);
     const small = image("paesaggio-small.png", "variante-small", 480, 320);
     const medium = image("paesaggio-medium.png", "variante-medium", 960, 640);
+    const social = image("paesaggio-social.png", "variante-social", 1200, 630);
     const created = await call(env, "/api/admin/map-entries", {
         admin: true,
         method: "POST",
@@ -231,7 +232,8 @@ test("cataloga dimensioni e serve varianti responsive con ripiego all’original
             ...original,
             variants: [
                 { key: "small", type: small.type, data: small.data },
-                { key: "medium", type: medium.type, data: medium.data }
+                { key: "medium", type: medium.type, data: medium.data },
+                { key: "social", type: social.type, data: social.data }
             ]
         })
     });
@@ -242,12 +244,13 @@ test("cataloga dimensioni e serve varianti responsive con ripiego all’original
         SELECT variant_key, width, height, state
         FROM media_assets
         WHERE owner_type = 'map_entry' AND owner_id = ?
-        ORDER BY width
+        ORDER BY width, variant_key
     `).all(String(id)).map((row) => ({ ...row }));
     assert.deepEqual(assets, [
         { variant_key: "small", width: 480, height: 320, state: "current" },
         { variant_key: "medium", width: 960, height: 640, state: "current" },
-        { variant_key: "original", width: 1200, height: 800, state: "current" }
+        { variant_key: "original", width: 1200, height: 800, state: "current" },
+        { variant_key: "social", width: 1200, height: 630, state: "current" }
     ]);
 
     const publicList = await call(env, "/api/public/map-entries");
@@ -256,6 +259,9 @@ test("cataloga dimensioni e serve varianti responsive con ripiego all’original
     assert.equal(entry.imageWidth, 1200);
     assert.equal(entry.imageHeight, 800);
     assert.deepEqual(entry.imageSources.map((source) => source.width), [480, 960, 1200]);
+    assert.match(entry.socialImageUrl, /[?&]variant=social$/u);
+    assert.equal(entry.socialImageWidth, 1200);
+    assert.equal(entry.socialImageHeight, 630);
 
     const responsive = await call(
         env,
@@ -266,6 +272,17 @@ test("cataloga dimensioni e serve varianti responsive con ripiego all’original
     assert.equal(responsive.headers.get("x-media-width"), "480");
     assert.equal(
         Buffer.from(await responsive.arrayBuffer()).toString().endsWith("variante-small"),
+        true
+    );
+
+    const socialResponse = await call(
+        env,
+        `/api/public/map-entry-images/${id}?variant=social`
+    );
+    assert.equal(socialResponse.headers.get("x-media-variant"), "social");
+    assert.equal(socialResponse.headers.get("x-media-width"), "1200");
+    assert.equal(
+        Buffer.from(await socialResponse.arrayBuffer()).toString().endsWith("variante-social"),
         true
     );
 
@@ -406,7 +423,10 @@ test("frontend e generatore applicano srcset, sizes e dimensioni note", async ()
         assert.match(source, /\.height\s*=/u);
     }
     assert.match(wiki, /responsivePhotoVariant/u);
+    assert.match(wiki, /socialPhotoVariant/u);
     assert.match(memories, /responsiveMemoryVariant/u);
+    assert.match(memories, /socialMemoryVariant/u);
     assert.match(generator, /srcset="\$\{escapeHtml\(srcset\)\}"/u);
     assert.match(generator, /imageDimensions/u);
+    assert.match(generator, /name="twitter:image"/u);
 });
