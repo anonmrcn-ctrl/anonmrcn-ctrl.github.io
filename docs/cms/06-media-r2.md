@@ -165,13 +165,26 @@ fotografie di una Voce soltanto quando la Voce è `published` e il segnaposto è
 presente nel testo corrente, bozze e immagini rimosse non possono entrare nei
 metadati, nella sitemap o nella cache pubblica.
 
+La pubblicazione del 10 ottobre 2026 è verificata dai run Worker
+`38045514506`, Pages `38045514346` e controllo SEO `38045514514`. Una verifica
+successiva ha rilevato che il generatore calcolava alt e dimensioni senza
+passarli al modello HTML delle Voci: la regressione aggiunta in
+`public-pages.test.mjs` e la PR #12 hanno corretto il difetto prima della
+chiusura dell'unità. I run Pages `38045948833` e SEO `38045948910` sono verdi;
+la pagina pubblica `/voci/cave-di-gaggio-nord.html` espone lo stesso URL R2 in
+Open Graph e Twitter insieme ad `image/webp`, `1600` × `599` e al testo
+alternativo «foto satellitare delle cave». La richiesta
+`?variant=social` per questa fotografia storica restituisce correttamente
+l'originale R2, mentre il test di upload prova la variante 1200:630 per i nuovi
+media. L'intera suite conta 99 test superati.
+
 ## Unità ancora da completare
 
 | Ordine | Unità | Stato |
 |---:|---|---|
 | 6.1 | Originali, catalogo, migrazione compatibile e cancellazione privata | Completo e verificato sul Worker pubblicato |
 | 6.2 | Metadati dimensionali e varianti responsive | Completo e verificato sul Worker e sulla pagina generata |
-| 6.3 | Selezione e generazione delle immagini sociali | Codice completo; pubblicazione da verificare |
+| 6.3 | Selezione e generazione delle immagini sociali | Completo e verificato sul Worker e sulla pagina pubblicata |
 | 6.4 | Documenti in R2, gestione amministrativa e verifica finale | Da iniziare |
 
 Il punto 6 e SEO-4 restano quindi **in corso** finché tutte le unità non sono
