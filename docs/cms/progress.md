@@ -17,7 +17,7 @@ affiancare il primo passaggio tecnico incompleto, ma non sostituirlo.
 | 3 | Pannello editoriale e controllo SEO | Completo | Le unità 3.1–3.7 sono amministrabili con validazione, anteprima, controllo di concorrenza e revisioni; il primo punto strutturale incompleto è il 5 |
 | 4 | Bozze, anteprima, cronologia e indicizzazione | Completo | Stati editoriali, anteprima protetta con `noindex`, confronto, ripristino append-only ed esclusione delle bozze dalle API pubbliche sono coperti da codice e test |
 | 5 | Permalink, QR e pagine indicizzabili | Completo | `generate-public-pages.mjs` pubblica 5 Voci e 2 luoghi D1 come HTML autonomo; manifest, sitemap, alias D1, test e sincronizzazione periodica conservano ID, URL storici e QR |
-| 6 | Media e documenti in R2, immagini SEO | In corso — blocco esterno | L'unità 6.1 è completa e testata nel repository, ma Cloudflare rifiuta la creazione del bucket finché R2 non viene abilitato nell'account (`10042`, run `37996881926`); restano pubblicazione, varianti, immagini sociali e documenti (`06-media-r2.md`) |
+| 6 | Media e documenti in R2, immagini SEO | In corso | L'unità 6.1 è pubblicata e verificata su R2; restano varianti, immagini sociali e documenti (`06-media-r2.md`) |
 | 7 | Sostituzione del token amministrativo | Da iniziare | L’accesso continua a usare `ADMIN_TOKEN` |
 | 8 | Esportazione, manutenzione e diagnostica CMS/SEO | Da iniziare | Gli strumenti esistenti non coprono l’intero CMS né indicizzazione, link, sitemap e pubblicazione statica |
 | 9 | Prestazioni e Core Web Vitals | Da iniziare | Non esiste ancora una baseline distinta per homepage, mappa, Voci, luoghi e Memorie |
@@ -33,7 +33,7 @@ affiancare il primo passaggio tecnico incompleto, ma non sostituirlo.
 | SEO-1 | Baseline di indicizzazione | In attesa di accesso | `docs/seo/search-console-baseline.md` definisce proprietà, invio sitemap e misure aggregate senza tracciamento; verifica della proprietà e dati reali richiedono accesso a Google Search Console |
 | SEO-2 | Autonomia dei metadati | Completo | Il punto 3.7 gestisce title, descrizione e immagine sociale con valori predefiniti, unicità, anteprima autenticata, stati e revisioni |
 | SEO-3 | Contenuti autonomi e indicizzabili | Completo | Punto 5: `public-content-manifest.json` censisce ogni pagina pubblicata, i percorsi `/voci/<slug>.html` e `/luoghi/<id>.html` hanno HTML, canonical e JSON-LD; alias storici e aggiornamento automatico sono provati |
-| SEO-4 | Media ottimizzati | In corso — blocco esterno | Punto 6: originali e testo alternativo sono catalogati nel codice; la verifica pubblica attende l'abilitazione R2, poi restano dimensioni, varianti responsive e immagine sociale |
+| SEO-4 | Media ottimizzati | In corso | Punto 6: originali e testo alternativo sono catalogati e pubblicati su R2; restano dimensioni, varianti responsive e immagine sociale |
 | SEO-5 | Esperienza e prestazioni | Da iniziare | Punto 9: LCP ≤ 2,5 s, INP ≤ 200 ms e CLS ≤ 0,1 al 75º percentile per i modelli principali |
 | SEO-6 | Crescita editoriale verificabile | Da iniziare | Punto 10: pubblicazione basata sulle fonti e valutazione trimestrale rispetto alla baseline, senza obiettivi di traffico arbitrari |
 
@@ -115,7 +115,7 @@ punto 2 non è completa. Non vanno eliminati durante una migrazione parziale.
 
 | Ordine | Unità | Stato | Criterio e prova |
 |---:|---|---|---|
-| 6.1 | Originali e catalogo R2 | Codice completo; pubblicazione bloccata | `0015_media_assets_r2.sql`, binding `MEDIA`, migrazione verificata prima della rimozione del blob D1, ripiego compatibile, versioni `current`/`retained`, cancellazione delle Memorie e `media-r2.test.mjs`; il run `37996881926` prova il blocco Cloudflare `10042`, dettagli in `06-media-r2.md` |
+| 6.1 | Originali e catalogo R2 | Completo | `0015_media_assets_r2.sql`, binding `MEDIA`, migrazione verificata prima della rimozione del blob D1, ripiego compatibile, versioni `current`/`retained`, cancellazione delle Memorie e `media-r2.test.mjs`; il nuovo tentativo del run `37996881926` ha creato il bucket UE e pubblicato il Worker, poi health e doppia lettura hanno provato migrazione D1→R2 senza cambiare URL o byte (`06-media-r2.md`) |
 | 6.2 | Varianti responsive e dimensioni | Da iniziare | Generazione deterministica, larghezza e altezza note, `srcset`/`sizes` sulle pagine pubbliche e ripiego all'originale |
 | 6.3 | Immagini sociali | Da iniziare | Scelta amministrabile o predefinita, variante idonea e sincronizzazione dei metadati Open Graph/Twitter senza esporre bozze |
 | 6.4 | Documenti e verifica finale | Da iniziare | Upload e download R2 protetti, metadati D1, sostituzione/rimozione, accessibilità, esportazione e prova sul Worker pubblicato |
