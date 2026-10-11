@@ -24,7 +24,6 @@
     <link rel="apple-touch-icon" sizes="180x180" href="./apple-touch-icon-logo3.png">
     <link rel="manifest" href="./manifest.webmanifest">
     <link rel="preconnect" href="https://nnmrcn-rete.anonmrcn.workers.dev" crossorigin>
-    <link rel="preconnect" href="https://unpkg.com" crossorigin>
     <link rel="preconnect" href="https://server.arcgisonline.com">
     <script src="./tema.js?v=20261006-map-layers1"></script>
     <script>
@@ -32,10 +31,10 @@
             document.documentElement.classList.add("poesia-mappa-mini");
         }
     </script>
-    <link rel="stylesheet" href="./style.css?v=20261009-admin-actions1">
+    <link rel="stylesheet" href="./style.css?v=20261011-privacy2">
     <link rel="stylesheet" href="./percorsi.css?v=20261006-place-links2">
     <link rel="stylesheet" href="./leaflet.css?v=1.9.4">
-    <script data-goatcounter="https://anonmrcn.goatcounter.com/count" async src="./goatcounter.js?v=20261003-privacy1"></script>
+    <script defer src="./privacy-telemetry.js?v=20261011-privacy2"></script>
 </head>
 
 <body class="pagina-progetto" data-cms-page="progetto">
@@ -430,8 +429,8 @@
         </article>
     </div>
 
-    <script defer src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH" crossorigin="anonymous"></script>
-    <script defer src="https://unpkg.com/pmtiles@4.4.1/dist/pmtiles.js" integrity="sha384-iS2/cbFYol4NsEeda4mW6N/8wPMOT6pv2eY+GNYSJRqVC4nbJECP1+mg6D2T8wT/" crossorigin="anonymous"></script>
+    <script defer src="./vendor/leaflet-1.9.4.js"></script>
+    <script defer src="./vendor/pmtiles-4.4.1.js"></script>
     <script defer src="./pmtiles-overzoom.js?v=20260828-mobile-source2"></script>
     <script defer src="./config.js"></script>
     <script defer src="./analytics.js?v=20261001-versi1"></script>

@@ -30,15 +30,20 @@ test("le pagine dinamiche preparano la connessione al Worker", async () => {
     }
 });
 
-test("le mappe preparano un'unica connessione alle librerie esterne", async () => {
+test("le librerie cartografiche sono servite dallo stesso sito", async () => {
     const project = await readFile(resolve(root, "progetto.html"), "utf8");
     const memories = await readFile(resolve(root, "memorie.html"), "utf8");
-    assert.equal((project.match(/rel="preconnect" href="https:\/\/unpkg\.com"/g) || []).length, 1);
+    assert.doesNotMatch(project, /unpkg\.com/);
+    assert.match(project, /src="\.\/vendor\/leaflet-1\.9\.4\.js"/);
+    assert.match(project, /src="\.\/vendor\/pmtiles-4\.4\.1\.js"/);
     assert.match(project, /href="\.\/leaflet\.css\?v=1\.9\.4"/);
     assert.doesNotMatch(project, /href="https:\/\/unpkg\.com\/leaflet[^\"]+\.css/);
     assert.doesNotMatch(memories, /rel="preconnect" href="https:\/\/unpkg\.com"/);
     assert.match(memories, /href="\.\/leaflet\.css\?v=1\.9\.4"/);
     assert.doesNotMatch(memories, /<script[^>]+src="https:\/\/unpkg\.com\/leaflet/);
+    const memoryScript = await readFile(resolve(root, "memorie.js"), "utf8");
+    assert.match(memoryScript, /\.\/vendor\/leaflet-1\.9\.4\.js/);
+    assert.doesNotMatch(memoryScript, /unpkg\.com/);
 });
 
 test("Memorie carica mappa e servizio cartografico soltanto su richiesta", async () => {

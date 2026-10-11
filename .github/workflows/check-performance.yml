@@ -50,6 +50,11 @@ jobs:
           ADMIN_UI_CHROME_CHANNEL: chrome
         run: node scripts/admin-ui.e2e.mjs
 
+      - name: Verifica consenso e assenza di telemetria privata
+        env:
+          PRIVACY_UI_CHROME_CHANNEL: chrome
+        run: node scripts/privacy-ui.e2e.mjs
+
       - name: Misura le cinque tipologie
         shell: bash
         run: |
@@ -89,5 +94,14 @@ jobs:
         with:
           name: admin-ui-reports
           path: admin-ui-reports/*.png
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Conserva la schermata del consenso
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: privacy-ui-reports
+          path: privacy-ui-reports/*.png
           if-no-files-found: error
           retention-days: 30

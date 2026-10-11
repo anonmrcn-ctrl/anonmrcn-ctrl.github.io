@@ -23,7 +23,7 @@ affiancare il primo passaggio tecnico incompleto, ma non sostituirlo.
 | 9 | Prestazioni e Core Web Vitals | Completo | Baseline, interventi, dieci audit conformi su `main` e verifiche HTTP del sito e del Worker sono registrati in `docs/performance/baseline-2026-10-11.md`; il primo punto incompleto è il 10 |
 | 10 | Programma editoriale e monitoraggio organico | In corso | Programma, collegamenti contestuali e strumenti per rapporti aggregati sono completi; la prima baseline numerica resta in attesa dell'accesso a Search Console |
 | 11 | Amministrazione più user friendly | Completo | Navigazione per attività, feedback comprensibili, protezione delle modifiche e audit Chrome a 375/1440 px sono documentati in `11-admin-usability.md`; i run SEO `38154750211` e prestazioni/UX `38154750212` sono riusciti |
-| 12 | Rafforzamento della privacy | In corso | Inventario e audit iniziale sono verificabili; restano da chiudere retention, telemetria/servizi esterni e diritti self-service nelle unità 12.2–12.4 |
+| 12 | Rafforzamento della privacy | In corso | Inventario, retention, telemetria opt-in e librerie locali sono verificabili; resta da chiudere l'unità 12.4 sui diritti self-service e la verifica finale |
 
 ## Traguardi SEO trasversali
 
@@ -171,7 +171,7 @@ retention e recupero senza modificare contenuti o media, è in
 |---:|---|---|---|
 | 12.1 | Inventario e audit iniziale | Completa | `privacy.config.json`, `12-privacy-hardening.md` e `check-privacy.mjs` censiscono otto classi di dati, sei servizi esterni, retention, esposizione e quattro rilievi senza includere valori reali o segreti. Il controllo prova anche `noindex`, assenza dalla sitemap, log senza query e retention dei contatti |
 | 12.2 | Minimizzazione e retention | Completa | Il job periodico elimina sessioni location, sindaco e amministrative scadute; gli HMAC antiabuso delle Memorie vengono svuotati dopo 24 ore anche prima di un nuovo invio. `privacy-retention.test.mjs` distingue record scaduti e attivi senza alterare contributi, media o token di ritiro |
-| 12.3 | Consenso, telemetria e servizi esterni | Da iniziare | Statistiche soltanto dopo opt-in e mai nelle aree private; librerie applicative servite in prima parte; preferenze revocabili e verificabili |
+| 12.3 | Consenso, telemetria e servizi esterni | Completa | `privacy-telemetry.js` rende le statistiche opt-in e revocabili, limita GoatCounter al solo percorso e condivide il consenso con l'analytics Cloudflare facoltativo. Le aree protette non caricano telemetria; Leaflet e PMTiles sono serviti da `vendor/` con licenze e SHA-256 verificati |
 | 12.4 | Esportazione, cancellazione e verifica finale | Da iniziare | La persona autenticata esporta i propri dati e li cancella senza esporre terzi; cache, sitemap, diagnostica, informativa e servizio pubblicato superano l'audit finale |
 
 ## Punti 4–12 — criteri di completamento

@@ -1772,6 +1772,72 @@ body.poesia-aperta {
     line-height: 1.7;
 }
 
+.privacy-telemetry-open {
+    position: fixed;
+    right: 0.75rem;
+    bottom: 0.75rem;
+    z-index: 950;
+    min-height: 2.75rem;
+    padding: 0.6rem 0.9rem;
+    border: 1px solid currentColor;
+    border-radius: 999px;
+    background: var(--paper, #f4f1e8);
+    color: var(--ink, #171717);
+    box-shadow: 0 0.25rem 1rem rgb(0 0 0 / 16%);
+    font: inherit;
+    cursor: pointer;
+}
+
+.privacy-telemetry-panel {
+    position: fixed;
+    right: 0.75rem;
+    bottom: 4.25rem;
+    z-index: 951;
+    width: min(32rem, calc(100vw - 1.5rem));
+    max-height: calc(100vh - 5rem);
+    overflow: auto;
+    box-sizing: border-box;
+    padding: 1rem;
+    border: 2px solid currentColor;
+    border-radius: 0.75rem;
+    background: var(--paper, #f4f1e8);
+    color: var(--ink, #171717);
+    box-shadow: 0 0.5rem 2rem rgb(0 0 0 / 24%);
+}
+
+.privacy-telemetry-panel h2 {
+    margin: 0 0 0.75rem;
+    font-size: 1.2rem;
+}
+
+.privacy-telemetry-panel p {
+    margin: 0.5rem 0;
+    line-height: 1.5;
+}
+
+.privacy-telemetry-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.65rem;
+    margin-top: 1rem;
+}
+
+.privacy-telemetry-actions button {
+    min-height: 2.75rem;
+    padding: 0.6rem 0.8rem;
+    border: 1px solid currentColor;
+    border-radius: 0.35rem;
+    font: inherit;
+    cursor: pointer;
+}
+
+.privacy-telemetry-open:focus-visible,
+.privacy-telemetry-panel a:focus-visible,
+.privacy-telemetry-panel button:focus-visible {
+    outline: 3px solid #005fcc;
+    outline-offset: 3px;
+}
+
 .admin-contact-text {
     white-space: pre-line;
 }

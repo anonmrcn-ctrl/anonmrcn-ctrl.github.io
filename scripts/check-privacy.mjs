@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -45,19 +46,60 @@ for (const page of config.protectedPages) {
     const html = read(page);
     assert.match(html, /<meta name="robots" content="[^"]*noindex/iu, `${page} deve essere noindex`);
     assert.ok(!sitemap.includes(`/${page}`), `${page} non deve comparire nella sitemap`);
+    assert.doesNotMatch(
+        html,
+        /(?:privacy-telemetry|goatcounter|analytics\.js)/iu,
+        `${page} non deve caricare telemetria`
+    );
 }
 
-for (const service of ["github-pages", "cloudflare", "goatcounter", "unpkg", "map-tiles", "search-console"]) {
+for (const page of config.telemetry.publicPages) {
+    const html = read(page);
+    assert.match(html, /privacy-telemetry\.js\?v=20261011-privacy2/u, `${page}: consenso assente`);
+    assert.doesNotMatch(html, /data-goatcounter|src="\.\/goatcounter\.js/iu, `${page}: GoatCounter parte direttamente`);
+}
+
+for (const service of ["github-pages", "cloudflare", "goatcounter", "map-tiles", "search-console"]) {
     assert.ok(config.externalServices.some((item) => item.id === service), `servizio esterno non censito: ${service}`);
 }
+assert.ok(!config.externalServices.some((item) => item.id === "unpkg"));
 
-for (const id of ["PRIV-TELEMETRY-1", "PRIV-EXTERNAL-1", "PRIV-RIGHTS-1"]) {
+for (const id of ["PRIV-RIGHTS-1"]) {
     assert.ok(config.openFindings.some((item) => item.id === id), `rilievo mancante: ${id}`);
 }
-assert.ok(
-    config.resolvedFindings.some((item) => item.id === "PRIV-RETENTION-1"),
-    "risoluzione retention non registrata"
-);
+for (const id of ["PRIV-RETENTION-1", "PRIV-TELEMETRY-1", "PRIV-EXTERNAL-1"]) {
+    assert.ok(
+        config.resolvedFindings.some((item) => item.id === id),
+        `risoluzione non registrata: ${id}`
+    );
+}
+
+const telemetry = read("privacy-telemetry.js");
+const analytics = read("analytics.js");
+const goatCounter = read("goatcounter.js");
+assert.match(telemetry, /nnmrcn_telemetry_consent_v1/u);
+assert.match(telemetry, /readChoice\(\) !== ALLOW/u);
+assert.match(telemetry, /path: \(\) => window\.location\.pathname/u);
+assert.match(telemetry, /referrer: \(\) => ""/u);
+assert.match(telemetry, /no_events: true/u);
+assert.match(analytics, /!consentAllowed\(\)/u);
+assert.doesNotMatch(goatCounter, /\bs:\s*window\.screen\.width/u);
+assert.doesNotMatch(goatCounter, /\bb:\s*is_bot\(\)/u);
+
+for (const source of [
+    "admin.html", "progetto.html", "spazio-personale.html", "taccuino.html",
+    "memorie.js"
+]) {
+    assert.doesNotMatch(read(source), /unpkg\.com/iu, `${source}: dipendenza unpkg residua`);
+}
+
+for (const [file, expected] of [
+    ["vendor/leaflet-1.9.4.js", "db49d009c841f5ca34a888c96511ae936fd9f5533e90d8b2c4d57596f4e5641a"],
+    ["vendor/pmtiles-4.4.1.js", "36bcbe1ba97cc07b3fc90cee9cba11729b04e25ec8790cf65a0787d5b38e091b"]
+]) {
+    const digest = crypto.createHash("sha256").update(fs.readFileSync(path.join(root, file))).digest("hex");
+    assert.equal(digest, expected, `${file}: checksum inatteso`);
+}
 
 assert.match(worker, /const CONTACT_RETENTION_MS = 30 \* 24 \* 60 \* 60 \* 1000/u);
 assert.match(worker, /const MEMORY_ABUSE_RETENTION_MS = 24 \* 60 \* 60 \* 1000/u);

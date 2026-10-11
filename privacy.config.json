@@ -80,6 +80,24 @@
     "spazio-personale.html",
     "taccuino.html"
   ],
+  "telemetry": {
+    "consentStorageKey": "nnmrcn_telemetry_consent_v1",
+    "default": "denied",
+    "publicPages": [
+      "index.html",
+      "autore.html",
+      "progetto.html",
+      "spazio-pubblico.html",
+      "memorie.html",
+      "voci.html",
+      "archivio.html",
+      "logo.html",
+      "luogo.html",
+      "privacy.html"
+    ],
+    "fields": ["pathname"],
+    "excluded": ["query", "fragment", "referrer", "title", "click-events"]
+  },
   "externalServices": [
     {
       "id": "github-pages",
@@ -94,12 +112,7 @@
     {
       "id": "goatcounter",
       "purpose": "conteggi aggregati di visita",
-      "data": "percorso canonico senza query, referrer senza query, titolo e larghezza schermo"
-    },
-    {
-      "id": "unpkg",
-      "purpose": "distribuzione corrente delle librerie Leaflet e PMTiles",
-      "data": "richiesta HTTP dal browser"
+      "data": "solo percorso della pagina, dopo consenso esplicito memorizzato localmente"
     },
     {
       "id": "map-tiles",
@@ -117,19 +130,19 @@
       "id": "PRIV-RETENTION-1",
       "unit": "12.2",
       "resolution": "Il job periodico elimina sessioni location, sindaco e amministrative scadute; svuota gli HMAC delle Memorie oltre 24 ore senza toccare contributi, media o token di ritiro."
-    }
-  ],
-  "openFindings": [
+    },
     {
       "id": "PRIV-TELEMETRY-1",
       "unit": "12.3",
-      "finding": "GoatCounter parte senza una scelta esplicita e compare anche in pagine personali noindex."
+      "resolution": "La telemetria è negata per impostazione predefinita, richiede opt-in revocabile e non viene caricata nelle quattro pagine protette."
     },
     {
       "id": "PRIV-EXTERNAL-1",
       "unit": "12.3",
-      "finding": "Leaflet e PMTiles sono ancora richiesti a unpkg dal browser."
-    },
+      "resolution": "Leaflet 1.9.4 e PMTiles 4.4.1 sono serviti dal sito con versione, licenza e SHA-256 registrati; nessun sorgente applicativo usa unpkg."
+    }
+  ],
+  "openFindings": [
     {
       "id": "PRIV-RIGHTS-1",
       "unit": "12.4",

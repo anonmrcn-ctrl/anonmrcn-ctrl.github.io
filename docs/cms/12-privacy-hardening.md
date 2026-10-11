@@ -36,11 +36,7 @@ indirizzi, coordinate o chiavi.
 
 ### Rilievi da correggere nelle unità successive
 
-1. **PRIV-TELEMETRY-1:** non avviare GoatCounter prima di un consenso esplicito
-   e non caricare telemetria nelle pagine personali o amministrative.
-2. **PRIV-EXTERNAL-1:** servire Leaflet e PMTiles dallo stesso sito, senza una
-   richiesta preliminare del browser a unpkg.
-3. **PRIV-RIGHTS-1:** rendere disponibili esportazione e cancellazione
+1. **PRIV-RIGHTS-1:** rendere disponibili esportazione e cancellazione
    autenticata dallo Spazio personale, mantenendo solo un ID tombstone non
    ricollegabile quando è necessario preservare i riferimenti storici.
 
@@ -62,14 +58,37 @@ validi, esegue il vero handler `scheduled` e prova che soltanto i primi siano
 eliminati o minimizzati. La pulizia dell'HMAC viene eseguita anche prima di una
 nuova Memoria, così la garanzia non dipende esclusivamente dal cron.
 
+## 12.3 — Consenso, telemetria e servizi esterni
+
+Le statistiche sono negate per impostazione predefinita. Le dieci pagine
+pubbliche mostrano una scelta comprensibile fra «Solo necessari» e «Consenti
+statistiche aggregate»; la scelta resta soltanto in `localStorage` ed è
+modificabile dal controllo sempre disponibile. GoatCounter viene caricato dopo
+l'opt-in e riceve soltanto `location.pathname`: query, frammento, referrer,
+titolo ed eventi di clic vengono esclusi. Cloudflare Web Analytics, attualmente
+privo di token, usa lo stesso consenso se sarà attivato.
+
+Le quattro pagine protette non includono né il gestore del consenso, né
+GoatCounter, né Web Analytics. In questo modo accesso, amministrazione, Spazio
+personale e Taccuino non possono finire nella telemetria neppure dopo un opt-in
+espresso su una pagina pubblica.
+
+Leaflet 1.9.4 e PMTiles 4.4.1 sono copie non modificate servite dalla cartella
+`vendor/`. Versione, licenza e SHA-256 sono registrati in `vendor/README.md` e
+verificati da `check-privacy.mjs`; il browser non contatta più unpkg per il
+codice. Restano esterne soltanto le tile cartografiche caricate quando la mappa
+è usata, descritte come servizio necessario all'interazione cartografica.
+
+`privacy-telemetry.test.mjs` controlla sintassi, consenso, minimizzazione,
+assenza dalle aree protette e dipendenze cartografiche locali.
+
 ## Servizi esterni
 
 | Servizio | Scopo | Controllo previsto |
 |---|---|---|
 | GitHub Pages | Hosting statico | Nessun dato applicativo nel repository o nella sitemap |
 | Cloudflare Worker, D1 e R2 | API e archiviazione | CORS ristretto, cache private `no-store`, segreti nell'ambiente |
-| GoatCounter | Conteggi aggregati | Opt-in, nessuna query, nessun uso su pagine private |
-| unpkg | Librerie cartografiche | Da eliminare tramite copie locali verificate |
+| GoatCounter | Conteggi aggregati | Opt-in, solo percorso, nessun uso su pagine private |
 | Esri | Tile richieste quando la mappa è usata | Documentare e caricare solo con la funzionalità cartografica |
 | Google Search Console | Indicizzazione e dati SEO aggregati | Esportazioni locali con soglia minima, senza pixel sul sito |
 
@@ -80,6 +99,7 @@ node scripts/check-privacy.mjs
 node scripts/check-content-boundary.mjs
 node scripts/check-seo.mjs
 node --test worker/tests/*.test.mjs
+node --test scripts/*.test.mjs
 ```
 
 La configurazione non dichiara la conformità legale in astratto: rende
