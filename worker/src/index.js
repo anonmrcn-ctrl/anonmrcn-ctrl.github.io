@@ -25,7 +25,10 @@ import {
     validateCmsBackup
 } from "./cms-maintenance.js";
 import { runCmsDiagnostics } from "./cms-diagnostics.js";
-import { PRIVACY_DOCUMENT_SEED } from "./legal-seed.js";
+import {
+    PRIVACY_DOCUMENT_SEED,
+    PRIVACY_DOCUMENT_V2_SEED
+} from "./legal-seed.js";
 import { MAP_LAYER_SEEDS } from "./map-seed.js";
 import { NARRATIVE_STEP_SEEDS } from "./narrative-seed.js";
 import { NAVIGATION_SEEDS } from "./navigation-seed.js";
@@ -390,6 +393,10 @@ const LOCATION_PROFILE_COLUMNS = Object.freeze([
     {
         name: "location_consent_at",
         statement: "ALTER TABLE locations ADD COLUMN location_consent_at INTEGER"
+    },
+    {
+        name: "deleted_at",
+        statement: "ALTER TABLE locations ADD COLUMN deleted_at INTEGER"
     }
 ]);
 const MESSAGE_ARCHIVE_COLUMNS = Object.freeze([
@@ -464,6 +471,14 @@ export default {
 
             if (request.method === "POST" && path === "/api/logout") {
                 return await logout(request, env);
+            }
+
+            if (request.method === "GET" && path === "/api/account/export") {
+                return await exportLocationAccount(request, env);
+            }
+
+            if (request.method === "DELETE" && path === "/api/account") {
+                return await deleteLocationAccount(request, env);
             }
 
             if (
@@ -1021,12 +1036,21 @@ export default {
             }
 
             if (request.method === "GET" && path === "/api/health") {
+                const locationTable = await env.DB.prepare(`
+                    SELECT name
+                    FROM sqlite_master
+                    WHERE type = 'table' AND name = 'locations'
+                    LIMIT 1
+                `).first();
+                if (locationTable) {
+                    await ensureLocationProfileStorage(env);
+                }
                 await ensureCmsStorage(env);
                 return json(request, env, {
                     ok: true,
                     service: "nnmrcn-rete",
-                    privacyVersion: "2026-10-03",
-                    contentSchema: 4,
+                    privacyVersion: "2026-10-12",
+                    contentSchema: 5,
                     mediaStorage: env.MEDIA ? "r2" : "d1-fallback"
                 });
             }
@@ -1099,7 +1123,7 @@ async function login(request, env) {
             password_salt,
             password_hash
         FROM locations
-        WHERE password_lookup = ?
+        WHERE password_lookup = ? AND deleted_at IS NULL
         LIMIT 1
     `).bind(lookup).first();
 
@@ -1217,6 +1241,193 @@ async function logout(request, env) {
     return json(request, env, {
         ok: true
     });
+}
+
+async function exportLocationAccount(request, env) {
+    const session = await requireSession(request, env);
+
+    if (!session) {
+        return unauthorized(request, env);
+    }
+
+    await ensureMessageArchiveStorage(env);
+    const locationId = Number(session.location_id);
+    const [location, poem, messages, sessions, subscriptions] = await Promise.all([
+        env.DB.prepare(`
+            SELECT
+                id, address, username, street_name, street_order, lat, lon,
+                is_visible, welcome_seen_at, location_consent_at
+            FROM locations
+            WHERE id = ? AND deleted_at IS NULL
+            LIMIT 1
+        `).bind(locationId).first(),
+        env.DB.prepare(`
+            SELECT html
+            FROM poems
+            WHERE location_id = ?
+            LIMIT 1
+        `).bind(locationId).first(),
+        env.DB.prepare(`
+            SELECT
+                id, sender_location_id, text, reveal_sender, delivery_type,
+                status, sender_public_consent, recipient_public_consent,
+                is_public, published_at, created_at, updated_at
+            FROM messages
+            WHERE sender_location_id = ? OR recipient_location_id = ?
+            ORDER BY created_at, id
+        `).bind(locationId, locationId).all(),
+        env.DB.prepare(`
+            SELECT created_at, expires_at
+            FROM sessions
+            WHERE location_id = ?
+            ORDER BY created_at
+        `).bind(locationId).all(),
+        env.DB.prepare(`
+            SELECT endpoint, created_at, updated_at
+            FROM push_subscriptions
+            WHERE audience = 'location' AND location_id = ?
+            ORDER BY created_at
+        `).bind(locationId).all()
+    ]);
+
+    if (!location) {
+        return unauthorized(request, env);
+    }
+
+    const payload = {
+        format: "nnmrcn-personal-data",
+        version: 1,
+        exportedAt: new Date().toISOString(),
+        account: {
+            id: Number(location.id),
+            address: location.address,
+            username: location.username,
+            streetName: location.street_name,
+            streetOrder: Number(location.street_order),
+            approximateLocation: {
+                lat: Number(location.lat),
+                lon: Number(location.lon)
+            },
+            visible: Number(location.is_visible) === 1,
+            welcomeSeenAt: timestampToIso(location.welcome_seen_at),
+            locationConsentAt: timestampToIso(location.location_consent_at)
+        },
+        poem: poem ? { html: poem.html } : null,
+        messages: (messages.results || []).map((message) => ({
+            id: Number(message.id),
+            direction: Number(message.sender_location_id) === locationId
+                ? "sent"
+                : "received",
+            text: message.text,
+            revealSender: Number(message.reveal_sender) === 1,
+            deliveryType: message.delivery_type,
+            status: message.status,
+            senderPublicConsent: Number(message.sender_public_consent) === 1,
+            recipientPublicConsent: Number(message.recipient_public_consent) === 1,
+            public: Number(message.is_public) === 1,
+            publishedAt: timestampToIso(message.published_at),
+            createdAt: timestampToIso(message.created_at),
+            updatedAt: timestampToIso(message.updated_at)
+        })),
+        sessions: (sessions.results || []).map((item) => ({
+            createdAt: timestampToIso(item.created_at),
+            expiresAt: timestampToIso(item.expires_at)
+        })),
+        pushSubscriptions: (subscriptions.results || []).map((item) => ({
+            endpoint: item.endpoint,
+            createdAt: timestampToIso(item.created_at),
+            updatedAt: timestampToIso(item.updated_at)
+        })),
+        excluded: [
+            "password e relativi hash",
+            "token e hash di sessione",
+            "chiavi delle notifiche push",
+            "identificativi e profili delle altre location",
+            "taccuino conservato soltanto su questo dispositivo"
+        ]
+    };
+    const date = new Date().toISOString().slice(0, 10);
+
+    return downloadResponse(
+        request,
+        env,
+        `${JSON.stringify(payload, null, 2)}\n`,
+        "application/json; charset=utf-8",
+        `nnmrcn-dati-location-${locationId}-${date}.json`
+    );
+}
+
+async function deleteLocationAccount(request, env) {
+    const session = await requireSession(request, env);
+
+    if (!session) {
+        return unauthorized(request, env);
+    }
+
+    const body = await readJson(request);
+
+    if (body?.confirmation !== "ELIMINA I MIEI DATI") {
+        return json(request, env, {
+            error: "Scrivi esattamente ELIMINA I MIEI DATI per confermare."
+        }, 400);
+    }
+
+    const locationId = Number(session.location_id);
+    const now = Date.now();
+    const tombstone = `deleted:${locationId}:${randomToken(18)}`;
+
+    await env.DB.batch([
+        env.DB.prepare(`
+            DELETE FROM messages
+            WHERE sender_location_id = ? OR recipient_location_id = ?
+        `).bind(locationId, locationId),
+        env.DB.prepare("DELETE FROM poems WHERE location_id = ?").bind(locationId),
+        env.DB.prepare("DELETE FROM sessions WHERE location_id = ?").bind(locationId),
+        env.DB.prepare(`
+            DELETE FROM push_subscriptions
+            WHERE audience = 'location' AND location_id = ?
+        `).bind(locationId),
+        env.DB.prepare(`
+            UPDATE locations
+            SET
+                address = ?,
+                username = '',
+                street_name = '',
+                street_order = 0,
+                lat = 0,
+                lon = 0,
+                is_visible = 0,
+                welcome_seen_at = NULL,
+                privacy_safe = 1,
+                location_consent_at = NULL,
+                password_lookup = ?,
+                password_salt = ?,
+                password_hash = ?,
+                deleted_at = ?
+            WHERE id = ? AND deleted_at IS NULL
+        `).bind(
+            `Location ${locationId} eliminata`,
+            tombstone,
+            randomToken(18),
+            randomToken(32),
+            now,
+            locationId
+        )
+    ]);
+
+    return json(request, env, {
+        ok: true,
+        deletedAt: new Date(now).toISOString(),
+        preservedId: locationId
+    });
+}
+
+function timestampToIso(value) {
+    const timestamp = Number(value);
+
+    return Number.isFinite(timestamp) && timestamp > 0
+        ? new Date(timestamp).toISOString()
+        : null;
 }
 
 async function checkMayorAccess(request, env) {
@@ -1395,6 +1606,7 @@ async function listLocations(request, env) {
         FROM locations l
         LEFT JOIN poems p
             ON p.location_id = l.id
+        WHERE l.deleted_at IS NULL
         ORDER BY l.id
     `).all();
 
@@ -2636,7 +2848,7 @@ async function createMessage(request, env, ctx) {
     const recipient = await env.DB.prepare(`
         SELECT id
         FROM locations
-        WHERE id = ?
+        WHERE id = ? AND deleted_at IS NULL
         LIMIT 1
     `).bind(recipientId).first();
 
@@ -8490,64 +8702,112 @@ async function ensureSourcePublicationState(env) {
 }
 
 async function initializeLegalContent(env) {
-    const initialized = await env.DB.prepare(`
+    const v1Initialized = await env.DB.prepare(`
         SELECT name
         FROM content_initializations
         WHERE name = 'legal_documents_v1'
         LIMIT 1
     `).first();
 
-    if (initialized) {
+    if (!v1Initialized) {
+        const document = PRIVACY_DOCUMENT_SEED;
+        const version = document.version;
+        const now = Date.now();
+
+        await env.DB.batch([
+            env.DB.prepare(`
+                INSERT OR IGNORE INTO legal_documents (
+                    id, slug, title, current_version, created_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?)
+            `).bind(
+                document.id,
+                document.slug,
+                document.title,
+                version.number,
+                now,
+                now
+            ),
+            env.DB.prepare(`
+                INSERT OR IGNORE INTO legal_document_versions (
+                    id, document_id, version_number, effective_date,
+                    body_html, checksum, status, created_at, published_at
+                ) VALUES (?, ?, ?, ?, ?, ?, 'published', ?, ?)
+            `).bind(
+                version.id,
+                document.id,
+                version.number,
+                version.effectiveDate,
+                version.bodyHtml,
+                version.checksum,
+                now,
+                now
+            ),
+            env.DB.prepare(`
+                INSERT OR IGNORE INTO content_initializations (name, applied_at)
+                VALUES ('legal_documents_v1', ?)
+            `).bind(now)
+        ]);
+    }
+
+    const v2Initialized = await env.DB.prepare(`
+        SELECT name
+        FROM content_initializations
+        WHERE name = 'legal_privacy_v2'
+        LIMIT 1
+    `).first();
+
+    if (v2Initialized) {
         return;
     }
 
-    const document = PRIVACY_DOCUMENT_SEED;
+    const document = PRIVACY_DOCUMENT_V2_SEED;
     const version = document.version;
     const now = Date.now();
 
+    await env.DB.prepare(`
+        INSERT OR IGNORE INTO legal_document_versions (
+            id, document_id, version_number, effective_date,
+            body_html, checksum, status, created_at, published_at
+        ) VALUES (?, ?, ?, ?, ?, ?, 'published', ?, ?)
+    `).bind(
+        version.id,
+        document.id,
+        version.number,
+        version.effectiveDate,
+        version.bodyHtml,
+        version.checksum,
+        now,
+        now
+    ).run();
+
+    const stored = await env.DB.prepare(`
+        SELECT version_number, checksum
+        FROM legal_document_versions
+        WHERE id = ?
+        LIMIT 1
+    `).bind(version.id).first();
+
+    if (
+        Number(stored?.version_number) !== version.number ||
+        stored?.checksum !== version.checksum
+    ) {
+        throw new Error("Privacy v2 conflicts with an existing legal version.");
+    }
+
     await env.DB.batch([
         env.DB.prepare(`
-            INSERT OR IGNORE INTO legal_documents (
-                id,
-                slug,
-                title,
-                current_version,
-                created_at,
-                updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?)
-        `).bind(
-            document.id,
-            document.slug,
-            document.title,
-            version.number,
-            now,
-            now
-        ),
-        env.DB.prepare(`
-            INSERT OR IGNORE INTO legal_document_versions (
-                id,
-                document_id,
-                version_number,
-                effective_date,
-                body_html,
-                checksum,
-                status,
-                created_at,
-                published_at
-            ) VALUES (?, ?, ?, ?, ?, ?, 'published', ?, ?)
-        `).bind(
-            version.id,
-            document.id,
-            version.number,
-            version.effectiveDate,
-            version.bodyHtml,
-            version.checksum,
-            now,
-            now
-        ),
+            UPDATE legal_documents
+            SET
+                current_version = CASE
+                    WHEN current_version < ? THEN ?
+                    ELSE current_version
+                END,
+                updated_at = ?
+            WHERE id = ?
+        `).bind(version.number, version.number, now, document.id),
         env.DB.prepare(`
             INSERT OR IGNORE INTO content_initializations (name, applied_at)
-            VALUES ('legal_documents_v1', ?)
+            VALUES ('legal_privacy_v2', ?)
         `).bind(now)
     ]);
 }
@@ -9922,6 +10182,7 @@ async function ensureLocationProfileStorage(env) {
     const columns = new Set(
         (result.results || []).map((column) => String(column.name))
     );
+    const deletedAtAdded = !columns.has("deleted_at");
 
     for (const column of LOCATION_PROFILE_COLUMNS) {
         if (columns.has(column.name)) {
@@ -9957,10 +10218,19 @@ async function ensureLocationProfileStorage(env) {
 
     await normalizeLocationRecords(env);
 
+    if (deletedAtAdded) {
+        await env.DB.prepare("DROP INDEX IF EXISTS idx_locations_street_order").run();
+    }
+
     await env.DB.prepare(`
         CREATE UNIQUE INDEX IF NOT EXISTS idx_locations_street_order
         ON locations(street_name, street_order)
-        WHERE street_name <> '' AND street_order > 0
+        WHERE street_name <> '' AND street_order > 0 AND deleted_at IS NULL
+    `).run();
+
+    await env.DB.prepare(`
+        CREATE INDEX IF NOT EXISTS idx_locations_active
+        ON locations(deleted_at, id)
     `).run();
 }
 
@@ -9979,6 +10249,7 @@ async function normalizeLocationRecords(env) {
             lon,
             privacy_safe
         FROM locations
+        WHERE deleted_at IS NULL
         ORDER BY id
     `).all();
     const rows = result.results || [];
@@ -10919,6 +11190,7 @@ async function requireSession(request, env) {
         WHERE
             s.session_hash = ?
             AND s.expires_at > ?
+            AND l.deleted_at IS NULL
         LIMIT 1
     `).bind(
         sessionHash,

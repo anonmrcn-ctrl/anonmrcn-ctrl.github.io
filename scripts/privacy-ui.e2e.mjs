@@ -69,6 +69,22 @@ try {
     assert.equal(await page.locator("#privacyTelemetryOpen").count(), 0);
     assert.equal(await page.locator("script[data-goatcounter]").count(), 0);
     assert.equal(await page.locator('script[src*="analytics.js"]').count(), 0);
+    await page.evaluate(() => {
+        document.querySelector("[data-spazio-personale-contenuto]").hidden = false;
+    });
+    const exportButton = page.getByRole("button", { name: "Scarica i miei dati" });
+    const deleteButton = page.getByRole("button", { name: "Elimina account e dati" });
+    const confirmation = page.getByLabel(/Per confermare scrivi/u);
+    assert.equal(await exportButton.isVisible(), true);
+    assert.equal(await deleteButton.isEnabled(), false);
+    await confirmation.fill("ELIMINA I MIEI DATI");
+    assert.equal(await deleteButton.isEnabled(), true);
+    assert.equal(await page.evaluate(() =>
+        document.documentElement.scrollWidth <= document.documentElement.clientWidth
+    ), true);
+    await page.locator("#i-tuoi-dati").screenshot({
+        path: new URL("privacy-rights-mobile.png", outputDirectory).pathname
+    });
 
     await context.close();
 } finally {

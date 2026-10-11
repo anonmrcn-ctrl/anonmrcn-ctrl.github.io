@@ -97,6 +97,110 @@ const PRIVACY_BODY_HTML = `
 </section>
 `.trim();
 
+const PRIVACY_BODY_HTML_V2 = `
+<section>
+    <h2>1. Titolare e contatti</h2>
+    <p>
+        Il titolare del trattamento è l’autore e amministratore di
+        <strong>anonMrcn</strong>, progetto artistico indipendente e senza
+        scopo di lucro. Per richieste sulla privacy puoi scrivere a
+        <a href="mailto:anonmrcn@gmail.com">anonmrcn@gmail.com</a>.
+    </p>
+</section>
+
+<section>
+    <h2>2. Dati trattati e finalità</h2>
+    <p>
+        Per l’accesso e la partecipazione possono essere trattati username,
+        email, via o zona generica, posizione approssimata, poesia, messaggi,
+        preferenze di visibilità e dati tecnici delle notifiche richieste dal
+        dispositivo. Password e token non sono conservati in chiaro.
+    </p>
+    <p>
+        Non viene richiesto il numero civico. Le coordinate vengono spostate
+        automaticamente di circa 250–400 metri prima del salvataggio. Un
+        codice pseudonimo derivato dall’indirizzo IP viene usato soltanto per
+        limitare gli abusi e non per identificare o profilare la persona.
+    </p>
+</section>
+
+<section>
+    <h2>3. Consenso e visibilità</h2>
+    <p>
+        La location nasce nascosta e diventa visibile agli altri partecipanti
+        soltanto dopo una scelta esplicita, revocabile in ogni momento. I
+        messaggi possono entrare nell’archivio pubblico solo con il consenso
+        di mittente e destinatario e dopo moderazione.
+    </p>
+    <p>
+        Le statistiche aggregate delle pagine pubbliche sono disattivate per
+        impostazione predefinita. Dopo il consenso, GoatCounter riceve soltanto
+        il percorso della pagina, senza query, frammento, referrer, titolo o
+        eventi di clic. Le aree di accesso, amministrazione, spazio personale
+        e taccuino non caricano telemetria.
+    </p>
+</section>
+
+<section>
+    <h2>4. Conservazione e minimizzazione</h2>
+    <p>
+        Le richieste di contatto e accesso vengono eliminate entro 30 giorni;
+        i codici pseudonimi antiabuso delle Memorie vengono svuotati dopo 24
+        ore. Le sessioni scadute vengono eliminate automaticamente. Account,
+        poesia e messaggi restano fino alla cancellazione dell’account o alla
+        conclusione del progetto, salvo obblighi di legge.
+    </p>
+</section>
+
+<section>
+    <h2>5. Servizi tecnici</h2>
+    <p>
+        I dati non sono venduti. GitHub Pages pubblica il sito; Cloudflare
+        gestisce Worker, database D1, file R2 e protezione del servizio. Le
+        mappe richieste dall’utente caricano tasselli Esri, che ricevono area e
+        livello di zoom necessari a fornire la cartografia. GoatCounter e
+        l’eventuale misurazione aggregata Cloudflare vengono attivati soltanto
+        dopo consenso. Google Search Console è usato senza codice di
+        tracciamento sul sito e solo per dati organici aggregati.
+    </p>
+</section>
+
+<section>
+    <h2>6. Esportazione e cancellazione</h2>
+    <p>
+        Dallo Spazio personale puoi scaricare una copia dei dati della tua
+        location ed eliminare direttamente account, poesia, messaggi,
+        sessioni e notifiche. L’esportazione non contiene password, token,
+        chiavi tecniche o dati identificativi delle altre location.
+    </p>
+    <p>
+        Dopo la cancellazione resta soltanto un record anonimo con
+        l’identificativo numerico storico, senza credenziali, coordinate o
+        contenuti. Serve esclusivamente a impedire che QR, collegamenti e ID
+        precedenti vengano assegnati a un’altra persona. Il taccuino è salvato
+        soltanto sul dispositivo e non viene ricevuto dal servizio.
+    </p>
+</section>
+
+<section>
+    <h2>7. Diritti dell’interessato</h2>
+    <p>
+        Puoi esercitare accesso e cancellazione dallo Spazio personale. Per
+        rettifica, limitazione, portabilità, opposizione o assistenza puoi
+        scrivere al contatto indicato sopra. Puoi inoltre proporre reclamo al
+        Garante per la protezione dei dati personali.
+    </p>
+</section>
+
+<section>
+    <h2>8. Decisioni automatizzate</h2>
+    <p>
+        Non vengono adottate decisioni automatizzate né svolte attività di
+        profilazione o pubblicità comportamentale.
+    </p>
+</section>
+`.trim();
+
 export const PRIVACY_DOCUMENT_SEED = Object.freeze({
     id: "privacy",
     slug: "privacy",
@@ -107,5 +211,18 @@ export const PRIVACY_DOCUMENT_SEED = Object.freeze({
         effectiveDate: "2026-10-03",
         bodyHtml: PRIVACY_BODY_HTML,
         checksum: "0348a9efdb4d2cff7f9e973771941529b120ccf15cda8741a8307ea1960a5d79"
+    })
+});
+
+export const PRIVACY_DOCUMENT_V2_SEED = Object.freeze({
+    id: "privacy",
+    slug: "privacy",
+    title: "Informativa sulla Privacy",
+    version: Object.freeze({
+        id: "privacy-2026-10-12",
+        number: 2,
+        effectiveDate: "2026-10-12",
+        bodyHtml: PRIVACY_BODY_HTML_V2,
+        checksum: "1261b608808db3606d22c482547357d599979684be7d642ae906730d52a302d4"
     })
 });

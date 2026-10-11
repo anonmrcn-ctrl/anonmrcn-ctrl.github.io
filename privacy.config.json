@@ -14,7 +14,7 @@
       "tables": ["locations", "poems"],
       "purpose": "accesso pseudonimo e partecipazione al progetto",
       "minimization": "nessun civico; coordinate spostate di 250-400 metri; password e codice conservati soltanto come hash con salt/pepper",
-      "retention": "fino alla cancellazione dell'account o alla conclusione del progetto",
+      "retention": "fino alla cancellazione dell'account o alla conclusione del progetto; dopo la cancellazione resta soltanto l'ID numerico anonimo per impedire il riutilizzo di QR e riferimenti storici",
       "public": false
     },
     {
@@ -140,13 +140,12 @@
       "id": "PRIV-EXTERNAL-1",
       "unit": "12.3",
       "resolution": "Leaflet 1.9.4 e PMTiles 4.4.1 sono serviti dal sito con versione, licenza e SHA-256 registrati; nessun sorgente applicativo usa unpkg."
-    }
-  ],
-  "openFindings": [
+    },
     {
       "id": "PRIV-RIGHTS-1",
       "unit": "12.4",
-      "finding": "Accesso ed eliminazione dei dati richiedono ancora una richiesta email anziché un flusso self-service autenticato."
+      "resolution": "Lo Spazio personale offre esportazione autenticata no-store e cancellazione self-service con conferma esplicita; dati, sessioni e push vengono rimossi, mentre l'ID resta come tombstone anonimo non autenticabile."
     }
-  ]
+  ],
+  "openFindings": []
 }

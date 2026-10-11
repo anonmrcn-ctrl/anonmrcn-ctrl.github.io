@@ -54,4 +54,7 @@ test("l’audit browser prova rifiuto, consenso, revoca e pagina protetta", asyn
     assert.match(audit, /page\.reload/u);
     assert.match(audit, /spazio-personale\.html/u);
     assert.match(audit, /script\[data-goatcounter\]/u);
+    assert.match(audit, /Scarica i miei dati/u);
+    assert.match(audit, /ELIMINA I MIEI DATI/u);
+    assert.match(audit, /privacy-rights-mobile\.png/u);
 });

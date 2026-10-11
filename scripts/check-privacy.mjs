@@ -64,10 +64,8 @@ for (const service of ["github-pages", "cloudflare", "goatcounter", "map-tiles",
 }
 assert.ok(!config.externalServices.some((item) => item.id === "unpkg"));
 
-for (const id of ["PRIV-RIGHTS-1"]) {
-    assert.ok(config.openFindings.some((item) => item.id === id), `rilievo mancante: ${id}`);
-}
-for (const id of ["PRIV-RETENTION-1", "PRIV-TELEMETRY-1", "PRIV-EXTERNAL-1"]) {
+assert.equal(config.openFindings.length, 0, "l'audit privacy finale ha rilievi aperti");
+for (const id of ["PRIV-RETENTION-1", "PRIV-TELEMETRY-1", "PRIV-EXTERNAL-1", "PRIV-RIGHTS-1"]) {
     assert.ok(
         config.resolvedFindings.some((item) => item.id === id),
         `risoluzione non registrata: ${id}`
@@ -109,8 +107,23 @@ assert.match(worker, /DELETE FROM mayor_sessions[\s\S]*WHERE expires_at <= \?/u)
 assert.match(worker, /path: new URL\(request\.url\)\.pathname/u);
 assert.doesNotMatch(worker, /console\.(?:log|error)\([^\n]*(?:authorization|cookie|request\.url|searchParams)/iu);
 assert.match(legal, /30 giorni/iu);
+assert.match(legal, /24\s+ore/iu);
 assert.match(legal, /GitHub Pages e Cloudflare/iu);
 assert.match(legal, /GoatCounter/iu);
+assert.match(legal, /Spazio personale/iu);
+assert.match(legal, /identificativo numerico storico/iu);
+assert.match(worker, /GET" && path === "\/api\/account\/export/u);
+assert.match(worker, /DELETE" && path === "\/api\/account"/u);
+assert.match(worker, /WHERE id = \? AND deleted_at IS NULL/u);
+assert.match(schema, /deleted_at INTEGER/u);
+
+const personalSpace = read("spazio-personale.html");
+const personalScript = read("spazio-personale.js");
+assert.match(personalSpace, /id="esportaDatiButton"/u);
+assert.match(personalSpace, /id="eliminaAccountConferma"/u);
+assert.match(personalSpace, /ELIMINA I MIEI DATI/u);
+assert.match(personalScript, /\/api\/account\/export/u);
+assert.match(personalScript, /method: "DELETE"/u);
 
 console.log(
     `Privacy: ${config.dataClasses.length} classi dati, ` +

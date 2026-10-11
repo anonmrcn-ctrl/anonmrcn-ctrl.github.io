@@ -1,6 +1,6 @@
 # Rafforzamento della privacy
 
-Aggiornato l'11 ottobre 2026. Questo documento è il registro verificabile del
+Aggiornato il 12 ottobre 2026. Questo documento è il registro verificabile del
 punto 12. L'inventario leggibile dalle macchine è `privacy.config.json` e il
 controllo è `node scripts/check-privacy.mjs`.
 
@@ -34,15 +34,14 @@ indirizzi, coordinate o chiavi.
 - La diagnostica e il backup CMS escludono dati operativi personali,
   autenticazione e segreti.
 
-### Rilievi da correggere nelle unità successive
+### Rilievo iniziale chiuso
 
-1. **PRIV-RIGHTS-1:** rendere disponibili esportazione e cancellazione
-   autenticata dallo Spazio personale, mantenendo solo un ID tombstone non
-   ricollegabile quando è necessario preservare i riferimenti storici.
+**PRIV-RIGHTS-1** è stato chiuso nell’unità 12.4: esportazione e cancellazione
+sono disponibili nello Spazio personale e l’ID tombstone non conserva dati
+ricollegabili né credenziali.
 
-Questi rilievi impediscono di dichiarare completo il punto 12, ma non il suo
-inventario iniziale: ogni rilievo ha un'unità, una prova automatica prevista e
-un criterio di chiusura esplicito.
+L’inventario conserva il rilievo fra le risoluzioni verificabili, invece di
+cancellarne la storia.
 
 ## 12.2 — Minimizzazione e retention
 
@@ -82,6 +81,37 @@ codice. Restano esterne soltanto le tile cartografiche caricate quando la mappa
 `privacy-telemetry.test.mjs` controlla sintassi, consenso, minimizzazione,
 assenza dalle aree protette e dipendenze cartografiche locali.
 
+## 12.4 — Esportazione, cancellazione e audit finale
+
+La persona autenticata può scaricare `GET /api/account/export`: il JSON è
+versionato, usa `no-store` e contiene profilo proprio, coordinate già
+approssimate, poesia, messaggi con la sola direzione, date delle sessioni ed
+endpoint push propri. Non include password, hash, token, chiavi push o
+identificativi e profili delle altre location. Il taccuino resta escluso perché
+esiste soltanto nel dispositivo.
+
+`DELETE /api/account` accetta esclusivamente la frase
+`ELIMINA I MIEI DATI`. Elimina poesia, messaggi inviati e ricevuti, sessioni e
+notifiche; sostituisce credenziali, testi, coordinate e consensi della location
+con valori anonimi. L’ID numerico resta occupato e non autenticabile: in questo
+modo un QR o collegamento storico non può essere assegnato a un’altra persona.
+Login, elenco location, destinatari e sessioni escludono i tombstone.
+
+La migrazione `0018_privacy_account_rights.sql` aggiunge `deleted_at`; l’health
+check applica anche l’aggiornamento conservativo a un database precedente e
+dichiara `contentSchema: 5`. `account-privacy.test.mjs` prova autorizzazione,
+minimizzazione dell’export, conferma esatta, cancellazione atomica, sessione
+revocata, ID conservato ed esclusione dalle API.
+
+L’informativa del 12 ottobre 2026 è la versione 2 append-only: la versione del
+3 ottobre resta immutabile. Descrive retention, consenso alla telemetria,
+servizi tecnici, esportazione, cancellazione e tombstone. La copia statica è
+identica al record D1 e resta disponibile se il Worker non risponde.
+
+Il controllo locale finale del 12 ottobre supera 143 test, tutti i controlli
+statici e la build Worker dry-run. La prova browser e il servizio pubblicato
+vengono registrati prima di dichiarare conclusa l’unità.
+
 ## Servizi esterni
 
 | Servizio | Scopo | Controllo previsto |
@@ -98,8 +128,11 @@ assenza dalle aree protette e dipendenze cartografiche locali.
 node scripts/check-privacy.mjs
 node scripts/check-content-boundary.mjs
 node scripts/check-seo.mjs
-node --test worker/tests/*.test.mjs
-node --test scripts/*.test.mjs
+node scripts/check-editorial-program.mjs
+node scripts/check-organic-report.mjs
+node scripts/check-performance.mjs
+node --test worker/tests/*.test.mjs scripts/*.test.mjs
+npx --yes wrangler@4 deploy --dry-run --config worker/wrangler.jsonc
 ```
 
 La configurazione non dichiara la conformità legale in astratto: rende

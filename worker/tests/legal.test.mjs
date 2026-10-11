@@ -6,7 +6,10 @@ import test from "node:test";
 import vm from "node:vm";
 
 import worker from "../src/index.js";
-import { PRIVACY_DOCUMENT_SEED } from "../src/legal-seed.js";
+import {
+    PRIVACY_DOCUMENT_SEED,
+    PRIVACY_DOCUMENT_V2_SEED
+} from "../src/legal-seed.js";
 
 class D1StatementMock {
     constructor(database, sql) {
@@ -84,11 +87,11 @@ async function call(env, path) {
     return { response, data: await response.json() };
 }
 
-test("importa la versione privacy del 3 ottobre 2026 con checksum verificabile", async () => {
+test("conserva la privacy v1 e pubblica la v2 con checksum verificabile", async () => {
     const env = createEnvironment();
     const first = await call(env, "/api/public/legal/privacy");
     const second = await call(env, "/api/public/legal/privacy");
-    const version = PRIVACY_DOCUMENT_SEED.version;
+    const version = PRIVACY_DOCUMENT_V2_SEED.version;
     const checksum = createHash("sha256")
         .update(version.bodyHtml)
         .digest("hex");
@@ -96,9 +99,9 @@ test("importa la versione privacy del 3 ottobre 2026 con checksum verificabile",
     assert.equal(first.response.status, 200);
     assert.equal(second.response.status, 200);
     assert.equal(first.data.document.id, "privacy");
-    assert.equal(first.data.document.title, PRIVACY_DOCUMENT_SEED.title);
-    assert.equal(first.data.document.version.number, 1);
-    assert.equal(first.data.document.version.effectiveDate, "2026-10-03");
+    assert.equal(first.data.document.title, PRIVACY_DOCUMENT_V2_SEED.title);
+    assert.equal(first.data.document.version.number, 2);
+    assert.equal(first.data.document.version.effectiveDate, "2026-10-12");
     assert.equal(first.data.document.version.bodyHtml, version.bodyHtml);
     assert.equal(first.data.document.version.checksum, checksum);
     assert.equal(version.checksum, checksum);
@@ -107,7 +110,15 @@ test("importa la versione privacy del 3 ottobre 2026 con checksum verificabile",
     `).get().total, 1);
     assert.equal(env.DB.database.prepare(`
         SELECT COUNT(*) AS total FROM legal_document_versions
+    `).get().total, 2);
+    assert.equal(env.DB.database.prepare(`
+        SELECT COUNT(*) AS total FROM content_initializations
+        WHERE name = 'legal_privacy_v2'
     `).get().total, 1);
+    assert.equal(env.DB.database.prepare(`
+        SELECT body_html FROM legal_document_versions
+        WHERE id = 'privacy-2026-10-03'
+    `).get().body_html, PRIVACY_DOCUMENT_SEED.version.bodyHtml);
     assert.equal(env.DB.database.prepare(`
         SELECT COUNT(*) AS total FROM content_initializations
         WHERE name = 'legal_documents_v1'
@@ -165,7 +176,7 @@ test("la pagina conserva integralmente l'informativa statica come ripiego", asyn
     assert.ok(body);
     assert.equal(
         normalizeHtml(body),
-        normalizeHtml(PRIVACY_DOCUMENT_SEED.version.bodyHtml)
+        normalizeHtml(PRIVACY_DOCUMENT_V2_SEED.version.bodyHtml)
     );
     assert.match(html, /data-legal-title/u);
     assert.match(html, /data-legal-effective-date/u);
@@ -218,22 +229,22 @@ async function executeLoader(request) {
 
 test("il client applica soltanto contenuto D1 con checksum valido", async () => {
     const result = await executeLoader(async () => ({
-        document: PRIVACY_DOCUMENT_SEED
+        document: PRIVACY_DOCUMENT_V2_SEED
     }));
 
     assert.equal(
         result.target.innerHTML,
-        PRIVACY_DOCUMENT_SEED.version.bodyHtml
+        PRIVACY_DOCUMENT_V2_SEED.version.bodyHtml
     );
-    assert.equal(result.title.textContent, PRIVACY_DOCUMENT_SEED.title);
+    assert.equal(result.title.textContent, PRIVACY_DOCUMENT_V2_SEED.title);
     assert.equal(
         result.effectiveDate.textContent,
-        "Ultimo aggiornamento: 3 ottobre 2026"
+        "Ultimo aggiornamento: 12 ottobre 2026"
     );
     assert.equal(result.document.documentElement.dataset.legalDocumentSource, "d1");
     assert.equal(
         result.document.documentElement.dataset.legalDocumentChecksum,
-        PRIVACY_DOCUMENT_SEED.version.checksum
+        PRIVACY_DOCUMENT_V2_SEED.version.checksum
     );
     assert.equal(result.event.detail.source, "d1");
 });
@@ -245,9 +256,9 @@ test("il client mantiene il ripiego se API o checksum non sono validi", async ()
         },
         async () => ({
             document: {
-                ...PRIVACY_DOCUMENT_SEED,
+                ...PRIVACY_DOCUMENT_V2_SEED,
                 version: {
-                    ...PRIVACY_DOCUMENT_SEED.version,
+                    ...PRIVACY_DOCUMENT_V2_SEED.version,
                     checksum: "0".repeat(64)
                 }
             }
