@@ -50,8 +50,11 @@ async function checkStaticRoute(route) {
         const asset = await stat(assetPath);
         if (!asset.isFile()) continue;
         referencedBytes += asset.size;
-        if (/\.(?:js|mjs)$/i.test(reference) && asset.size > config.static.maxSingleScriptBytes) {
-            fail(`${route.id}: ${reference} pesa ${asset.size} B, limite script ${config.static.maxSingleScriptBytes} B`);
+        const scriptLimit = reference.startsWith("vendor/")
+            ? config.static.maxVendoredScriptBytes
+            : config.static.maxSingleScriptBytes;
+        if (/\.(?:js|mjs)$/i.test(reference) && asset.size > scriptLimit) {
+            fail(`${route.id}: ${reference} pesa ${asset.size} B, limite script ${scriptLimit} B`);
         }
         if (/\.css$/i.test(reference) && asset.size > config.static.maxSingleStylesheetBytes) {
             fail(`${route.id}: ${reference} pesa ${asset.size} B, limite CSS ${config.static.maxSingleStylesheetBytes} B`);

@@ -4,7 +4,7 @@ import { DatabaseSync } from "node:sqlite";
 import test from "node:test";
 
 import worker from "../src/index.js";
-import { PRIVACY_DOCUMENT_SEED } from "../src/legal-seed.js";
+import { PRIVACY_DOCUMENT_V2_SEED } from "../src/legal-seed.js";
 
 if (typeof crypto.subtle.timingSafeEqual !== "function") {
     crypto.subtle.timingSafeEqual = (first, second) =>
@@ -81,30 +81,30 @@ test("prepara e pubblica una nuova versione legale senza riscrivere la precedent
     const listed = await call(env, "/api/admin/cms/legal", { admin: true });
     assert.equal(denied.response.status, 401);
     assert.equal(listed.response.status, 200);
-    assert.equal(listed.data.documents[0].currentVersion, 1);
+    assert.equal(listed.data.documents[0].currentVersion, 2);
 
-    const bodyHtml = `${PRIVACY_DOCUMENT_SEED.version.bodyHtml}\n<p>Versione due.</p>`;
+    const bodyHtml = `${PRIVACY_DOCUMENT_V2_SEED.version.bodyHtml}\n<p>Versione tre.</p>`;
     const created = await call(env, "/api/admin/cms/legal/privacy/versions", {
         admin: true,
         method: "POST",
-        body: { effectiveDate: "2026-10-10", bodyHtml }
+        body: { effectiveDate: "2026-10-13", bodyHtml }
     });
     assert.equal(created.response.status, 201);
-    assert.equal(created.data.version.id, "privacy-v2");
+    assert.equal(created.data.version.id, "privacy-v3");
     assert.equal(created.data.version.status, "draft");
 
     const stillPublished = await call(env, "/api/public/legal/privacy");
-    assert.equal(stillPublished.data.document.version.number, 1);
+    assert.equal(stillPublished.data.document.version.number, 2);
     assert.equal(
         stillPublished.data.document.version.bodyHtml,
-        PRIVACY_DOCUMENT_SEED.version.bodyHtml
+        PRIVACY_DOCUMENT_V2_SEED.version.bodyHtml
     );
 
-    const saved = await call(env, "/api/admin/cms/legal/versions/privacy-v2", {
+    const saved = await call(env, "/api/admin/cms/legal/versions/privacy-v3", {
         admin: true,
         method: "PATCH",
         body: {
-            effectiveDate: "2026-10-11",
+            effectiveDate: "2026-10-14",
             bodyHtml: `${bodyHtml}\n<p>Correzione.</p>`,
             expectedChecksum: created.data.version.checksum,
             expectedEffectiveDate: created.data.version.effectiveDate
@@ -113,11 +113,11 @@ test("prepara e pubblica una nuova versione legale senza riscrivere la precedent
     assert.equal(saved.response.status, 200);
     assert.notEqual(saved.data.version.checksum, created.data.version.checksum);
 
-    const stale = await call(env, "/api/admin/cms/legal/versions/privacy-v2", {
+    const stale = await call(env, "/api/admin/cms/legal/versions/privacy-v3", {
         admin: true,
         method: "PATCH",
         body: {
-            effectiveDate: "2026-10-12",
+            effectiveDate: "2026-10-15",
             bodyHtml,
             expectedChecksum: created.data.version.checksum,
             expectedEffectiveDate: created.data.version.effectiveDate
@@ -127,34 +127,34 @@ test("prepara e pubblica una nuova versione legale senza riscrivere la precedent
 
     const published = await call(
         env,
-        "/api/admin/cms/legal/versions/privacy-v2/publish",
+        "/api/admin/cms/legal/versions/privacy-v3/publish",
         { admin: true, method: "POST", body: {
             expectedChecksum: saved.data.version.checksum,
             expectedEffectiveDate: saved.data.version.effectiveDate
         } }
     );
     assert.equal(published.response.status, 200);
-    assert.equal(published.data.document.currentVersion, 2);
+    assert.equal(published.data.document.currentVersion, 3);
     assert.equal(published.data.version.status, "published");
 
     const publicVersion = await call(env, "/api/public/legal/privacy");
-    assert.equal(publicVersion.data.document.version.number, 2);
-    assert.equal(publicVersion.data.document.version.effectiveDate, "2026-10-11");
+    assert.equal(publicVersion.data.document.version.number, 3);
+    assert.equal(publicVersion.data.document.version.effectiveDate, "2026-10-14");
     assert.match(publicVersion.data.document.version.bodyHtml, /Correzione/u);
     assert.equal(env.DB.database.prepare(`
         SELECT body_html FROM legal_document_versions
-        WHERE id = 'privacy-2026-10-03'
-    `).get().body_html, PRIVACY_DOCUMENT_SEED.version.bodyHtml);
+        WHERE id = 'privacy-2026-10-12'
+    `).get().body_html, PRIVACY_DOCUMENT_V2_SEED.version.bodyHtml);
     assert.equal(env.DB.database.prepare(`
         SELECT COUNT(*) AS total FROM content_revisions
-        WHERE entity_type = 'legal_document_version' AND entity_id = 'privacy-v2'
+        WHERE entity_type = 'legal_document_version' AND entity_id = 'privacy-v3'
     `).get().total, 3);
 
-    const immutable = await call(env, "/api/admin/cms/legal/versions/privacy-v2", {
+    const immutable = await call(env, "/api/admin/cms/legal/versions/privacy-v3", {
         admin: true,
         method: "PATCH",
         body: {
-            effectiveDate: "2026-10-12",
+            effectiveDate: "2026-10-15",
             bodyHtml,
             expectedChecksum: saved.data.version.checksum,
             expectedEffectiveDate: saved.data.version.effectiveDate
@@ -169,20 +169,20 @@ test("rifiuta bozze legali pericolose e una seconda bozza simultanea", async () 
     const invalid = await call(env, "/api/admin/cms/legal/privacy/versions", {
         admin: true,
         method: "POST",
-        body: { effectiveDate: "2026-10-10", bodyHtml: "<script>alert(1)</script>" }
+        body: { effectiveDate: "2026-10-13", bodyHtml: "<script>alert(1)</script>" }
     });
     assert.equal(invalid.response.status, 400);
 
     const created = await call(env, "/api/admin/cms/legal/privacy/versions", {
         admin: true,
         method: "POST",
-        body: { effectiveDate: "2026-10-10", bodyHtml: "<section><p>Bozza</p></section>" }
+        body: { effectiveDate: "2026-10-13", bodyHtml: "<section><p>Bozza</p></section>" }
     });
     assert.equal(created.response.status, 201);
     const second = await call(env, "/api/admin/cms/legal/privacy/versions", {
         admin: true,
         method: "POST",
-        body: { effectiveDate: "2026-10-11", bodyHtml: "<p>Altra</p>" }
+        body: { effectiveDate: "2026-10-14", bodyHtml: "<p>Altra</p>" }
     });
     assert.equal(second.response.status, 409);
 });

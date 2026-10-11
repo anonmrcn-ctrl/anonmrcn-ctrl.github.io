@@ -133,7 +133,7 @@ if (import.meta.url === invoked) {
     } else {
         console.log(result.reports
             ? `Rapporti organici validi: ${result.reports}.`
-            : "Monitoraggio organico pronto; nessun rapporto reale finché Search Console non è accessibile."
+            : "Monitoraggio organico pronto; proprietà verificata e in attesa di dati reali sufficienti."
         );
     }
 }

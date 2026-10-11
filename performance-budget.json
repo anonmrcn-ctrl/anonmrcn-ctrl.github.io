@@ -17,8 +17,9 @@
   },
   "static": {
     "maxHtmlBytes": 65536,
-    "maxReferencedLocalBytes": 524288,
+    "maxReferencedLocalBytes": 557056,
     "maxSingleScriptBytes": 98304,
+    "maxVendoredScriptBytes": 153600,
     "maxSingleStylesheetBytes": 102400
   }
 }

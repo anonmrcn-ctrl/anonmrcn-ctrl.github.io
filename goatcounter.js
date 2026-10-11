@@ -25,8 +25,6 @@
 			r: (vars.referrer === undefined ? goatcounter.referrer : vars.referrer),
 			t: (vars.title    === undefined ? goatcounter.title    : vars.title),
 			e: !!(vars.event || goatcounter.event),
-			s: window.screen.width,
-			b: is_bot(),
 			q: '',
 		}
 

@@ -10,6 +10,11 @@
     const elements = {
         content: document.querySelector("[data-spazio-personale-contenuto]"),
         identity: document.getElementById("spazioPersonaleIdentita"),
+        exportData: document.getElementById("esportaDatiButton"),
+        exportStatus: document.getElementById("esportaDatiStatus"),
+        deleteConfirmation: document.getElementById("eliminaAccountConferma"),
+        deleteAccount: document.getElementById("eliminaAccountButton"),
+        deleteStatus: document.getElementById("eliminaAccountStatus"),
         map: document.getElementById("spazioPersonaleMap"),
         newMessage: document.getElementById("nuovoMessaggioButton"),
         recipientPanel: document.getElementById("destinatariPanel"),
@@ -71,6 +76,9 @@
         elements.messageText.addEventListener("input", updateMessageCounter);
         elements.messageForm.addEventListener("change", syncArchiveConsent);
         elements.messageForm.addEventListener("submit", sendMessage);
+        elements.exportData.addEventListener("click", exportPersonalData);
+        elements.deleteConfirmation.addEventListener("input", syncDeleteConfirmation);
+        elements.deleteAccount.addEventListener("click", deleteAccount);
 
         document.addEventListener("keydown", (event) => {
             if (event.key === "Escape" && !elements.messageOverlay.hidden) {
@@ -102,6 +110,10 @@
     async function unlockSpace(location) {
         sessionLocation = location;
         elements.identity.textContent = `Accesso riconosciuto: ${location.username || location.address}`;
+        elements.exportStatus.textContent = "";
+        elements.deleteStatus.textContent = "";
+        elements.deleteConfirmation.value = "";
+        syncDeleteConfirmation();
         ensureMap();
         map.invalidateSize({ pan: false });
         await loadNetwork();
@@ -117,6 +129,10 @@
         elements.recipientPanel.hidden = true;
         elements.newMessage.setAttribute("aria-expanded", "false");
         elements.messageOverlay.hidden = true;
+        elements.exportData.disabled = false;
+        elements.deleteConfirmation.value = "";
+        elements.deleteStatus.textContent = "";
+        syncDeleteConfirmation();
         document.body.classList.remove("poesia-aperta");
         showMessage(elements.inbox, "Completa l’accesso per leggere i messaggi.");
     }
@@ -612,5 +628,90 @@
         const paragraph = document.createElement("p");
         paragraph.textContent = message;
         container.replaceChildren(paragraph);
+    }
+
+    async function exportPersonalData() {
+        if (!sessionToken || !sessionLocation) {
+            return;
+        }
+
+        elements.exportData.disabled = true;
+        elements.exportStatus.textContent = "Preparazione del file…";
+
+        try {
+            const response = await fetch(`${apiClient.baseUrl}/api/account/export`, {
+                headers: {
+                    "Accept": "application/json",
+                    "Authorization": `Bearer ${sessionToken}`
+                }
+            });
+
+            if (response.status === 401) {
+                sessionStore?.clear();
+                document.dispatchEvent(new CustomEvent("nnmrcn:sessioninvalid"));
+                lockSpace();
+                return;
+            }
+
+            if (!response.ok) {
+                throw new Error("Non è stato possibile preparare l’esportazione.");
+            }
+
+            const blob = await response.blob();
+            const link = document.createElement("a");
+            const fileName = contentDispositionFileName(
+                response.headers.get("Content-Disposition")
+            ) || `nnmrcn-dati-location-${sessionLocation.id}.json`;
+            const objectUrl = URL.createObjectURL(blob);
+
+            link.href = objectUrl;
+            link.download = fileName;
+            link.hidden = true;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            URL.revokeObjectURL(objectUrl);
+            elements.exportStatus.textContent = "Esportazione scaricata. Il file contiene soltanto i dati della tua location.";
+        } catch (error) {
+            elements.exportStatus.textContent = error.message || "Non è stato possibile scaricare i dati.";
+        } finally {
+            elements.exportData.disabled = false;
+        }
+    }
+
+    function contentDispositionFileName(value) {
+        return /filename="([^"]+)"/u.exec(String(value || ""))?.[1] || "";
+    }
+
+    function syncDeleteConfirmation() {
+        elements.deleteAccount.disabled =
+            elements.deleteConfirmation.value !== "ELIMINA I MIEI DATI";
+    }
+
+    async function deleteAccount() {
+        if (elements.deleteConfirmation.value !== "ELIMINA I MIEI DATI") {
+            syncDeleteConfirmation();
+            return;
+        }
+
+        elements.deleteAccount.disabled = true;
+        elements.deleteConfirmation.disabled = true;
+        elements.deleteStatus.textContent = "Eliminazione in corso…";
+
+        try {
+            await api("/api/account", {
+                method: "DELETE",
+                body: JSON.stringify({ confirmation: "ELIMINA I MIEI DATI" })
+            });
+            sessionStore?.clear();
+            elements.deleteStatus.textContent = "Account e dati eliminati. L’identificativo storico non verrà riutilizzato.";
+            window.setTimeout(() => window.location.assign("./index.html"), 1200);
+        } catch (error) {
+            if (error.status !== 401) {
+                elements.deleteStatus.textContent = error.message || "Non è stato possibile eliminare l’account.";
+                elements.deleteConfirmation.disabled = false;
+                syncDeleteConfirmation();
+            }
+        }
     }
 })();

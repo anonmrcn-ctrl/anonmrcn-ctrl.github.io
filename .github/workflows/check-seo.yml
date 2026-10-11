@@ -30,9 +30,10 @@ jobs:
           node scripts/check-seo.mjs
           node scripts/check-editorial-program.mjs
           node scripts/check-organic-report.mjs
+          node scripts/check-privacy.mjs
 
-      - name: Prova la generazione delle pagine pubbliche
-        run: node --test scripts/public-pages.test.mjs scripts/organic-report.test.mjs scripts/admin-ux.test.mjs
+      - name: Prova pagine pubbliche, pannello e privacy
+        run: node --test scripts/public-pages.test.mjs scripts/organic-report.test.mjs scripts/admin-ux.test.mjs scripts/privacy-telemetry.test.mjs
 
       - name: Controlla il confine contenuti-software
         run: node scripts/check-content-boundary.mjs

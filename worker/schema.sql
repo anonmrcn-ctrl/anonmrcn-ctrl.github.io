@@ -15,6 +15,7 @@ CREATE TABLE IF NOT EXISTS locations (
     privacy_safe INTEGER NOT NULL DEFAULT 0
         CHECK (privacy_safe IN (0, 1)),
     location_consent_at INTEGER,
+    deleted_at INTEGER,
     password_lookup TEXT NOT NULL UNIQUE,
     password_salt TEXT NOT NULL,
     password_hash TEXT NOT NULL
@@ -22,7 +23,10 @@ CREATE TABLE IF NOT EXISTS locations (
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_locations_street_order
 ON locations(street_name, street_order)
-WHERE street_name <> '' AND street_order > 0;
+WHERE street_name <> '' AND street_order > 0 AND deleted_at IS NULL;
+
+CREATE INDEX IF NOT EXISTS idx_locations_active
+ON locations(deleted_at, id);
 
 CREATE TRIGGER IF NOT EXISTS locations_private_by_default
 AFTER INSERT ON locations

@@ -67,7 +67,7 @@ cartografici, revisioni, permalink e documenti legali. Le revisioni sono
 append-only, il percorso di un permalink non è riscrivibile e una versione
 legale pubblicata non può essere modificata o eliminata. Il primo health check
 dopo il deploy installa in modo idempotente queste strutture e restituisce
-`"contentSchema": 4`.
+`"contentSchema": 5` e `"privacyVersion": "2026-10-12"`.
 
 La migrazione non distruttiva `0014_source_publication_state.sql` aggiunge alle
 fonti lo stesso ciclo `draft`/`published`/`archived` usato dagli altri contenuti.

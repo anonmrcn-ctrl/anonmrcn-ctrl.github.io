@@ -24,10 +24,6 @@ async function auditViewport(name, viewport) {
     });
     const page = await context.newPage();
 
-    await page.route("https://unpkg.com/**", (route) => route.fulfill({
-        contentType: "application/javascript",
-        body: "window.L = window.L || {};"
-    }));
     await page.route(/\/api\/admin\/auth\/status(?:\?.*)?$/u, (route) =>
         route.fulfill({
             contentType: "application/json",

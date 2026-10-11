@@ -466,6 +466,51 @@ test("la migrazione 0017 separa identità, passkey, sfide e sessioni", async () 
     );
 });
 
+test("la migrazione 0018 preserva gli ID cancellati senza bloccare le location attive", async () => {
+    const database = new DatabaseSync(":memory:");
+    database.exec(`
+        CREATE TABLE locations (
+            id INTEGER PRIMARY KEY,
+            address TEXT NOT NULL UNIQUE,
+            street_name TEXT NOT NULL DEFAULT '',
+            street_order INTEGER NOT NULL DEFAULT 0
+        );
+        CREATE UNIQUE INDEX idx_locations_street_order
+        ON locations(street_name, street_order)
+        WHERE street_name <> '' AND street_order > 0;
+        INSERT INTO locations (id, address, street_name, street_order)
+        VALUES (1, 'Via Test 1', 'Via Test', 1);
+    `);
+    const migration = await readFile(
+        new URL("../migrations/0018_privacy_account_rights.sql", import.meta.url),
+        "utf8"
+    );
+    database.exec(migration);
+    database.prepare(`
+        UPDATE locations
+        SET street_name = '', street_order = 0, deleted_at = ?
+        WHERE id = 1
+    `).run(Date.now());
+    database.prepare(`
+        INSERT INTO locations (id, address, street_name, street_order)
+        VALUES (2, 'Via Test nuova 1', 'Via Test', 1)
+    `).run();
+
+    assert.equal(database.prepare(`
+        SELECT deleted_at IS NOT NULL AS deleted FROM locations WHERE id = 1
+    `).get().deleted, 1);
+    assert.equal(database.prepare(`
+        SELECT COUNT(*) AS total FROM locations WHERE deleted_at IS NULL
+    `).get().total, 1);
+    assert.match(
+        database.prepare(`
+            SELECT sql FROM sqlite_master
+            WHERE type = 'index' AND name = 'idx_locations_street_order'
+        `).get().sql,
+        /deleted_at IS NULL/u
+    );
+});
+
 test("l’health check aggiorna una fondazione 0013 prima di creare indici nuovi", async () => {
     const db = new D1DatabaseMock();
     const foundation = await readFile(
@@ -516,6 +561,7 @@ test("l’health check installa la fondazione prima di dichiarare il servizio sa
 
     assert.equal(response.status, 200);
     assert.equal(data.ok, true);
-    assert.equal(data.contentSchema, 4);
+    assert.equal(data.contentSchema, 5);
+    assert.equal(data.privacyVersion, "2026-10-12");
     assert.deepEqual(listCmsTables(db.database), EXPECTED_TABLES);
 });

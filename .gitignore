@@ -12,3 +12,4 @@ password_locations_nnmrcn*.txt
 .wrangler/
 node_modules/
 admin-ui-reports/
+privacy-ui-reports/

@@ -6,8 +6,10 @@
     const settingsManager = window.NNMRCN_SETTINGS;
     const SUBMISSIONS_KEY = "nnmrcn_memorie_inviate_v1";
     const MAX_MEDIA_BYTES = 900000;
-    const LEAFLET_URL = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
-    const LEAFLET_INTEGRITY = "sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH";
+    const LEAFLET_URL = new URL(
+        "./vendor/leaflet-1.9.4.js",
+        document.baseURI
+    ).href;
 
     const elements = {
         map: document.getElementById("memorieMap"),
@@ -78,8 +80,6 @@
         leafletPromise = new Promise((resolve, reject) => {
             const script = document.createElement("script");
             script.src = LEAFLET_URL;
-            script.integrity = LEAFLET_INTEGRITY;
-            script.crossOrigin = "anonymous";
             script.addEventListener("load", () => resolve(window.L), { once: true });
             script.addEventListener("error", () => reject(new Error("Leaflet non disponibile")), { once: true });
             document.head.appendChild(script);

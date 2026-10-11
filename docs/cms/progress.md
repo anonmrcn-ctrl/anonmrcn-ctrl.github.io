@@ -23,7 +23,7 @@ affiancare il primo passaggio tecnico incompleto, ma non sostituirlo.
 | 9 | Prestazioni e Core Web Vitals | Completo | Baseline, interventi, dieci audit conformi su `main` e verifiche HTTP del sito e del Worker sono registrati in `docs/performance/baseline-2026-10-11.md`; il primo punto incompleto è il 10 |
 | 10 | Programma editoriale e monitoraggio organico | In corso | Programma, collegamenti contestuali e strumenti per rapporti aggregati sono completi; la prima baseline numerica resta in attesa dell'accesso a Search Console |
 | 11 | Amministrazione più user friendly | Completo | Navigazione per attività, feedback comprensibili, protezione delle modifiche e audit Chrome a 375/1440 px sono documentati in `11-admin-usability.md`; i run SEO `38154750211` e prestazioni/UX `38154750212` sono riusciti |
-| 12 | Rafforzamento della privacy | Da iniziare | Esistono informativa, filtri e strumenti rispettosi della privacy; manca un audit complessivo con minimizzazione, retention, consenso, sicurezza dei metadati e diagnostica verificabile |
+| 12 | Rafforzamento della privacy | In corso | Inventario, retention, telemetria opt-in e librerie locali sono verificabili; resta da chiudere l'unità 12.4 sui diritti self-service e la verifica finale |
 
 ## Traguardi SEO trasversali
 
@@ -155,7 +155,7 @@ retention e recupero senza modificare contenuti o media, è in
 |---:|---|---|---|
 | 10.1 | Cluster, calendario e prove editoriali | Completa | `editorial-program.json` e `docs/seo/editorial-program.md` organizzano sei attività in tre cluster, distinguono fonte, testimonianza e interpretazione e applicano consenso e minimizzazione. `check-editorial-program.mjs` verifica copertura delle cinque Voci, calendario, URL e relazioni senza usare dati personali |
 | 10.2 | Collegamenti contestuali pubblicati | Completa | `generate-public-pages.mjs` rende la rete definita dal programma come navigazione «Approfondisci nel territorio» nelle cinque Voci autonome. Il controllo editoriale legge l'HTML generato e impedisce Voci prive di relazioni o collegamenti non pubblicati, senza cambiare canonical, sitemap o permalink |
-| 10.3 | Rapporto organico trimestrale | In attesa di accesso | `organic-monitoring.json`, `docs/seo/organic-monitoring.md` e `check-organic-report.mjs` definiscono confronto corrente/baseline, soglia minima di aggregazione e rifiuto di query, URL e identificativi; i test provano accettazione e blocchi. La prima baseline e il primo rapporto non possono essere compilati senza accesso alla proprietà Search Console e non vengono inventati |
+| 10.3 | Rapporto organico trimestrale | In raccolta dati | `organic-monitoring.json`, `docs/seo/organic-monitoring.md` e `check-organic-report.mjs` definiscono confronto corrente/baseline, soglia minima di aggregazione e rifiuto di query, URL e identificativi. L’11 ottobre 2026 la proprietà URL-prefix è stata verificata tramite PR #25 e la sitemap è stata inviata; la prima baseline e il primo rapporto attendono ora soltanto dati reali sufficienti e non vengono inventati |
 
 ## Punto 11 — ordine vincolante
 
@@ -164,6 +164,15 @@ retention e recupero senza modificare contenuti o media, è in
 | 11.1 | Gerarchia e navigazione per attività | Completa | `admin.html` presenta dopo l'accesso un indice con otto attività espresse in linguaggio non tecnico e destinazioni stabili. `style.css` garantisce target tattili, stato focus e una colonna su smartphone; `admin-ux.test.mjs` verifica collegamenti, ID univoci, titoli associati, responsive e `noindex`. Il controllo completo dell'11 ottobre 2026 supera 130 test, tutti i controlli statici e la build Worker dry-run |
 | 11.2 | Feedback, salvataggi ed errori | Completa | `admin.js` assegna stati accessibili a tutte le regioni live, rende comprensibili sessione scaduta, conflitto, limiti e indisponibilità, segnala i moduli modificati e avvisa prima di abbandonarli. Una nuova autenticazione conserva i campi non salvati invece di ricaricare automaticamente i dati; `admin-ux.test.mjs` verifica queste garanzie e la suite completa supera 132 test |
 | 11.3 | Audit end-to-end accessibile e responsive | Completa | `admin-ui.e2e.mjs` prova con Chrome smartphone e desktop, assenza di overflow, etichette, target da 44 px, tastiera e ciclo di feedback senza dati di produzione. Il run `38154750212` è riuscito e conserva le schermate nell'artefatto `11708057414`; 133 test locali, controlli statici, build Worker dry-run e run SEO `38154750211` sono verdi. La verifica della stessa versione pubblicata resta registrata prima di avanzare al punto 12 |
+
+## Punto 12 — ordine vincolante
+
+| Ordine | Unità | Stato | Criterio e prova |
+|---:|---|---|---|
+| 12.1 | Inventario e audit iniziale | Completa | `privacy.config.json`, `12-privacy-hardening.md` e `check-privacy.mjs` censiscono otto classi di dati, sei servizi esterni, retention, esposizione e quattro rilievi senza includere valori reali o segreti. Il controllo prova anche `noindex`, assenza dalla sitemap, log senza query e retention dei contatti |
+| 12.2 | Minimizzazione e retention | Completa | Il job periodico elimina sessioni location, sindaco e amministrative scadute; gli HMAC antiabuso delle Memorie vengono svuotati dopo 24 ore anche prima di un nuovo invio. `privacy-retention.test.mjs` distingue record scaduti e attivi senza alterare contributi, media o token di ritiro |
+| 12.3 | Consenso, telemetria e servizi esterni | Completa | `privacy-telemetry.js` rende le statistiche opt-in e revocabili, limita GoatCounter al solo percorso e condivide il consenso con l'analytics Cloudflare facoltativo. Le aree protette non caricano telemetria; Leaflet e PMTiles sono serviti da `vendor/` con licenze e SHA-256 verificati |
+| 12.4 | Esportazione, cancellazione e verifica finale | In verifica | `GET /api/account/export`, `DELETE /api/account`, la migrazione `0018`, la sezione «I tuoi dati» e l’informativa privacy v2 implementano export `no-store`, cancellazione atomica e tombstone anonimo che preserva l’ID. `account-privacy.test.mjs` e 143 test complessivi provano assenza di dati di terzi, revoca delle sessioni, esclusione dalle API, schema 5 e versioni legali append-only; restano CI e prova pubblicata |
 
 ## Punti 4–12 — criteri di completamento
 

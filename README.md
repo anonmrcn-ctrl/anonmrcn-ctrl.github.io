@@ -34,6 +34,7 @@ Sito GitHub Pages del progetto anonMrcn.
 - `taccuino.js` — salvataggio locale condiviso tra le pagine
 - `taccuino-pagina.js` — visualizzazione ed esportazione del taccuino
 - `analytics.js` — attivazione facoltativa di Cloudflare Web Analytics
+- `privacy-telemetry.js` — consenso locale e revocabile alle statistiche aggregate
 - `goatcounter.js` — copia locale dello script di conteggio visite GoatCounter
 - `percorsi.js` — percorsi, luoghi rilevanti e livelli paesaggistici
 - `marcon-da-sud.js` — percorso aggiuntivo Marcon da sud
@@ -57,15 +58,17 @@ Sito GitHub Pages del progetto anonMrcn.
 Il backend Cloudflare Worker è nella cartella `worker/`.
 Le istruzioni di configurazione sono in `worker/README.md`.
 
-Cloudflare Web Analytics viene caricato soltanto quando
-`NNMRCN_ANALYTICS_TOKEN` contiene il token pubblico assegnato al sito. Il valore
-si imposta in `config.js`; con il campo vuoto non viene eseguita alcuna richiesta
-di analisi.
+Le statistiche sono disattivate per impostazione predefinita. Soltanto dopo la
+scelta esplicita «Consenti statistiche aggregate», le pagine pubbliche caricano
+la copia locale di `goatcounter.js` e inviano a GoatCounter il solo percorso,
+senza query, frammento, referrer, titolo o eventi di clic. La preferenza resta in
+`localStorage`, è revocabile dal pulsante «Privacy e statistiche» e non viene
+applicata ad accesso, amministrazione, Spazio personale o Taccuino. Anche
+Cloudflare Web Analytics richiede lo stesso consenso oltre al token pubblico;
+con `NNMRCN_ANALYTICS_TOKEN` vuoto non viene caricato.
 
-Le pagine pubbliche caricano localmente `goatcounter.js` e inviano il conteggio
-a `anonmrcn.goatcounter.com`. Lo script esclude localhost e le anteprime caricate
-negli iframe del tour; la pagina amministrativa e la pagina di accesso con token
-non lo includono. I parametri URL non vengono inviati al contatore.
+Leaflet e PMTiles sono serviti dalla cartella `vendor/`, con versione, licenza e
+checksum registrati, così il browser non contatta unpkg per scaricare codice.
 
 La richiesta di accesso richiede il consenso alla `privacy.html`. Indirizzi e
 coordinate vengono minimizzati prima della memorizzazione permanente; i moduli
