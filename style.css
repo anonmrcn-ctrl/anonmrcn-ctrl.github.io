@@ -2869,6 +2869,70 @@ html[data-theme="dark"] .leaflet-control-layers label {
     opacity: 0.55;
 }
 
+.admin-sezioni {
+    display: grid;
+    gap: 1rem;
+    margin: 0 0 2.5rem;
+    padding: 1.25rem;
+    border: 1px solid var(--line);
+    background: color-mix(in srgb, var(--paper) 94%, var(--brand-yellow));
+}
+
+.admin-sezioni h2,
+.admin-sezioni p {
+    margin: 0;
+}
+
+.admin-sezioni h2 {
+    font-size: 1.2rem;
+}
+
+.admin-sezioni p {
+    max-width: 65ch;
+    margin-top: 0.35rem;
+    font-size: 0.86rem;
+    line-height: 1.5;
+}
+
+.admin-sezioni ul {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.55rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.admin-sezioni a {
+    display: flex;
+    min-height: 2.75rem;
+    align-items: center;
+    padding: 0.65rem 0.8rem;
+    border: 1px solid var(--ink);
+    color: var(--ink);
+    font-size: 0.84rem;
+    font-weight: 700;
+    line-height: 1.25;
+    text-decoration: none;
+}
+
+.admin-sezioni a:hover,
+.admin-sezioni a:focus-visible {
+    outline: none;
+    background: var(--ink);
+    color: var(--paper);
+}
+
+.admin-panel > section[id] {
+    scroll-margin-top: 1rem;
+}
+
+@media (max-width: 560px) {
+    .admin-sezioni ul {
+        grid-template-columns: 1fr;
+    }
+}
+
 .admin-voci-mappa {
     margin: 0 0 3rem;
     padding: 1.5rem 0 2rem;

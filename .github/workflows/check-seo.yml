@@ -32,7 +32,7 @@ jobs:
           node scripts/check-organic-report.mjs
 
       - name: Prova la generazione delle pagine pubbliche
-        run: node --test scripts/public-pages.test.mjs scripts/organic-report.test.mjs
+        run: node --test scripts/public-pages.test.mjs scripts/organic-report.test.mjs scripts/admin-ux.test.mjs
 
       - name: Controlla il confine contenuti-software
         run: node scripts/check-content-boundary.mjs
