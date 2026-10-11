@@ -244,7 +244,7 @@ test("il seed D1 coincide integralmente con la copia HTML di ripiego", async () 
     assert.deepEqual(extractStaticPoem(html), seedShape());
     assert.match(
         html,
-        /<script(?: defer)? src="\.\/api\.js"><\/script>[\s\S]*?<script(?: defer)? src="\.\/poem-content\.js\?v=20261008-poem1"><\/script>/u
+        /<script(?: defer)? src="\.\/api\.js"><\/script>[\s\S]*?<script(?: defer)? src="\.\/poem-content\.js\?v=20261011-performance1"><\/script>/u
     );
 });
 
@@ -392,4 +392,15 @@ test("metrica e interazioni attendono il caricamento del contenuto", async () =>
     assert.match(verses, /NNMRCN_POEM_READY/u);
     assert.match(verses, /NNMRCN_POEM_RENDERED/u);
     assert.match(interactions, /NNMRCN_POEM_RENDERED/u);
+});
+
+test("il client non ricostruisce i 121 versi quando D1 coincide con il ripiego", async () => {
+    const source = await readFile(
+        new URL("../../poem-content.js", import.meta.url),
+        "utf8"
+    );
+
+    assert.match(source, /if \(!sameAsStaticPoem\(poem\)\) \{/u);
+    assert.match(source, /poemShapeFromData/u);
+    assert.match(source, /poemShapeFromDocument/u);
 });
