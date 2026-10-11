@@ -59,10 +59,16 @@ test("il logo delle schede luogo riserva lo spazio prima del download", async ()
 test("l'indice Voci è leggibile prima della risposta D1 e non viene ridisegnato se invariato", async () => {
     const html = await readFile(resolve(root, "voci.html"), "utf8");
     const script = await readFile(resolve(root, "voci.js"), "utf8");
+    const loader = await readFile(resolve(root, "voci-loader.js"), "utf8");
     const generator = await readFile(resolve(root, "scripts/generate-public-pages.mjs"), "utf8");
     assert.match(html, /<!-- VOCI_FALLBACK_START -->[\s\S]+data-wiki-slug="zero"[\s\S]+<!-- VOCI_FALLBACK_END -->/);
     assert.doesNotMatch(html, /id="vociStato"[^>]*>Caricamento…</);
     assert.match(script, /let publicEntries = readStaticPublicEntries\(\)/);
     assert.match(script, /publicIndexSignature\(freshEntries\) !== staticSignature/);
+    assert.match(html, /src="\.\/voci-loader\.js\?v=20261011-performance1"/);
+    assert.doesNotMatch(html, /<script[^>]+src="\.\/voci\.js/);
+    assert.match(loader, /sessionStorage\.getItem\(ADMIN_SESSION_KEY\)/);
+    assert.match(loader, /\["focus", "pointerdown", "keydown"\]/);
+    assert.match(loader, /\.\/voci\.js\?v=20261011-performance1/);
     assert.match(generator, /updateWikiCollectionFallback\(root, wikis\)/);
 });

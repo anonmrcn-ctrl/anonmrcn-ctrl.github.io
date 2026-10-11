@@ -166,6 +166,9 @@
         });
 
     updateBodyCounter();
+    if (elements.search.value) {
+        renderPublicIndex();
+    }
     loadPublicEntries();
 
     if (sessionStorage.getItem(ADMIN_SESSION_KEY)) {
