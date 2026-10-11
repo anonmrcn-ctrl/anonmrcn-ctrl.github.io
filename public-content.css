@@ -35,6 +35,28 @@
     margin-block: 2rem 0;
 }
 
+.contenuto-statico-correlati {
+    margin-block: 2rem 1rem;
+    padding: 1rem 1.1rem;
+    border: 1px solid rgb(20 33 31 / 18%);
+    border-radius: 0.75rem;
+    background: rgb(255 255 255 / 55%);
+}
+
+.contenuto-statico-correlati h2 {
+    margin-block: 0 0.65rem;
+    font-size: 1.1rem;
+}
+
+.contenuto-statico-correlati ul {
+    margin: 0;
+    padding-inline-start: 1.25rem;
+}
+
+.contenuto-statico-correlati li + li {
+    margin-top: 0.4rem;
+}
+
 @media (max-width: 40rem) {
     .contenuto-statico {
         width: min(100% - 1rem, 58rem);

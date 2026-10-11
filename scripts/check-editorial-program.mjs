@@ -89,6 +89,17 @@ for (const relationship of program.relationships || []) {
     if (relationshipDegree.has(relationship.to)) {
         relationshipDegree.set(relationship.to, relationshipDegree.get(relationship.to) + 1);
     }
+
+    if (wikis.has(relationship.from) && wikis.has(relationship.to)) {
+        const manifestEntry = (manifest.wiki || []).find((entry) =>
+            entry.path === relationship.from
+        );
+        const html = await readFile(path.join(root, manifestEntry.file), "utf8");
+        const href = `href="${relationship.to}"`;
+        if (!html.includes(href) || !html.includes("contenuto-statico-correlati")) {
+            fail(`collegamento contestuale non pubblicato: ${relationship.from} → ${relationship.to}`);
+        }
+    }
 }
 for (const [wikiPath, degree] of relationshipDegree) {
     if (!degree) fail(`Voce isolata dal grafo editoriale: ${wikiPath}`);

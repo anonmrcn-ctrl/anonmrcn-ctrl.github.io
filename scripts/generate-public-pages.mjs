@@ -449,7 +449,7 @@ function pageShell({
     <link rel="icon" href="/favicon.ico?v=logo3" sizes="any">
     <link rel="stylesheet" href="/style.css?v=20261009-admin-actions1">
     <link rel="stylesheet" href="/${stylesheet}">
-    <link rel="stylesheet" href="/public-content.css?v=20261009-permalink1">
+    <link rel="stylesheet" href="/public-content.css?v=20261011-editorial1">
     <script type="application/ld+json">${safeJson(jsonLd)}</script>
 </head>
 ${body}
@@ -477,6 +477,10 @@ export function renderWikiPage(entry, wikis, options) {
         ? `<p class="voce-sommario">${renderInline(entry.summary, citations, wikis)}</p>`
         : "";
     const body = renderWikiBody(entry, wikis, citations, options.apiBase);
+    const related = renderEditorialRelationships(
+        pathName,
+        options.relationships || []
+    );
     const updated = Number(entry.updatedAt) > 0
         ? `<p class="voce-metadati">Ultima modifica: <time datetime="${new Date(Number(entry.updatedAt)).toISOString()}">${new Intl.DateTimeFormat("it-IT", { dateStyle: "long" }).format(new Date(Number(entry.updatedAt)))}</time></p>`
         : "";
@@ -517,6 +521,7 @@ export function renderWikiPage(entry, wikis, options) {
             ${summary}
             <div class="voce-corpo">${body}</div>
             ${renderReferences(citations)}
+            ${related}
             ${updated}
         </article>
         <nav class="contenuto-statico-azioni" aria-label="Continua la navigazione"><a href="/voci.html">Tutte le Voci</a><a href="/progetto.html#map">Esplora la mappa</a></nav>
@@ -654,6 +659,20 @@ function manifestEntry(entry, file, pathName, title, description) {
     };
 }
 
+export function renderEditorialRelationships(pathName, relationships = []) {
+    const links = relationships.filter((relationship) =>
+        relationship.from === pathName
+    );
+
+    if (!links.length) {
+        return "";
+    }
+
+    return `<nav class="contenuto-statico-correlati" aria-labelledby="approfondisci-territorio"><h2 id="approfondisci-territorio">Approfondisci nel territorio</h2><ul>${links.map((relationship) =>
+        `<li><a href="${escapeHtml(relationship.to)}">${escapeHtml(relationship.label)}</a></li>`
+    ).join("")}</ul></nav>`;
+}
+
 function sitemapXml(siteOrigin, staticPages, generatedPages) {
     const items = [
         ...staticPages.map((page) => ({ path: page.path, updatedAt: 0 })),
@@ -669,7 +688,10 @@ function sitemapXml(siteOrigin, staticPages, generatedPages) {
 }
 
 export async function generatePublicPages({ root, apiBase = DEFAULT_API_BASE }) {
-    const config = JSON.parse(await readFile(path.join(root, "seo.config.json"), "utf8"));
+    const [config, editorialProgram] = await Promise.all([
+        readFile(path.join(root, "seo.config.json"), "utf8").then(JSON.parse),
+        readFile(path.join(root, "editorial-program.json"), "utf8").then(JSON.parse)
+    ]);
     const normalizedApiBase = String(apiBase).replace(/\/+$/u, "");
     const [wikiList, mapList] = await Promise.all([
         fetchJson(normalizedApiBase, "/api/public/wiki"),
@@ -692,7 +714,8 @@ export async function generatePublicPages({ root, apiBase = DEFAULT_API_BASE }) 
     const options = {
         apiBase: normalizedApiBase,
         siteOrigin: config.siteOrigin,
-        defaultImage: config.defaultImage
+        defaultImage: config.defaultImage,
+        relationships: editorialProgram.relationships || []
     };
     const wikiOutputs = wikis.map((entry) => {
         const pathName = preferredWikiPath(entry.slug);
