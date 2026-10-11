@@ -384,14 +384,21 @@ test("il client conserva la poesia HTML se il Worker non è raggiungibile", asyn
 });
 
 test("metrica e interazioni attendono il caricamento del contenuto", async () => {
-    const [verses, interactions] = await Promise.all([
+    const [verses, interactions, loader, html] = await Promise.all([
         readFile(new URL("../../versi.js", import.meta.url), "utf8"),
-        readFile(new URL("../../poesia-interattiva.js", import.meta.url), "utf8")
+        readFile(new URL("../../poesia-interattiva.js", import.meta.url), "utf8"),
+        readFile(new URL("../../poesia-loader.js", import.meta.url), "utf8"),
+        readFile(new URL("../../index.html", import.meta.url), "utf8")
     ]);
 
     assert.match(verses, /NNMRCN_POEM_READY/u);
     assert.match(verses, /NNMRCN_POEM_RENDERED/u);
     assert.match(interactions, /NNMRCN_POEM_RENDERED/u);
+    assert.match(html, /poesia-loader\.js\?v=20261011-performance1/u);
+    assert.doesNotMatch(html, /<script[^>]+src="\.\/poesia-interattiva\.js/u);
+    assert.match(loader, /\["pointerover", "pointerdown", "focusin"\]/u);
+    assert.match(loader, /window\.setTimeout\(loadInteractions, 8000\)/u);
+    assert.match(loader, /poesia-interattiva\.js\?v=20261011-performance1/u);
 });
 
 test("il client non ricostruisce i 121 versi quando D1 coincide con il ripiego", async () => {
