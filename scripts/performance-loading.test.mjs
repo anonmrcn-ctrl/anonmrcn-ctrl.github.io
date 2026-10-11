@@ -55,3 +55,14 @@ test("il logo delle schede luogo riserva lo spazio prima del download", async ()
     const template = await readFile(resolve(root, "scripts/generate-public-pages.mjs"), "utf8");
     assert.match(template, /<img src="\/logo\.webp"[^>]*width="640"[^>]*height="360"[^>]*fetchpriority="high">/);
 });
+
+test("l'indice Voci è leggibile prima della risposta D1 e non viene ridisegnato se invariato", async () => {
+    const html = await readFile(resolve(root, "voci.html"), "utf8");
+    const script = await readFile(resolve(root, "voci.js"), "utf8");
+    const generator = await readFile(resolve(root, "scripts/generate-public-pages.mjs"), "utf8");
+    assert.match(html, /<!-- VOCI_FALLBACK_START -->[\s\S]+data-wiki-slug="zero"[\s\S]+<!-- VOCI_FALLBACK_END -->/);
+    assert.doesNotMatch(html, /id="vociStato"[^>]*>Caricamento…</);
+    assert.match(script, /let publicEntries = readStaticPublicEntries\(\)/);
+    assert.match(script, /publicIndexSignature\(freshEntries\) !== staticSignature/);
+    assert.match(generator, /updateWikiCollectionFallback\(root, wikis\)/);
+});

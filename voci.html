@@ -91,9 +91,17 @@
                 <label for="vociRicerca">Cerca nelle voci</label>
                 <input id="vociRicerca" type="search" autocomplete="off" placeholder="Titolo o parola">
             </div>
-            <p class="voci-stato" id="vociStato" aria-live="polite">Caricamento…</p>
+            <p class="voci-stato" id="vociStato" aria-live="polite">5 voci pubblicate.</p>
             <div class="voci-layout" id="vociLayout">
-                <nav class="voci-indice" id="vociIndice" aria-label="Indice delle voci"></nav>
+                <nav class="voci-indice" id="vociIndice" aria-label="Indice delle voci">
+                    <!-- VOCI_FALLBACK_START -->
+                    <a href="./voci/strada-bassa.html" data-wiki-slug="strada-bassa"><span>&quot;strada bassa&quot;</span><small>&quot;strada bassa&quot; era il toponimo dell&#39;attuale &quot;via monte grappa&quot;, fino ad una data non meglio precisata del secolo scorso. Questa strada è stata, a differenza della sua gemella…</small></a>
+                    <a href="./voci/cave-di-gaggio.html" data-wiki-slug="cave-di-gaggio"><span>Cave di Gaggio</span><small>Le Cave di Gaggio sono il sito IT3250016 della rete Natura 2000, misura 115 ettari ed è tutelato nell&#39;ambito sia della direttiva europea sugli habitat sia di quella sugli…</small></a>
+                    <a href="./voci/cave-di-gaggio-nord.html" data-wiki-slug="cave-di-gaggio-nord"><span>Cave di Gaggio Nord</span><small>Le Cave di Gaggio Nord sono un complesso di zone umide di origine artificiale situato a Gaggio. Derivano dall&#39;allagamento e dalla progressiva rinaturalizzazione di cave…</small></a>
+                    <a href="./voci/chiesa-di-san-giorgio.html" data-wiki-slug="chiesa-di-san-giorgio"><span>Chiesa di san Giorgio</span><small>La cappella di San Giorgio è attestata per la prima volta nel 1177 tra i possessi del monastero benedettino di Santa Maria di Mogliano, ma l&#39;edificio subirà modifiche fin dal…</small></a>
+                    <a href="./voci/zero.html" data-wiki-slug="zero"><span>Zero</span><small>Lo Zero è un fiume di risorgiva della pianura veneta, lungo circa 43 km, con un bacino di circa 69 km². Nasce a San Marco di Resana, nella fascia delle risorgive prossima alle…</small></a>
+                    <!-- VOCI_FALLBACK_END -->
+                </nav>
                 <aside class="voce-indice-laterale" id="voceIndiceLaterale" aria-label="Indice dell’articolo" hidden></aside>
                 <article class="voce-articolo" id="voceArticolo" tabindex="-1" hidden></article>
             </div>

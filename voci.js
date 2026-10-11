@@ -62,7 +62,7 @@
         return;
     }
 
-    let publicEntries = [];
+    let publicEntries = readStaticPublicEntries();
     let adminEntries = [];
     let editorImages = [];
     let wikiLinkInsertionRange = { start: 0, end: 0 };
@@ -188,20 +188,52 @@
     }
 
     async function loadPublicEntries() {
-        elements.publicStatus.textContent = "Caricamento…";
+        const staticSignature = publicIndexSignature(publicEntries);
+
+        if (!publicEntries.length) {
+            elements.publicStatus.textContent = "Caricamento…";
+        }
 
         try {
             const data = await publicRequest("/api/public/wiki");
-            publicEntries = Array.isArray(data.entries) ? data.entries : [];
-            renderPublicIndex();
+            const freshEntries = Array.isArray(data.entries) ? data.entries : [];
+            publicEntries = freshEntries;
+
+            if (publicIndexSignature(freshEntries) !== staticSignature) {
+                renderPublicIndex();
+            }
+
             elements.publicStatus.textContent = publicEntries.length
                 ? `${publicEntries.length} ${publicEntries.length === 1 ? "voce pubblicata" : "voci pubblicate"}.`
                 : "Nessuna voce è stata ancora pubblicata.";
             loadEntryFromHash();
         } catch (error) {
-            elements.publicStatus.textContent =
-                error.message || "Non è stato possibile caricare le voci.";
+            elements.publicStatus.textContent = publicEntries.length
+                ? `${publicEntries.length} ${publicEntries.length === 1 ? "voce disponibile" : "voci disponibili"} dalla copia pubblicata.`
+                : error.message || "Non è stato possibile caricare le voci.";
         }
+    }
+
+    function readStaticPublicEntries() {
+        return [...elements.publicIndex.querySelectorAll("a[data-wiki-slug]")]
+            .map((link) => ({
+                slug: link.dataset.wikiSlug || "",
+                title: link.querySelector("span")?.textContent?.trim() || "",
+                summary: link.querySelector("small")?.textContent?.trim() || "",
+                preferredUrl: new URL(link.href, document.baseURI).pathname
+            }))
+            .filter((entry) => entry.slug && entry.title);
+    }
+
+    function publicIndexSignature(entries) {
+        return JSON.stringify(entries.map((entry) => [
+            String(entry.slug || ""),
+            String(entry.title || "").trim(),
+            new URL(
+                entry.preferredUrl || preferredWikiUrl(entry.slug),
+                document.baseURI
+            ).pathname
+        ]));
     }
 
     function renderPublicIndex() {
