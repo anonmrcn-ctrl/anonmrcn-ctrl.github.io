@@ -6,9 +6,13 @@
     const settingsManager = window.NNMRCN_SETTINGS;
     const SUBMISSIONS_KEY = "nnmrcn_memorie_inviate_v1";
     const MAX_MEDIA_BYTES = 900000;
+    const LEAFLET_URL = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
+    const LEAFLET_INTEGRITY = "sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH";
 
     const elements = {
         map: document.getElementById("memorieMap"),
+        mapActivation: document.getElementById("memorieMapActivation"),
+        mapActivate: document.getElementById("memorieMapActivate"),
         mapStatus: document.getElementById("memorieMapStatus"),
         list: document.getElementById("memorieLista"),
         form: document.getElementById("memoriaForm"),
@@ -31,7 +35,7 @@
         ownList: document.getElementById("memorieProprieLista")
     };
 
-    if (!elements.map || !window.L) {
+    if (!elements.map || !elements.mapActivation || !elements.mapActivate) {
         return;
     }
 
@@ -39,30 +43,18 @@
     const reduceMotion = Boolean(
         settingsManager?.shouldReduceMotion?.() || lightMap
     );
-    const map = L.map(elements.map, {
-        scrollWheelZoom: true,
-        fadeAnimation: !lightMap,
-        markerZoomAnimation: !lightMap,
-        zoomAnimation: !lightMap
-    }).setView([45.5515, 12.3278], 13);
-    const memoriesLayer = L.layerGroup().addTo(map);
+    let map = null;
+    let memoriesLayer = null;
+    let leafletPromise = null;
+    let publicMemories = [];
     const markers = new Map();
     let selectionMode = false;
     let selectedMarker = null;
 
-    L.tileLayer(
-        "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
-        {
-            maxZoom: 19,
-            keepBuffer: lightMap ? 1 : 2,
-            updateWhenIdle: lightMap,
-            attribution:
-                "Tiles &copy; Esri — Sources: Esri, Maxar, Earthstar Geographics, and the GIS User Community"
-        }
-    ).addTo(map);
-
     elements.text.addEventListener("input", updateCounter);
-    elements.selectPoint.addEventListener("click", () => {
+    elements.mapActivate.addEventListener("click", () => activateMap());
+    elements.selectPoint.addEventListener("click", async () => {
+        if (!map && !await activateMap()) return;
         setSelectionMode(!selectionMode);
 
         if (selectionMode) {
@@ -75,11 +67,68 @@
     elements.currentPosition.addEventListener("click", useCurrentPosition);
     elements.removePoint.addEventListener("click", clearSelectedPoint);
     elements.form.addEventListener("submit", submitMemory);
-    map.on("click", handleMapClick);
-
     updateCounter();
     loadPublicMemories();
     loadOwnSubmissions();
+
+    function loadLeaflet() {
+        if (window.L) return Promise.resolve(window.L);
+        if (leafletPromise) return leafletPromise;
+
+        leafletPromise = new Promise((resolve, reject) => {
+            const script = document.createElement("script");
+            script.src = LEAFLET_URL;
+            script.integrity = LEAFLET_INTEGRITY;
+            script.crossOrigin = "anonymous";
+            script.addEventListener("load", () => resolve(window.L), { once: true });
+            script.addEventListener("error", () => reject(new Error("Leaflet non disponibile")), { once: true });
+            document.head.appendChild(script);
+        });
+        return leafletPromise;
+    }
+
+    async function activateMap() {
+        if (map) return map;
+
+        elements.mapActivate.disabled = true;
+        elements.mapActivate.textContent = "Caricamento della mappa…";
+
+        try {
+            await loadLeaflet();
+            map = window.L.map(elements.map, {
+                scrollWheelZoom: true,
+                fadeAnimation: !lightMap,
+                markerZoomAnimation: !lightMap,
+                zoomAnimation: !lightMap
+            }).setView([45.5515, 12.3278], 13);
+            memoriesLayer = window.L.layerGroup().addTo(map);
+            window.L.tileLayer(
+                "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+                {
+                    maxZoom: 19,
+                    keepBuffer: lightMap ? 1 : 2,
+                    updateWhenIdle: lightMap,
+                    attribution:
+                        "Tiles &copy; Esri — Sources: Esri, Maxar, Earthstar Geographics, and the GIS User Community"
+                }
+            ).addTo(map);
+            map.on("click", handleMapClick);
+            elements.map.classList.add("is-active");
+            elements.map.removeAttribute("aria-hidden");
+            elements.mapActivation.hidden = true;
+            renderMemoryMarkers();
+            window.requestAnimationFrame(() => {
+                map.invalidateSize();
+            });
+            return map;
+        } catch (_) {
+            elements.mapStatus.textContent = "Non è stato possibile caricare la mappa interattiva.";
+            elements.mapActivate.disabled = false;
+            elements.mapActivate.textContent = "Riprova ad attivare la mappa";
+            leafletPromise = null;
+            return null;
+        }
+    }
 
     async function loadPublicMemories() {
         if (!api?.baseUrl) {
@@ -91,36 +140,23 @@
 
         try {
             const data = await api.request("/api/public/memories");
-            renderPublicMemories(data.memories || []);
+            publicMemories = data.memories || [];
+            renderPublicMemories();
         } catch (_) {
             elements.mapStatus.textContent =
                 "Non è stato possibile caricare le memorie.";
         }
     }
 
-    function renderPublicMemories(memories) {
-        memoriesLayer.clearLayers();
-        markers.clear();
+    function renderPublicMemories() {
         elements.list.replaceChildren();
 
-        memories.forEach((memory) => {
-            const marker = L.circleMarker([memory.lat, memory.lon], {
-                radius: 8,
-                color: "#171717",
-                weight: 2,
-                fillColor: "#f4f1e8",
-                fillOpacity: 0.95
-            }).addTo(memoriesLayer);
-
-            marker.bindPopup(buildMemoryPopup(memory), {
-                maxWidth: 310,
-                minWidth: 220
-            });
-            markers.set(Number(memory.id), marker);
+        publicMemories.forEach((memory) => {
             elements.list.appendChild(buildMemoryCard(memory));
         });
+        if (map) renderMemoryMarkers();
 
-        if (!memories.length) {
+        if (!publicMemories.length) {
             elements.mapStatus.textContent =
                 "Non ci sono ancora memorie pubblicate.";
             const empty = document.createElement("p");
@@ -130,15 +166,24 @@
         }
 
         elements.mapStatus.textContent =
-            `${memories.length} ${memories.length === 1 ? "memoria" : "memorie"}`;
+            `${publicMemories.length} ${publicMemories.length === 1 ? "memoria" : "memorie"}`;
+    }
 
-        const requestedId = Number(
-            new URLSearchParams(window.location.search).get("memory")
-        );
+    function renderMemoryMarkers() {
+        memoriesLayer.clearLayers();
+        markers.clear();
 
-        if (markers.has(requestedId)) {
-            window.setTimeout(() => focusMemory(requestedId), 100);
-        }
+        publicMemories.forEach((memory) => {
+            const marker = window.L.circleMarker([memory.lat, memory.lon], {
+                radius: 8,
+                color: "#171717",
+                weight: 2,
+                fillColor: "#f4f1e8",
+                fillOpacity: 0.95
+            }).addTo(memoriesLayer);
+            marker.bindPopup(buildMemoryPopup(memory), { maxWidth: 310, minWidth: 220 });
+            markers.set(Number(memory.id), marker);
+        });
     }
 
     function buildMemoryPopup(memory) {
@@ -257,7 +302,8 @@
         };
     }
 
-    function focusMemory(id) {
+    async function focusMemory(id) {
+        if (!map && !await activateMap()) return;
         const marker = markers.get(Number(id));
 
         if (!marker) {
@@ -310,7 +356,7 @@
         if (selectedMarker) {
             selectedMarker.setLatLng([lat, lon]);
         } else {
-            selectedMarker = L.circleMarker([lat, lon], {
+            selectedMarker = window.L.circleMarker([lat, lon], {
                 radius: 10,
                 color: "#171717",
                 weight: 3,
@@ -335,7 +381,8 @@
         }
     }
 
-    function useCurrentPosition() {
+    async function useCurrentPosition() {
+        if (!map && !await activateMap()) return;
         if (!navigator.geolocation) {
             elements.pointStatus.textContent =
                 "La geolocalizzazione non è disponibile in questo browser.";

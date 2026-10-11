@@ -41,6 +41,33 @@
     border: 1px solid rgba(var(--ink-rgb), 0.3);
 }
 
+.memorie-mappa:not(.is-active) {
+    height: 180px;
+    min-height: 180px;
+    background:
+        linear-gradient(135deg, rgba(var(--ink-rgb), 0.035), transparent 60%),
+        rgba(var(--paper-rgb), 0.5);
+}
+
+.memorie-mappa-avvio {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.85rem 0;
+}
+
+.memorie-mappa-avvio p {
+    max-width: 660px;
+    margin: 0;
+    line-height: 1.5;
+}
+
+.memorie-mappa-avvio button {
+    flex: 0 0 auto;
+    min-height: 44px;
+}
+
 .memorie-mappa.selezione-attiva {
     cursor: crosshair;
     box-shadow: inset 0 0 0 3px rgba(var(--ink-rgb), 0.45);
@@ -263,6 +290,16 @@
     .memorie-mappa {
         height: 58vh;
         min-height: 400px;
+    }
+
+    .memorie-mappa:not(.is-active) {
+        height: 150px;
+        min-height: 150px;
+    }
+
+    .memorie-mappa-avvio {
+        align-items: stretch;
+        flex-direction: column;
     }
 
     .memorie-lista {

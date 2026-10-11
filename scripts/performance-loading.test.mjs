@@ -31,10 +31,22 @@ test("le pagine dinamiche preparano la connessione al Worker", async () => {
 });
 
 test("le mappe preparano un'unica connessione alle librerie esterne", async () => {
-    for (const page of ["progetto.html", "memorie.html"]) {
-        const html = await readFile(resolve(root, page), "utf8");
-        assert.equal((html.match(/rel="preconnect" href="https:\/\/unpkg\.com"/g) || []).length, 1, page);
-    }
+    const project = await readFile(resolve(root, "progetto.html"), "utf8");
+    const memories = await readFile(resolve(root, "memorie.html"), "utf8");
+    assert.equal((project.match(/rel="preconnect" href="https:\/\/unpkg\.com"/g) || []).length, 1);
+    assert.doesNotMatch(memories, /rel="preconnect" href="https:\/\/unpkg\.com"/);
+    assert.match(memories, /href="\.\/leaflet\.css\?v=1\.9\.4"/);
+    assert.doesNotMatch(memories, /<script[^>]+src="https:\/\/unpkg\.com\/leaflet/);
+});
+
+test("Memorie carica mappa e servizio cartografico soltanto su richiesta", async () => {
+    const html = await readFile(resolve(root, "memorie.html"), "utf8");
+    const script = await readFile(resolve(root, "memorie.js"), "utf8");
+    assert.match(html, /id="memorieMapActivate"[^>]+aria-controls="memorieMap"/);
+    assert.match(html, /id="memorieMap"[\s\S]*?aria-hidden="true"/);
+    assert.match(script, /elements\.mapActivate\.addEventListener\("click", \(\) => activateMap\(\)\)/);
+    assert.match(script, /async function activateMap/);
+    assert.match(script, /window\.L\.tileLayer/);
 });
 
 test("il logo delle schede luogo riserva lo spazio prima del download", async () => {
