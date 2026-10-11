@@ -109,8 +109,25 @@ servizi tecnici, esportazione, cancellazione e tombstone. La copia statica è
 identica al record D1 e resta disponibile se il Worker non risponde.
 
 Il controllo locale finale del 12 ottobre supera 143 test, tutti i controlli
-statici e la build Worker dry-run. La prova browser e il servizio pubblicato
-vengono registrati prima di dichiarare conclusa l’unità.
+statici e la build Worker dry-run. La PR #26 supera i run SEO `38180368046` e
+prestazioni/UX `38180368040`; quest'ultimo conserva le schermate del consenso e
+dei diritti self-service nell'artefatto `11717349270`.
+
+La versione unita su `main` supera Pages `38180583326`, Worker `38180583580`,
+SEO `38180583575` e prestazioni `38180583593`. Le verifiche pubbliche
+ripetibili confermano:
+
+- `privacy.html` e `spazio-personale.html` rispondono `200`; il ripiego statico
+  contiene l'informativa del 12 ottobre, la sezione «I tuoi dati» e `noindex`;
+- `/api/health` risponde `200`, `Cache-Control: no-store`, schema contenuti 5,
+  privacy `2026-10-12` e archiviazione media `r2`;
+- `/api/public/legal/privacy` espone la versione 2 con checksum verificabile;
+- `/api/account/export` senza sessione risponde `401`, `no-store` e
+  `X-Content-Type-Options: nosniff`, senza rivelare dati.
+
+Non viene eseguita una cancellazione reale come prova pubblica: atomicità,
+revoca delle sessioni, rimozione dei collegamenti e tombstone dell'ID sono
+verificati dai test D1 isolati, così da non alterare account di produzione.
 
 ## Servizi esterni
 

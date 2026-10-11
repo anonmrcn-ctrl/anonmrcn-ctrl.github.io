@@ -1,6 +1,6 @@
 # Roadmap complessiva CMS e SEO
 
-Aggiornata l'11 ottobre 2026. Questa è la roadmap unica di anonMrcn: integra
+Aggiornata il 12 ottobre 2026. Questa è la roadmap unica di anonMrcn: integra
 amministrazione dei contenuti, permanenza degli URL, indicizzazione, prestazioni,
 crescita editoriale, usabilità amministrativa e privacy. Si procede dalla prima
 riga incompleta e una riga diventa completa soltanto quando schema,
@@ -21,16 +21,16 @@ affiancare il primo passaggio tecnico incompleto, ma non sostituirlo.
 | 7 | Sostituzione del token amministrativo | Completo | PR #16 e i run Worker `38068531893`, Pages `38068531244` e SEO `38068532070` pubblicano identità WebAuthn, sessioni di 8 ore e disattivazione automatica del token dopo la prima passkey. L'11 ottobre 2026 lo stato pubblico restituisce `configured: true`, una richiesta amministrativa con il solo header legacy restituisce `401` e l'amministratore conferma l'accesso con la passkey personale. La seconda passkey resta raccomandata ma non vincolante; l'unico recupero disponibile è quello infrastrutturale documentato |
 | 8 | Esportazione, manutenzione e diagnostica CMS/SEO | Completo | Le unità 8.1–8.4 forniscono backup e ripristino verificabili di D1/R2, diagnostica CMS/SEO, manuale senza codice e cadenza di manutenzione. PR #18, 115 test, i run Worker `38091623182`, SEO `38091623204` e Pages `38091622784` e le risposte live sono registrati in `08-maintenance-diagnostics.md` |
 | 9 | Prestazioni e Core Web Vitals | Completo | Baseline, interventi, dieci audit conformi su `main` e verifiche HTTP del sito e del Worker sono registrati in `docs/performance/baseline-2026-10-11.md`; il primo punto incompleto è il 10 |
-| 10 | Programma editoriale e monitoraggio organico | In corso | Programma, collegamenti contestuali e strumenti per rapporti aggregati sono completi; la prima baseline numerica resta in attesa dell'accesso a Search Console |
+| 10 | Programma editoriale e monitoraggio organico | In corso | Programma, collegamenti contestuali e strumenti per rapporti aggregati sono completi; proprietà Search Console e sitemap sono verificate e la prima baseline numerica attende soltanto dati reali sufficienti |
 | 11 | Amministrazione più user friendly | Completo | Navigazione per attività, feedback comprensibili, protezione delle modifiche e audit Chrome a 375/1440 px sono documentati in `11-admin-usability.md`; i run SEO `38154750211` e prestazioni/UX `38154750212` sono riusciti |
-| 12 | Rafforzamento della privacy | In corso | Inventario, retention, telemetria opt-in e librerie locali sono verificabili; resta da chiudere l'unità 12.4 sui diritti self-service e la verifica finale |
+| 12 | Rafforzamento della privacy | Completo | Inventario, retention, telemetria opt-in, librerie locali, informativa v2, esportazione e cancellazione self-service sono verificati localmente, in CI e sui servizi pubblicati; PR #26 e prove ripetibili sono registrate nell'unità 12.4 |
 
 ## Traguardi SEO trasversali
 
 | Codice | Traguardo | Stato | Dipendenza e criterio |
 |---:|---|---|---|
 | SEO-0 | Fondazione tecnica | Completo | `robots.txt`, sitemap, canonical, metadati sociali, JSON-LD, `noindex`, `seo.config.json` e `check-seo.mjs` sono pubblicati; `docs/seo/deployment-verification.md` registra workflow riusciti, health del Worker e risposte HTTP 200 |
-| SEO-1 | Baseline di indicizzazione | In attesa di accesso | `docs/seo/search-console-baseline.md` definisce proprietà, invio sitemap e misure aggregate senza tracciamento; verifica della proprietà e dati reali richiedono accesso a Google Search Console |
+| SEO-1 | Baseline di indicizzazione | In raccolta dati | La proprietà URL-prefix è stata verificata l'11 ottobre 2026 e la sitemap è stata inviata; `docs/seo/search-console-baseline.md` definisce l'esportazione aggregata e la prima baseline sarà compilata dopo almeno 28 giorni reali, senza simulare valori |
 | SEO-2 | Autonomia dei metadati | Completo | Il punto 3.7 gestisce title, descrizione e immagine sociale con valori predefiniti, unicità, anteprima autenticata, stati e revisioni |
 | SEO-3 | Contenuti autonomi e indicizzabili | Completo | Punto 5: `public-content-manifest.json` censisce ogni pagina pubblicata, i percorsi `/voci/<slug>.html` e `/luoghi/<id>.html` hanno HTML, canonical e JSON-LD; alias storici e aggiornamento automatico sono provati |
 | SEO-4 | Media ottimizzati | Completo | Le unità 6.1–6.3 catalogano originali, testo alternativo e dimensioni, generano varianti responsive e sociali e pubblicano metadati Open Graph/Twitter coerenti; test e verifica live sono registrati in `06-media-r2.md` |
@@ -169,10 +169,10 @@ retention e recupero senza modificare contenuti o media, è in
 
 | Ordine | Unità | Stato | Criterio e prova |
 |---:|---|---|---|
-| 12.1 | Inventario e audit iniziale | Completa | `privacy.config.json`, `12-privacy-hardening.md` e `check-privacy.mjs` censiscono otto classi di dati, sei servizi esterni, retention, esposizione e quattro rilievi senza includere valori reali o segreti. Il controllo prova anche `noindex`, assenza dalla sitemap, log senza query e retention dei contatti |
+| 12.1 | Inventario e audit iniziale | Completa | `privacy.config.json`, `12-privacy-hardening.md` e `check-privacy.mjs` censiscono otto classi di dati, cinque servizi esterni, retention, esposizione e quattro rilievi risolti senza includere valori reali o segreti. Il controllo prova anche `noindex`, assenza dalla sitemap, log senza query e retention dei contatti |
 | 12.2 | Minimizzazione e retention | Completa | Il job periodico elimina sessioni location, sindaco e amministrative scadute; gli HMAC antiabuso delle Memorie vengono svuotati dopo 24 ore anche prima di un nuovo invio. `privacy-retention.test.mjs` distingue record scaduti e attivi senza alterare contributi, media o token di ritiro |
 | 12.3 | Consenso, telemetria e servizi esterni | Completa | `privacy-telemetry.js` rende le statistiche opt-in e revocabili, limita GoatCounter al solo percorso e condivide il consenso con l'analytics Cloudflare facoltativo. Le aree protette non caricano telemetria; Leaflet e PMTiles sono serviti da `vendor/` con licenze e SHA-256 verificati |
-| 12.4 | Esportazione, cancellazione e verifica finale | In verifica | `GET /api/account/export`, `DELETE /api/account`, la migrazione `0018`, la sezione «I tuoi dati» e l’informativa privacy v2 implementano export `no-store`, cancellazione atomica e tombstone anonimo che preserva l’ID. `account-privacy.test.mjs` e 143 test complessivi provano assenza di dati di terzi, revoca delle sessioni, esclusione dalle API, schema 5 e versioni legali append-only; restano CI e prova pubblicata |
+| 12.4 | Esportazione, cancellazione e verifica finale | Completa | `GET /api/account/export`, `DELETE /api/account`, la migrazione `0018`, la sezione «I tuoi dati» e l’informativa privacy v2 implementano export `no-store`, cancellazione atomica e tombstone anonimo che preserva l’ID. `account-privacy.test.mjs` e 143 test provano assenza di dati di terzi, revoca delle sessioni, esclusione dalle API, schema 5 e versioni legali append-only. PR #26 è pubblicata: i run PR SEO `38180368046` e prestazioni/UX `38180368040` sono verdi e l'artefatto privacy `11717349270` conserva le schermate; su `main` sono riusciti Pages `38180583326`, Worker `38180583580`, SEO `38180583575` e prestazioni `38180583593`. Le verifiche live restituiscono pagina e controlli `200`, health `privacyVersion: 2026-10-12`, `contentSchema: 5`, `mediaStorage: r2`, informativa D1 v2 e `401` con `Cache-Control: no-store` per l'export senza sessione |
 
 ## Punti 4–12 — criteri di completamento
 
