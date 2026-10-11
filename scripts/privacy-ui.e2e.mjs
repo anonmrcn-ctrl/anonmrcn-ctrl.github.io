@@ -73,6 +73,7 @@ try {
         document.querySelector("[data-spazio-personale-contenuto]").hidden = false;
     });
     const exportButton = page.getByRole("button", { name: "Scarica i miei dati" });
+    await page.locator("details.spazio-eliminazione > summary").click();
     const deleteButton = page.getByRole("button", { name: "Elimina account e dati" });
     const confirmation = page.getByLabel(/Per confermare scrivi/u);
     assert.equal(await exportButton.isVisible(), true);
