@@ -46,3 +46,6 @@ produzione. Non registra richieste né dati di navigazione.
 
 Ogni rapporto è nominato `<tipologia>.<profilo>.json`; l'assenza anche di una
 sola delle dieci combinazioni rende il controllo non valido.
+
+La baseline, gli interventi e i dieci risultati dell'11 ottobre 2026 sono in
+[`baseline-2026-10-11.md`](baseline-2026-10-11.md).

@@ -20,7 +20,7 @@ affiancare il primo passaggio tecnico incompleto, ma non sostituirlo.
 | 6 | Media e documenti in R2, immagini SEO | Completo | Le unità 6.1–6.4 coprono originali, varianti responsive e sociali, metadati accessibili e documenti privati. Test, deploy e verifiche live di Worker, R2, pannello e protezione degli endpoint sono registrati in `06-media-r2.md` |
 | 7 | Sostituzione del token amministrativo | Completo | PR #16 e i run Worker `38068531893`, Pages `38068531244` e SEO `38068532070` pubblicano identità WebAuthn, sessioni di 8 ore e disattivazione automatica del token dopo la prima passkey. L'11 ottobre 2026 lo stato pubblico restituisce `configured: true`, una richiesta amministrativa con il solo header legacy restituisce `401` e l'amministratore conferma l'accesso con la passkey personale. La seconda passkey resta raccomandata ma non vincolante; l'unico recupero disponibile è quello infrastrutturale documentato |
 | 8 | Esportazione, manutenzione e diagnostica CMS/SEO | Completo | Le unità 8.1–8.4 forniscono backup e ripristino verificabili di D1/R2, diagnostica CMS/SEO, manuale senza codice e cadenza di manutenzione. PR #18, 115 test, i run Worker `38091623182`, SEO `38091623204` e Pages `38091622784` e le risposte live sono registrati in `08-maintenance-diagnostics.md` |
-| 9 | Prestazioni e Core Web Vitals | In corso | `performance-budget.json`, `scripts/check-performance.mjs` e il workflow `check-performance.yml` definiscono la baseline mobile/desktop delle cinque tipologie; restano da registrare misure, interventi e verifica pubblicata |
+| 9 | Prestazioni e Core Web Vitals | In corso | Baseline, interventi e dieci audit conformi sono registrati in `docs/performance/baseline-2026-10-11.md`; resta la verifica di `main` e delle risposte pubbliche dell'unità 9.4 |
 | 10 | Programma editoriale e monitoraggio organico | Da iniziare | Cluster territoriali e fonti sono definiti, ma non esiste ancora un ciclo editoriale misurato |
 | 11 | Amministrazione più user friendly | Da iniziare | Il pannello copre le funzioni CMS, ma richiede una revisione completa di linguaggio, navigazione, gerarchia, feedback, errori, responsive e accessibilità |
 | 12 | Rafforzamento della privacy | Da iniziare | Esistono informativa, filtri e strumenti rispettosi della privacy; manca un audit complessivo con minimizzazione, retention, consenso, sicurezza dei metadati e diagnostica verificabile |
@@ -34,7 +34,7 @@ affiancare il primo passaggio tecnico incompleto, ma non sostituirlo.
 | SEO-2 | Autonomia dei metadati | Completo | Il punto 3.7 gestisce title, descrizione e immagine sociale con valori predefiniti, unicità, anteprima autenticata, stati e revisioni |
 | SEO-3 | Contenuti autonomi e indicizzabili | Completo | Punto 5: `public-content-manifest.json` censisce ogni pagina pubblicata, i percorsi `/voci/<slug>.html` e `/luoghi/<id>.html` hanno HTML, canonical e JSON-LD; alias storici e aggiornamento automatico sono provati |
 | SEO-4 | Media ottimizzati | Completo | Le unità 6.1–6.3 catalogano originali, testo alternativo e dimensioni, generano varianti responsive e sociali e pubblicano metadati Open Graph/Twitter coerenti; test e verifica live sono registrati in `06-media-r2.md` |
-| SEO-5 | Esperienza e prestazioni | Da iniziare | Punto 9: LCP ≤ 2,5 s, INP ≤ 200 ms e CLS ≤ 0,1 al 75º percentile per i modelli principali |
+| SEO-5 | Esperienza e prestazioni | Conforme in laboratorio; campo in attesa | Le dieci combinazioni rispettano LCP ≤ 2,5 s, CLS ≤ 0,1 e TBT ≤ 200 ms nel run `38111289096`; l'INP al 75º percentile resta in attesa di un campione Search Console/CrUX sufficiente, senza aggiungere telemetria individuale |
 | SEO-6 | Crescita editoriale verificabile | Da iniziare | Punto 10: pubblicazione basata sulle fonti e valutazione trimestrale rispetto alla baseline, senza obiettivi di traffico arbitrari |
 
 ## Sequenza vincolante complessiva
@@ -144,10 +144,10 @@ retention e recupero senza modificare contenuti o media, è in
 
 | Ordine | Unità | Stato | Criterio e prova |
 |---:|---|---|---|
-| 9.1 | Baseline e budget ripetibili | In corso | Cinque tipologie per i profili mobile e desktop, soglie in `performance-budget.json`, controllo statico e Lighthouse in CI. L'unità si chiude quando i dieci rapporti sono stati prodotti e registrati |
-| 9.2 | Stabilità visiva e caricamento iniziale | Da iniziare | Le immagini riservano spazio, le risorse critiche sono esplicite e quelle non necessarie non bloccano la prima visualizzazione; nuova misura sulle dieci combinazioni |
-| 9.3 | Reattività di mappa e contenuti interattivi | Da iniziare | Le inizializzazioni costose sono differite o suddivise; TBT e prove d'interazione non regrediscono. L'INP resta distinto e viene verificato al 75º percentile quando disponibile sul campo |
-| 9.4 | Verifica pubblicata e monitoraggio | Da iniziare | Audit sul ramo pubblicato, cause e correzioni degli eventuali scostamenti, procedura di controllo periodico e passaggio di SEO-5 a completo |
+| 9.1 | Baseline e budget ripetibili | Completa | `performance-budget.json`, controllo statico e workflow producono cinque tipologie × due profili; prima misura, ambiente, soglie e dieci rapporti finali sono registrati in `docs/performance/baseline-2026-10-11.md` |
+| 9.2 | Stabilità visiva e caricamento iniziale | Completa | Script differiti, connessioni selettive, CSS Leaflet locale, dimensioni delle immagini e ripiego HTML dell'indice Voci sono coperti da `performance-loading.test.mjs`; la matrice finale rispetta LCP e CLS in tutte le combinazioni |
+| 9.3 | Reattività di mappa e contenuti interattivi | Completa | Memorie attiva la cartografia su richiesta e Voci carica l'editor soltanto quando serve. Il run `38111289096` rispetta TBT ≤ 200 ms in tutte le combinazioni; INP resta distinto e in attesa del campione sul campo |
+| 9.4 | Verifica pubblicata e monitoraggio | In corso | La PR ha dieci audit conformi e una procedura senza telemetria individuale; restano integrazione in `main`, controllo dei workflow pubblicati e verifica HTTP del sito e del Worker |
 
 ## Punti 4–12 — criteri di completamento
 
