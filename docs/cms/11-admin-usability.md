@@ -45,11 +45,17 @@ R2, gli errori di autorizzazione, i conflitti di versione e le revisioni.
 
 ## Esito e limiti
 
-I controlli strutturali e la suite funzionale sono verdi. Nel contenitore di
-sviluppo la libreria browser è disponibile ma il binario Chromium non è
-installato e la rete protetta ne impedisce il download; perciò non viene
-registrato un falso esito locale. Il test browser è eseguito dal runner CI con
-Chrome e il punto si chiude soltanto dopo quel risultato.
+I controlli strutturali e la suite funzionale sono verdi. Il run PR
+`38154750212` ha superato il test browser con Chrome e tutte le dieci misure
+Lighthouse; le schermate mobile e desktop sono nell'artefatto
+`admin-ui-reports` con ID `11708057414` e digest
+`sha256:2045e812faac9ac507bf6d09ec6b1e2d8232f85e44318f7f27fb17b69c0b2d0e`.
+Anche il run SEO `38154750211` è riuscito.
+
+Nel contenitore di sviluppo la libreria browser è disponibile ma il binario
+Chromium non è installato e la rete protetta ne impedisce il download; perciò
+la prova browser è correttamente demandata al runner Chrome, mentre 133 test,
+controlli statici e build Worker dry-run vengono eseguiti localmente.
 
 Una passkey o un contenuto di produzione non vengono copiati nel test. La
 verifica pubblicata deve inoltre confermare caricamento e impaginazione della
