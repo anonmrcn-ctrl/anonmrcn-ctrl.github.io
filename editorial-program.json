@@ -1,0 +1,141 @@
+{
+  "version": 1,
+  "siteOrigin": "https://anonmrcn-ctrl.github.io",
+  "timezone": "Europe/Rome",
+  "evidenceTypes": {
+    "fonte": "Dato verificabile sostenuto da una fonte identificata e richiamata nel testo.",
+    "testimonianza": "Ricordo attribuito con consenso, contesto e limiti espliciti; non viene presentato come fatto generale.",
+    "interpretazione": "Lettura editoriale dichiarata come tale e separata dai fatti documentati."
+  },
+  "privacyRules": [
+    "Non inserire nomi, contatti o identificativi di chi consulta il sito nei dati editoriali o SEO.",
+    "Pubblicare una testimonianza soltanto con consenso documentato e con i dati personali strettamente necessari.",
+    "Usare soltanto dati aggregati di Search Console o CrUX e non aggiungere telemetria individuale.",
+    "Escludere bozze, pannello, anteprime, token, query private e URL dei QR riservati da esportazioni e rapporti."
+  ],
+  "clusters": [
+    {
+      "id": "acque-e-bonifiche",
+      "label": "Acque, bonifiche e trasformazioni del paesaggio",
+      "pillarPath": "/voci/zero.html",
+      "publishedPaths": [
+        "/voci/zero.html",
+        "/voci/cave-di-gaggio.html",
+        "/voci/cave-di-gaggio-nord.html"
+      ],
+      "sourceSeedIds": [
+        "source-zero-wikipedia",
+        "source-dese-wikipedia",
+        "source-sile-wikipedia",
+        "source-zuccarello-comune"
+      ]
+    },
+    {
+      "id": "gaggio-e-zone-umide",
+      "label": "Gaggio, cave e zone umide",
+      "pillarPath": "/voci/cave-di-gaggio.html",
+      "publishedPaths": [
+        "/voci/cave-di-gaggio.html",
+        "/voci/cave-di-gaggio-nord.html"
+      ],
+      "sourceSeedIds": [
+        "source-gaggio-wikipedia",
+        "source-zero-wikipedia"
+      ]
+    },
+    {
+      "id": "insediamenti-e-toponimi",
+      "label": "Insediamenti, toponimi e viabilità storica",
+      "pillarPath": "/voci/strada-bassa.html",
+      "publishedPaths": [
+        "/voci/strada-bassa.html",
+        "/voci/chiesa-di-san-giorgio.html",
+        "/luoghi/1.html",
+        "/luoghi/2.html"
+      ],
+      "sourceSeedIds": [
+        "source-marcon-wikipedia",
+        "source-praello-comune",
+        "source-colmello-comune",
+        "source-pojanon-wikipedia"
+      ]
+    }
+  ],
+  "relationships": [
+    {
+      "from": "/voci/cave-di-gaggio.html",
+      "to": "/voci/cave-di-gaggio-nord.html",
+      "label": "Approfondisci le Cave di Gaggio Nord"
+    },
+    {
+      "from": "/voci/cave-di-gaggio-nord.html",
+      "to": "/voci/zero.html",
+      "label": "Il sistema territoriale del fiume Zero"
+    },
+    {
+      "from": "/voci/zero.html",
+      "to": "/voci/cave-di-gaggio.html",
+      "label": "Le zone umide lungo lo Zero"
+    },
+    {
+      "from": "/voci/strada-bassa.html",
+      "to": "/voci/chiesa-di-san-giorgio.html",
+      "label": "La chiesa di San Giorgio"
+    },
+    {
+      "from": "/voci/chiesa-di-san-giorgio.html",
+      "to": "/voci/strada-bassa.html",
+      "label": "La viabilità storica di Strada Bassa"
+    }
+  ],
+  "calendar": [
+    {
+      "date": "2026-10-23",
+      "clusterId": "gaggio-e-zone-umide",
+      "action": "audit",
+      "target": "/voci/cave-di-gaggio.html",
+      "requiredEvidence": ["fonte", "interpretazione"],
+      "deliverable": "Controllo di fonti, date, collegamenti interni e testo alternativo delle immagini."
+    },
+    {
+      "date": "2026-11-06",
+      "clusterId": "acque-e-bonifiche",
+      "action": "review",
+      "target": "/voci/zero.html",
+      "requiredEvidence": ["fonte", "interpretazione"],
+      "deliverable": "Revisione delle affermazioni storiche e separazione esplicita fra dati e letture editoriali."
+    },
+    {
+      "date": "2026-11-20",
+      "clusterId": "insediamenti-e-toponimi",
+      "action": "review",
+      "target": "/voci/chiesa-di-san-giorgio.html",
+      "requiredEvidence": ["fonte", "testimonianza", "interpretazione"],
+      "deliverable": "Verifica documentaria; eventuali testimonianze restano bozze finché consenso e attribuzione non sono registrati."
+    },
+    {
+      "date": "2026-12-04",
+      "clusterId": "insediamenti-e-toponimi",
+      "action": "link-audit",
+      "target": "/voci/strada-bassa.html",
+      "requiredEvidence": ["fonte"],
+      "deliverable": "Allineamento fra Voce, due schede luogo, permalink storici e collegamenti contestuali."
+    },
+    {
+      "date": "2027-01-15",
+      "clusterId": "acque-e-bonifiche",
+      "action": "draft",
+      "target": "draft:dese",
+      "requiredEvidence": ["fonte", "interpretazione"],
+      "deliverable": "Scaletta in bozza sul Dese; nessuna pubblicazione prima di fonti primarie o istituzionali sufficienti."
+    },
+    {
+      "date": "2027-02-12",
+      "clusterId": "insediamenti-e-toponimi",
+      "action": "draft",
+      "target": "draft:praello",
+      "requiredEvidence": ["fonte", "testimonianza", "interpretazione"],
+      "deliverable": "Scaletta in bozza su Praello con consenso separato per ogni testimonianza eventualmente raccolta."
+    }
+  ]
+}

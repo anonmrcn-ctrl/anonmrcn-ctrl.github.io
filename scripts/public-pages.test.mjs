@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+    renderEditorialRelationships,
     renderPlacePage,
     renderWikiCollectionFallback,
     renderWikiPage
@@ -46,6 +47,19 @@ test("la Voce autonoma contiene testo, canonical e link preferiti senza JavaScri
     assert.match(html, /<h2 id="fonti-voce-1">Fonti<\/h2>/u);
     assert.equal((html.match(/<h1\b/gu) || []).length, 1);
     assert.equal(/<script\b(?![^>]*application\/ld\+json)/u.test(html), false);
+});
+
+test("il grafo editoriale produce collegamenti contestuali sicuri", () => {
+    const html = renderEditorialRelationships("/voci/prima-voce.html", [{
+        from: "/voci/prima-voce.html",
+        to: "/voci/seconda-voce.html",
+        label: "Seconda voce <documentata>"
+    }]);
+
+    assert.match(html, /Approfondisci nel territorio/u);
+    assert.match(html, /href="\/voci\/seconda-voce\.html"/u);
+    assert.match(html, /Seconda voce &lt;documentata&gt;/u);
+    assert.doesNotMatch(html, /<documentata>/u);
 });
 
 test("l'indice statico delle Voci conserva destinazioni, ordine e testo sicuro", () => {

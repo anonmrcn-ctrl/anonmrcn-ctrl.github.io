@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "cadence": "quarterly",
+  "allowedSources": [
+    "Google Search Console",
+    "Chrome UX Report"
+  ],
+  "metrics": [
+    "indexedPages",
+    "impressions",
+    "clicks",
+    "ctr",
+    "averagePosition"
+  ],
+  "privacy": {
+    "minimumGroupImpressions": 20,
+    "prohibitedFields": [
+      "query",
+      "queries",
+      "url",
+      "urls",
+      "visitor",
+      "visitorId",
+      "userId",
+      "deviceId",
+      "ip",
+      "email",
+      "token",
+      "qr"
+    ]
+  },
+  "reportsDirectory": "docs/seo/reports"
+}
