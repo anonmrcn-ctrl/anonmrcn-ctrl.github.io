@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "profiles": ["mobile", "desktop"],
+  "routes": [
+    { "id": "homepage", "path": "/index.html", "label": "Homepage e poesia" },
+    { "id": "mappa", "path": "/progetto.html", "label": "Mappa e progetto" },
+    { "id": "voci", "path": "/voci.html", "label": "Indice delle Voci" },
+    { "id": "luogo", "path": "/luoghi/1.html", "label": "Scheda di un luogo" },
+    { "id": "memorie", "path": "/memorie.html", "label": "Memorie" }
+  ],
+  "thresholds": {
+    "largestContentfulPaintMs": 2500,
+    "cumulativeLayoutShift": 0.1,
+    "totalBlockingTimeMs": 200,
+    "performanceScore": 0.9,
+    "totalByteWeight": 1048576
+  },
+  "static": {
+    "maxHtmlBytes": 65536,
+    "maxReferencedLocalBytes": 524288,
+    "maxSingleScriptBytes": 98304,
+    "maxSingleStylesheetBytes": 102400
+  }
+}

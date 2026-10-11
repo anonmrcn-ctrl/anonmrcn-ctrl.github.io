@@ -3,11 +3,12 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 test("il frontend conserva solo la sessione temporanea e resta noindex", async () => {
-    const [adminHtml, adminScript, wikiHtml, wikiScript] = await Promise.all([
+    const [adminHtml, adminScript, wikiHtml, wikiScript, wikiLoader] = await Promise.all([
         readFile(new URL("../../admin.html", import.meta.url), "utf8"),
         readFile(new URL("../../admin.js", import.meta.url), "utf8"),
         readFile(new URL("../../voci.html", import.meta.url), "utf8"),
-        readFile(new URL("../../voci.js", import.meta.url), "utf8")
+        readFile(new URL("../../voci.js", import.meta.url), "utf8"),
+        readFile(new URL("../../voci-loader.js", import.meta.url), "utf8")
     ]);
 
     assert.match(adminHtml, /name="robots" content="noindex, nofollow"/u);
@@ -17,7 +18,9 @@ test("il frontend conserva solo la sessione temporanea e resta noindex", async (
     assert.match(adminScript, /nnmrcn_admin_session/u);
     assert.match(adminScript, /Authorization/u);
     assert.doesNotMatch(adminScript, /nnmrcn_admin_token/u);
-    assert.match(wikiHtml, /voci\.js\?v=20261010-passkeys1/u);
+    assert.match(wikiHtml, /voci-loader\.js\?v=20261011-performance1/u);
+    assert.match(wikiLoader, /voci\.js\?v=20261011-performance1/u);
+    assert.match(wikiLoader, /nnmrcn_admin_session/u);
     assert.match(wikiScript, /nnmrcn_admin_session/u);
     assert.doesNotMatch(wikiScript, /nnmrcn_admin_token/u);
 });

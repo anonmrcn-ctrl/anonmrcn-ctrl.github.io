@@ -89,6 +89,36 @@ function preferredPlacePath(id) {
     return `/luoghi/${Number(id)}.html`;
 }
 
+export function renderWikiCollectionFallback(entries) {
+    return [...entries]
+        .sort((first, second) => String(first.title).localeCompare(String(second.title), "it"))
+        .map((entry) => {
+            const description = descriptionFor(
+                entry.summary || entry.body,
+                `Approfondimento su ${entry.title} nel territorio di Marcon.`
+            );
+            return `                    <a href=".${preferredWikiPath(entry.slug)}" data-wiki-slug="${escapeHtml(entry.slug)}"><span>${escapeHtml(entry.title)}</span><small>${escapeHtml(description)}</small></a>`;
+        })
+        .join("\n");
+}
+
+async function updateWikiCollectionFallback(root, entries) {
+    const pagePath = path.join(root, "voci.html");
+    const page = await readFile(pagePath, "utf8");
+    const start = "                    <!-- VOCI_FALLBACK_START -->";
+    const end = "                    <!-- VOCI_FALLBACK_END -->";
+    const startIndex = page.indexOf(start);
+    const endIndex = page.indexOf(end);
+
+    if (startIndex === -1 || endIndex === -1 || endIndex <= startIndex) {
+        throw new Error("Marcatori del ripiego Voci assenti da voci.html");
+    }
+
+    const replacement = `${start}\n${renderWikiCollectionFallback(entries)}\n${end}`;
+    const updated = page.slice(0, startIndex) + replacement + page.slice(endIndex + end.length);
+    await writeFile(pagePath, updated, "utf8");
+}
+
 function placeDescription(place) {
     const category = (CATEGORY_LABELS[place.category] || "Luogo").toLocaleLowerCase("it");
     return descriptionFor(
@@ -570,7 +600,7 @@ export function renderPlacePage(place, wikis, options) {
         jsonLd,
         body: `<body class="pagina-luogo-scheda pagina-contenuto-statico">
     <main class="luogo-scheda-pagina contenuto-statico">
-        <a class="luogo-scheda-logo" href="/progetto.html" aria-label="Vai al progetto anonMrcn"><img src="/logo.webp" alt="anonMrcn"></a>
+        <a class="luogo-scheda-logo" href="/progetto.html" aria-label="Vai al progetto anonMrcn"><img src="/logo.webp" alt="anonMrcn" width="640" height="360" decoding="async" fetchpriority="high"></a>
         <article class="luogo-scheda">
             ${place.imageUrl ? `<figure class="luogo-scheda-banner"><img src="${escapeHtml(image)}"${imageResponsive}${imageDimensions} alt="Fotografia di ${escapeHtml(place.name)}" loading="eager" decoding="async"></figure>` : ""}
             <div class="luogo-scheda-corpo">
@@ -703,6 +733,7 @@ export async function generatePublicPages({ root, apiBase = DEFAULT_API_BASE }) 
         clearGeneratedHtml(placeDirectory)
     ]);
     await Promise.all([
+        updateWikiCollectionFallback(root, wikis),
         ...wikiOutputs.map((output) => writeFile(
             path.join(root, output.file),
             output.html,

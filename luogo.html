@@ -12,6 +12,7 @@
     <link rel="icon" type="image/png" sizes="32x32" href="./favicon-32.png?v=logo3">
     <link rel="apple-touch-icon" sizes="180x180" href="./apple-touch-icon-logo3.png">
     <link rel="manifest" href="./manifest.webmanifest">
+    <link rel="preconnect" href="https://nnmrcn-rete.anonmrcn.workers.dev" crossorigin>
     <script src="./tema.js?v=20261006-map-layers1"></script>
     <link rel="stylesheet" href="./style.css?v=20261009-admin-actions1">
     <link rel="stylesheet" href="./luogo.css?v=20261007-place-photo1">
@@ -21,7 +22,7 @@
 <body class="pagina-luogo-scheda">
     <main class="luogo-scheda-pagina">
         <a class="luogo-scheda-logo" href="./progetto.html" aria-label="Vai al progetto anonMrcn">
-            <img src="./logo.webp" alt="anonMrcn">
+            <img src="./logo.webp" alt="anonMrcn" width="640" height="360" decoding="async" fetchpriority="high">
         </a>
 
         <p class="luogo-scheda-stato" id="luogoSchedaStato" aria-live="polite">
@@ -56,10 +57,10 @@
         <a class="luogo-scheda-ritorno" href="./progetto.html">Torna al progetto</a>
     </main>
 
-    <script src="./config.js"></script>
-    <script src="./analytics.js?v=20261001-onboarding1"></script>
-    <script src="./api.js"></script>
-    <script src="./site-metadata.js?v=20261009-seo2"></script>
-    <script src="./luogo.js?v=20261010-responsive-media1"></script>
+    <script defer src="./config.js"></script>
+    <script defer src="./analytics.js?v=20261001-onboarding1"></script>
+    <script defer src="./api.js"></script>
+    <script defer src="./site-metadata.js?v=20261009-seo2"></script>
+    <script defer src="./luogo.js?v=20261010-responsive-media1"></script>
 </body>
 </html>

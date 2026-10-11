@@ -23,6 +23,7 @@
     <link rel="icon" type="image/png" sizes="32x32" href="./favicon-32.png?v=logo3">
     <link rel="apple-touch-icon" sizes="180x180" href="./apple-touch-icon-logo3.png">
     <link rel="manifest" href="./manifest.webmanifest">
+    <link rel="preconnect" href="https://nnmrcn-rete.anonmrcn.workers.dev" crossorigin>
     <script src="./tema.js?v=20261006-map-layers1"></script>
     <link rel="stylesheet" href="./style.css?v=20261009-admin-actions1">
     <link rel="stylesheet" href="./spazi.css?v=20260830-voci2">
@@ -90,9 +91,17 @@
                 <label for="vociRicerca">Cerca nelle voci</label>
                 <input id="vociRicerca" type="search" autocomplete="off" placeholder="Titolo o parola">
             </div>
-            <p class="voci-stato" id="vociStato" aria-live="polite">Caricamento…</p>
+            <p class="voci-stato" id="vociStato" aria-live="polite">5 voci pubblicate.</p>
             <div class="voci-layout" id="vociLayout">
-                <nav class="voci-indice" id="vociIndice" aria-label="Indice delle voci"></nav>
+                <nav class="voci-indice" id="vociIndice" aria-label="Indice delle voci">
+                    <!-- VOCI_FALLBACK_START -->
+                    <a href="./voci/strada-bassa.html" data-wiki-slug="strada-bassa"><span>&quot;strada bassa&quot;</span><small>&quot;strada bassa&quot; era il toponimo dell&#39;attuale &quot;via monte grappa&quot;, fino ad una data non meglio precisata del secolo scorso. Questa strada è stata, a differenza della sua gemella…</small></a>
+                    <a href="./voci/cave-di-gaggio.html" data-wiki-slug="cave-di-gaggio"><span>Cave di Gaggio</span><small>Le Cave di Gaggio sono il sito IT3250016 della rete Natura 2000, misura 115 ettari ed è tutelato nell&#39;ambito sia della direttiva europea sugli habitat sia di quella sugli…</small></a>
+                    <a href="./voci/cave-di-gaggio-nord.html" data-wiki-slug="cave-di-gaggio-nord"><span>Cave di Gaggio Nord</span><small>Le Cave di Gaggio Nord sono un complesso di zone umide di origine artificiale situato a Gaggio. Derivano dall&#39;allagamento e dalla progressiva rinaturalizzazione di cave…</small></a>
+                    <a href="./voci/chiesa-di-san-giorgio.html" data-wiki-slug="chiesa-di-san-giorgio"><span>Chiesa di san Giorgio</span><small>La cappella di San Giorgio è attestata per la prima volta nel 1177 tra i possessi del monastero benedettino di Santa Maria di Mogliano, ma l&#39;edificio subirà modifiche fin dal…</small></a>
+                    <a href="./voci/zero.html" data-wiki-slug="zero"><span>Zero</span><small>Lo Zero è un fiume di risorgiva della pianura veneta, lungo circa 43 km, con un bacino di circa 69 km². Nasce a San Marco di Resana, nella fascia delle risorgive prossima alle…</small></a>
+                    <!-- VOCI_FALLBACK_END -->
+                </nav>
                 <aside class="voce-indice-laterale" id="voceIndiceLaterale" aria-label="Indice dell’articolo" hidden></aside>
                 <article class="voce-articolo" id="voceArticolo" tabindex="-1" hidden></article>
             </div>
@@ -244,17 +253,17 @@
     <div class="voce-indice-mobile-sfondo" id="voceIndiceMobileSfondo" aria-hidden="true" hidden></div>
     <button class="voce-indice-mobile-pulsante" id="voceIndiceMobilePulsante" type="button" aria-controls="voceIndiceLaterale" aria-expanded="false" hidden>Indice</button>
 
-    <script src="./config.js"></script>
-    <script src="./analytics.js?v=20261001-onboarding1"></script>
-    <script src="./api.js"></script>
-    <script src="./site-metadata.js?v=20261009-seo2"></script>
-    <script src="./navigation-content.js?v=20261008-navigation1"></script>
-    <script src="./onboarding-content.js?v=20261008-onboarding1"></script>
-    <script src="./sessione.js?v=20261008-onboarding1"></script>
-    <script src="./notifiche.js"></script>
-    <script src="./site.js?v=20261006-map-layers1"></script>
-    <script src="./accesso-menu.js?v=20261003-privacy1"></script>
-    <script src="./taccuino.js"></script>
-    <script src="./voci.js?v=20261010-passkeys1"></script>
+    <script defer src="./config.js"></script>
+    <script defer src="./analytics.js?v=20261001-onboarding1"></script>
+    <script defer src="./api.js"></script>
+    <script defer src="./site-metadata.js?v=20261009-seo2"></script>
+    <script defer src="./navigation-content.js?v=20261008-navigation1"></script>
+    <script defer src="./onboarding-content.js?v=20261008-onboarding1"></script>
+    <script defer src="./sessione.js?v=20261008-onboarding1"></script>
+    <script defer src="./notifiche.js"></script>
+    <script defer src="./site.js?v=20261006-map-layers1"></script>
+    <script defer src="./accesso-menu.js?v=20261003-privacy1"></script>
+    <script defer src="./taccuino.js"></script>
+    <script defer src="./voci-loader.js?v=20261011-performance1"></script>
 </body>
 </html>

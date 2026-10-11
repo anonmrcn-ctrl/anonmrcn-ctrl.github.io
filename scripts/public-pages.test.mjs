@@ -3,6 +3,7 @@ import test from "node:test";
 
 import {
     renderPlacePage,
+    renderWikiCollectionFallback,
     renderWikiPage
 } from "./generate-public-pages.mjs";
 
@@ -45,6 +46,18 @@ test("la Voce autonoma contiene testo, canonical e link preferiti senza JavaScri
     assert.match(html, /<h2 id="fonti-voce-1">Fonti<\/h2>/u);
     assert.equal((html.match(/<h1\b/gu) || []).length, 1);
     assert.equal(/<script\b(?![^>]*application\/ld\+json)/u.test(html), false);
+});
+
+test("l'indice statico delle Voci conserva destinazioni, ordine e testo sicuro", () => {
+    const html = renderWikiCollectionFallback([
+        wikis[1],
+        { ...wikis[0], title: '"Prima voce" <script>', summary: "Testo <img>." }
+    ]);
+
+    assert.match(html, /href="\.\/voci\/prima-voce\.html" data-wiki-slug="prima-voce"/u);
+    assert.match(html, /&lt;script&gt;/u);
+    assert.match(html, /Testo &lt;img&gt;\./u);
+    assert.ok(html.indexOf("prima-voce.html") < html.indexOf("seconda-voce.html"));
 });
 
 test("la Voce sincronizza immagine sociale, alt, formato e dimensioni", () => {

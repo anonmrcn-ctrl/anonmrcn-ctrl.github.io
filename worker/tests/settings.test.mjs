@@ -232,7 +232,7 @@ test("titoli e descrizioni D1 coincidono con i quattordici ripieghi HTML", async
         );
         assert.match(
             html,
-            /<script src="\.\/api\.js"><\/script>[\s\S]*?<script src="\.\/site-metadata\.js\?v=20261009-seo2"><\/script>/u,
+            /<script(?: defer)? src="\.\/api\.js"><\/script>[\s\S]*?<script(?: defer)? src="\.\/site-metadata\.js\?v=20261009-seo2"><\/script>/u,
             key
         );
     }
