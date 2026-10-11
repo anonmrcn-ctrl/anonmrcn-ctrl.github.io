@@ -51,11 +51,19 @@ for (const service of ["github-pages", "cloudflare", "goatcounter", "unpkg", "ma
     assert.ok(config.externalServices.some((item) => item.id === service), `servizio esterno non censito: ${service}`);
 }
 
-for (const id of ["PRIV-RETENTION-1", "PRIV-TELEMETRY-1", "PRIV-EXTERNAL-1", "PRIV-RIGHTS-1"]) {
+for (const id of ["PRIV-TELEMETRY-1", "PRIV-EXTERNAL-1", "PRIV-RIGHTS-1"]) {
     assert.ok(config.openFindings.some((item) => item.id === id), `rilievo mancante: ${id}`);
 }
+assert.ok(
+    config.resolvedFindings.some((item) => item.id === "PRIV-RETENTION-1"),
+    "risoluzione retention non registrata"
+);
 
 assert.match(worker, /const CONTACT_RETENTION_MS = 30 \* 24 \* 60 \* 60 \* 1000/u);
+assert.match(worker, /const MEMORY_ABUSE_RETENTION_MS = 24 \* 60 \* 60 \* 1000/u);
+assert.match(worker, /SET sender_hash = ''[\s\S]*created_at < \?/u);
+assert.match(worker, /DELETE FROM sessions[\s\S]*WHERE expires_at <= \?/u);
+assert.match(worker, /DELETE FROM mayor_sessions[\s\S]*WHERE expires_at <= \?/u);
 assert.match(worker, /path: new URL\(request\.url\)\.pathname/u);
 assert.doesNotMatch(worker, /console\.(?:log|error)\([^\n]*(?:authorization|cookie|request\.url|searchParams)/iu);
 assert.match(legal, /30 giorni/iu);
@@ -64,6 +72,7 @@ assert.match(legal, /GoatCounter/iu);
 
 console.log(
     `Privacy: ${config.dataClasses.length} classi dati, ` +
-    `${config.externalServices.length} servizi esterni e ` +
-    `${config.openFindings.length} rilievi tracciati.`
+    `${config.externalServices.length} servizi esterni, ` +
+    `${config.openFindings.length} rilievi aperti e ` +
+    `${config.resolvedFindings.length} risolti.`
 );

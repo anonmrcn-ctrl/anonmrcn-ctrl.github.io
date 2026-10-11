@@ -36,19 +36,31 @@ indirizzi, coordinate o chiavi.
 
 ### Rilievi da correggere nelle unità successive
 
-1. **PRIV-RETENTION-1:** cancellare dopo 24 ore gli HMAC antiabuso delle
-   Memorie e rimuovere periodicamente tutte le sessioni scadute.
-2. **PRIV-TELEMETRY-1:** non avviare GoatCounter prima di un consenso esplicito
+1. **PRIV-TELEMETRY-1:** non avviare GoatCounter prima di un consenso esplicito
    e non caricare telemetria nelle pagine personali o amministrative.
-3. **PRIV-EXTERNAL-1:** servire Leaflet e PMTiles dallo stesso sito, senza una
+2. **PRIV-EXTERNAL-1:** servire Leaflet e PMTiles dallo stesso sito, senza una
    richiesta preliminare del browser a unpkg.
-4. **PRIV-RIGHTS-1:** rendere disponibili esportazione e cancellazione
+3. **PRIV-RIGHTS-1:** rendere disponibili esportazione e cancellazione
    autenticata dallo Spazio personale, mantenendo solo un ID tombstone non
    ricollegabile quando è necessario preservare i riferimenti storici.
 
 Questi rilievi impediscono di dichiarare completo il punto 12, ma non il suo
 inventario iniziale: ogni rilievo ha un'unità, una prova automatica prevista e
 un criterio di chiusura esplicito.
+
+## 12.2 — Minimizzazione e retention
+
+Il job periodico ora elimina le righe scadute di `sessions` e
+`mayor_sessions`; `purgeExpiredAdminAuth` continua a eliminare sfide e sessioni
+amministrative scadute. Per le Memorie, l'HMAC pseudonimo dell'IP viene
+svuotato dopo la finestra antiabuso di 24 ore. Restano invariati contributo,
+stato, media R2, consenso e hash del token di ritiro, quindi la persona può
+ancora controllare o rimuovere ciò che ha inviato.
+
+`privacy-retention.test.mjs` prepara contemporaneamente record scaduti e
+validi, esegue il vero handler `scheduled` e prova che soltanto i primi siano
+eliminati o minimizzati. La pulizia dell'HMAC viene eseguita anche prima di una
+nuova Memoria, così la garanzia non dipende esclusivamente dal cron.
 
 ## Servizi esterni
 

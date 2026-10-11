@@ -170,7 +170,7 @@ retention e recupero senza modificare contenuti o media, è in
 | Ordine | Unità | Stato | Criterio e prova |
 |---:|---|---|---|
 | 12.1 | Inventario e audit iniziale | Completa | `privacy.config.json`, `12-privacy-hardening.md` e `check-privacy.mjs` censiscono otto classi di dati, sei servizi esterni, retention, esposizione e quattro rilievi senza includere valori reali o segreti. Il controllo prova anche `noindex`, assenza dalla sitemap, log senza query e retention dei contatti |
-| 12.2 | Minimizzazione e retention | Da iniziare | Eliminare gli identificatori antiabuso quando non sono più necessari, ripulire le sessioni scadute e provare la cadenza automatica |
+| 12.2 | Minimizzazione e retention | Completa | Il job periodico elimina sessioni location, sindaco e amministrative scadute; gli HMAC antiabuso delle Memorie vengono svuotati dopo 24 ore anche prima di un nuovo invio. `privacy-retention.test.mjs` distingue record scaduti e attivi senza alterare contributi, media o token di ritiro |
 | 12.3 | Consenso, telemetria e servizi esterni | Da iniziare | Statistiche soltanto dopo opt-in e mai nelle aree private; librerie applicative servite in prima parte; preferenze revocabili e verificabili |
 | 12.4 | Esportazione, cancellazione e verifica finale | Da iniziare | La persona autenticata esporta i propri dati e li cancella senza esporre terzi; cache, sitemap, diagnostica, informativa e servizio pubblicato superano l'audit finale |
 

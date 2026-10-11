@@ -66,6 +66,7 @@ const MAX_CONTACT_EMAIL_LENGTH = 254;
 const MAX_LOCATION_ADDRESS_LENGTH = 240;
 const MAX_CONTACT_REQUEST_BYTES = 8192;
 const CONTACT_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
+const MEMORY_ABUSE_RETENTION_MS = 24 * 60 * 60 * 1000;
 const LOCATION_MIN_SHIFT_METERS = 250;
 const LOCATION_MAX_SHIFT_METERS = 400;
 const CIVIC_NUMBER_SOURCE = String.raw`\d{1,4}[a-z]?(?:[\/-](?:\d{1,4}[a-z]?|[a-z]))?(?:\s+(?:bis|ter|quater))?`;
@@ -1059,6 +1060,8 @@ export default {
             await purgeExpiredContactMessages(env);
             await ensureLocationProfileStorage(env);
             await ensureMemoryStorage(env);
+            await ensureMayorStorage(env);
+            await purgeExpiredOperationalData(env);
             await ensureWikiStorage(env);
             await ensureMapEntryStorage(env);
             await ensureCmsStorage(env);
@@ -1716,6 +1719,7 @@ async function createMemory(request, env, ctx) {
     }
 
     await ensureMemoryStorage(env);
+    await minimizeExpiredMemorySenderHashes(env);
 
     const sender = request.headers.get("CF-Connecting-IP") || "unknown";
     const senderHash = await hmacHex(
@@ -8376,6 +8380,36 @@ async function purgeExpiredContactMessages(env, now = Date.now()) {
         DELETE FROM contact_messages
         WHERE created_at < ?
     `).bind(now - CONTACT_RETENTION_MS).run();
+}
+
+async function minimizeExpiredMemorySenderHashes(env, now = Date.now()) {
+    await env.DB.prepare(`
+        UPDATE memories
+        SET sender_hash = ''
+        WHERE
+            sender_hash <> ''
+            AND created_at < ?
+    `).bind(now - MEMORY_ABUSE_RETENTION_MS).run();
+}
+
+async function purgeExpiredOperationalData(env, now = Date.now()) {
+    await env.DB.batch([
+        env.DB.prepare(`
+            DELETE FROM sessions
+            WHERE expires_at <= ?
+        `).bind(now),
+        env.DB.prepare(`
+            DELETE FROM mayor_sessions
+            WHERE expires_at <= ?
+        `).bind(now),
+        env.DB.prepare(`
+            UPDATE memories
+            SET sender_hash = ''
+            WHERE
+                sender_hash <> ''
+                AND created_at < ?
+        `).bind(now - MEMORY_ABUSE_RETENTION_MS)
+    ]);
 }
 
 async function ensureMemoryStorage(env) {

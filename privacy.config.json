@@ -112,12 +112,14 @@
       "data": "query e URL aggregati soggetti a soglia minima nel rapporto locale"
     }
   ],
-  "openFindings": [
+  "resolvedFindings": [
     {
       "id": "PRIV-RETENTION-1",
       "unit": "12.2",
-      "finding": "Gli HMAC antiabuso delle Memorie restano oltre la finestra utile di 24 ore e le righe di sessione scadute non sono eliminate dal job periodico."
-    },
+      "resolution": "Il job periodico elimina sessioni location, sindaco e amministrative scadute; svuota gli HMAC delle Memorie oltre 24 ore senza toccare contributi, media o token di ritiro."
+    }
+  ],
+  "openFindings": [
     {
       "id": "PRIV-TELEMETRY-1",
       "unit": "12.3",
