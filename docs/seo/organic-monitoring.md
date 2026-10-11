@@ -57,10 +57,11 @@ stesso oggetto `metrics` di `overall`. Un cluster con meno di 20 impressioni
 non può essere salvato: va riportato soltanto in `excludedGroups` tramite il
 suo ID, senza valore numerico.
 
-## Blocco esterno attuale
+## Raccolta dati in corso
 
-La proprietà Search Console non è accessibile a questa esecuzione. Per questo
-non vengono inventati una baseline o un primo rapporto. Il codice, i criteri e
-la validazione sono completi; SEO-1 e la prova numerica finale di SEO-6 restano
-in attesa della verifica della proprietà descritta in
-`search-console-baseline.md`.
+La proprietà URL-prefix è stata verificata l'11 ottobre 2026 e la sitemap è
+stata inviata a Google Search Console. Il rapporto iniziale resta
+intenzionalmente privo di valori numerici finché Search Console non avrà
+raccolto un intervallo reale sufficientemente rappresentativo: non vengono
+simulati clic, impressioni, CTR o posizione media. Dopo almeno 28 giorni
+completi, esportare i dati e compilare il template seguendo questa procedura.
