@@ -21,7 +21,7 @@ affiancare il primo passaggio tecnico incompleto, ma non sostituirlo.
 | 7 | Sostituzione del token amministrativo | Completo | PR #16 e i run Worker `38068531893`, Pages `38068531244` e SEO `38068532070` pubblicano identità WebAuthn, sessioni di 8 ore e disattivazione automatica del token dopo la prima passkey. L'11 ottobre 2026 lo stato pubblico restituisce `configured: true`, una richiesta amministrativa con il solo header legacy restituisce `401` e l'amministratore conferma l'accesso con la passkey personale. La seconda passkey resta raccomandata ma non vincolante; l'unico recupero disponibile è quello infrastrutturale documentato |
 | 8 | Esportazione, manutenzione e diagnostica CMS/SEO | Completo | Le unità 8.1–8.4 forniscono backup e ripristino verificabili di D1/R2, diagnostica CMS/SEO, manuale senza codice e cadenza di manutenzione. PR #18, 115 test, i run Worker `38091623182`, SEO `38091623204` e Pages `38091622784` e le risposte live sono registrati in `08-maintenance-diagnostics.md` |
 | 9 | Prestazioni e Core Web Vitals | Completo | Baseline, interventi, dieci audit conformi su `main` e verifiche HTTP del sito e del Worker sono registrati in `docs/performance/baseline-2026-10-11.md`; il primo punto incompleto è il 10 |
-| 10 | Programma editoriale e monitoraggio organico | Da iniziare | Cluster territoriali e fonti sono definiti, ma non esiste ancora un ciclo editoriale misurato |
+| 10 | Programma editoriale e monitoraggio organico | In corso | L'unità 10.1 definisce cluster, calendario, trattamento delle prove e privacy in formato verificabile; restano pubblicazione dei collegamenti contestuali e rapporto organico aggregato |
 | 11 | Amministrazione più user friendly | Da iniziare | Il pannello copre le funzioni CMS, ma richiede una revisione completa di linguaggio, navigazione, gerarchia, feedback, errori, responsive e accessibilità |
 | 12 | Rafforzamento della privacy | Da iniziare | Esistono informativa, filtri e strumenti rispettosi della privacy; manca un audit complessivo con minimizzazione, retention, consenso, sicurezza dei metadati e diagnostica verificabile |
 
@@ -35,7 +35,7 @@ affiancare il primo passaggio tecnico incompleto, ma non sostituirlo.
 | SEO-3 | Contenuti autonomi e indicizzabili | Completo | Punto 5: `public-content-manifest.json` censisce ogni pagina pubblicata, i percorsi `/voci/<slug>.html` e `/luoghi/<id>.html` hanno HTML, canonical e JSON-LD; alias storici e aggiornamento automatico sono provati |
 | SEO-4 | Media ottimizzati | Completo | Le unità 6.1–6.3 catalogano originali, testo alternativo e dimensioni, generano varianti responsive e sociali e pubblicano metadati Open Graph/Twitter coerenti; test e verifica live sono registrati in `06-media-r2.md` |
 | SEO-5 | Esperienza e prestazioni | Completo nel perimetro misurabile | Le dieci combinazioni su `main` rispettano LCP ≤ 2,5 s, CLS ≤ 0,1 e TBT ≤ 200 ms nel run `38112468792`; l'INP al 75º percentile resta correttamente in attesa di un campione Search Console/CrUX sufficiente, senza aggiungere telemetria individuale |
-| SEO-6 | Crescita editoriale verificabile | Da iniziare | Punto 10: pubblicazione basata sulle fonti e valutazione trimestrale rispetto alla baseline, senza obiettivi di traffico arbitrari |
+| SEO-6 | Crescita editoriale verificabile | In corso | `editorial-program.json` pianifica sei attività in tre cluster, distingue fonte, testimonianza e interpretazione e vieta dati individuali; restano collegamenti contestuali pubblicati e prima valutazione aggregata rispetto alla baseline |
 
 ## Sequenza vincolante complessiva
 
@@ -148,6 +148,14 @@ retention e recupero senza modificare contenuti o media, è in
 | 9.2 | Stabilità visiva e caricamento iniziale | Completa | Script differiti, connessioni selettive, CSS Leaflet locale, dimensioni delle immagini e ripiego HTML dell'indice Voci sono coperti da `performance-loading.test.mjs`; la matrice finale rispetta LCP e CLS in tutte le combinazioni |
 | 9.3 | Reattività di mappa e contenuti interattivi | Completa | Memorie attiva la cartografia su richiesta e Voci carica l'editor soltanto quando serve. Il run `38111289096` rispetta TBT ≤ 200 ms in tutte le combinazioni; INP resta distinto e in attesa del campione sul campo |
 | 9.4 | Verifica pubblicata e monitoraggio | Completa | Su `main` i run Performance `38112468792`, SEO `38112468591`, Pages `38112468441` e Worker `38112468711` sono riusciti. Le risposte pubbliche `200` provano i loader differiti, l'indice Voci statico, l'attivazione esplicita di Memorie e l'health D1/R2; misure e intestazioni sono in `docs/performance/baseline-2026-10-11.md` |
+
+## Punto 10 — ordine vincolante
+
+| Ordine | Unità | Stato | Criterio e prova |
+|---:|---|---|---|
+| 10.1 | Cluster, calendario e prove editoriali | Completa | `editorial-program.json` e `docs/seo/editorial-program.md` organizzano sei attività in tre cluster, distinguono fonte, testimonianza e interpretazione e applicano consenso e minimizzazione. `check-editorial-program.mjs` verifica copertura delle cinque Voci, calendario, URL e relazioni senza usare dati personali |
+| 10.2 | Collegamenti contestuali pubblicati | Da iniziare | Il grafo editoriale deve produrre collegamenti autonomi e verificati nelle pagine generate, senza cambiare canonical o permalink |
+| 10.3 | Rapporto organico trimestrale | Da iniziare | Il formato deve confrontare dati aggregati con la baseline ed escludere query, URL o segmenti che possano esporre dati privati; i valori reali richiedono accesso a Search Console |
 
 ## Punti 4–12 — criteri di completamento
 

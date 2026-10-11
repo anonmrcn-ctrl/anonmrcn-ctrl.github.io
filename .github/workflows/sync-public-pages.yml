@@ -35,6 +35,7 @@ jobs:
       - name: Verifica pagine, SEO e sicurezza del renderer
         run: |
           node scripts/check-seo.mjs
+          node scripts/check-editorial-program.mjs
           node --test scripts/public-pages.test.mjs
 
       - name: Pubblica solo gli aggiornamenti generati
