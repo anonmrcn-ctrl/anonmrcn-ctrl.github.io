@@ -31,10 +31,10 @@ jobs:
       - name: Avvia il sito locale
         shell: bash
         run: |
-          python3 -m http.server 4173 --bind 127.0.0.1 > /tmp/nnmrcn-http.log 2>&1 &
+          node scripts/serve-performance.mjs > /tmp/nnmrcn-http.log 2>&1 &
           echo $! > /tmp/nnmrcn-http.pid
           for attempt in {1..20}; do
-            if curl --fail --silent http://127.0.0.1:4173/index.html > /dev/null; then
+            if curl --fail --silent http://127.0.0.1:8000/index.html > /dev/null; then
               exit 0
             fi
             sleep 1
@@ -53,7 +53,7 @@ jobs:
               if [[ "$profile" == "desktop" ]]; then
                 extra+=(--preset=desktop)
               fi
-              npx --yes lighthouse@12.8.2 "http://127.0.0.1:4173${path}" \
+              npx --yes lighthouse@12.8.2 "http://127.0.0.1:8000${path}" \
                 --quiet \
                 --chrome-flags="--headless --no-sandbox --disable-dev-shm-usage" \
                 --only-categories=performance \

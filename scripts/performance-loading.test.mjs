@@ -34,6 +34,8 @@ test("le mappe preparano un'unica connessione alle librerie esterne", async () =
     const project = await readFile(resolve(root, "progetto.html"), "utf8");
     const memories = await readFile(resolve(root, "memorie.html"), "utf8");
     assert.equal((project.match(/rel="preconnect" href="https:\/\/unpkg\.com"/g) || []).length, 1);
+    assert.match(project, /href="\.\/leaflet\.css\?v=1\.9\.4"/);
+    assert.doesNotMatch(project, /href="https:\/\/unpkg\.com\/leaflet[^\"]+\.css/);
     assert.doesNotMatch(memories, /rel="preconnect" href="https:\/\/unpkg\.com"/);
     assert.match(memories, /href="\.\/leaflet\.css\?v=1\.9\.4"/);
     assert.doesNotMatch(memories, /<script[^>]+src="https:\/\/unpkg\.com\/leaflet/);

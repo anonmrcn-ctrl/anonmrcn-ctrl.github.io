@@ -7,7 +7,8 @@ delle Voci, scheda di un luogo e Memorie — sia con profilo mobile sia desktop.
 ## Che cosa misura il controllo
 
 `performance-budget.json` è l'unica fonte per percorsi e soglie. Il workflow
-`check-performance.yml` avvia il ramo corrente in un server locale isolato,
+`check-performance.yml` avvia il ramo corrente in un server locale isolato con
+compressione gzip, come il sito pubblicato,
 esegue Lighthouse sulle dieci combinazioni e conserva i rapporti JSON per 30
 giorni. `scripts/check-performance.mjs` verifica:
 
@@ -38,6 +39,10 @@ In CI, dopo la produzione dei rapporti:
 ```bash
 node scripts/check-performance.mjs performance-reports
 ```
+
+Il server usa `http://127.0.0.1:8000`, origine locale già ammessa dal Worker:
+in questo modo l'audit misura anche i contenuti D1 senza allargare il CORS di
+produzione. Non registra richieste né dati di navigazione.
 
 Ogni rapporto è nominato `<tipologia>.<profilo>.json`; l'assenza anche di una
 sola delle dieci combinazioni rende il controllo non valido.
