@@ -30,6 +30,7 @@ jobs:
           node scripts/check-seo.mjs
           node scripts/check-editorial-program.mjs
           node scripts/check-organic-report.mjs
+          node scripts/check-privacy.mjs
 
       - name: Prova la generazione delle pagine pubbliche
         run: node --test scripts/public-pages.test.mjs scripts/organic-report.test.mjs scripts/admin-ux.test.mjs

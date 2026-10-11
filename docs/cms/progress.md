@@ -23,7 +23,7 @@ affiancare il primo passaggio tecnico incompleto, ma non sostituirlo.
 | 9 | Prestazioni e Core Web Vitals | Completo | Baseline, interventi, dieci audit conformi su `main` e verifiche HTTP del sito e del Worker sono registrati in `docs/performance/baseline-2026-10-11.md`; il primo punto incompleto è il 10 |
 | 10 | Programma editoriale e monitoraggio organico | In corso | Programma, collegamenti contestuali e strumenti per rapporti aggregati sono completi; la prima baseline numerica resta in attesa dell'accesso a Search Console |
 | 11 | Amministrazione più user friendly | Completo | Navigazione per attività, feedback comprensibili, protezione delle modifiche e audit Chrome a 375/1440 px sono documentati in `11-admin-usability.md`; i run SEO `38154750211` e prestazioni/UX `38154750212` sono riusciti |
-| 12 | Rafforzamento della privacy | Da iniziare | Esistono informativa, filtri e strumenti rispettosi della privacy; manca un audit complessivo con minimizzazione, retention, consenso, sicurezza dei metadati e diagnostica verificabile |
+| 12 | Rafforzamento della privacy | In corso | Inventario e audit iniziale sono verificabili; restano da chiudere retention, telemetria/servizi esterni e diritti self-service nelle unità 12.2–12.4 |
 
 ## Traguardi SEO trasversali
 
@@ -164,6 +164,15 @@ retention e recupero senza modificare contenuti o media, è in
 | 11.1 | Gerarchia e navigazione per attività | Completa | `admin.html` presenta dopo l'accesso un indice con otto attività espresse in linguaggio non tecnico e destinazioni stabili. `style.css` garantisce target tattili, stato focus e una colonna su smartphone; `admin-ux.test.mjs` verifica collegamenti, ID univoci, titoli associati, responsive e `noindex`. Il controllo completo dell'11 ottobre 2026 supera 130 test, tutti i controlli statici e la build Worker dry-run |
 | 11.2 | Feedback, salvataggi ed errori | Completa | `admin.js` assegna stati accessibili a tutte le regioni live, rende comprensibili sessione scaduta, conflitto, limiti e indisponibilità, segnala i moduli modificati e avvisa prima di abbandonarli. Una nuova autenticazione conserva i campi non salvati invece di ricaricare automaticamente i dati; `admin-ux.test.mjs` verifica queste garanzie e la suite completa supera 132 test |
 | 11.3 | Audit end-to-end accessibile e responsive | Completa | `admin-ui.e2e.mjs` prova con Chrome smartphone e desktop, assenza di overflow, etichette, target da 44 px, tastiera e ciclo di feedback senza dati di produzione. Il run `38154750212` è riuscito e conserva le schermate nell'artefatto `11708057414`; 133 test locali, controlli statici, build Worker dry-run e run SEO `38154750211` sono verdi. La verifica della stessa versione pubblicata resta registrata prima di avanzare al punto 12 |
+
+## Punto 12 — ordine vincolante
+
+| Ordine | Unità | Stato | Criterio e prova |
+|---:|---|---|---|
+| 12.1 | Inventario e audit iniziale | Completa | `privacy.config.json`, `12-privacy-hardening.md` e `check-privacy.mjs` censiscono otto classi di dati, sei servizi esterni, retention, esposizione e quattro rilievi senza includere valori reali o segreti. Il controllo prova anche `noindex`, assenza dalla sitemap, log senza query e retention dei contatti |
+| 12.2 | Minimizzazione e retention | Da iniziare | Eliminare gli identificatori antiabuso quando non sono più necessari, ripulire le sessioni scadute e provare la cadenza automatica |
+| 12.3 | Consenso, telemetria e servizi esterni | Da iniziare | Statistiche soltanto dopo opt-in e mai nelle aree private; librerie applicative servite in prima parte; preferenze revocabili e verificabili |
+| 12.4 | Esportazione, cancellazione e verifica finale | Da iniziare | La persona autenticata esporta i propri dati e li cancella senza esporre terzi; cache, sitemap, diagnostica, informativa e servizio pubblicato superano l'audit finale |
 
 ## Punti 4–12 — criteri di completamento
 

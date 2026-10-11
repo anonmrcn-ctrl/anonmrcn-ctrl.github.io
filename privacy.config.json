@@ -1,0 +1,137 @@
+{
+  "version": "2026-10-11",
+  "ownerContact": "anonmrcn@gmail.com",
+  "principles": [
+    "minimizzazione",
+    "limitazione della conservazione",
+    "consenso esplicito e revocabile",
+    "nessun tracciamento pubblicitario",
+    "nessun dato privato in cache, sitemap o telemetria pubbliche"
+  ],
+  "dataClasses": [
+    {
+      "id": "location-account",
+      "tables": ["locations", "poems"],
+      "purpose": "accesso pseudonimo e partecipazione al progetto",
+      "minimization": "nessun civico; coordinate spostate di 250-400 metri; password e codice conservati soltanto come hash con salt/pepper",
+      "retention": "fino alla cancellazione dell'account o alla conclusione del progetto",
+      "public": false
+    },
+    {
+      "id": "location-sessions",
+      "tables": ["sessions"],
+      "purpose": "sessione autenticata della location",
+      "minimization": "il token resta sul dispositivo; D1 conserva soltanto SHA-256, location e scadenza",
+      "retention": "massimo 365 giorni dall'ultimo rinnovo; revoca immediata al logout",
+      "public": false
+    },
+    {
+      "id": "messages",
+      "tables": ["messages"],
+      "purpose": "corrispondenza tra location e archivio pubblico facoltativo",
+      "minimization": "mittente nascosto per impostazione predefinita; pubblicazione soltanto con doppio consenso e moderazione",
+      "retention": "fino alla cancellazione dell'account o alla conclusione del progetto; il consenso pubblico è revocabile",
+      "public": "solo testo approvato con doppio consenso"
+    },
+    {
+      "id": "contact-access",
+      "tables": ["contact_messages"],
+      "purpose": "rispondere a contatti e richieste di accesso e limitare abusi",
+      "minimization": "campi espliciti e HMAC temporaneo dell'indirizzo IP; nessun IP in chiaro",
+      "retention": "30 giorni",
+      "public": false
+    },
+    {
+      "id": "memories",
+      "tables": ["memories", "media_assets"],
+      "purpose": "moderare e pubblicare contributi territoriali con consenso",
+      "minimization": "nome facoltativo, coordinate fornite dall'autore, token di ritiro conservato come hash",
+      "retention": "fino al ritiro o alla conclusione del progetto; HMAC antiabuso necessario soltanto 24 ore",
+      "public": "solo contributi approvati"
+    },
+    {
+      "id": "push",
+      "tables": ["push_subscriptions", "push_keys"],
+      "purpose": "notifiche facoltative richieste dal dispositivo",
+      "minimization": "endpoint e chiavi tecniche; nessun contenuto personale nella notifica",
+      "retention": "fino alla disattivazione, cancellazione dell'account o risposta 404/410 del provider",
+      "public": false
+    },
+    {
+      "id": "admin-auth",
+      "tables": ["admin_identities", "admin_credentials", "admin_auth_challenges", "admin_sessions"],
+      "purpose": "autenticazione forte del pannello",
+      "minimization": "chiave pubblica, contatore e hash di challenge/sessione; nessun dato biometrico o chiave privata",
+      "retention": "challenge 5 minuti; sessione 8 ore; credenziale fino alla revoca",
+      "public": false
+    },
+    {
+      "id": "private-documents",
+      "tables": ["cms_documents", "media_assets"],
+      "purpose": "documenti operativi riservati dell'amministrazione",
+      "minimization": "metadati in D1 e byte in R2, download solo autenticato e no-store",
+      "retention": "fino alla cancellazione amministrativa; le versioni sostituite restano tracciate",
+      "public": false
+    }
+  ],
+  "protectedPages": [
+    "accesso.html",
+    "admin.html",
+    "spazio-personale.html",
+    "taccuino.html"
+  ],
+  "externalServices": [
+    {
+      "id": "github-pages",
+      "purpose": "hosting delle pagine statiche pubbliche",
+      "data": "richieste HTTP tecnicamente necessarie"
+    },
+    {
+      "id": "cloudflare",
+      "purpose": "Worker, D1, R2 e protezione del servizio",
+      "data": "richieste API e dati applicativi descritti nell'inventario"
+    },
+    {
+      "id": "goatcounter",
+      "purpose": "conteggi aggregati di visita",
+      "data": "percorso canonico senza query, referrer senza query, titolo e larghezza schermo"
+    },
+    {
+      "id": "unpkg",
+      "purpose": "distribuzione corrente delle librerie Leaflet e PMTiles",
+      "data": "richiesta HTTP dal browser"
+    },
+    {
+      "id": "map-tiles",
+      "purpose": "cartografia richiesta dall'utente",
+      "data": "richieste di tile con area e livello di zoom"
+    },
+    {
+      "id": "search-console",
+      "purpose": "misure SEO aggregate e verifica indicizzazione",
+      "data": "query e URL aggregati soggetti a soglia minima nel rapporto locale"
+    }
+  ],
+  "openFindings": [
+    {
+      "id": "PRIV-RETENTION-1",
+      "unit": "12.2",
+      "finding": "Gli HMAC antiabuso delle Memorie restano oltre la finestra utile di 24 ore e le righe di sessione scadute non sono eliminate dal job periodico."
+    },
+    {
+      "id": "PRIV-TELEMETRY-1",
+      "unit": "12.3",
+      "finding": "GoatCounter parte senza una scelta esplicita e compare anche in pagine personali noindex."
+    },
+    {
+      "id": "PRIV-EXTERNAL-1",
+      "unit": "12.3",
+      "finding": "Leaflet e PMTiles sono ancora richiesti a unpkg dal browser."
+    },
+    {
+      "id": "PRIV-RIGHTS-1",
+      "unit": "12.4",
+      "finding": "Accesso ed eliminazione dei dati richiedono ancora una richiesta email anziché un flusso self-service autenticato."
+    }
+  ]
+}
