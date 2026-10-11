@@ -155,7 +155,7 @@ retention e recupero senza modificare contenuti o media, è in
 |---:|---|---|---|
 | 10.1 | Cluster, calendario e prove editoriali | Completa | `editorial-program.json` e `docs/seo/editorial-program.md` organizzano sei attività in tre cluster, distinguono fonte, testimonianza e interpretazione e applicano consenso e minimizzazione. `check-editorial-program.mjs` verifica copertura delle cinque Voci, calendario, URL e relazioni senza usare dati personali |
 | 10.2 | Collegamenti contestuali pubblicati | Completa | `generate-public-pages.mjs` rende la rete definita dal programma come navigazione «Approfondisci nel territorio» nelle cinque Voci autonome. Il controllo editoriale legge l'HTML generato e impedisce Voci prive di relazioni o collegamenti non pubblicati, senza cambiare canonical, sitemap o permalink |
-| 10.3 | Rapporto organico trimestrale | Da iniziare | Il formato deve confrontare dati aggregati con la baseline ed escludere query, URL o segmenti che possano esporre dati privati; i valori reali richiedono accesso a Search Console |
+| 10.3 | Rapporto organico trimestrale | In attesa di accesso | `organic-monitoring.json`, `docs/seo/organic-monitoring.md` e `check-organic-report.mjs` definiscono confronto corrente/baseline, soglia minima di aggregazione e rifiuto di query, URL e identificativi; i test provano accettazione e blocchi. La prima baseline e il primo rapporto non possono essere compilati senza accesso alla proprietà Search Console e non vengono inventati |
 
 ## Punti 4–12 — criteri di completamento
 

@@ -36,7 +36,8 @@ jobs:
         run: |
           node scripts/check-seo.mjs
           node scripts/check-editorial-program.mjs
-          node --test scripts/public-pages.test.mjs
+          node scripts/check-organic-report.mjs
+          node --test scripts/public-pages.test.mjs scripts/organic-report.test.mjs
 
       - name: Pubblica solo gli aggiornamenti generati
         shell: bash
