@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 const adminHtml = await readFile(new URL("../admin.html", import.meta.url), "utf8");
+const adminJs = await readFile(new URL("../admin.js", import.meta.url), "utf8");
 const styleCss = await readFile(new URL("../style.css", import.meta.url), "utf8");
 
 function attribute(tag, name) {
@@ -47,4 +48,23 @@ test("la navigazione resta leggibile da tastiera e smartphone", () => {
 
 test("la pagina amministrativa resta esclusa dall’indicizzazione", () => {
     assert.match(adminHtml, /<meta name="robots" content="noindex, nofollow">/u);
+});
+
+test("feedback e conflitti usano messaggi comprensibili senza cancellare i moduli", () => {
+    assert.match(adminJs, /error\?\.status === 401/u);
+    assert.match(adminJs, /error\?\.status === 409/u);
+    assert.match(adminJs, /Le tue modifiche sono ancora nel modulo/u);
+    assert.match(adminJs, /Accesso ripristinato[\s\S]*modifiche non salvate/u);
+    assert.match(adminJs, /hasUnsavedAdminChanges\(\)/u);
+    assert.match(adminJs, /beforeunload/u);
+});
+
+test("gli stati di attesa, riuscita ed errore sono annunciati e visibili", () => {
+    for (const state of ["busy", "success", "error"]) {
+        assert.match(adminJs, new RegExp(`return "${state}"`, "u"));
+        assert.match(styleCss, new RegExp(`data-state="${state}"`, "u"));
+    }
+    assert.match(adminJs, /aria-atomic/u);
+    assert.match(adminJs, /setAttribute\("role", "status"\)/u);
+    assert.match(adminJs, /Modifiche non ancora salvate\./u);
 });

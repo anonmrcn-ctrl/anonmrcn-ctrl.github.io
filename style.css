@@ -3443,6 +3443,60 @@ html[data-theme="dark"] .leaflet-control-layers label {
     font-size: 0.8rem;
 }
 
+.admin-status[data-state],
+.admin-export-status[data-state],
+.notifiche-status[data-state] {
+    padding: 0.55rem 0.7rem;
+    border-left: 0.25rem solid var(--line);
+    line-height: 1.45;
+}
+
+.admin-status[data-state]::before,
+.admin-export-status[data-state]::before,
+.notifiche-status[data-state]::before {
+    margin-right: 0.35rem;
+    font-weight: 700;
+}
+
+.admin-status[data-state="busy"]::before,
+.admin-export-status[data-state="busy"]::before,
+.notifiche-status[data-state="busy"]::before {
+    content: "In corso ·";
+}
+
+.admin-status[data-state="success"],
+.admin-export-status[data-state="success"],
+.notifiche-status[data-state="success"] {
+    border-left-color: var(--brand-green-deep);
+}
+
+.admin-status[data-state="success"]::before,
+.admin-export-status[data-state="success"]::before,
+.notifiche-status[data-state="success"]::before {
+    content: "Fatto ·";
+}
+
+.admin-status[data-state="error"],
+.admin-export-status[data-state="error"],
+.notifiche-status[data-state="error"] {
+    border-left-color: var(--brand-red-deep);
+}
+
+.admin-status[data-state="error"]::before,
+.admin-export-status[data-state="error"]::before,
+.notifiche-status[data-state="error"]::before {
+    content: "Attenzione ·";
+}
+
+.admin-modifiche {
+    grid-column: 1 / -1;
+    margin: 0;
+    padding: 0.55rem 0.7rem;
+    border-left: 0.25rem solid var(--brand-yellow);
+    font-size: 0.82rem;
+    font-weight: 700;
+}
+
 .admin-archive-meta {
     padding-left: 0.65rem;
     border-left: 2px solid var(--ink);

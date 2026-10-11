@@ -22,7 +22,7 @@ affiancare il primo passaggio tecnico incompleto, ma non sostituirlo.
 | 8 | Esportazione, manutenzione e diagnostica CMS/SEO | Completo | Le unità 8.1–8.4 forniscono backup e ripristino verificabili di D1/R2, diagnostica CMS/SEO, manuale senza codice e cadenza di manutenzione. PR #18, 115 test, i run Worker `38091623182`, SEO `38091623204` e Pages `38091622784` e le risposte live sono registrati in `08-maintenance-diagnostics.md` |
 | 9 | Prestazioni e Core Web Vitals | Completo | Baseline, interventi, dieci audit conformi su `main` e verifiche HTTP del sito e del Worker sono registrati in `docs/performance/baseline-2026-10-11.md`; il primo punto incompleto è il 10 |
 | 10 | Programma editoriale e monitoraggio organico | In corso | Programma, collegamenti contestuali e strumenti per rapporti aggregati sono completi; la prima baseline numerica resta in attesa dell'accesso a Search Console |
-| 11 | Amministrazione più user friendly | In corso | L'unità 11.1 aggiunge un indice delle attività con otto destinazioni accessibili, touch target e disposizione responsive verificati; restano feedback/errori e audit end-to-end |
+| 11 | Amministrazione più user friendly | In corso | Le unità 11.1–11.2 aggiungono navigazione per attività, stati accessibili, errori comprensibili e protezione delle modifiche non salvate; resta l'audit end-to-end |
 | 12 | Rafforzamento della privacy | Da iniziare | Esistono informativa, filtri e strumenti rispettosi della privacy; manca un audit complessivo con minimizzazione, retention, consenso, sicurezza dei metadati e diagnostica verificabile |
 
 ## Traguardi SEO trasversali
@@ -162,7 +162,7 @@ retention e recupero senza modificare contenuti o media, è in
 | Ordine | Unità | Stato | Criterio e prova |
 |---:|---|---|---|
 | 11.1 | Gerarchia e navigazione per attività | Completa | `admin.html` presenta dopo l'accesso un indice con otto attività espresse in linguaggio non tecnico e destinazioni stabili. `style.css` garantisce target tattili, stato focus e una colonna su smartphone; `admin-ux.test.mjs` verifica collegamenti, ID univoci, titoli associati, responsive e `noindex`. Il controllo completo dell'11 ottobre 2026 supera 130 test, tutti i controlli statici e la build Worker dry-run |
-| 11.2 | Feedback, salvataggi ed errori | Da iniziare | Ogni operazione deve distinguere attesa, riuscita, errore di validazione, sessione scaduta e conflitto senza perdere le modifiche dell'amministratore |
+| 11.2 | Feedback, salvataggi ed errori | Completa | `admin.js` assegna stati accessibili a tutte le regioni live, rende comprensibili sessione scaduta, conflitto, limiti e indisponibilità, segnala i moduli modificati e avvisa prima di abbandonarli. Una nuova autenticazione conserva i campi non salvati invece di ricaricare automaticamente i dati; `admin-ux.test.mjs` verifica queste garanzie e la suite completa supera 132 test |
 | 11.3 | Audit end-to-end accessibile e responsive | Da iniziare | I flussi principali devono essere verificati con tastiera, smartphone e desktop, con linguaggio coerente e prove automatiche e pubblicate |
 
 ## Punti 4–12 — criteri di completamento
