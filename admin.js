@@ -327,13 +327,154 @@
         identity: () => adminSession ? "admin" : ""
     });
 
+    function adminRequestErrorMessage(error) {
+        if (error?.status === 401) {
+            return "La sessione è scaduta. Accedi di nuovo: le modifiche presenti nel modulo restano disponibili.";
+        }
+        if (error?.status === 409) {
+            return "Il contenuto è cambiato in un’altra sessione. Le tue modifiche sono ancora nel modulo: confrontale prima di ricaricare.";
+        }
+        if (error?.status === 413) {
+            return "Il file è troppo grande. Riducilo e riprova; gli altri campi non sono stati cancellati.";
+        }
+        if (error?.status === 429) {
+            return "Troppe richieste ravvicinate. Attendi qualche istante e riprova.";
+        }
+        if (Number(error?.status) >= 500) {
+            return "Il servizio non è disponibile in questo momento. Le modifiche nel modulo non sono state cancellate.";
+        }
+        if (error?.code === "API_NOT_CONFIGURED") {
+            return "Il collegamento al servizio non è configurato. Ricarica la pagina dopo aver controllato la configurazione.";
+        }
+        if (error?.name === "TypeError") {
+            return "Connessione non disponibile. Controlla la rete e riprova: le modifiche nel modulo restano disponibili.";
+        }
+        return error?.message || "Operazione non riuscita. Riprova senza ricaricare la pagina.";
+    }
+
     async function request(path, options = {}) {
         const headers = new Headers(options.headers || {});
         headers.set("Authorization", `Bearer ${adminSession}`);
 
-        return api.request(path, {
-            ...options,
-            headers
+        try {
+            return await api.request(path, {
+                ...options,
+                headers
+            });
+        } catch (error) {
+            const normalizedError = error instanceof Error
+                ? error
+                : new Error("Operazione non riuscita.");
+            normalizedError.message = adminRequestErrorMessage(normalizedError);
+            throw normalizedError;
+        }
+    }
+
+    function adminStatusState(message) {
+        const value = String(message || "").trim().toLocaleLowerCase("it");
+        if (!value) return "";
+        if (/caricamento|preparazione|salvataggio|creazione|verifica(?!t)|ripristino|rimozione|eliminazione|esportazione|in corso/u.test(value)) {
+            return "busy";
+        }
+        if (/salvat|completat|aggiunt|aggiornat|pubblicat|registrat|creat|pront|verificat|annullat|nessuna modifica/u.test(value)) {
+            return "success";
+        }
+        if (/non |errore|scadut|tropp|rifiutat|manca|impossibil|seleziona|scegli|non corrisponde/u.test(value)) {
+            return "error";
+        }
+        return "info";
+    }
+
+    function resetAdminFormDirty(formElement) {
+        formElement?.removeAttribute("data-dirty");
+        formElement?.querySelector(":scope > .admin-modifiche")?.remove();
+    }
+
+    function applyAdminStatusState(element) {
+        const state = adminStatusState(element.textContent);
+        const region = element.closest("form, section");
+        if (!state) {
+            element.removeAttribute("data-state");
+            element.removeAttribute("role");
+            region?.removeAttribute("aria-busy");
+            return;
+        }
+        element.dataset.state = state;
+        element.setAttribute("role", "status");
+        if (state === "busy") {
+            region?.setAttribute("aria-busy", "true");
+        } else {
+            region?.removeAttribute("aria-busy");
+        }
+        if (state === "success") {
+            resetAdminFormDirty(element.closest("form"));
+        }
+    }
+
+    function hasUnsavedAdminChanges() {
+        return Boolean(panel.querySelector("form[data-dirty='true']"));
+    }
+
+    const adminSwitcherIds = new Set([
+        "adminPageSelect",
+        "adminMapLayerSelect",
+        "adminMapFeatureSelect",
+        "adminSourceSelect",
+        "adminSettingSelect",
+        "adminSeoPage",
+        "adminLegalDocumentSelect",
+        "adminLegalVersionSelect",
+        "adminPermalinkSelect",
+        "adminDocumentSelect",
+        "adminPreviewSelect",
+        "adminRevisionRestore",
+        "adminRevisionCompare"
+    ]);
+
+    function markAdminFormDirty(event) {
+        if (adminSwitcherIds.has(event.target.id)) return;
+        const changedForm = event.target.closest("#adminPanel form");
+        if (!changedForm || changedForm.dataset.dirty === "true") return;
+        changedForm.dataset.dirty = "true";
+        const note = document.createElement("p");
+        note.className = "admin-modifiche";
+        note.setAttribute("role", "status");
+        note.textContent = "Modifiche non ancora salvate.";
+        const status = changedForm.querySelector("[aria-live]");
+        if (status) status.before(note);
+        else changedForm.appendChild(note);
+    }
+
+    function initializeAdminFeedback() {
+        const statusElements = document.querySelectorAll(
+            ".admin [aria-live='polite']"
+        );
+        const observer = new MutationObserver((records) => {
+            const changed = new Set(records.map((record) =>
+                record.target.nodeType === Node.TEXT_NODE
+                    ? record.target.parentElement
+                    : record.target
+            ));
+            changed.forEach((element) => {
+                if (element?.matches?.(".admin [aria-live='polite']")) {
+                    applyAdminStatusState(element);
+                }
+            });
+        });
+        statusElements.forEach((element) => {
+            element.setAttribute("aria-atomic", "true");
+            applyAdminStatusState(element);
+            observer.observe(element, { childList: true, characterData: true, subtree: true });
+        });
+        panel.addEventListener("input", markAdminFormDirty);
+        panel.addEventListener("change", markAdminFormDirty);
+        panel.querySelectorAll("[id$='Reload']").forEach((button) => {
+            button.addEventListener("click", () => resetAdminFormDirty(button.closest("form")));
+        });
+        window.addEventListener("beforeunload", (event) => {
+            if (!hasUnsavedAdminChanges()) return;
+            event.preventDefault();
+            event.returnValue = "";
         });
     }
 
@@ -484,6 +625,7 @@
     }
 
     async function loginWithPasskey() {
+        const preserveEditorState = hasUnsavedAdminChanges();
         passkeyLogin.disabled = true;
         statusText.textContent = "Verifica della passkey…";
         try {
@@ -502,7 +644,13 @@
                 })
             });
             setAuthenticated(session);
-            await loadMessages();
+            if (preserveEditorState) {
+                panel.hidden = false;
+                statusText.textContent =
+                    "Accesso ripristinato. Le modifiche non salvate sono ancora nei moduli: prova di nuovo a salvarle.";
+            } else {
+                await loadMessages();
+            }
         } catch (error) {
             statusText.textContent = credentialErrorMessage(error);
             await refreshAuthStatus();
@@ -4170,6 +4318,8 @@
             memorySection.scrollIntoView({ behavior: "smooth", block: "start" });
         });
     });
+
+    initializeAdminFeedback();
 
     if (adminSession) {
         resumeAdminSession();

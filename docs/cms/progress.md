@@ -21,8 +21,8 @@ affiancare il primo passaggio tecnico incompleto, ma non sostituirlo.
 | 7 | Sostituzione del token amministrativo | Completo | PR #16 e i run Worker `38068531893`, Pages `38068531244` e SEO `38068532070` pubblicano identità WebAuthn, sessioni di 8 ore e disattivazione automatica del token dopo la prima passkey. L'11 ottobre 2026 lo stato pubblico restituisce `configured: true`, una richiesta amministrativa con il solo header legacy restituisce `401` e l'amministratore conferma l'accesso con la passkey personale. La seconda passkey resta raccomandata ma non vincolante; l'unico recupero disponibile è quello infrastrutturale documentato |
 | 8 | Esportazione, manutenzione e diagnostica CMS/SEO | Completo | Le unità 8.1–8.4 forniscono backup e ripristino verificabili di D1/R2, diagnostica CMS/SEO, manuale senza codice e cadenza di manutenzione. PR #18, 115 test, i run Worker `38091623182`, SEO `38091623204` e Pages `38091622784` e le risposte live sono registrati in `08-maintenance-diagnostics.md` |
 | 9 | Prestazioni e Core Web Vitals | Completo | Baseline, interventi, dieci audit conformi su `main` e verifiche HTTP del sito e del Worker sono registrati in `docs/performance/baseline-2026-10-11.md`; il primo punto incompleto è il 10 |
-| 10 | Programma editoriale e monitoraggio organico | In corso | L'unità 10.1 definisce cluster, calendario, trattamento delle prove e privacy in formato verificabile; restano pubblicazione dei collegamenti contestuali e rapporto organico aggregato |
-| 11 | Amministrazione più user friendly | Da iniziare | Il pannello copre le funzioni CMS, ma richiede una revisione completa di linguaggio, navigazione, gerarchia, feedback, errori, responsive e accessibilità |
+| 10 | Programma editoriale e monitoraggio organico | In corso | Programma, collegamenti contestuali e strumenti per rapporti aggregati sono completi; la prima baseline numerica resta in attesa dell'accesso a Search Console |
+| 11 | Amministrazione più user friendly | Completo | Navigazione per attività, feedback comprensibili, protezione delle modifiche e audit Chrome a 375/1440 px sono documentati in `11-admin-usability.md`; i run SEO `38154750211` e prestazioni/UX `38154750212` sono riusciti |
 | 12 | Rafforzamento della privacy | Da iniziare | Esistono informativa, filtri e strumenti rispettosi della privacy; manca un audit complessivo con minimizzazione, retention, consenso, sicurezza dei metadati e diagnostica verificabile |
 
 ## Traguardi SEO trasversali
@@ -35,7 +35,7 @@ affiancare il primo passaggio tecnico incompleto, ma non sostituirlo.
 | SEO-3 | Contenuti autonomi e indicizzabili | Completo | Punto 5: `public-content-manifest.json` censisce ogni pagina pubblicata, i percorsi `/voci/<slug>.html` e `/luoghi/<id>.html` hanno HTML, canonical e JSON-LD; alias storici e aggiornamento automatico sono provati |
 | SEO-4 | Media ottimizzati | Completo | Le unità 6.1–6.3 catalogano originali, testo alternativo e dimensioni, generano varianti responsive e sociali e pubblicano metadati Open Graph/Twitter coerenti; test e verifica live sono registrati in `06-media-r2.md` |
 | SEO-5 | Esperienza e prestazioni | Completo nel perimetro misurabile | Le dieci combinazioni su `main` rispettano LCP ≤ 2,5 s, CLS ≤ 0,1 e TBT ≤ 200 ms nel run `38112468792`; l'INP al 75º percentile resta correttamente in attesa di un campione Search Console/CrUX sufficiente, senza aggiungere telemetria individuale |
-| SEO-6 | Crescita editoriale verificabile | In corso | `editorial-program.json` pianifica sei attività in tre cluster, distingue fonte, testimonianza e interpretazione e vieta dati individuali; restano collegamenti contestuali pubblicati e prima valutazione aggregata rispetto alla baseline |
+| SEO-6 | Crescita editoriale verificabile | In corso | Programma e collegamenti contestuali sono pubblicati e verificati; la prima valutazione aggregata resta in attesa della baseline Search Console, senza inventare dati |
 
 ## Sequenza vincolante complessiva
 
@@ -156,6 +156,14 @@ retention e recupero senza modificare contenuti o media, è in
 | 10.1 | Cluster, calendario e prove editoriali | Completa | `editorial-program.json` e `docs/seo/editorial-program.md` organizzano sei attività in tre cluster, distinguono fonte, testimonianza e interpretazione e applicano consenso e minimizzazione. `check-editorial-program.mjs` verifica copertura delle cinque Voci, calendario, URL e relazioni senza usare dati personali |
 | 10.2 | Collegamenti contestuali pubblicati | Completa | `generate-public-pages.mjs` rende la rete definita dal programma come navigazione «Approfondisci nel territorio» nelle cinque Voci autonome. Il controllo editoriale legge l'HTML generato e impedisce Voci prive di relazioni o collegamenti non pubblicati, senza cambiare canonical, sitemap o permalink |
 | 10.3 | Rapporto organico trimestrale | In attesa di accesso | `organic-monitoring.json`, `docs/seo/organic-monitoring.md` e `check-organic-report.mjs` definiscono confronto corrente/baseline, soglia minima di aggregazione e rifiuto di query, URL e identificativi; i test provano accettazione e blocchi. La prima baseline e il primo rapporto non possono essere compilati senza accesso alla proprietà Search Console e non vengono inventati |
+
+## Punto 11 — ordine vincolante
+
+| Ordine | Unità | Stato | Criterio e prova |
+|---:|---|---|---|
+| 11.1 | Gerarchia e navigazione per attività | Completa | `admin.html` presenta dopo l'accesso un indice con otto attività espresse in linguaggio non tecnico e destinazioni stabili. `style.css` garantisce target tattili, stato focus e una colonna su smartphone; `admin-ux.test.mjs` verifica collegamenti, ID univoci, titoli associati, responsive e `noindex`. Il controllo completo dell'11 ottobre 2026 supera 130 test, tutti i controlli statici e la build Worker dry-run |
+| 11.2 | Feedback, salvataggi ed errori | Completa | `admin.js` assegna stati accessibili a tutte le regioni live, rende comprensibili sessione scaduta, conflitto, limiti e indisponibilità, segnala i moduli modificati e avvisa prima di abbandonarli. Una nuova autenticazione conserva i campi non salvati invece di ricaricare automaticamente i dati; `admin-ux.test.mjs` verifica queste garanzie e la suite completa supera 132 test |
+| 11.3 | Audit end-to-end accessibile e responsive | Completa | `admin-ui.e2e.mjs` prova con Chrome smartphone e desktop, assenza di overflow, etichette, target da 44 px, tastiera e ciclo di feedback senza dati di produzione. Il run `38154750212` è riuscito e conserva le schermate nell'artefatto `11708057414`; 133 test locali, controlli statici, build Worker dry-run e run SEO `38154750211` sono verdi. La verifica della stessa versione pubblicata resta registrata prima di avanzare al punto 12 |
 
 ## Punti 4–12 — criteri di completamento
 

@@ -12,7 +12,7 @@
     <link rel="manifest" href="./admin.webmanifest">
     <script src="./tema.js?v=20261006-map-layers1"></script>
     <link rel="stylesheet" href="./leaflet.css?v=1.9.4">
-    <link rel="stylesheet" href="./style.css?v=20261010-passkeys1">
+    <link rel="stylesheet" href="./style.css?v=20261011-adminux2">
 </head>
 
 <body>
@@ -85,6 +85,23 @@
                 <p class="admin-status" id="adminSecurityStatus" aria-live="polite"></p>
             </section>
 
+            <nav class="admin-sezioni" aria-labelledby="adminSezioniTitolo">
+                <div>
+                    <h2 id="adminSezioniTitolo">Vai a una sezione</h2>
+                    <p>Scegli l’attività da svolgere. I contenuti e gli indirizzi esistenti non cambiano.</p>
+                </div>
+                <ul>
+                    <li><a href="#admin-riepilogo">Riepilogo</a></li>
+                    <li><a href="#admin-contenuti">Contenuti</a></li>
+                    <li><a href="#admin-cartografia">Mappe e luoghi</a></li>
+                    <li><a href="#admin-seo-fonti">SEO e fonti</a></li>
+                    <li><a href="#admin-documenti">Media e documenti</a></li>
+                    <li><a href="#admin-anteprima">Anteprima e revisioni</a></li>
+                    <li><a href="#admin-messaggi">Messaggi e memorie</a></li>
+                    <li><a href="#admin-strumenti">Backup e diagnostica</a></li>
+                </ul>
+            </nav>
+
             <section class="admin-anteprima-benvenuto" aria-labelledby="adminBenvenutoTitolo">
                 <h2 id="adminBenvenutoTitolo">Schermata di benvenuto</h2>
                 <p>
@@ -113,7 +130,7 @@
                 ></p>
             </section>
 
-            <section class="admin-riepilogo" aria-labelledby="adminRiepilogoTitolo">
+            <section class="admin-riepilogo" id="admin-riepilogo" aria-labelledby="adminRiepilogoTitolo">
                 <h2 id="adminRiepilogoTitolo">Riepilogo</h2>
                 <div class="admin-riepilogo-griglia">
                     <button type="button" data-admin-filter="pending">
@@ -147,7 +164,7 @@
                 </div>
             </section>
 
-            <section class="admin-strumenti" aria-labelledby="adminStrumentiTitolo">
+            <section class="admin-strumenti" id="admin-strumenti" aria-labelledby="adminStrumentiTitolo">
                 <h2 id="adminStrumentiTitolo">Strumenti</h2>
                 <label for="adminSearch">Cerca nei messaggi mostrati</label>
                 <input
@@ -224,7 +241,7 @@
                 <p class="admin-export-status" id="adminExportStatus" aria-live="polite"></p>
             </section>
 
-            <section class="admin-voci-mappa" aria-labelledby="adminPagineTitolo">
+            <section class="admin-voci-mappa" id="admin-contenuti" aria-labelledby="adminPagineTitolo">
                 <h2 id="adminPagineTitolo">Pagine e blocchi</h2>
                 <p>
                     Modifica i testi generali del sito senza intervenire nei file.
@@ -393,7 +410,7 @@
                 </form>
             </section>
 
-            <section class="admin-voci-mappa" aria-labelledby="adminLivelliTitolo">
+            <section class="admin-voci-mappa" id="admin-cartografia" aria-labelledby="adminLivelliTitolo">
                 <h2 id="adminLivelliTitolo">Livelli e geometrie</h2>
                 <p>
                     Gestisci i cataloghi cartografici e le relative feature GeoJSON.
@@ -485,7 +502,7 @@
                 </form>
             </section>
 
-            <section class="admin-voci-mappa" aria-labelledby="adminFontiTitolo">
+            <section class="admin-voci-mappa" id="admin-seo-fonti" aria-labelledby="adminFontiTitolo">
                 <h2 id="adminFontiTitolo">Fonti e impostazioni editoriali</h2>
                 <p>
                     Cura il catalogo bibliografico e i metadati pubblici del sito.
@@ -657,7 +674,7 @@
                 </form>
             </section>
 
-            <section class="admin-voci-mappa" aria-labelledby="adminDocumentiTitolo">
+            <section class="admin-voci-mappa" id="admin-documenti" aria-labelledby="adminDocumentiTitolo">
                 <h2 id="adminDocumentiTitolo">Documenti privati</h2>
                 <p>
                     Conserva documenti di lavoro in R2. Elenco, download e file
@@ -730,7 +747,7 @@
                 </form>
             </section>
 
-            <section class="admin-voci-mappa" aria-labelledby="adminAnteprimaTitolo">
+            <section class="admin-voci-mappa" id="admin-anteprima" aria-labelledby="adminAnteprimaTitolo">
                 <h2 id="adminAnteprimaTitolo">Anteprima autenticata</h2>
                 <p>
                     Controlla l’ultima revisione di lavoro senza pubblicarla. Il
@@ -1057,7 +1074,7 @@
                 <div class="admin-list" id="adminNarrativeList"></div>
             </section>
 
-            <section class="admin-contatti" aria-labelledby="adminContattiTitolo">
+            <section class="admin-contatti" id="admin-messaggi" aria-labelledby="adminContattiTitolo">
                 <h2 id="adminContattiTitolo">Messaggi diretti</h2>
                 <div class="admin-list" id="adminContactList"></div>
             </section>
@@ -1111,6 +1128,6 @@
         integrity="sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH"
         crossorigin="anonymous"
     ></script>
-    <script src="./admin.js?v=20261011-maintenance1"></script>
+    <script src="./admin.js?v=20261011-adminux2"></script>
 </body>
 </html>
