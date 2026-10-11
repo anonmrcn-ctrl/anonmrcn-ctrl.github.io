@@ -11,3 +11,4 @@ password_locations_nnmrcn*.txt
 !.env.example
 .wrangler/
 node_modules/
+admin-ui-reports/

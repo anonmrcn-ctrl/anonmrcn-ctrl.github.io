@@ -2927,6 +2927,10 @@ html[data-theme="dark"] .leaflet-control-layers label {
     scroll-margin-top: 1rem;
 }
 
+.admin-panel button {
+    min-height: 2.75rem;
+}
+
 @media (max-width: 560px) {
     .admin-sezioni ul {
         grid-template-columns: 1fr;

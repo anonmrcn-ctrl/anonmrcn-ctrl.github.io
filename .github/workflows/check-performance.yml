@@ -42,6 +42,14 @@ jobs:
           cat /tmp/nnmrcn-http.log
           exit 1
 
+      - name: Installa il browser test del pannello
+        run: npm install --no-save --no-package-lock --ignore-scripts playwright@1.55.0
+
+      - name: Verifica il pannello su smartphone e desktop
+        env:
+          ADMIN_UI_CHROME_CHANNEL: chrome
+        run: node scripts/admin-ui.e2e.mjs
+
       - name: Misura le cinque tipologie
         shell: bash
         run: |
@@ -72,5 +80,14 @@ jobs:
         with:
           name: lighthouse-reports
           path: performance-reports/*.json
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Conserva le schermate del pannello
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: admin-ui-reports
+          path: admin-ui-reports/*.png
           if-no-files-found: error
           retention-days: 30

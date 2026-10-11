@@ -68,3 +68,14 @@ test("gli stati di attesa, riuscita ed errore sono annunciati e visibili", () =>
     assert.match(adminJs, /setAttribute\("role", "status"\)/u);
     assert.match(adminJs, /Modifiche non ancora salvate\./u);
 });
+
+test("l’audit browser copre smartphone, desktop, tastiera e moduli", async () => {
+    const e2e = await readFile(new URL("./admin-ui.e2e.mjs", import.meta.url), "utf8");
+    assert.match(e2e, /width: 375, height: 812/u);
+    assert.match(e2e, /width: 1440, height: 1000/u);
+    assert.match(e2e, /page\.keyboard\.press\("Enter"\)/u);
+    assert.match(e2e, /controlli senza etichetta/u);
+    assert.match(e2e, /pulsanti inferiori a 44px/u);
+    assert.match(e2e, /data-state='busy'/u);
+    assert.match(e2e, /data-state='success'/u);
+});
