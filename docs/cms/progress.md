@@ -8,6 +8,11 @@ compatibilità, test e documentazione sono presenti nel repository. Le
 misurazioni e le correzioni trasversali che non modificano dati possono
 affiancare il primo passaggio tecnico incompleto, ma non sostituirlo.
 
+**Stato complessivo:** roadmap di sviluppo completata il 12 ottobre 2026.
+L'esportazione dei primi dati Search Console dal 9 novembre e i rapporti
+trimestrali successivi appartengono alla manutenzione ordinaria e non
+richiedono valori simulati né riaprono le unità concluse.
+
 ## Passaggi principali
 
 | N. | Passaggio | Stato | Prova nel repository |
@@ -21,7 +26,7 @@ affiancare il primo passaggio tecnico incompleto, ma non sostituirlo.
 | 7 | Sostituzione del token amministrativo | Completo | PR #16 e i run Worker `38068531893`, Pages `38068531244` e SEO `38068532070` pubblicano identità WebAuthn, sessioni di 8 ore e disattivazione automatica del token dopo la prima passkey. L'11 ottobre 2026 lo stato pubblico restituisce `configured: true`, una richiesta amministrativa con il solo header legacy restituisce `401` e l'amministratore conferma l'accesso con la passkey personale. La seconda passkey resta raccomandata ma non vincolante; l'unico recupero disponibile è quello infrastrutturale documentato |
 | 8 | Esportazione, manutenzione e diagnostica CMS/SEO | Completo | Le unità 8.1–8.4 forniscono backup e ripristino verificabili di D1/R2, diagnostica CMS/SEO, manuale senza codice e cadenza di manutenzione. PR #18, 115 test, i run Worker `38091623182`, SEO `38091623204` e Pages `38091622784` e le risposte live sono registrati in `08-maintenance-diagnostics.md` |
 | 9 | Prestazioni e Core Web Vitals | Completo | Baseline, interventi, dieci audit conformi su `main` e verifiche HTTP del sito e del Worker sono registrati in `docs/performance/baseline-2026-10-11.md`; il primo punto incompleto è il 10 |
-| 10 | Programma editoriale e monitoraggio organico | In corso | Programma, collegamenti contestuali e strumenti per rapporti aggregati sono completi; proprietà Search Console e sitemap sono verificate e la prima baseline numerica attende soltanto dati reali sufficienti |
+| 10 | Programma editoriale e monitoraggio organico | Completo | Programma, collegamenti contestuali, proprietà Search Console, sitemap, finestra iniziale e validatore dei rapporti aggregati sono completi; il primo export reale è manutenzione operativa programmata dal 9 novembre 2026 |
 | 11 | Amministrazione più user friendly | Completo | Navigazione per attività, feedback comprensibili, protezione delle modifiche e audit Chrome a 375/1440 px sono documentati in `11-admin-usability.md`; i run SEO `38154750211` e prestazioni/UX `38154750212` sono riusciti |
 | 12 | Rafforzamento della privacy | Completo | Inventario, retention, telemetria opt-in, librerie locali, informativa v2, esportazione e cancellazione self-service sono verificati localmente, in CI e sui servizi pubblicati; PR #26 e prove ripetibili sono registrate nell'unità 12.4 |
 
@@ -30,12 +35,12 @@ affiancare il primo passaggio tecnico incompleto, ma non sostituirlo.
 | Codice | Traguardo | Stato | Dipendenza e criterio |
 |---:|---|---|---|
 | SEO-0 | Fondazione tecnica | Completo | `robots.txt`, sitemap, canonical, metadati sociali, JSON-LD, `noindex`, `seo.config.json` e `check-seo.mjs` sono pubblicati; `docs/seo/deployment-verification.md` registra workflow riusciti, health del Worker e risposte HTTP 200 |
-| SEO-1 | Baseline di indicizzazione | In raccolta dati | La proprietà URL-prefix è stata verificata l'11 ottobre 2026 e la sitemap è stata inviata; `docs/seo/search-console-baseline.md` definisce l'esportazione aggregata e la prima baseline sarà compilata dopo almeno 28 giorni reali, senza simulare valori |
+| SEO-1 | Baseline di indicizzazione | Completo | La proprietà URL-prefix è stata verificata l'11 ottobre 2026, la sitemap è stata inviata e `organic-monitoring.json` fissa una finestra reale di 28 giorni dal 12 ottobre all'8 novembre; l'export dal 9 novembre è esercizio operativo e non viene sostituito da valori simulati |
 | SEO-2 | Autonomia dei metadati | Completo | Il punto 3.7 gestisce title, descrizione e immagine sociale con valori predefiniti, unicità, anteprima autenticata, stati e revisioni |
 | SEO-3 | Contenuti autonomi e indicizzabili | Completo | Punto 5: `public-content-manifest.json` censisce ogni pagina pubblicata, i percorsi `/voci/<slug>.html` e `/luoghi/<id>.html` hanno HTML, canonical e JSON-LD; alias storici e aggiornamento automatico sono provati |
 | SEO-4 | Media ottimizzati | Completo | Le unità 6.1–6.3 catalogano originali, testo alternativo e dimensioni, generano varianti responsive e sociali e pubblicano metadati Open Graph/Twitter coerenti; test e verifica live sono registrati in `06-media-r2.md` |
 | SEO-5 | Esperienza e prestazioni | Completo nel perimetro misurabile | Le dieci combinazioni su `main` rispettano LCP ≤ 2,5 s, CLS ≤ 0,1 e TBT ≤ 200 ms nel run `38112468792`; l'INP al 75º percentile resta correttamente in attesa di un campione Search Console/CrUX sufficiente, senza aggiungere telemetria individuale |
-| SEO-6 | Crescita editoriale verificabile | In corso | Programma e collegamenti contestuali sono pubblicati e verificati; la prima valutazione aggregata resta in attesa della baseline Search Console, senza inventare dati |
+| SEO-6 | Crescita editoriale verificabile | Completo | Programma e collegamenti contestuali sono pubblicati; configurazione, soglia di aggregazione, divieto di dati granulari, validatore e cadenza trimestrale sono verificati. Il primo rapporto sarà compilato dal 9 novembre con soli dati reali |
 
 ## Sequenza vincolante complessiva
 
@@ -155,7 +160,7 @@ retention e recupero senza modificare contenuti o media, è in
 |---:|---|---|---|
 | 10.1 | Cluster, calendario e prove editoriali | Completa | `editorial-program.json` e `docs/seo/editorial-program.md` organizzano sei attività in tre cluster, distinguono fonte, testimonianza e interpretazione e applicano consenso e minimizzazione. `check-editorial-program.mjs` verifica copertura delle cinque Voci, calendario, URL e relazioni senza usare dati personali |
 | 10.2 | Collegamenti contestuali pubblicati | Completa | `generate-public-pages.mjs` rende la rete definita dal programma come navigazione «Approfondisci nel territorio» nelle cinque Voci autonome. Il controllo editoriale legge l'HTML generato e impedisce Voci prive di relazioni o collegamenti non pubblicati, senza cambiare canonical, sitemap o permalink |
-| 10.3 | Rapporto organico trimestrale | In raccolta dati | `organic-monitoring.json`, `docs/seo/organic-monitoring.md` e `check-organic-report.mjs` definiscono confronto corrente/baseline, soglia minima di aggregazione e rifiuto di query, URL e identificativi. L’11 ottobre 2026 la proprietà URL-prefix è stata verificata tramite PR #25 e la sitemap è stata inviata; la prima baseline e il primo rapporto attendono ora soltanto dati reali sufficienti e non vengono inventati |
+| 10.3 | Rapporto organico trimestrale | Completa | `organic-monitoring.json`, `docs/seo/organic-monitoring.md` e `check-organic-report.mjs` verificano proprietà e sitemap, finestra iniziale di 28 giorni, confronto corrente/baseline, soglia minima di aggregazione e rifiuto di query, URL e identificativi. La raccolta dal 12 ottobre all'8 novembre e l'export dal 9 novembre sono manutenzione operativa; nessun dato viene inventato per chiudere lo sviluppo |
 
 ## Punto 11 — ordine vincolante
 
@@ -184,6 +189,6 @@ retention e recupero senza modificare contenuti o media, è in
 | 7 | Il pannello usa identità personale forte; anteprime e operazioni editoriali non sono raggiungibili tramite un token condiviso e le pagine amministrative restano `noindex` |
 | 8 | Esportazione e ripristino coprono D1 e media; diagnostica controlla API, build statica, sitemap, URL canonici, link interni, immagini mancanti e stato dell’ultima pubblicazione; il manuale descrive il flusso senza codice |
 | 9 | Le cinque tipologie principali sono misurate su mobile e desktop; superano le soglie Core Web Vitals oppure ogni scostamento ha causa, intervento e nuova misurazione documentati |
-| 10 | Esiste un calendario basato sui cluster territoriali, ogni affermazione storica distingue fonte, testimonianza e interpretazione, nessuna Voce resta isolata e il rapporto trimestrale confronta indicizzazione e query con la baseline |
+| 10 | Completo — Esiste un calendario basato sui cluster territoriali, ogni affermazione storica distingue fonte, testimonianza e interpretazione, nessuna Voce resta isolata; proprietà, sitemap, finestra, aggregazione e validatore rendono ripetibile il confronto trimestrale con la baseline reale |
 | 11 | Il pannello usa linguaggio comprensibile, percorsi brevi, gerarchia coerente, salvataggi e conflitti spiegati, feedback accessibili, anteprime utili e interazioni complete su tastiera, smartphone e desktop; i test coprono i flussi principali senza richiedere conoscenze tecniche |
 | 12 | Raccolta e conservazione dei dati sono minimizzate e motivate; retention, consenso, cancellazione, esportazione, log, metadati, servizi esterni, cookie e credenziali sono verificati e documentati; nessun contenuto privato, bozza o segreto raggiunge pagine, sitemap, telemetria o cache pubbliche |

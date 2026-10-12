@@ -13,6 +13,11 @@ function daysBetween(start, end) {
     return (Date.parse(`${end}T00:00:00Z`) - Date.parse(`${start}T00:00:00Z`)) / 86400000 + 1;
 }
 
+function date(value) {
+    return /^\d{4}-\d{2}-\d{2}$/u.test(value || "") &&
+        Number.isFinite(Date.parse(`${value}T00:00:00Z`));
+}
+
 function walkFields(value, visit, trail = []) {
     if (!value || typeof value !== "object") return;
     for (const [key, child] of Object.entries(value)) {
@@ -96,6 +101,39 @@ export function validateOrganicReport(report, config, clusterIds) {
     return errors;
 }
 
+export function validateMonitoringConfiguration(config) {
+    const errors = [];
+    const fail = (message) => errors.push(message);
+    const property = config.property || {};
+    const sitemap = config.sitemap || {};
+    const window = config.firstObservationWindow || {};
+
+    if (config.implementationStatus !== "complete") {
+        fail("implementazione del monitoraggio non completata");
+    }
+    if (property.type !== "url-prefix" ||
+        property.url !== "https://anonmrcn-ctrl.github.io/" || !date(property.verifiedOn)) {
+        fail("proprietà Search Console non verificabile");
+    }
+    if (sitemap.url !== "https://anonmrcn-ctrl.github.io/sitemap.xml" ||
+        !date(sitemap.submittedOn)) {
+        fail("invio della sitemap non verificabile");
+    }
+    if (!date(window.start) || !date(window.end) ||
+        daysBetween(window.start, window.end) < 28 || window.minimumDays !== 28) {
+        fail("prima finestra di osservazione inferiore a 28 giorni");
+    }
+    if (!date(window.earliestExportOn) ||
+        Date.parse(`${window.earliestExportOn}T00:00:00Z`) <=
+            Date.parse(`${window.end}T00:00:00Z`)) {
+        fail("data del primo export non successiva alla finestra di osservazione");
+    }
+    if (window.status !== "collecting") {
+        fail("stato della prima finestra non coerente");
+    }
+    return errors;
+}
+
 export async function checkOrganicReports(base = root) {
     const [config, editorial] = await Promise.all([
         readFile(path.join(base, "organic-monitoring.json"), "utf8").then(JSON.parse),
@@ -104,7 +142,7 @@ export async function checkOrganicReports(base = root) {
     const directory = path.join(base, config.reportsDirectory);
     const files = (await readdir(directory)).filter((file) => file.endsWith(".json")).sort();
     const clusterIds = new Set((editorial.clusters || []).map((cluster) => cluster.id));
-    const errors = [];
+    const errors = validateMonitoringConfiguration(config);
 
     if (config.version !== 1 || config.cadence !== "quarterly") {
         errors.push("configurazione del monitoraggio non supportata");
@@ -133,7 +171,7 @@ if (import.meta.url === invoked) {
     } else {
         console.log(result.reports
             ? `Rapporti organici validi: ${result.reports}.`
-            : "Monitoraggio organico pronto; proprietà verificata e in attesa di dati reali sufficienti."
+            : "Monitoraggio organico completato; primo export operativo previsto non prima del 9 novembre 2026."
         );
     }
 }

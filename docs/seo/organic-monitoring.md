@@ -57,11 +57,15 @@ stesso oggetto `metrics` di `overall`. Un cluster con meno di 20 impressioni
 non può essere salvato: va riportato soltanto in `excludedGroups` tramite il
 suo ID, senza valore numerico.
 
-## Raccolta dati in corso
+## Passaggio all'esercizio
 
 La proprietà URL-prefix è stata verificata l'11 ottobre 2026 e la sitemap è
-stata inviata a Google Search Console. Il rapporto iniziale resta
-intenzionalmente privo di valori numerici finché Search Console non avrà
-raccolto un intervallo reale sufficientemente rappresentativo: non vengono
-simulati clic, impressioni, CTR o posizione media. Dopo almeno 28 giorni
-completi, esportare i dati e compilare il template seguendo questa procedura.
+stata inviata a Google Search Console. Configurazione, regole di aggregazione,
+validatore e procedura sono completi; il monitoraggio passa quindi
+dall'implementazione all'esercizio ordinario.
+
+La prima finestra reale è fissata dal 12 ottobre all'8 novembre 2026 e il primo
+export può essere eseguito dal 9 novembre. Fino ad allora il rapporto resta
+intenzionalmente privo di valori numerici: non vengono simulati clic,
+impressioni, CTR o posizione media. I rapporti trimestrali successivi sono
+manutenzione editoriale ricorrente e non riaprono la roadmap del software.

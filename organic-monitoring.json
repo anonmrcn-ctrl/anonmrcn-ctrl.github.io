@@ -1,6 +1,23 @@
 {
   "version": 1,
+  "implementationStatus": "complete",
   "cadence": "quarterly",
+  "property": {
+    "type": "url-prefix",
+    "url": "https://anonmrcn-ctrl.github.io/",
+    "verifiedOn": "2026-10-11"
+  },
+  "sitemap": {
+    "url": "https://anonmrcn-ctrl.github.io/sitemap.xml",
+    "submittedOn": "2026-10-11"
+  },
+  "firstObservationWindow": {
+    "start": "2026-10-12",
+    "end": "2026-11-08",
+    "earliestExportOn": "2026-11-09",
+    "minimumDays": 28,
+    "status": "collecting"
+  },
   "allowedSources": [
     "Google Search Console",
     "Chrome UX Report"
