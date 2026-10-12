@@ -13,7 +13,8 @@ live ha restituito lo stesso valore richiesto da Search Console. Il proprietario
 ha quindi confermato la verifica e l’invio di
 `https://anonmrcn-ctrl.github.io/sitemap.xml`.
 
-Restano da eseguire dopo la prima elaborazione:
+Restano da eseguire come manutenzione operativa, senza riaprire la roadmap di
+sviluppo:
 
 1. annotare lo stato della sitemap e gli eventuali errori;
 2. registrare il primo periodo completo di almeno 28 giorni;
@@ -33,5 +34,8 @@ Restano da eseguire dopo la prima elaborazione:
 - Canonical scelti uguali agli URL della sitemap.
 - Query raggruppate per temi territoriali; nessuna profilazione individuale.
 
-La verifica SEO-1 è completa; la baseline numerica e il primo rapporto restano
-in attesa dei dati reali. Nessun valore viene stimato o inventato.
+La verifica SEO-1 e la sua implementazione sono complete. La prima finestra
+reale va dal 12 ottobre all'8 novembre 2026; il primo export può essere
+effettuato dal 9 novembre. La baseline numerica e i rapporti successivi sono
+attività operative ricorrenti: la loro assenza prima della scadenza non rende
+incompleto il software e nessun valore viene stimato o inventato.

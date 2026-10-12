@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { validateOrganicReport } from "./check-organic-report.mjs";
+import {
+    validateMonitoringConfiguration,
+    validateOrganicReport
+} from "./check-organic-report.mjs";
 
 const config = {
     version: 1,
@@ -49,4 +52,32 @@ test("rifiuta query grezze, gruppi piccoli e delta manipolati", () => {
     assert.ok(errors.some((message) => message.includes("campo vietato")));
     assert.ok(errors.some((message) => message.includes("soglia di aggregazione")));
     assert.ok(errors.some((message) => message.includes("delta non coerente")));
+});
+
+test("chiude lo sviluppo con una finestra reale e un passaggio operativo verificabile", () => {
+    const monitoring = {
+        implementationStatus: "complete",
+        property: {
+            type: "url-prefix",
+            url: "https://anonmrcn-ctrl.github.io/",
+            verifiedOn: "2026-10-11"
+        },
+        sitemap: {
+            url: "https://anonmrcn-ctrl.github.io/sitemap.xml",
+            submittedOn: "2026-10-11"
+        },
+        firstObservationWindow: {
+            start: "2026-10-12",
+            end: "2026-11-08",
+            earliestExportOn: "2026-11-09",
+            minimumDays: 28,
+            status: "collecting"
+        }
+    };
+
+    assert.deepEqual(validateMonitoringConfiguration(monitoring), []);
+    monitoring.firstObservationWindow.earliestExportOn = "2026-11-08";
+    assert.ok(validateMonitoringConfiguration(monitoring).some((message) =>
+        message.includes("primo export")
+    ));
 });
