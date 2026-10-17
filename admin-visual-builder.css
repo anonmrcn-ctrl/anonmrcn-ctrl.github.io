@@ -1,0 +1,174 @@
+.admin-visual-inspector-preview {
+    display: grid;
+    grid-template-columns: minmax(16rem, .75fr) minmax(0, 1.25fr);
+    gap: 1rem;
+    margin: 1rem 0;
+}
+
+.admin-visual-inspector,
+.admin-visual-preview {
+    min-width: 0;
+    padding: 1rem;
+    border: 1px solid var(--line);
+}
+
+.admin-visual-inspector h3,
+.admin-visual-preview h3 { margin-top: 0; }
+
+#adminVisualInspectorFields {
+    display: grid;
+    gap: .7rem;
+}
+
+#adminVisualInspectorFields label {
+    display: grid;
+    gap: .35rem;
+    font-size: .82rem;
+    font-weight: 700;
+}
+
+#adminVisualInspectorFields input,
+#adminVisualInspectorFields select,
+#adminVisualInspectorFields textarea {
+    width: 100%;
+    min-height: 2.75rem;
+    padding: .6rem .7rem;
+    border: 1px solid var(--ink);
+    background: transparent;
+    color: var(--ink);
+    font: inherit;
+}
+
+#adminVisualInspectorSave {
+    width: 100%;
+    min-height: 2.75rem;
+    margin-top: .85rem;
+    border: 1px solid var(--ink);
+    background: var(--ink);
+    color: var(--paper);
+    font: inherit;
+    font-weight: 700;
+}
+
+.admin-visual-device-switch {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: .35rem;
+}
+
+.admin-visual-device-switch button {
+    min-height: 2.75rem;
+    border: 1px solid var(--ink);
+    background: transparent;
+    color: var(--ink);
+    font: inherit;
+    font-size: .78rem;
+    font-weight: 700;
+}
+
+.admin-visual-device-switch button[aria-pressed="true"] {
+    background: var(--ink);
+    color: var(--paper);
+}
+
+.admin-visual-preview-stage {
+    width: 100%;
+    overflow: hidden;
+    padding: .75rem;
+    background: color-mix(in srgb, var(--ink) 8%, var(--paper));
+}
+
+#adminVisualPreview {
+    max-width: 100%;
+    min-height: 18rem;
+    margin: 0 auto;
+    overflow-x: clip;
+    padding: .75rem;
+    background: var(--paper);
+    color: var(--ink);
+    transition: width 160ms ease;
+}
+
+#adminVisualPreview[data-device="phone"] { width: min(360px, 100%); }
+#adminVisualPreview[data-device="tablet"] { width: min(768px, 100%); }
+#adminVisualPreview[data-device="desktop"] { width: 100%; }
+
+.admin-visual-preview-block {
+    min-width: 0;
+    overflow-wrap: anywhere;
+    padding: .45rem;
+    outline: 1px dashed color-mix(in srgb, currentColor 35%, transparent);
+}
+
+#adminVisualWarnings {
+    margin-bottom: 0;
+    color: #8b1f11;
+    font-weight: 700;
+}
+
+.visual-block[data-visual-align="center"] { text-align: center; }
+.visual-block[data-visual-align="right"] { text-align: right; }
+.visual-block[data-visual-width="compact"] { width: min(100%, 36rem); margin-inline: auto; }
+.visual-block[data-visual-width="content"] { width: min(100%, 56rem); margin-inline: auto; }
+.visual-block[data-visual-width="wide"] { width: min(100%, 76rem); margin-inline: auto; }
+.visual-block[data-visual-width="full"] { width: 100%; }
+.visual-block[data-visual-space-top="space-0"] { margin-top: 0; }
+.visual-block[data-visual-space-top="space-1"] { margin-top: .25rem; }
+.visual-block[data-visual-space-top="space-2"] { margin-top: .5rem; }
+.visual-block[data-visual-space-top="space-3"] { margin-top: 1rem; }
+.visual-block[data-visual-space-top="space-4"] { margin-top: 1.5rem; }
+.visual-block[data-visual-space-top="space-5"] { margin-top: 2rem; }
+.visual-block[data-visual-space-top="space-6"] { margin-top: 3rem; }
+.visual-block[data-visual-space-bottom="space-0"] { margin-bottom: 0; }
+.visual-block[data-visual-space-bottom="space-1"] { margin-bottom: .25rem; }
+.visual-block[data-visual-space-bottom="space-2"] { margin-bottom: .5rem; }
+.visual-block[data-visual-space-bottom="space-3"] { margin-bottom: 1rem; }
+.visual-block[data-visual-space-bottom="space-4"] { margin-bottom: 1.5rem; }
+.visual-block[data-visual-space-bottom="space-5"] { margin-bottom: 2rem; }
+.visual-block[data-visual-space-bottom="space-6"] { margin-bottom: 3rem; }
+.visual-block[data-visual-font="serif"] { font-family: Georgia, "Times New Roman", serif; }
+.visual-block[data-visual-font="sans"] { font-family: Arial, Helvetica, sans-serif; }
+.visual-block[data-visual-font="display"] { font-family: Impact, Haettenschweiler, sans-serif; }
+.visual-block[data-visual-size="small"] { font-size: .875rem; }
+.visual-block[data-visual-size="normal"] { font-size: 1rem; }
+.visual-block[data-visual-size="large"] { font-size: 1.25rem; }
+.visual-block[data-visual-size="xlarge"] { font-size: 1.75rem; }
+.visual-block[data-visual-color="ink"] { color: #191919; }
+.visual-block[data-visual-color="muted"] { color: #5b5b5b; }
+.visual-block[data-visual-color="paper"] { color: #f4f1e8; }
+.visual-block[data-visual-color="soft"] { color: #e6e0d2; }
+.visual-block[data-visual-color="accent"] { color: #d6a900; }
+.visual-block[data-visual-color="dark"] { color: #202733; }
+.visual-block[data-visual-background="ink"] { background: #191919; }
+.visual-block[data-visual-background="muted"] { background: #5b5b5b; }
+.visual-block[data-visual-background="paper"] { background: #f4f1e8; }
+.visual-block[data-visual-background="soft"] { background: #e6e0d2; }
+.visual-block[data-visual-background="accent"] { background: #d6a900; }
+.visual-block[data-visual-background="dark"] { background: #202733; }
+.visual-block[data-visual-border="none"] { border: 0; }
+.visual-block[data-visual-border="thin"] { border: 1px solid currentColor; }
+.visual-block[data-visual-border="strong"] { border: 3px solid currentColor; }
+.visual-block[data-visual-radius="none"] { border-radius: 0; }
+.visual-block[data-visual-radius="small"] { border-radius: .35rem; }
+.visual-block[data-visual-radius="large"] { border-radius: 1rem; }
+
+#adminVisualPreview[data-device="phone"] [data-visual-phone="hidden"],
+#adminVisualPreview[data-device="tablet"] [data-visual-tablet="hidden"],
+#adminVisualPreview[data-device="desktop"] [data-visual-desktop="hidden"] { display: none; }
+
+@media (max-width: 640px) {
+    .visual-block[data-visual-phone="hidden"] { display: none; }
+}
+
+@media (min-width: 641px) and (max-width: 1024px) {
+    .visual-block[data-visual-tablet="hidden"] { display: none; }
+}
+
+@media (min-width: 1025px) {
+    .visual-block[data-visual-desktop="hidden"] { display: none; }
+}
+
+@media (max-width: 700px) {
+    .admin-visual-inspector-preview,
+    .admin-visual-device-switch { grid-template-columns: 1fr; }
+}

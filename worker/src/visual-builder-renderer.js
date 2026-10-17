@@ -18,7 +18,7 @@ export const VISUAL_BLOCK_REGISTRY = Object.freeze({
     "grid": entry("structure", ["presentation.layout", "presentation.responsive"], "div"),
     "separator": entry("structure", ["presentation.box", "presentation.responsive"], "hr"),
     "spacer": entry("structure", ["presentation.box", "presentation.responsive"], "spacer"),
-    "heading": entry("content", ["content.copy", "presentation.typography", "presentation.responsive"], "heading"),
+    "heading": entry("content", ["content.copy", "presentation.box", "presentation.layout", "presentation.typography", "presentation.responsive"], "heading"),
     "rich-text": entry("content", ["content.copy", "presentation.typography", "presentation.responsive"], "paragraph"),
     "list": entry("content", ["content.copy", "presentation.typography", "presentation.responsive"], "list"),
     "quote": entry("content", ["content.copy", "presentation.box", "presentation.typography", "presentation.responsive"], "quote"),
@@ -247,7 +247,7 @@ function renderNode(
     const text = first(values, "content.copy/text");
     const items = all(values, "content.copy/items");
     const className = `visual-block visual-block--${node.block_type}`;
-    const attributes = ` class="${className}" data-block-id="${escapeHtml(node.id)}"`;
+    const attributes = ` class="${className}" data-block-id="${escapeHtml(node.id)}"${presentationAttributes(values)}`;
 
     switch (node.definition.renderAs) {
         case "main":
@@ -357,6 +357,30 @@ function first(values, prefix) {
 
 function all(values, prefix) {
     return (values.get(`${prefix}/all`) || []).map((item) => item.value);
+}
+
+function presentationAttributes(values) {
+    const definitions = [
+        ["visual-align", "presentation.layout/alignment", "all", ["left", "center", "right"]],
+        ["visual-width", "presentation.layout/width", "all", ["compact", "content", "wide", "full"]],
+        ["visual-space-top", "presentation.box/spaceTop", "all", ["space-0", "space-1", "space-2", "space-3", "space-4", "space-5", "space-6"]],
+        ["visual-space-bottom", "presentation.box/spaceBottom", "all", ["space-0", "space-1", "space-2", "space-3", "space-4", "space-5", "space-6"]],
+        ["visual-font", "presentation.typography/fontFamily", "all", ["serif", "sans", "display"]],
+        ["visual-size", "presentation.typography/fontSize", "all", ["small", "normal", "large", "xlarge"]],
+        ["visual-color", "presentation.typography/color", "all", ["ink", "muted", "paper", "soft", "accent", "dark"]],
+        ["visual-background", "presentation.box/background", "all", ["ink", "muted", "paper", "soft", "accent", "dark"]],
+        ["visual-border", "presentation.box/border", "all", ["none", "thin", "strong"]],
+        ["visual-radius", "presentation.box/radius", "all", ["none", "small", "large"]],
+        ["visual-phone", "presentation.responsive/visibility", "phone", ["visible", "hidden"]],
+        ["visual-tablet", "presentation.responsive/visibility", "tablet", ["visible", "hidden"]],
+        ["visual-desktop", "presentation.responsive/visibility", "desktop", ["visible", "hidden"]]
+    ];
+    return definitions.map(([attribute, prefix, breakpoint, allowed]) => {
+        const value = values.get(`${prefix}/${breakpoint}`)?.[0]?.value;
+        return allowed.includes(value)
+            ? ` data-${attribute}="${value}"`
+            : "";
+    }).join("");
 }
 
 function safeHref(value) {

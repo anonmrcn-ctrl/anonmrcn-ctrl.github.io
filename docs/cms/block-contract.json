@@ -50,7 +50,7 @@
     { "id": "grid", "category": "structure", "propertySets": ["presentation.layout", "presentation.responsive"] },
     { "id": "separator", "category": "structure", "propertySets": ["presentation.box", "presentation.responsive"] },
     { "id": "spacer", "category": "structure", "propertySets": ["presentation.box", "presentation.responsive"] },
-    { "id": "heading", "category": "content", "propertySets": ["content.copy", "presentation.typography", "presentation.responsive"] },
+    { "id": "heading", "category": "content", "propertySets": ["content.copy", "presentation.box", "presentation.layout", "presentation.typography", "presentation.responsive"] },
     { "id": "rich-text", "category": "content", "propertySets": ["content.copy", "presentation.typography", "presentation.responsive"] },
     { "id": "list", "category": "content", "propertySets": ["content.copy", "presentation.typography", "presentation.responsive"] },
     { "id": "quote", "category": "content", "propertySets": ["content.copy", "presentation.box", "presentation.typography", "presentation.responsive"] },

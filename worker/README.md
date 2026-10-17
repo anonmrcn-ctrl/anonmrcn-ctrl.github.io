@@ -128,6 +128,15 @@ ID nuovi nel Worker e verifica la versione per evitare sovrascritture. Prima
 della prima modifica conserva la baseline e dopo ogni salvataggio aggiunge una
 revisione completa dell'albero e delle sue proprietà.
 
+La risposta del canvas include inoltre lo schema tipizzato dell'ispettore.
+`PATCH /api/admin/cms/visual-properties/:pageId/:nodeId` salva contenuti e
+token consentiti per allineamento, larghezza, spaziatura, tipografia, colori,
+sfondo, bordi e visibilità responsive. Il Worker rifiuta proprietà estranee,
+URL non sicuri, valori fuori catalogo, contrasto inferiore a 4,5:1 e blocchi
+nascosti su tutti i dispositivi; non modifica binding o altre proprietà
+tecniche. L'anteprima amministrativa usa gli stessi token per smartphone,
+tablet e desktop e non interpreta HTML o CSS fornito dall'utente.
+
 La stessa inizializzazione importa «Il Gajo tra i Praelli» in `poem_works`,
 `poem_sections` e `poem_lines`: 4 canti, 121 versi e i metadati necessari a
 ricostruire strofe, rientri e 165 righe metriche. L'endpoint

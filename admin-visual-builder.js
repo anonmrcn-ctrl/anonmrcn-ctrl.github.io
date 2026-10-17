@@ -8,6 +8,12 @@
     const addButton = document.getElementById("adminVisualAdd");
     const undoButton = document.getElementById("adminVisualUndo");
     const canvas = document.getElementById("adminVisualCanvas");
+    const inspectorForm = document.getElementById("adminVisualInspectorForm");
+    const inspectorFields = document.getElementById("adminVisualInspectorFields");
+    const inspectorSave = document.getElementById("adminVisualInspectorSave");
+    const preview = document.getElementById("adminVisualPreview");
+    const previewDevice = document.getElementById("adminVisualPreviewDevice");
+    const warnings = document.getElementById("adminVisualWarnings");
     const saveButton = document.getElementById("adminVisualSave");
     const reloadButton = document.getElementById("adminVisualReload");
     const status = document.getElementById("adminVisualStatus");
@@ -26,12 +32,15 @@
 
     let pages = [];
     let palette = [];
+    let inspectorSchemas = {};
     let nodes = [];
     let selectedKey = "";
     let undoStack = [];
     let dirty = false;
+    let propertyDirty = new Set();
     let draggedKey = "";
     let lastPageId = "";
+    let activeDevice = "phone";
 
     async function request(path, options = {}) {
         const session = sessionStorage.getItem(SESSION_KEY) || "";
@@ -74,7 +83,10 @@
 
     function snapshot() {
         return {
-            nodes: nodes.map((node) => ({ ...node })),
+            nodes: nodes.map((node) => ({
+                ...node,
+                values: { ...(node.values || {}) }
+            })),
             selectedKey
         };
     }
@@ -86,7 +98,10 @@
     }
 
     function restore(snapshotValue) {
-        nodes = snapshotValue.nodes.map((node) => ({ ...node }));
+        nodes = snapshotValue.nodes.map((node) => ({
+            ...node,
+            values: { ...(node.values || {}) }
+        }));
         selectedKey = snapshotValue.selectedKey;
         dirty = true;
         renderCanvas(true);
@@ -121,6 +136,8 @@
         if (focusSelected) {
             canvas.querySelector(`[data-visual-select="${CSS.escape(selectedKey)}"]`)?.focus();
         }
+        renderInspector();
+        renderPreview();
     }
 
     function renderNode(node, level) {
@@ -249,6 +266,7 @@
                 position: node.key === source.key ? source.position + 0.5 : node.position,
                 label: `${node.label || currentLabel(node.type)} (copia)`,
                 copyOf: node.key.startsWith("new-") ? node.copyOf || null : node.key,
+                values: { ...(node.values || {}) },
                 root: false
             };
             nodes.push(duplicate);
@@ -276,6 +294,7 @@
             type,
             label: currentLabel(type),
             copyOf: null,
+            values: defaultValues(type),
             root: false
         };
         nodes.push(node);
@@ -292,6 +311,7 @@
             const data = await request("/api/admin/cms/visual-pages");
             pages = data.pages || [];
             palette = data.palette || [];
+            inspectorSchemas = data.inspectorSchemas || {};
             const pageId = preferredId || pageSelect.value || lastPageId;
             pageSelect.replaceChildren(...pages.map((page) => {
                 const option = document.createElement("option");
@@ -313,13 +333,20 @@
         }
     }
 
-    function showSelectedPage() {
+    function showSelectedPage(preferredKey = "") {
         const page = selectedPage();
         lastPageId = page?.id || "";
-        nodes = (page?.nodes || []).map((node) => ({ ...node, copyOf: null }));
-        selectedKey = nodes.find((node) => node.root)?.key || nodes[0]?.key || "";
+        nodes = (page?.nodes || []).map((node) => ({
+            ...node,
+            values: { ...(node.values || {}) },
+            copyOf: null
+        }));
+        selectedKey = nodes.some((node) => node.key === preferredKey)
+            ? preferredKey
+            : nodes.find((node) => node.root)?.key || nodes[0]?.key || "";
         undoStack = [];
         dirty = false;
+        propertyDirty = new Set();
         renderCanvas();
     }
 
@@ -347,9 +374,10 @@
                     })
                 }
             );
+            const selectedBeforeSave = selectedKey;
             const index = pages.findIndex((candidate) => candidate.id === page.id);
             pages[index] = data.page;
-            showSelectedPage();
+            showSelectedPage(data.keyMap?.[selectedBeforeSave] || selectedBeforeSave);
             status.textContent = data.unchanged
                 ? "Nessuna modifica da salvare."
                 : "Struttura salvata e revisione registrata.";
@@ -361,8 +389,227 @@
         }
     }
 
+    function defaultValues(type) {
+        return Object.fromEntries((inspectorSchemas[type] || []).map((field) => [
+            field.key,
+            field.propertyName === "visibility" ? "visible" : ""
+        ]));
+    }
+
+    function renderInspector() {
+        inspectorFields.replaceChildren();
+        const node = nodeByKey(selectedKey);
+        const schema = inspectorSchemas[node?.type] || [];
+        inspectorSave.disabled = !node || node.key.startsWith("new-") || dirty ||
+            !propertyDirty.has(node.key);
+        if (!node) {
+            inspectorFields.textContent = "Seleziona un blocco.";
+            return;
+        }
+        for (const field of schema) {
+            const label = document.createElement("label");
+            const caption = document.createElement("span");
+            const control = field.control === "textarea"
+                ? document.createElement("textarea")
+                : field.control === "select"
+                    ? document.createElement("select")
+                    : document.createElement("input");
+            const id = `adminVisualField-${field.key}`;
+            caption.textContent = field.label;
+            label.htmlFor = id;
+            control.id = id;
+            control.name = field.key;
+            control.dataset.visualField = field.key;
+            control.maxLength = field.maxLength;
+            if (control instanceof HTMLInputElement) {
+                control.type = field.control === "url" ? "url" : "text";
+            }
+            if (control instanceof HTMLTextAreaElement) control.rows = 4;
+            if (control instanceof HTMLSelectElement) {
+                if (field.propertyName !== "visibility") {
+                    const empty = document.createElement("option");
+                    empty.value = "";
+                    empty.textContent = "Predefinito";
+                    control.appendChild(empty);
+                }
+                for (const item of field.options || []) {
+                    const option = document.createElement("option");
+                    option.value = item.value;
+                    option.textContent = item.label;
+                    control.appendChild(option);
+                }
+            }
+            control.value = node.values?.[field.key] ||
+                (field.propertyName === "visibility" ? "visible" : "");
+            if (field.required) control.required = true;
+            label.append(caption, control);
+            inspectorFields.appendChild(label);
+        }
+    }
+
+    function renderPreview() {
+        preview.replaceChildren();
+        preview.dataset.device = activeDevice;
+        const root = nodes.find((node) => node.root);
+        if (root) preview.appendChild(previewNode(root));
+        const labels = {
+            phone: "Anteprima smartphone, 360 px",
+            tablet: "Anteprima tablet, 768 px",
+            desktop: "Anteprima desktop, larghezza disponibile"
+        };
+        previewDevice.textContent = labels[activeDevice];
+        renderWarnings();
+    }
+
+    function previewNode(node) {
+        const element = document.createElement(node.root ? "main" :
+            node.type === "heading" ? "h2" :
+                node.type === "rich-text" ? "p" :
+                    node.type === "quote" ? "blockquote" : "section");
+        element.className = "visual-block admin-visual-preview-block";
+        element.dataset.previewType = node.type;
+        applyPreviewAttributes(element, node.values || {});
+        const title = String(node.values?.title || "").trim();
+        const text = String(node.values?.text || "").trim();
+        const items = String(node.values?.items || "").split(/\r?\n/u).filter(Boolean);
+        if (node.type === "heading") {
+            element.textContent = title || node.label;
+        } else if (["rich-text", "quote"].includes(node.type)) {
+            element.textContent = text || node.label;
+        } else {
+            if (title) {
+                const heading = document.createElement(node.root ? "h1" : "h3");
+                heading.textContent = title;
+                element.appendChild(heading);
+            }
+            if (text) {
+                const paragraph = document.createElement("p");
+                paragraph.textContent = text;
+                element.appendChild(paragraph);
+            }
+            if (items.length) {
+                const list = document.createElement("ul");
+                for (const item of items) {
+                    const entry = document.createElement("li");
+                    entry.textContent = item;
+                    list.appendChild(entry);
+                }
+                element.appendChild(list);
+            }
+            if (!title && !text && !items.length && !node.root) {
+                const placeholder = document.createElement("span");
+                placeholder.textContent = node.label || currentLabel(node.type);
+                element.appendChild(placeholder);
+            }
+            for (const child of childrenOf(node.key)) element.appendChild(previewNode(child));
+        }
+        return element;
+    }
+
+    function applyPreviewAttributes(element, values) {
+        const mapping = {
+            alignment: "visualAlign", width: "visualWidth",
+            spaceTop: "visualSpaceTop", spaceBottom: "visualSpaceBottom",
+            fontFamily: "visualFont", fontSize: "visualSize",
+            textColor: "visualColor", background: "visualBackground",
+            border: "visualBorder", radius: "visualRadius",
+            visibilityPhone: "visualPhone", visibilityTablet: "visualTablet",
+            visibilityDesktop: "visualDesktop"
+        };
+        for (const [key, dataName] of Object.entries(mapping)) {
+            if (values[key]) element.dataset[dataName] = values[key];
+        }
+    }
+
+    function currentWarnings() {
+        const node = nodeByKey(selectedKey);
+        if (!node) return [];
+        const values = node.values || {};
+        const messages = [];
+        if (["visibilityPhone", "visibilityTablet", "visibilityDesktop"].every(
+            (key) => values[key] === "hidden"
+        )) messages.push("Il blocco non può essere nascosto su tutti i dispositivi.");
+        const colorOptions = (inspectorSchemas[node.type] || [])
+            .flatMap((field) => field.options || [])
+            .filter((item) => item.color);
+        const color = (name, fallback) =>
+            colorOptions.find((item) => item.value === name)?.color || fallback;
+        const ratio = contrastRatio(
+            color(values.textColor, "#191919"),
+            color(values.background, "#f4f1e8")
+        );
+        if (ratio < 4.5) messages.push(
+            `Contrasto insufficiente (${ratio.toFixed(2)}:1): scegli colori più leggibili.`
+        );
+        if (node.type === "image" && !String(values.alt || "").trim()) {
+            messages.push("Aggiungi il testo alternativo prima di salvare l'immagine.");
+        }
+        return messages;
+    }
+
+    function renderWarnings() {
+        warnings.replaceChildren();
+        for (const message of currentWarnings()) {
+            const item = document.createElement("li");
+            item.textContent = message;
+            warnings.appendChild(item);
+        }
+        const node = nodeByKey(selectedKey);
+        inspectorSave.disabled = currentWarnings().length > 0 || dirty ||
+            !node || node.key.startsWith("new-") || !propertyDirty.has(node.key);
+    }
+
+    function contrastRatio(first, second) {
+        const luminance = (hex) => {
+            const channels = hex.match(/[a-f0-9]{2}/giu).map((value) => parseInt(value, 16) / 255);
+            const linear = channels.map((value) => value <= 0.03928
+                ? value / 12.92
+                : ((value + 0.055) / 1.055) ** 2.4);
+            return 0.2126 * linear[0] + 0.7152 * linear[1] + 0.0722 * linear[2];
+        };
+        const values = [luminance(first), luminance(second)].sort((a, b) => b - a);
+        return (values[0] + 0.05) / (values[1] + 0.05);
+    }
+
+    async function saveInspector(event) {
+        event.preventDefault();
+        const page = selectedPage();
+        const node = nodeByKey(selectedKey);
+        if (!page || !node) return;
+        if (dirty || node.key.startsWith("new-")) {
+            status.textContent = "Salva prima la struttura, poi le proprietà del nuovo blocco.";
+            return;
+        }
+        if (currentWarnings().length) {
+            status.textContent = currentWarnings()[0];
+            return;
+        }
+        inspectorSave.disabled = true;
+        status.textContent = "Salvataggio delle proprietà…";
+        try {
+            const data = await request(
+                `/api/admin/cms/visual-properties/${encodeURIComponent(page.id)}/${encodeURIComponent(node.key)}`,
+                {
+                    method: "PATCH",
+                    body: JSON.stringify({
+                        expectedUpdatedAt: page.updatedAt,
+                        values: node.values || {}
+                    })
+                }
+            );
+            const index = pages.findIndex((candidate) => candidate.id === page.id);
+            pages[index] = data.page;
+            showSelectedPage(node.key);
+            status.textContent = "Proprietà salvate e revisione registrata.";
+        } catch (error) {
+            status.textContent = error.message || "Non è stato possibile salvare le proprietà.";
+            inspectorSave.disabled = false;
+        }
+    }
+
     pageSelect.addEventListener("change", () => {
-        if (dirty && !window.confirm("Abbandonare le modifiche non salvate del canvas?")) {
+        if ((dirty || propertyDirty.size) &&
+            !window.confirm("Abbandonare le modifiche non salvate del canvas?")) {
             pageSelect.value = lastPageId;
             return;
         }
@@ -377,9 +624,32 @@
     });
     saveButton.addEventListener("click", save);
     reloadButton.addEventListener("click", () => {
-        if (!dirty || window.confirm("Ricaricare e perdere le modifiche non salvate?")) {
+        if ((!dirty && !propertyDirty.size) ||
+            window.confirm("Ricaricare e perdere le modifiche non salvate?")) {
             load(pageSelect.value);
         }
+    });
+    inspectorForm.addEventListener("submit", saveInspector);
+    inspectorFields.addEventListener("input", (event) => {
+        const control = event.target.closest("[data-visual-field]");
+        const node = nodeByKey(selectedKey);
+        if (!control || !node) return;
+        node.values = { ...(node.values || {}), [control.dataset.visualField]: control.value };
+        propertyDirty.add(node.key);
+        renderPreview();
+        inspectorSave.disabled = currentWarnings().length > 0 || dirty ||
+            node.key.startsWith("new-");
+        status.textContent = currentWarnings()[0] ||
+            "Proprietà modificate. Controlla l'anteprima e salva.";
+    });
+    document.querySelectorAll("[data-visual-device]").forEach((button) => {
+        button.addEventListener("click", () => {
+            activeDevice = button.dataset.visualDevice;
+            document.querySelectorAll("[data-visual-device]").forEach((candidate) => {
+                candidate.setAttribute("aria-pressed", String(candidate === button));
+            });
+            renderPreview();
+        });
     });
     canvas.addEventListener("click", (event) => {
         const selection = event.target.closest("[data-visual-select]");
@@ -442,7 +712,7 @@
         });
     });
     window.addEventListener("beforeunload", (event) => {
-        if (!dirty) return;
+        if (!dirty && !propertyDirty.size) return;
         event.preventDefault();
         event.returnValue = "";
     });
