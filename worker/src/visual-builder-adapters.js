@@ -74,7 +74,7 @@ export async function initializeVisualSpecializedBlocks(env) {
     await env.DB.batch(statements);
 }
 
-export async function loadVisualAdapterPayloads(env, nodes) {
+export async function loadVisualAdapterPayloads(env, nodes, properties = []) {
     const nodeTypes = new Set((nodes || []).map((node) => node.block_type));
     const hasMessageArchive = !nodeTypes.has("project-archive") || Boolean(
         await env.DB.prepare(`
@@ -152,10 +152,36 @@ export async function loadVisualAdapterPayloads(env, nodes) {
     }
     await Promise.all(loaders);
 
+    const collectionSourceByNode = new Map((properties || [])
+        .filter((property) =>
+            property.property_set === "behavior.collection" &&
+            property.property_name === "source" &&
+            property.text_value
+        )
+        .map((property) => [property.node_id, property.text_value]));
+    const collectionPayloads = new Map();
+    await Promise.all((nodes || [])
+        .filter((node) => node.block_type === "data-collection")
+        .map(async (node) => {
+            const source = collectionSourceByNode.get(node.id) || "public-pages";
+            if (!collectionPayloads.has(source)) {
+                collectionPayloads.set(source, loadDeclarativeCollection(env, source));
+            }
+            const items = await collectionPayloads.get(source);
+            collectionPayloads.set(source, Promise.resolve(items));
+        }));
+
     const payloads = new Map();
     for (const node of nodes || []) {
         if (payloadByType.has(node.block_type)) {
             payloads.set(node.id, payloadByType.get(node.block_type));
+        } else if (node.block_type === "data-collection") {
+            const source = collectionSourceByNode.get(node.id) || "public-pages";
+            payloads.set(node.id, {
+                kind: "data-collection",
+                source,
+                items: await collectionPayloads.get(source)
+            });
         } else if (node.block_type === "approved-form") {
             payloads.set(node.id, { kind: "approved-form", form: "memory" });
         } else if (node.block_type === "personal-notebook") {
@@ -167,4 +193,51 @@ export async function loadVisualAdapterPayloads(env, nodes) {
         }
     }
     return payloads;
+}
+
+async function loadDeclarativeCollection(env, source) {
+    const queries = {
+        "public-pages": `
+            SELECT id, title, description, slug
+            FROM site_pages WHERE status = 'published'
+            ORDER BY title COLLATE NOCASE, id
+        `,
+        "public-voices": `
+            SELECT id, title, summary AS description, slug
+            FROM wiki_entries WHERE status = 'published'
+            ORDER BY title COLLATE NOCASE, id
+        `,
+        "public-places": `
+            SELECT id, name AS title, description, id AS slug
+            FROM map_entries ORDER BY name COLLATE NOCASE, id
+        `,
+        "public-sources": `
+            SELECT id, title, coalesce(note, author, '') AS description, url
+            FROM sources WHERE status = 'published'
+            ORDER BY title COLLATE NOCASE, id
+        `,
+        "public-memories": `
+            SELECT id, title, text AS description
+            FROM memories
+            WHERE status = 'approved' AND consent = 1
+            ORDER BY published_at DESC, id DESC
+        `
+    };
+    const query = queries[source];
+    if (!query) throw new Error("Sorgente dichiarativa non consentita.");
+    const result = await env.DB.prepare(query).all();
+    return (result.results || []).slice(0, 100).map((row) => ({
+        id: String(row.id),
+        title: String(row.title || ""),
+        description: String(row.description || ""),
+        href: collectionHref(source, row)
+    }));
+}
+
+function collectionHref(source, row) {
+    if (source === "public-pages") return row.slug === "index" ? "./index.html" : `./${row.slug}.html`;
+    if (source === "public-voices") return `./voci/${encodeURIComponent(row.slug)}.html`;
+    if (source === "public-places") return `./luoghi/${encodeURIComponent(row.slug)}.html`;
+    if (source === "public-sources") return /^https:\/\//iu.test(String(row.url || "")) ? row.url : "";
+    return "";
 }

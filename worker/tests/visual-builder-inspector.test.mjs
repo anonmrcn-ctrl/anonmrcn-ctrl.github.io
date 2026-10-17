@@ -78,7 +78,7 @@ test("l'ispettore salva contenuto e stile tipizzati senza toccare i binding", as
     const env = environment();
     const initial = await call(env, "/api/admin/cms/visual-pages", { admin: true });
     assert.equal(initial.response.status, 200);
-    assert.equal(initial.data.inspectorVersion, 1);
+    assert.equal(initial.data.inspectorVersion, 2);
     assert.ok(initial.data.inspectorSchemas.heading.some((field) => field.key === "title"));
     assert.ok(initial.data.inspectorSchemas.heading.some((field) => field.key === "visibilityPhone"));
     assert.ok(!JSON.stringify(initial.data).includes("technical.binding"));
@@ -200,5 +200,5 @@ test("l'anteprima genera i campi dallo schema e mostra breakpoint e avvisi", asy
     assert.match(css, /data-visual-background="dark"/u);
     assert.match(css, /data-visual-phone="hidden"/u);
     assert.match(css, /width:\s*min\(360px, 100%\)/u);
-    assert.match(html, /admin-visual-builder\.css\?v=20261018-theme1/u);
+    assert.match(html, /admin-visual-builder\.css\?v=20261018-behavior1/u);
 });
