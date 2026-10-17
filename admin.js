@@ -788,6 +788,7 @@
                 loadMapEntries(),
                 loadNarrativeSteps(),
                 loadCmsPages(),
+                window.NNMRCN_VISUAL_BUILDER.load(),
                 loadCmsPoem(),
                 loadCmsNavigation(),
                 loadCmsOnboarding(),

@@ -41,7 +41,7 @@ async function auditViewport(name, viewport) {
         path: new URL(`admin-navigation-${name}.png`, outputDirectory).pathname
     });
 
-    assert.equal(await navigation.locator("a").count(), 8);
+    assert.equal(await navigation.locator("a").count(), 9);
     assert.equal(await navigation.getAttribute("aria-labelledby"), "adminSezioniTitolo");
 
     const horizontalOverflow = await page.evaluate(() =>

@@ -3,7 +3,7 @@
   "title": "Autonomia visuale no-code",
   "objective": "Permettere all'amministratore di creare, comporre, personalizzare, pubblicare, archiviare e recuperare pagine senza modificare codice.",
   "status": "in_progress",
-  "currentUnit": "13.5",
+  "currentUnit": "13.6",
   "allowedStatuses": [
     "pending",
     "in_progress",
@@ -93,7 +93,7 @@
     {
       "id": "13.5",
       "title": "Canvas visuale a blocchi",
-      "status": "pending",
+      "status": "complete",
       "dependsOn": ["13.4"],
       "deliverables": [
         "Inserimento, selezione, riordino, annidamento, duplicazione e rimozione visuale dei blocchi.",

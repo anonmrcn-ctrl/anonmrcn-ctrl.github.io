@@ -19,7 +19,7 @@ test("l’indice amministrativo collega attività chiare a sezioni esistenti", (
     assert.match(navigation, /aria-labelledby="adminSezioniTitolo"/u);
 
     const links = [...navigation.matchAll(/<a\s+[^>]*href="#([^"]+)"[^>]*>([^<]+)<\/a>/gu)];
-    assert.equal(links.length, 8);
+    assert.equal(links.length, 9);
 
     for (const [, target, label] of links) {
         assert.ok(label.trim().length >= 3, `etichetta poco chiara per #${target}`);
