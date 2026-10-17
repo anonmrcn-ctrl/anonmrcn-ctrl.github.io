@@ -83,6 +83,15 @@ import {
     visualSectionImpact,
     VisualSectionLibraryError
 } from "./visual-section-library.js";
+import {
+    compareVisualThemes,
+    createVisualTheme,
+    listVisualThemes,
+    publishVisualTheme,
+    readPublicTheme,
+    updateVisualTheme,
+    VisualThemeStudioError
+} from "./visual-theme-studio.js";
 
 // workerd refuses PBKDF2 requests above 100,000 iterations.
 const PBKDF2_ITERATIONS = 100000;
@@ -788,6 +797,66 @@ export default {
             ) {
                 return await adminVisualSectionResponse(request, env, () =>
                     listVisualSections(env)
+                );
+            }
+
+            if (
+                request.method === "GET" &&
+                path === "/api/admin/cms/visual-themes"
+            ) {
+                return await adminVisualThemeResponse(request, env, () =>
+                    listVisualThemes(env)
+                );
+            }
+
+            if (
+                request.method === "POST" &&
+                path === "/api/admin/cms/visual-themes"
+            ) {
+                return await adminVisualThemeResponse(request, env, async () =>
+                    createVisualTheme(env, await readJson(request, MAX_CMS_PAGE_REQUEST_BYTES)),
+                201);
+            }
+
+            if (
+                request.method === "GET" &&
+                /^\/api\/admin\/cms\/visual-themes\/[a-z0-9]+(?:-[a-z0-9]+)*\/compare$/.test(path)
+            ) {
+                const themeId = path.split("/")[5];
+                return await adminVisualThemeResponse(request, env, () =>
+                    compareVisualThemes(
+                        env,
+                        themeId,
+                        url.searchParams.get("other") || "theme-default"
+                    )
+                );
+            }
+
+            if (
+                request.method === "PATCH" &&
+                /^\/api\/admin\/cms\/visual-themes\/[a-z0-9]+(?:-[a-z0-9]+)*\/publish$/.test(path)
+            ) {
+                const themeId = path.split("/")[5];
+                return await adminVisualThemeResponse(request, env, async () =>
+                    publishVisualTheme(
+                        env,
+                        themeId,
+                        await readJson(request, MAX_CMS_PAGE_REQUEST_BYTES)
+                    )
+                );
+            }
+
+            if (
+                request.method === "PATCH" &&
+                /^\/api\/admin\/cms\/visual-themes\/[a-z0-9]+(?:-[a-z0-9]+)*$/.test(path)
+            ) {
+                const themeId = path.split("/").pop();
+                return await adminVisualThemeResponse(request, env, async () =>
+                    updateVisualTheme(
+                        env,
+                        themeId,
+                        await readJson(request, MAX_CMS_PAGE_REQUEST_BYTES)
+                    )
                 );
             }
 
@@ -4107,7 +4176,8 @@ async function getPublicVisualPage(request, env, slug) {
             page.status,
             page.updated_at,
             page.published_at,
-            tree.id AS tree_id
+            tree.id AS tree_id,
+            mapping.theme_id
         FROM site_pages page
         INNER JOIN visual_page_trees mapping ON mapping.page_id = page.id
         INNER JOIN visual_trees tree ON tree.id = mapping.tree_id
@@ -4193,6 +4263,7 @@ async function getPublicVisualPage(request, env, slug) {
             properties: propertyResult.results || [],
             assets,
             adapterPayloads: await loadVisualAdapterPayloads(env, nodes),
+            theme: await readPublicTheme(env, page.theme_id),
             publicOrigin: env.ALLOWED_ORIGIN || "https://anonmrcn-ctrl.github.io"
         });
         return json(request, env, {
@@ -4291,6 +4362,17 @@ async function adminVisualSectionResponse(request, env, operation, successStatus
         return json(request, env, await operation(), successStatus);
     } catch (error) {
         if (!(error instanceof VisualSectionLibraryError)) throw error;
+        return json(request, env, { error: error.message }, error.status);
+    }
+}
+
+async function adminVisualThemeResponse(request, env, operation, successStatus = 200) {
+    if (!(await adminAuthorized(request, env))) return unauthorized(request, env);
+    await ensureCmsStorage(env);
+    try {
+        return json(request, env, await operation(), successStatus);
+    } catch (error) {
+        if (!(error instanceof VisualThemeStudioError)) throw error;
         return json(request, env, { error: error.message }, error.status);
     }
 }

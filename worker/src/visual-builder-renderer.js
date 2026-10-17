@@ -84,6 +84,7 @@ export function renderVisualPage({
     properties,
     assets = [],
     adapterPayloads = new Map(),
+    theme = null,
     publicOrigin = "https://anonmrcn-ctrl.github.io"
 }) {
     if (!page || page.status !== "published") {
@@ -110,6 +111,7 @@ export function renderVisualPage({
     return {
         registryVersion: VISUAL_BLOCK_REGISTRY_VERSION,
         html,
+        theme,
         metadata: {
             title: String(page.title || ""),
             description: String(page.description || ""),

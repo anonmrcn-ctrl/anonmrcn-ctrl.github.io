@@ -3,7 +3,7 @@
   "title": "Autonomia visuale no-code",
   "objective": "Permettere all'amministratore di creare, comporre, personalizzare, pubblicare, archiviare e recuperare pagine senza modificare codice.",
   "status": "in_progress",
-  "currentUnit": "13.9",
+  "currentUnit": "13.10",
   "allowedStatuses": [
     "pending",
     "in_progress",
@@ -149,7 +149,7 @@
     {
       "id": "13.9",
       "title": "Studio grafico globale",
-      "status": "pending",
+      "status": "complete",
       "dependsOn": ["13.8"],
       "deliverables": [
         "Controlli no-code per palette, tipografia, scala, spaziatura, superfici, bordi, ombre e movimento.",
