@@ -3,7 +3,7 @@
   "title": "Autonomia visuale no-code",
   "objective": "Permettere all'amministratore di creare, comporre, personalizzare, pubblicare, archiviare e recuperare pagine senza modificare codice.",
   "status": "in_progress",
-  "currentUnit": "13.3",
+  "currentUnit": "13.4",
   "allowedStatuses": [
     "pending",
     "in_progress",
@@ -65,7 +65,7 @@
     {
       "id": "13.3",
       "title": "Registro dei blocchi e renderer pubblico sicuro",
-      "status": "pending",
+      "status": "complete",
       "dependsOn": ["13.2"],
       "deliverables": [
         "Registro versionato dei tipi di blocco e delle proprietà consentite.",
