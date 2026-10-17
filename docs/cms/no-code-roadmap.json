@@ -3,7 +3,7 @@
   "title": "Autonomia visuale no-code",
   "objective": "Permettere all'amministratore di creare, comporre, personalizzare, pubblicare, archiviare e recuperare pagine senza modificare codice.",
   "status": "in_progress",
-  "currentUnit": "13.4",
+  "currentUnit": "13.5",
   "allowedStatuses": [
     "pending",
     "in_progress",
@@ -79,7 +79,7 @@
     {
       "id": "13.4",
       "title": "Migrazione dei componenti specializzati",
-      "status": "pending",
+      "status": "complete",
       "dependsOn": ["13.3"],
       "deliverables": [
         "Blocchi sicuri per poesia, mappa, Voci, luoghi, fonti, Memorie e moduli esistenti.",

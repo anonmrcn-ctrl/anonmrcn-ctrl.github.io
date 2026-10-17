@@ -55,6 +55,10 @@ import {
     renderVisualPage,
     VisualRenderError
 } from "./visual-builder-renderer.js";
+import {
+    initializeVisualSpecializedBlocks,
+    loadVisualAdapterPayloads
+} from "./visual-builder-adapters.js";
 
 // workerd refuses PBKDF2 requests above 100,000 iterations.
 const PBKDF2_ITERATIONS = 100000;
@@ -3930,13 +3934,28 @@ async function getPublicVisualPage(request, env, slug) {
     `).bind(slug).first();
     if (!page) return json(request, env, { error: "Pagina non trovata." }, 404);
 
-    const [nodeResult, propertyResult, assetResult] = await Promise.all([
-        env.DB.prepare(`
-            SELECT id, tree_id, parent_id, position, block_type, label
-            FROM visual_nodes
-            WHERE tree_id = ?
-            ORDER BY ifnull(parent_id, ''), position, id
-        `).bind(page.tree_id).all(),
+    const nodeResult = await env.DB.prepare(`
+        SELECT id, tree_id, parent_id, position, block_type, label
+        FROM visual_nodes
+        WHERE tree_id = ?
+        ORDER BY ifnull(parent_id, ''), position, id
+    `).bind(page.tree_id).all();
+    const nodes = nodeResult.results || [];
+    const nodeTypes = new Set(nodes.map((node) => node.block_type));
+    if (nodeTypes.has("project-voices")) await ensureWikiStorage(env);
+    if (nodeTypes.has("project-places")) await ensureMapEntryStorage(env);
+    if (nodeTypes.has("project-path")) await ensureNarrativeStorage(env);
+    if (nodeTypes.has("project-memories")) await ensureMemoryStorage(env);
+    if (nodeTypes.has("project-archive")) {
+        const messagesTable = await env.DB.prepare(`
+            SELECT name FROM sqlite_master
+            WHERE type = 'table' AND name = 'messages'
+            LIMIT 1
+        `).first();
+        if (messagesTable) await ensureMessageArchiveStorage(env);
+    }
+
+    const [propertyResult, assetResult] = await Promise.all([
         env.DB.prepare(`
             SELECT
                 property.node_id,
@@ -3986,9 +4005,10 @@ async function getPublicVisualPage(request, env, slug) {
     try {
         const rendered = renderVisualPage({
             page,
-            nodes: nodeResult.results || [],
+            nodes,
             properties: propertyResult.results || [],
             assets,
+            adapterPayloads: await loadVisualAdapterPayloads(env, nodes),
             publicOrigin: env.ALLOWED_ORIGIN || "https://anonmrcn-ctrl.github.io"
         });
         return json(request, env, {
@@ -8791,6 +8811,7 @@ async function initializeCmsStorage(env) {
     await initializeSeoSocialMetadata(env);
     await initializeLegalContent(env);
     await initializeVisualBuilderContent(env);
+    await initializeVisualSpecializedBlocks(env);
     await initializeContentRevisions(env);
     await initializePermalinks(env);
 }

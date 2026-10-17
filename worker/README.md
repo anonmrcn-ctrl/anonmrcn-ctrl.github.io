@@ -113,6 +113,13 @@ proprietà tecniche. La risposta include metadati SEO coerenti; Accesso, Spazio
 personale e Taccuino restano `noindex`. Questo endpoint non sostituisce ancora
 i documenti pubblici né i loro ripieghi statici.
 
+La stessa inizializzazione aggiunge una sola volta 12 blocchi specializzati con
+ID stabili. Gli adattatori leggono solo dati D1 pubblicabili per poesia,
+percorso, livelli cartografici, Voci, luoghi, fonti, Memorie e archivio; i
+messaggi richiedono entrambi i consensi. Mappa, modulo Memorie, taccuino e
+accesso mantengono collegamenti espliciti alle interfacce statiche complete
+durante la transizione. Nessun adattatore interpreta HTML, CSS o JavaScript.
+
 La stessa inizializzazione importa «Il Gajo tra i Praelli» in `poem_works`,
 `poem_sections` e `poem_lines`: 4 canti, 121 versi e i metadati necessari a
 ricostruire strofe, rientri e 165 righe metriche. L'endpoint

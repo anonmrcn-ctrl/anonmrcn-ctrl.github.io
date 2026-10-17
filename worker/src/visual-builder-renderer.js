@@ -32,19 +32,19 @@ export const VISUAL_BLOCK_REGISTRY = Object.freeze({
     "global-header": entry("global", ["content.copy", "content.media", "presentation.box", "presentation.layout", "presentation.responsive", "behavior.collection"], "header"),
     "global-footer": entry("global", ["content.copy", "presentation.box", "presentation.layout", "presentation.responsive", "behavior.collection"], "footer"),
     "global-notice": entry("global", ["content.copy", "presentation.box", "presentation.responsive", "behavior.link"], "aside"),
-    "project-poem": entry("project", ["content.copy", "presentation.typography", "presentation.responsive", "technical.binding"]),
-    "project-path": entry("project", ["content.copy", "presentation.layout", "presentation.responsive", "behavior.collection", "technical.binding"]),
-    "project-map": entry("project", ["content.copy", "presentation.layout", "presentation.responsive", "behavior.collection", "technical.binding"]),
-    "project-voices": entry("project", ["content.copy", "content.media", "presentation.layout", "presentation.responsive", "behavior.collection", "technical.binding"]),
-    "project-places": entry("project", ["content.copy", "content.media", "presentation.layout", "presentation.responsive", "behavior.collection", "technical.binding"]),
-    "project-sources": entry("project", ["content.copy", "presentation.layout", "behavior.collection", "technical.binding"]),
-    "project-memories": entry("project", ["content.copy", "content.media", "presentation.layout", "presentation.responsive", "behavior.collection", "technical.binding"]),
-    "project-archive": entry("project", ["content.copy", "presentation.layout", "presentation.responsive", "behavior.collection", "technical.binding"]),
-    "personal-notebook": entry("personal", ["content.copy", "presentation.layout", "presentation.responsive", "behavior.collection", "technical.binding", "technical.security"]),
-    "personal-space": entry("personal", ["content.copy", "content.media", "presentation.layout", "presentation.responsive", "behavior.collection", "technical.binding", "technical.security"]),
-    "special-access": entry("functional", ["content.copy", "presentation.box", "behavior.form", "technical.binding", "technical.security"]),
+    "project-poem": entry("project", ["content.copy", "presentation.typography", "presentation.responsive", "technical.binding"], "project-poem"),
+    "project-path": entry("project", ["content.copy", "presentation.layout", "presentation.responsive", "behavior.collection", "technical.binding"], "project-path"),
+    "project-map": entry("project", ["content.copy", "presentation.layout", "presentation.responsive", "behavior.collection", "technical.binding"], "project-map"),
+    "project-voices": entry("project", ["content.copy", "content.media", "presentation.layout", "presentation.responsive", "behavior.collection", "technical.binding"], "project-voices"),
+    "project-places": entry("project", ["content.copy", "content.media", "presentation.layout", "presentation.responsive", "behavior.collection", "technical.binding"], "project-places"),
+    "project-sources": entry("project", ["content.copy", "presentation.layout", "behavior.collection", "technical.binding"], "project-sources"),
+    "project-memories": entry("project", ["content.copy", "content.media", "presentation.layout", "presentation.responsive", "behavior.collection", "technical.binding"], "project-memories"),
+    "project-archive": entry("project", ["content.copy", "presentation.layout", "presentation.responsive", "behavior.collection", "technical.binding"], "project-archive"),
+    "personal-notebook": entry("personal", ["content.copy", "presentation.layout", "presentation.responsive", "behavior.collection", "technical.binding", "technical.security"], "personal-notebook"),
+    "personal-space": entry("personal", ["content.copy", "content.media", "presentation.layout", "presentation.responsive", "behavior.collection", "technical.binding", "technical.security"], "personal-space"),
+    "special-access": entry("functional", ["content.copy", "presentation.box", "behavior.form", "technical.binding", "technical.security"], "special-access"),
     "legal-document": entry("legal", ["content.copy", "presentation.typography", "presentation.responsive", "technical.binding"], "article"),
-    "approved-form": entry("functional", ["content.copy", "presentation.box", "presentation.layout", "behavior.form", "technical.binding", "technical.security"]),
+    "approved-form": entry("functional", ["content.copy", "presentation.box", "presentation.layout", "behavior.form", "technical.binding", "technical.security"], "approved-form"),
     "data-collection": entry("functional", ["content.copy", "presentation.layout", "presentation.responsive", "behavior.collection", "technical.binding"]),
     "data-filter": entry("functional", ["content.copy", "presentation.layout", "behavior.collection", "technical.binding"]),
     "admin-workspace": entry("administration", ["content.copy", "presentation.layout", "presentation.responsive", "technical.security"]),
@@ -83,6 +83,7 @@ export function renderVisualPage({
     nodes,
     properties,
     assets = [],
+    adapterPayloads = new Map(),
     publicOrigin = "https://anonmrcn-ctrl.github.io"
 }) {
     if (!page || page.status !== "published") {
@@ -126,6 +127,7 @@ export function renderVisualPage({
         childrenByParent,
         valuesByNode,
         assetsById,
+        adapterPayloads,
         visited
     );
     if (visited.size !== nodeById.size) throw new VisualRenderError("L'albero contiene nodi irraggiungibili o ciclici.");
@@ -190,7 +192,15 @@ function propertyValue(property) {
     }
 }
 
-function renderNode(node, depth, childrenByParent, valuesByNode, assetsById, visited) {
+function renderNode(
+    node,
+    depth,
+    childrenByParent,
+    valuesByNode,
+    assetsById,
+    adapterPayloads,
+    visited
+) {
     if (depth > MAX_DEPTH) throw new VisualRenderError("Profondità massima superata.");
     if (visited.has(node.id)) throw new VisualRenderError("Ciclo nell'albero dei blocchi.");
     visited.add(node.id);
@@ -206,6 +216,7 @@ function renderNode(node, depth, childrenByParent, valuesByNode, assetsById, vis
         childrenByParent,
         valuesByNode,
         assetsById,
+        adapterPayloads,
         visited
     )).join("");
     const values = valuesByNode.get(node.id) || new Map();
@@ -244,8 +255,64 @@ function renderNode(node, depth, childrenByParent, valuesByNode, assetsById, vis
         case "spacer": return `<div${attributes} aria-hidden="true"></div>`;
         case "section":
             return `<section${attributes}>${title ? `<h2>${escapeHtml(title)}</h2>` : ""}${text ? `<p>${escapeHtml(text)}</p>` : ""}${childHtml}</section>`;
+        case "project-poem":
+        case "project-path":
+        case "project-map":
+        case "project-voices":
+        case "project-places":
+        case "project-sources":
+        case "project-memories":
+        case "project-archive":
+        case "personal-notebook":
+        case "personal-space":
+        case "special-access":
+        case "approved-form":
+            return renderAdapter(node, adapterPayloads.get(node.id), attributes, childHtml);
         default:
             return `<${node.definition.renderAs}${attributes}>${childHtml}</${node.definition.renderAs}>`;
+    }
+}
+
+function renderAdapter(node, payload, attributes, childHtml) {
+    const rows = Array.isArray(payload) ? payload : [];
+    switch (node.block_type) {
+        case "project-poem": {
+            const sections = new Map();
+            for (const line of rows) {
+                const section = sections.get(line.section_id) || {
+                    title: line.section_title,
+                    position: Number(line.section_position),
+                    lines: []
+                };
+                section.lines.push(line);
+                sections.set(line.section_id, section);
+            }
+            return `<article${attributes} data-adapter="poem"><h2>${escapeHtml(rows[0]?.work_title || "Poesia")}</h2>${[...sections.values()].sort((a, b) => a.position - b.position).map((section) => `<section><h3>${escapeHtml(section.title)}</h3>${section.lines.map((line) => `<p id="${escapeHtml(line.line_id)}" data-indent="${Math.max(0, Math.min(12, Number(line.indent_level) || 0))}">${escapeHtml(line.text)}</p>`).join("")}</section>`).join("")}${childHtml}</article>`;
+        }
+        case "project-path":
+            return `<section${attributes} data-adapter="narrative-steps"><h2>Percorso poetico</h2><ol>${rows.map((step) => `<li><h3>${step.title_url ? `<a href="${escapeHtml(safeHref(step.title_url))}">${escapeHtml(step.title)}</a>` : escapeHtml(step.title)}</h3><blockquote>${escapeHtml(step.verse)}</blockquote><p>${escapeHtml(step.explanation)}</p></li>`).join("")}</ol>${childHtml}</section>`;
+        case "project-map":
+            return `<section${attributes} data-adapter="map-layers" data-static-fallback="${node.id === "visual-memorie-map" ? "./memorie.html#memorieMap" : "./progetto.html#map"}"><h2>Mappa</h2><ul>${rows.map((layer) => `<li><strong>${escapeHtml(layer.title)}</strong>${layer.description ? ` — ${escapeHtml(layer.description)}` : ""} <span>(${Math.max(0, Number(layer.feature_count) || 0)})</span></li>`).join("")}</ul><p><a href="${node.id === "visual-memorie-map" ? "./memorie.html#memorieMap" : "./progetto.html#map"}">Apri la mappa interattiva</a></p>${childHtml}</section>`;
+        case "project-voices":
+            return `<section${attributes} data-adapter="wiki-entries"><h2>Voci</h2><ul>${rows.map((item) => `<li><a href="./voci/${encodeURIComponent(item.slug)}.html">${escapeHtml(item.title)}</a>${item.summary ? `<p>${escapeHtml(item.summary)}</p>` : ""}</li>`).join("")}</ul>${childHtml}</section>`;
+        case "project-places":
+            return `<section${attributes} data-adapter="map-entries"><h2>Luoghi</h2><ul>${rows.map((item) => `<li><a href="./luoghi/${encodeURIComponent(item.id)}.html">${escapeHtml(item.name)}</a>${item.description ? `<p>${escapeHtml(item.description)}</p>` : ""}</li>`).join("")}</ul>${childHtml}</section>`;
+        case "project-sources":
+            return `<section${attributes} data-adapter="sources"><h2>Fonti</h2><ol>${rows.map((source) => `<li>${source.url ? `<a href="${escapeHtml(safeHref(source.url))}" rel="noreferrer">${escapeHtml(source.title)}</a>` : escapeHtml(source.title)}${source.author ? ` — ${escapeHtml(source.author)}` : ""}</li>`).join("")}</ol>${childHtml}</section>`;
+        case "project-memories":
+            return `<section${attributes} data-adapter="memories"><h2>Memorie</h2>${rows.map((memory) => `<article><h3>${escapeHtml(memory.title)}</h3><p>${escapeHtml(memory.text)}</p>${memory.author_name ? `<p>Condivisa da ${escapeHtml(memory.author_name)}</p>` : ""}</article>`).join("")}${childHtml}</section>`;
+        case "project-archive":
+            return `<section${attributes} data-adapter="public-messages"><h2>Archivio</h2><ol>${rows.map((message) => `<li>${escapeHtml(message.text)}</li>`).join("")}</ol>${childHtml}</section>`;
+        case "approved-form":
+            return `<section${attributes} data-adapter="memory-form" data-static-fallback="./memorie.html#memoriaFormTitolo"><h2>Condividi una Memoria</h2><p>Il modulo completo permette di scegliere il punto sulla mappa e allegare un contenuto, mantenendo consenso e moderazione.</p><p><a href="./memorie.html#memoriaFormTitolo">Apri il modulo completo</a></p></section>`;
+        case "personal-notebook":
+            return `<section${attributes} data-adapter="local-notebook" data-static-fallback="./taccuino.html"><h2>Taccuino personale</h2><p>I contenuti salvati restano su questo dispositivo.</p><p><a href="./taccuino.html">Apri il taccuino completo</a></p>${childHtml}</section>`;
+        case "personal-space":
+            return `<section${attributes} data-adapter="personal-space"><h2>Spazio personale</h2><p>Accedi per vedere messaggi e contenuti della tua location.</p><a href="./accesso.html">Vai all'accesso</a>${childHtml}</section>`;
+        case "special-access":
+            return `<section${attributes} data-adapter="location-access" data-static-fallback="./accesso.html"><h2>Accesso</h2><p>La verifica del collegamento e l'accesso protetto restano nella pagina dedicata.</p><p><a href="./accesso.html">Apri l'accesso sicuro</a></p></section>`;
+        default:
+            return `<section${attributes}>${childHtml}</section>`;
     }
 }
 
