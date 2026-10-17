@@ -10,7 +10,8 @@ affiancare il primo passaggio tecnico incompleto, ma non sostituirlo.
 
 **Stato complessivo:** i punti 1–12 sono stati completati il 12 ottobre 2026.
 Il 17 ottobre 2026 è stata aperta l'estensione 13 per l'autonomia visuale
-no-code; la prima unità da eseguire è la 13.1. L'esportazione dei primi dati
+no-code; l'inventario 13.1 è completo e la prima unità da eseguire è la 13.2.
+L'esportazione dei primi dati
 Search Console dal 9 novembre e i rapporti trimestrali successivi appartengono
 alla manutenzione ordinaria e non riaprono le unità concluse.
 
@@ -30,7 +31,7 @@ alla manutenzione ordinaria e non riaprono le unità concluse.
 | 10 | Programma editoriale e monitoraggio organico | Completo | Programma, collegamenti contestuali, proprietà Search Console, sitemap, finestra iniziale e validatore dei rapporti aggregati sono completi; PR #28 e i run SEO `38272655867`, Pages `38272655643` e prestazioni `38272655858` sono riusciti. Il primo export reale è manutenzione operativa programmata dal 9 novembre 2026 |
 | 11 | Amministrazione più user friendly | Completo | Navigazione per attività, feedback comprensibili, protezione delle modifiche e audit Chrome a 375/1440 px sono documentati in `11-admin-usability.md`; i run SEO `38154750211` e prestazioni/UX `38154750212` sono riusciti |
 | 12 | Rafforzamento della privacy | Completo | Inventario, retention, telemetria opt-in, librerie locali, informativa v2, esportazione e cancellazione self-service sono verificati localmente, in CI e sui servizi pubblicati; PR #26 e prove ripetibili sono registrate nell'unità 12.4 |
-| 13 | Autonomia visuale no-code | Da iniziare | `13-no-code-visual-builder.md` e `no-code-roadmap.json` definiscono il passaggio da blocchi testuali fissi a un builder visuale completo; la prima unità eseguibile è 13.1 |
+| 13 | Autonomia visuale no-code | In corso | L'unità 13.1 censisce 21 pagine, 14 famiglie, 17 moduli amministrativi, 18 aree e 40 tipi nel contratto v1; `13-1-visual-inventory-contract.md` e `scripts/check-visual-inventory.mjs` ne rendono ripetibile la prova. La prima unità eseguibile è 13.2 |
 
 ## Traguardi SEO trasversali
 
@@ -90,6 +91,8 @@ Da eseguire dalla radice del repository:
 node scripts/check-content-boundary.mjs
 node scripts/check-seo.mjs
 node scripts/check-no-code-roadmap.mjs
+node scripts/check-visual-inventory.mjs
+node --test scripts/visual-inventory.test.mjs
 node --test worker/tests/*.test.mjs
 ```
 

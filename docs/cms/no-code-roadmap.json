@@ -2,8 +2,8 @@
   "version": 1,
   "title": "Autonomia visuale no-code",
   "objective": "Permettere all'amministratore di creare, comporre, personalizzare, pubblicare, archiviare e recuperare pagine senza modificare codice.",
-  "status": "planned",
-  "currentUnit": "13.1",
+  "status": "in_progress",
+  "currentUnit": "13.2",
   "allowedStatuses": [
     "pending",
     "in_progress",
@@ -37,7 +37,7 @@
     {
       "id": "13.1",
       "title": "Inventario visuale e contratto dei blocchi",
-      "status": "pending",
+      "status": "complete",
       "dependsOn": ["13.0"],
       "deliverables": [
         "Inventario di componenti, layout, comportamenti e varianti del sito corrente.",
