@@ -67,7 +67,7 @@ accessibilità, privacy, SEO, migrazione e test.
 | 13.0 | Roadmap, guardrail e controllo automatico | Completa | Punti 1–12 |
 | 13.1 | Inventario visuale e contratto dei blocchi | Completa | 13.0 |
 | 13.2 | Schema D1 per pagine, alberi e temi | Completa | 13.1 |
-| 13.3 | Registro dei blocchi e renderer pubblico sicuro | Da iniziare | 13.2 |
+| 13.3 | Registro dei blocchi e renderer pubblico sicuro | Completa | 13.2 |
 | 13.4 | Migrazione dei componenti specializzati | Da iniziare | 13.3 |
 | 13.5 | Canvas visuale a blocchi | Da iniziare | 13.4 |
 | 13.6 | Ispettore visuale e anteprima responsive | Da iniziare | 13.5 |
@@ -90,6 +90,11 @@ La prova dell'unità 13.2 è in `13-2-visual-d1-schema.md`; la migrazione
 append-only, lo schema runtime e i test sono in `worker/migrations/0019_*`,
 `worker/src/visual-builder-storage.js` e
 `worker/tests/visual-builder-storage.test.mjs`.
+
+La prova dell'unità 13.3 è in `13-3-block-registry-renderer.md`; registro,
+renderer, endpoint pubblico parallelo e test di sanitizzazione sono in
+`worker/src/visual-builder-renderer.js` e
+`worker/tests/visual-builder-renderer.test.mjs`.
 
 ## Criterio finale
 

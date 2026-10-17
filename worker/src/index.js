@@ -51,6 +51,10 @@ import {
     SITE_SETTINGS_SEEDS
 } from "./settings-seed.js";
 import { initializeVisualBuilderContent } from "./visual-builder-storage.js";
+import {
+    renderVisualPage,
+    VisualRenderError
+} from "./visual-builder-renderer.js";
 
 // workerd refuses PBKDF2 requests above 100,000 iterations.
 const PBKDF2_ITERATIONS = 100000;
@@ -532,6 +536,14 @@ export default {
 
             if (request.method === "GET" && path === "/api/public/map-entries") {
                 return await listPublicMapEntries(request, env);
+            }
+
+            if (
+                request.method === "GET" &&
+                /^\/api\/public\/visual-pages\/[a-z0-9]+(?:-[a-z0-9]+)*$/.test(path)
+            ) {
+                const slug = path.split("/").pop();
+                return await getPublicVisualPage(request, env, slug);
             }
 
             if (
@@ -3894,6 +3906,109 @@ async function getPublicPage(request, env, slug) {
             }))
         }
     });
+}
+
+async function getPublicVisualPage(request, env, slug) {
+    await ensureCmsStorage(env);
+    const page = await env.DB.prepare(`
+        SELECT
+            page.id,
+            page.slug,
+            page.title,
+            page.description,
+            page.status,
+            page.updated_at,
+            page.published_at,
+            tree.id AS tree_id
+        FROM site_pages page
+        INNER JOIN visual_page_trees mapping ON mapping.page_id = page.id
+        INNER JOIN visual_trees tree ON tree.id = mapping.tree_id
+        WHERE page.slug = ?
+            AND page.status = 'published'
+            AND tree.status = 'published'
+        LIMIT 1
+    `).bind(slug).first();
+    if (!page) return json(request, env, { error: "Pagina non trovata." }, 404);
+
+    const [nodeResult, propertyResult, assetResult] = await Promise.all([
+        env.DB.prepare(`
+            SELECT id, tree_id, parent_id, position, block_type, label
+            FROM visual_nodes
+            WHERE tree_id = ?
+            ORDER BY ifnull(parent_id, ''), position, id
+        `).bind(page.tree_id).all(),
+        env.DB.prepare(`
+            SELECT
+                property.node_id,
+                property.domain,
+                property.property_set,
+                property.property_name,
+                property.breakpoint,
+                property.item_position,
+                property.value_kind,
+                property.text_value,
+                property.number_value,
+                property.boolean_value,
+                property.asset_id,
+                property.page_reference_id,
+                property.collection_key
+            FROM visual_node_properties property
+            INNER JOIN visual_nodes node ON node.id = property.node_id
+            WHERE node.tree_id = ?
+            ORDER BY property.node_id, property.property_set,
+                property.property_name, property.breakpoint,
+                property.item_position
+        `).bind(page.tree_id).all(),
+        env.DB.prepare(`
+            SELECT DISTINCT
+                asset.id,
+                asset.owner_type,
+                asset.owner_id,
+                asset.alt_text,
+                asset.caption,
+                asset.width,
+                asset.height
+            FROM visual_node_properties property
+            INNER JOIN visual_nodes node ON node.id = property.node_id
+            INNER JOIN media_assets asset ON asset.id = property.asset_id
+            WHERE node.tree_id = ?
+                AND asset.state = 'current'
+                AND asset.owner_type IN ('wiki_image', 'map_entry')
+        `).bind(page.tree_id).all()
+    ]);
+
+    const assets = (assetResult.results || []).map((asset) => ({
+        ...asset,
+        publicUrl: asset.owner_type === "wiki_image"
+            ? `/api/public/wiki-images/${encodeURIComponent(asset.owner_id)}`
+            : `/api/public/map-entry-images/${encodeURIComponent(asset.owner_id)}`
+    }));
+    try {
+        const rendered = renderVisualPage({
+            page,
+            nodes: nodeResult.results || [],
+            properties: propertyResult.results || [],
+            assets,
+            publicOrigin: env.ALLOWED_ORIGIN || "https://anonmrcn-ctrl.github.io"
+        });
+        return json(request, env, {
+            page: {
+                id: page.id,
+                slug: page.slug,
+                updatedAt: Number(page.updated_at),
+                publishedAt: Number(page.published_at),
+                ...rendered
+            }
+        });
+    } catch (error) {
+        if (!(error instanceof VisualRenderError)) throw error;
+        console.error(JSON.stringify({
+            event: "visual_page_render_failed",
+            pageId: page.id,
+            error: error.message
+        }));
+        return json(request, env, { error: "Pagina visuale non disponibile." }, 409);
+    }
 }
 
 async function adminListCmsPages(request, env) {

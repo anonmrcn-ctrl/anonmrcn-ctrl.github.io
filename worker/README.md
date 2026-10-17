@@ -106,6 +106,13 @@ L'endpoint pubblico è `GET /api/public/pages/:slug` e restituisce soltanto
 pagine con stato `published`. Ogni file HTML conserva la copia originaria e la
 usa automaticamente se il Worker non è raggiungibile.
 
+`GET /api/public/visual-pages/:slug` espone in parallelo la resa del nuovo
+albero visuale. Accetta soltanto i tipi e le proprietà del registro v1,
+codifica i contenuti come testo, filtra i collegamenti e non rende mai le
+proprietà tecniche. La risposta include metadati SEO coerenti; Accesso, Spazio
+personale e Taccuino restano `noindex`. Questo endpoint non sostituisce ancora
+i documenti pubblici né i loro ripieghi statici.
+
 La stessa inizializzazione importa «Il Gajo tra i Praelli» in `poem_works`,
 `poem_sections` e `poem_lines`: 4 canti, 121 versi e i metadati necessari a
 ricostruire strofe, rientri e 165 righe metriche. L'endpoint
