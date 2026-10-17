@@ -17,6 +17,25 @@
     const saveButton = document.getElementById("adminVisualSave");
     const reloadButton = document.getElementById("adminVisualReload");
     const status = document.getElementById("adminVisualStatus");
+    const createForm = document.getElementById("adminVisualCreateForm");
+    const createTitle = document.getElementById("adminVisualCreateTitle");
+    const createSlug = document.getElementById("adminVisualCreateSlug");
+    const createDescription = document.getElementById("adminVisualCreateDescription");
+    const createTemplate = document.getElementById("adminVisualCreateTemplate");
+    const createNavigation = document.getElementById("adminVisualCreateNavigation");
+    const lifecycleForm = document.getElementById("adminVisualLifecycleForm");
+    const lifecycleTitle = document.getElementById("adminVisualLifecycleTitle");
+    const lifecycleSlug = document.getElementById("adminVisualLifecycleSlug");
+    const lifecycleDescription = document.getElementById("adminVisualLifecycleDescription");
+    const lifecycleStatus = document.getElementById("adminVisualLifecycleStatus");
+    const lifecycleNavigation = document.getElementById("adminVisualLifecycleNavigation");
+    const canonical = document.getElementById("adminVisualCanonical");
+    const duplicateButton = document.getElementById("adminVisualDuplicate");
+    const analyzeDelete = document.getElementById("adminVisualAnalyzeDelete");
+    const dependencies = document.getElementById("adminVisualDependencies");
+    const deleteRedirect = document.getElementById("adminVisualDeleteRedirect");
+    const deleteConfirmation = document.getElementById("adminVisualDeleteConfirmation");
+    const deleteButton = document.getElementById("adminVisualDelete");
 
     const CATEGORY_CHILDREN = Object.freeze({
         root: ["structure", "content", "navigation", "project", "global", "functional", "personal", "legal"],
@@ -319,6 +338,15 @@
                 option.textContent = page.title;
                 return option;
             }));
+            createTemplate.replaceChildren(
+                Object.assign(document.createElement("option"), {
+                    value: "", textContent: "Pagina vuota"
+                }),
+                ...pages.map((page) => Object.assign(document.createElement("option"), {
+                    value: page.id,
+                    textContent: `Duplica: ${page.title}`
+                }))
+            );
             paletteSelect.replaceChildren(...palette.map((item) => {
                 const option = document.createElement("option");
                 option.value = item.type;
@@ -347,7 +375,147 @@
         undoStack = [];
         dirty = false;
         propertyDirty = new Set();
+        renderLifecycle(page);
         renderCanvas();
+    }
+
+    function renderLifecycle(page) {
+        const enabled = Boolean(page);
+        for (const control of lifecycleForm.elements) control.disabled = !enabled;
+        analyzeDelete.disabled = !enabled;
+        deleteButton.disabled = true;
+        dependencies.replaceChildren();
+        deleteRedirect.value = "";
+        deleteConfirmation.value = "";
+        if (!page) {
+            lifecycleForm.reset();
+            canonical.textContent = "";
+            return;
+        }
+        lifecycleTitle.value = page.title || "";
+        lifecycleSlug.value = page.slug || "";
+        lifecycleDescription.value = page.description || "";
+        lifecycleStatus.value = page.status || "draft";
+        lifecycleNavigation.checked = Boolean(page.inNavigation);
+        canonical.textContent = `URL permanente: ${page.canonicalPath}`;
+        deleteConfirmation.placeholder = `ELIMINA ${page.slug}`;
+    }
+
+    async function createPage(event) {
+        event.preventDefault();
+        status.textContent = "Creazione della pagina in bozza…";
+        try {
+            const data = await request("/api/admin/cms/visual-pages", {
+                method: "POST",
+                body: JSON.stringify({
+                    title: createTitle.value,
+                    slug: createSlug.value,
+                    description: createDescription.value,
+                    sourcePageId: createTemplate.value || null,
+                    includeInNavigation: createNavigation.checked
+                })
+            });
+            createForm.reset();
+            await load(data.page.id);
+            status.textContent = "Pagina creata in bozza con URL e ID stabili.";
+        } catch (error) {
+            status.textContent = error.message || "Non è stato possibile creare la pagina.";
+        }
+    }
+
+    async function saveLifecycle(event) {
+        event.preventDefault();
+        const page = selectedPage();
+        if (!page) return;
+        status.textContent = "Salvataggio delle impostazioni…";
+        try {
+            const data = await request(
+                `/api/admin/cms/visual-page-lifecycle/${encodeURIComponent(page.id)}`,
+                {
+                    method: "PATCH",
+                    body: JSON.stringify({
+                        expectedUpdatedAt: page.updatedAt,
+                        title: lifecycleTitle.value,
+                        slug: lifecycleSlug.value,
+                        description: lifecycleDescription.value,
+                        status: lifecycleStatus.value,
+                        includeInNavigation: lifecycleNavigation.checked
+                    })
+                }
+            );
+            await load(data.page.id);
+            status.textContent = data.page.status === "archived"
+                ? "Pagina archiviata: resta recuperabile e gli URL sono conservati."
+                : "Impostazioni salvate e revisione registrata.";
+        } catch (error) {
+            status.textContent = error.message || "Non è stato possibile salvare le impostazioni.";
+        }
+    }
+
+    function prepareDuplicate() {
+        const page = selectedPage();
+        if (!page) return;
+        createTemplate.value = page.id;
+        createTitle.value = `${page.title} (copia)`;
+        createSlug.value = `${page.slug}-copia`;
+        createDescription.value = page.description || "";
+        createNavigation.checked = false;
+        createForm.closest("details").open = true;
+        createTitle.focus();
+        status.textContent = "Copia pronta: scegli titolo e indirizzo, poi crea la bozza.";
+    }
+
+    async function analyzeDeletion() {
+        const page = selectedPage();
+        if (!page) return;
+        status.textContent = "Controllo di URL e dati collegati…";
+        try {
+            const data = await request(
+                `/api/admin/cms/visual-page-dependencies/${encodeURIComponent(page.id)}`
+            );
+            const lines = [
+                `${data.permalinks.length} URL o alias da reindirizzare`,
+                `${data.navigation.length} collegamenti di menu`,
+                `${data.pageReferences.length} riferimenti da altre pagine`,
+                `${data.sourceLinks.length} collegamenti a fonti`,
+                `${data.reusableSections.length} sezioni riutilizzabili`
+            ];
+            const list = document.createElement("ul");
+            for (const line of lines) {
+                const item = document.createElement("li");
+                item.textContent = line;
+                list.appendChild(item);
+            }
+            dependencies.replaceChildren(list);
+            deleteButton.disabled = data.hardDeleteBlocked;
+            status.textContent = data.hardDeleteBlocked
+                ? "Cancellazione bloccata: archivia o riassegna prima le dipendenze indicate."
+                : "Controllo superato. Indica destinazione e conferma per eliminare.";
+        } catch (error) {
+            status.textContent = error.message || "Controllo delle dipendenze non riuscito.";
+        }
+    }
+
+    async function deletePage() {
+        const page = selectedPage();
+        if (!page || !window.confirm("Eliminare definitivamente la pagina archiviata?")) return;
+        status.textContent = "Cancellazione protetta in corso…";
+        try {
+            const data = await request(
+                `/api/admin/cms/visual-pages/${encodeURIComponent(page.id)}`,
+                {
+                    method: "DELETE",
+                    body: JSON.stringify({
+                        redirectPath: deleteRedirect.value,
+                        confirmation: deleteConfirmation.value
+                    })
+                }
+            );
+            await load();
+            status.textContent = `Pagina eliminata; ${data.preservedPermalinks} URL conservati con reindirizzamento.`;
+        } catch (error) {
+            status.textContent = error.message || "La pagina non può essere eliminata.";
+        }
     }
 
     async function save() {
@@ -615,6 +783,11 @@
         }
         showSelectedPage();
     });
+    createForm.addEventListener("submit", createPage);
+    lifecycleForm.addEventListener("submit", saveLifecycle);
+    duplicateButton.addEventListener("click", prepareDuplicate);
+    analyzeDelete.addEventListener("click", analyzeDeletion);
+    deleteButton.addEventListener("click", deletePage);
     addButton.addEventListener("click", addBlock);
     undoButton.addEventListener("click", () => {
         const previous = undoStack.pop();

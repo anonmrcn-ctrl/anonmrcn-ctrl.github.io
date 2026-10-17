@@ -65,6 +65,13 @@ import {
     updateVisualBuilderTree,
     VisualCanvasError
 } from "./visual-builder-admin.js";
+import {
+    createVisualPage,
+    deleteVisualPage,
+    readVisualPageDependencies,
+    updateVisualPageLifecycle,
+    VisualPageManagementError
+} from "./visual-page-management.js";
 
 // workerd refuses PBKDF2 requests above 100,000 iterations.
 const PBKDF2_ITERATIONS = 100000;
@@ -755,6 +762,37 @@ export default {
                 path === "/api/admin/cms/visual-pages"
             ) {
                 return await adminListVisualPages(request, env);
+            }
+
+            if (
+                request.method === "POST" &&
+                path === "/api/admin/cms/visual-pages"
+            ) {
+                return await adminCreateVisualPage(request, env);
+            }
+
+            if (
+                request.method === "GET" &&
+                /^\/api\/admin\/cms\/visual-page-dependencies\/[a-z0-9]+(?:-[a-z0-9]+)*$/.test(path)
+            ) {
+                const pageId = path.split("/").pop();
+                return await adminGetVisualPageDependencies(request, env, pageId);
+            }
+
+            if (
+                request.method === "PATCH" &&
+                /^\/api\/admin\/cms\/visual-page-lifecycle\/[a-z0-9]+(?:-[a-z0-9]+)*$/.test(path)
+            ) {
+                const pageId = path.split("/").pop();
+                return await adminUpdateVisualPageLifecycle(request, env, pageId);
+            }
+
+            if (
+                request.method === "DELETE" &&
+                /^\/api\/admin\/cms\/visual-pages\/[a-z0-9]+(?:-[a-z0-9]+)*$/.test(path)
+            ) {
+                const pageId = path.split("/").pop();
+                return await adminDeleteVisualPage(request, env, pageId);
             }
 
             if (
@@ -4085,6 +4123,55 @@ async function adminListVisualPages(request, env) {
     }
     await ensureCmsStorage(env);
     return json(request, env, await readVisualBuilderPages(env));
+}
+
+async function adminCreateVisualPage(request, env) {
+    return visualPageManagementResponse(request, env, async () =>
+        createVisualPage(
+            env,
+            await readJson(request, MAX_CMS_PAGE_REQUEST_BYTES)
+        ), 201
+    );
+}
+
+async function adminGetVisualPageDependencies(request, env, pageId) {
+    return visualPageManagementResponse(request, env, () =>
+        readVisualPageDependencies(env, pageId)
+    );
+}
+
+async function adminUpdateVisualPageLifecycle(request, env, pageId) {
+    return visualPageManagementResponse(request, env, async () =>
+        updateVisualPageLifecycle(
+            env,
+            pageId,
+            await readJson(request, MAX_CMS_PAGE_REQUEST_BYTES)
+        )
+    );
+}
+
+async function adminDeleteVisualPage(request, env, pageId) {
+    return visualPageManagementResponse(request, env, async () =>
+        deleteVisualPage(
+            env,
+            pageId,
+            await readJson(request, MAX_CMS_PAGE_REQUEST_BYTES)
+        )
+    );
+}
+
+async function visualPageManagementResponse(request, env, operation, successStatus = 200) {
+    if (!(await adminAuthorized(request, env))) return unauthorized(request, env);
+    await ensureCmsStorage(env);
+    try {
+        return json(request, env, await operation(), successStatus);
+    } catch (error) {
+        if (!(error instanceof VisualPageManagementError)) throw error;
+        return json(request, env, {
+            error: error.message,
+            ...(error.details ? { dependencies: error.details } : {})
+        }, error.status);
+    }
 }
 
 async function adminUpdateVisualPage(request, env, pageId) {

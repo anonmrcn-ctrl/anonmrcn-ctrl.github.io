@@ -137,6 +137,18 @@ nascosti su tutti i dispositivi; non modifica binding o altre proprietà
 tecniche. L'anteprima amministrativa usa gli stessi token per smartphone,
 tablet e desktop e non interpreta HTML o CSS fornito dall'utente.
 
+`POST /api/admin/cms/visual-pages` crea una pagina in bozza da vuoto o
+duplicando un albero esistente. `PATCH
+/api/admin/cms/visual-page-lifecycle/:pageId` gestisce titolo, descrizione SEO,
+slug, menu, pubblicazione, archiviazione e recupero mantenendo i vecchi URL
+come redirect. Prima di una cancellazione definitiva, `GET
+/api/admin/cms/visual-page-dependencies/:pageId` elenca alias, navigazione,
+riferimenti, fonti e sezioni riutilizzabili. `DELETE
+/api/admin/cms/visual-pages/:pageId` accetta soltanto pagine create dal builder
+e già archiviate, richiede conferma esplicita e una destinazione attiva e
+conserva permalink e revisioni; le dipendenze non riassegnate bloccano
+l'operazione.
+
 La stessa inizializzazione importa «Il Gajo tra i Praelli» in `poem_works`,
 `poem_sections` e `poem_lines`: 4 canti, 121 versi e i metadati necessari a
 ricostruire strofe, rientri e 165 righe metriche. L'endpoint
