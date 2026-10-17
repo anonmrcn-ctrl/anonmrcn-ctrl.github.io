@@ -72,6 +72,17 @@ import {
     updateVisualPageLifecycle,
     VisualPageManagementError
 } from "./visual-page-management.js";
+import {
+    createVisualSection,
+    duplicateVisualSection,
+    insertVisualSection,
+    listVisualSections,
+    publishVisualSection,
+    unlinkVisualSection,
+    updateVisualSection,
+    visualSectionImpact,
+    VisualSectionLibraryError
+} from "./visual-section-library.js";
 
 // workerd refuses PBKDF2 requests above 100,000 iterations.
 const PBKDF2_ITERATIONS = 100000;
@@ -769,6 +780,105 @@ export default {
                 path === "/api/admin/cms/visual-pages"
             ) {
                 return await adminCreateVisualPage(request, env);
+            }
+
+            if (
+                request.method === "GET" &&
+                path === "/api/admin/cms/visual-sections"
+            ) {
+                return await adminVisualSectionResponse(request, env, () =>
+                    listVisualSections(env)
+                );
+            }
+
+            if (
+                request.method === "POST" &&
+                path === "/api/admin/cms/visual-sections"
+            ) {
+                return await adminVisualSectionResponse(request, env, async () =>
+                    createVisualSection(env, await readJson(request, MAX_CMS_PAGE_REQUEST_BYTES)),
+                201);
+            }
+
+            if (
+                request.method === "PATCH" &&
+                /^\/api\/admin\/cms\/visual-sections\/[a-z0-9]+(?:-[a-z0-9]+)*$/.test(path)
+            ) {
+                const sectionId = path.split("/").pop();
+                return await adminVisualSectionResponse(request, env, async () =>
+                    updateVisualSection(
+                        env,
+                        sectionId,
+                        await readJson(request, MAX_CMS_PAGE_REQUEST_BYTES)
+                    )
+                );
+            }
+
+            if (
+                request.method === "POST" &&
+                /^\/api\/admin\/cms\/visual-sections\/[a-z0-9]+(?:-[a-z0-9]+)*\/duplicate$/.test(path)
+            ) {
+                const sectionId = path.split("/")[5];
+                return await adminVisualSectionResponse(request, env, async () =>
+                    duplicateVisualSection(
+                        env,
+                        sectionId,
+                        await readJson(request, MAX_CMS_PAGE_REQUEST_BYTES)
+                    ),
+                201);
+            }
+
+            if (
+                request.method === "POST" &&
+                /^\/api\/admin\/cms\/visual-sections\/[a-z0-9]+(?:-[a-z0-9]+)*\/insert$/.test(path)
+            ) {
+                const sectionId = path.split("/")[5];
+                return await adminVisualSectionResponse(request, env, async () =>
+                    insertVisualSection(
+                        env,
+                        sectionId,
+                        await readJson(request, MAX_CMS_PAGE_REQUEST_BYTES)
+                    )
+                );
+            }
+
+            if (
+                request.method === "GET" &&
+                /^\/api\/admin\/cms\/visual-sections\/[a-z0-9]+(?:-[a-z0-9]+)*\/impact$/.test(path)
+            ) {
+                const sectionId = path.split("/")[5];
+                return await adminVisualSectionResponse(request, env, () =>
+                    visualSectionImpact(env, sectionId)
+                );
+            }
+
+            if (
+                request.method === "PATCH" &&
+                /^\/api\/admin\/cms\/visual-sections\/[a-z0-9]+(?:-[a-z0-9]+)*\/publish$/.test(path)
+            ) {
+                const sectionId = path.split("/")[5];
+                return await adminVisualSectionResponse(request, env, async () =>
+                    publishVisualSection(
+                        env,
+                        sectionId,
+                        await readJson(request, MAX_CMS_PAGE_REQUEST_BYTES)
+                    )
+                );
+            }
+
+            if (
+                request.method === "DELETE" &&
+                /^\/api\/admin\/cms\/visual-section-links\/[a-z0-9]+(?:-[a-z0-9]+)*\/[a-z0-9]+(?:-[a-z0-9]+)*$/.test(path)
+            ) {
+                const pathParts = path.split("/");
+                return await adminVisualSectionResponse(request, env, async () =>
+                    unlinkVisualSection(
+                        env,
+                        pathParts[5],
+                        pathParts[6],
+                        await readJson(request, MAX_CMS_PAGE_REQUEST_BYTES)
+                    )
+                );
             }
 
             if (
@@ -4171,6 +4281,17 @@ async function visualPageManagementResponse(request, env, operation, successStat
             error: error.message,
             ...(error.details ? { dependencies: error.details } : {})
         }, error.status);
+    }
+}
+
+async function adminVisualSectionResponse(request, env, operation, successStatus = 200) {
+    if (!(await adminAuthorized(request, env))) return unauthorized(request, env);
+    await ensureCmsStorage(env);
+    try {
+        return json(request, env, await operation(), successStatus);
+    } catch (error) {
+        if (!(error instanceof VisualSectionLibraryError)) throw error;
+        return json(request, env, { error: error.message }, error.status);
     }
 }
 

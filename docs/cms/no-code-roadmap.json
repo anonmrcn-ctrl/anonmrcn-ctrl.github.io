@@ -3,7 +3,7 @@
   "title": "Autonomia visuale no-code",
   "objective": "Permettere all'amministratore di creare, comporre, personalizzare, pubblicare, archiviare e recuperare pagine senza modificare codice.",
   "status": "in_progress",
-  "currentUnit": "13.8",
+  "currentUnit": "13.9",
   "allowedStatuses": [
     "pending",
     "in_progress",
@@ -135,7 +135,7 @@
     {
       "id": "13.8",
       "title": "Modelli, sezioni riutilizzabili e parti globali",
-      "status": "pending",
+      "status": "complete",
       "dependsOn": ["13.7"],
       "deliverables": [
         "Libreria di modelli e sezioni salvabili, duplicabili e scollegabili.",

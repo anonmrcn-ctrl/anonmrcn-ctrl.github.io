@@ -13,7 +13,7 @@
     <script src="./tema.js?v=20261006-map-layers1"></script>
     <link rel="stylesheet" href="./leaflet.css?v=1.9.4">
     <link rel="stylesheet" href="./style.css?v=20261017-inspector1">
-    <link rel="stylesheet" href="./admin-visual-builder.css?v=20261018-pages1">
+    <link rel="stylesheet" href="./admin-visual-builder.css?v=20261018-library1">
 </head>
 
 <body>
@@ -386,6 +386,32 @@
                         <button id="adminVisualDelete" type="button" disabled>
                             Elimina definitivamente
                         </button>
+                    </div>
+                </details>
+
+                <details class="admin-visual-page-management admin-visual-library">
+                    <summary>Modelli, sezioni e parti globali</summary>
+                    <p>
+                        Salva il blocco selezionato come modello riutilizzabile.
+                        Lo stesso editor visuale gestisce anche intestazione, menu,
+                        piè di pagina e avvisi globali, senza campi di codice.
+                    </p>
+                    <div class="admin-visual-library-controls">
+                        <label for="adminVisualLibraryName">Nome in libreria</label>
+                        <input id="adminVisualLibraryName" maxlength="120">
+                        <label for="adminVisualLibrarySelect">Elemento della libreria</label>
+                        <select id="adminVisualLibrarySelect"></select>
+                        <div class="admin-visual-library-actions">
+                            <button id="adminVisualLibrarySave" type="button">Salva la selezione come nuova</button>
+                            <button class="admin-button-secondary" id="adminVisualLibraryUpdate" type="button">Aggiorna dalla selezione</button>
+                            <button class="admin-button-secondary" id="adminVisualLibraryDuplicate" type="button">Duplica in libreria</button>
+                            <button id="adminVisualLibraryInsertLinked" type="button">Inserisci collegata</button>
+                            <button class="admin-button-secondary" id="adminVisualLibraryInsertCopy" type="button">Inserisci copia indipendente</button>
+                            <button class="admin-button-secondary" id="adminVisualLibraryUnlink" type="button">Scollega la selezione</button>
+                            <button class="admin-button-secondary" id="adminVisualLibraryImpact" type="button">Mostra impatto</button>
+                            <button id="adminVisualLibraryPublish" type="button" disabled>Pubblica e sincronizza</button>
+                        </div>
+                        <div id="adminVisualLibraryImpactResult" aria-live="polite"></div>
                     </div>
                 </details>
 
@@ -1253,7 +1279,7 @@
     <script src="./sessione.js?v=20261008-onboarding1"></script>
     <script src="./notifiche.js"></script>
     <script src="./vendor/leaflet-1.9.4.js"></script>
-    <script src="./admin-visual-builder.js?v=20261018-pages1"></script>
+    <script src="./admin-visual-builder.js?v=20261018-library1"></script>
     <script src="./admin.js?v=20261017-inspector1"></script>
 </body>
 </html>

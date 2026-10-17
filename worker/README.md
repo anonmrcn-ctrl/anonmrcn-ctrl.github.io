@@ -149,6 +149,15 @@ e già archiviate, richiede conferma esplicita e una destinazione attiva e
 conserva permalink e revisioni; le dipendenze non riassegnate bloccano
 l'operazione.
 
+La libreria protetta `GET/POST /api/admin/cms/visual-sections` salva blocchi e
+parti globali come alberi autonomi. Gli endpoint `duplicate`, `insert`,
+`impact` e `publish` offrono copie indipendenti oppure collegamenti
+normalizzati in `visual_reusable_instances`: l'impatto viene mostrato prima
+della pubblicazione e gli inserimenti collegati sono sincronizzati in una sola
+transazione con nuove revisioni. `DELETE
+/api/admin/cms/visual-section-links/:pageId/:nodeId` scollega senza rimuovere la
+copia locale.
+
 La stessa inizializzazione importa «Il Gajo tra i Praelli» in `poem_works`,
 `poem_sections` e `poem_lines`: 4 canti, 121 versi e i metadati necessari a
 ricostruire strofe, rientri e 165 righe metriche. L'endpoint

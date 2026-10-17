@@ -347,6 +347,9 @@ export async function updateVisualBuilderTree(env, pageId, rawInput) {
     `).bind(page.tree_id)];
     for (const node of removed) {
         statements.push(env.DB.prepare(`
+            DELETE FROM visual_reusable_instances WHERE node_id = ?
+        `).bind(node.id));
+        statements.push(env.DB.prepare(`
             DELETE FROM visual_node_properties WHERE node_id = ?
         `).bind(node.id));
         statements.push(env.DB.prepare(`

@@ -264,8 +264,15 @@ export async function readVisualPageDependencies(env, pageId) {
             WHERE content_type = 'site_page' AND content_id = ?
         `).bind(pageId).all(),
         env.DB.prepare(`
-            SELECT id FROM visual_reusable_sections WHERE tree_id = ?
-        `).bind(page.tree_id).all()
+            SELECT section.id, instance.node_id
+            FROM visual_reusable_instances instance
+            INNER JOIN visual_reusable_sections section
+                ON section.id = instance.section_id
+            WHERE instance.page_id = ?
+            UNION ALL
+            SELECT id, NULL AS node_id
+            FROM visual_reusable_sections WHERE tree_id = ?
+        `).bind(pageId, page.tree_id).all()
     ]);
     const result = {
         pageId,

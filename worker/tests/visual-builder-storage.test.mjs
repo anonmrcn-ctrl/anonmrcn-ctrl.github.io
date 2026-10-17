@@ -8,6 +8,7 @@ import { PAGE_SEEDS } from "../src/page-seed.js";
 import {
     initializeVisualBuilderContent,
     VISUAL_BLOCK_TYPES,
+    VISUAL_BUILDER_STORAGE_STATEMENTS,
     VISUAL_PROPERTY_SETS
 } from "../src/visual-builder-storage.js";
 
@@ -279,4 +280,21 @@ test("la migrazione 0019 è append-only e coincide con lo schema runtime", async
             SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?
         `).get(table));
     }
+});
+
+test("la migrazione 0020 aggiunge collegamenti riutilizzabili senza alterare gli alberi", async () => {
+    const database = new DatabaseSync(":memory:");
+    database.exec("PRAGMA foreign_keys = ON");
+    database.exec(`${VISUAL_BUILDER_STORAGE_STATEMENTS.slice(0, -2).join(";\n")}\n;`);
+    const before = database.prepare("SELECT count(*) AS total FROM visual_trees").get().total;
+    const migration = await readFile(
+        new URL("../migrations/0020_visual_reusable_instances.sql", import.meta.url),
+        "utf8"
+    );
+    database.exec(migration);
+    assert.ok(database.prepare(`
+        SELECT name FROM sqlite_master
+        WHERE type = 'table' AND name = 'visual_reusable_instances'
+    `).get());
+    assert.equal(database.prepare("SELECT count(*) AS total FROM visual_trees").get().total, before);
 });
