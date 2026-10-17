@@ -3,7 +3,7 @@
   "title": "Autonomia visuale no-code",
   "objective": "Permettere all'amministratore di creare, comporre, personalizzare, pubblicare, archiviare e recuperare pagine senza modificare codice.",
   "status": "in_progress",
-  "currentUnit": "13.6",
+  "currentUnit": "13.7",
   "allowedStatuses": [
     "pending",
     "in_progress",
@@ -107,7 +107,7 @@
     {
       "id": "13.6",
       "title": "Ispettore visuale e anteprima responsive",
-      "status": "pending",
+      "status": "complete",
       "dependsOn": ["13.5"],
       "deliverables": [
         "Pannello proprietà generato dallo schema del blocco.",

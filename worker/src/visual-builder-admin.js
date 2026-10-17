@@ -2,6 +2,13 @@ import {
     VISUAL_BLOCK_REGISTRY,
     validateVisualTreeStructure
 } from "./visual-builder-renderer.js";
+import {
+    editableValues,
+    inspectorRows,
+    normalizeInspectorValues,
+    VISUAL_INSPECTOR_SCHEMAS,
+    VISUAL_INSPECTOR_VERSION
+} from "./visual-builder-inspector.js";
 
 const MAX_CANVAS_NODES = 400;
 const ID_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/u;
@@ -79,8 +86,127 @@ export async function readVisualBuilderPages(env) {
     }
     return {
         pages,
-        palette: VISUAL_CANVAS_PALETTE
+        palette: VISUAL_CANVAS_PALETTE,
+        inspectorVersion: VISUAL_INSPECTOR_VERSION,
+        inspectorSchemas: VISUAL_INSPECTOR_SCHEMAS
     };
+}
+
+export async function updateVisualBuilderProperties(env, pageId, nodeId, rawInput) {
+    const page = await readPageRow(env, pageId);
+    if (!page) throw new VisualCanvasError("Pagina visuale non trovata.", 404);
+    const expectedUpdatedAt = Number(rawInput?.expectedUpdatedAt);
+    if (!Number.isSafeInteger(expectedUpdatedAt) || expectedUpdatedAt < 1) {
+        throw new VisualCanvasError("Versione della struttura non valida.");
+    }
+    if (expectedUpdatedAt !== Number(page.updated_at)) {
+        throw new VisualCanvasError(
+            "La pagina è stata modificata altrove. Ricaricala prima di salvare.",
+            409
+        );
+    }
+    const node = await env.DB.prepare(`
+        SELECT id, block_type FROM visual_nodes
+        WHERE id = ? AND tree_id = ? LIMIT 1
+    `).bind(nodeId, page.tree_id).first();
+    if (!node) throw new VisualCanvasError("Blocco visuale non trovato.", 404);
+    let normalized;
+    try {
+        normalized = normalizeInspectorValues(node.block_type, rawInput?.values);
+    } catch (error) {
+        throw new VisualCanvasError(error.message || "Proprietà visuali non valide.");
+    }
+
+    const [nodeResult, propertyResult] = await Promise.all([
+        env.DB.prepare(`
+            SELECT id, parent_id, position, block_type, label
+            FROM visual_nodes WHERE tree_id = ?
+            ORDER BY ifnull(parent_id, ''), position, id
+        `).bind(page.tree_id).all(),
+        env.DB.prepare(`
+            SELECT property.* FROM visual_node_properties property
+            INNER JOIN visual_nodes node ON node.id = property.node_id
+            WHERE node.tree_id = ?
+            ORDER BY property.node_id, property.property_set,
+                property.property_name, property.breakpoint, property.item_position
+        `).bind(page.tree_id).all()
+    ]);
+    const now = Math.max(Date.now(), Number(page.updated_at) + 1);
+    const baselineSnapshot = JSON.stringify({
+        pageId,
+        treeId: page.tree_id,
+        nodes: (nodeResult.results || []).map(apiNode),
+        properties: propertyResult.results || []
+    });
+    const statements = [env.DB.prepare(`
+        INSERT INTO content_revisions (
+            entity_type, entity_id, revision_number, snapshot_json,
+            publication_state, created_at
+        )
+        SELECT 'visual_tree', ?, 1, ?, ?, ?
+        WHERE NOT EXISTS (
+            SELECT 1 FROM content_revisions
+            WHERE entity_type = 'visual_tree' AND entity_id = ?
+        )
+    `).bind(
+        page.tree_id,
+        baselineSnapshot,
+        page.status,
+        Number(page.updated_at),
+        page.tree_id
+    )];
+    for (const descriptor of normalized.schema) {
+        statements.push(env.DB.prepare(`
+            DELETE FROM visual_node_properties
+            WHERE node_id = ? AND property_set = ?
+                AND property_name = ? AND breakpoint = ?
+        `).bind(
+            node.id,
+            descriptor.propertySet,
+            descriptor.propertyName,
+            descriptor.breakpoint
+        ));
+    }
+    for (const row of inspectorRows(normalized, now)) {
+        statements.push(env.DB.prepare(`
+            INSERT INTO visual_node_properties (
+                node_id, domain, property_set, property_name, breakpoint,
+                item_position, value_kind, text_value, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `).bind(
+            node.id,
+            row.domain,
+            row.propertySet,
+            row.propertyName,
+            row.breakpoint,
+            row.itemPosition,
+            row.valueKind,
+            row.textValue,
+            row.createdAt,
+            row.updatedAt
+        ));
+    }
+    statements.push(env.DB.prepare(`
+        UPDATE visual_nodes SET updated_at = ? WHERE id = ?
+    `).bind(now, node.id));
+    statements.push(env.DB.prepare(`
+        UPDATE visual_trees SET updated_at = ? WHERE id = ?
+    `).bind(now, page.tree_id));
+    statements.push(env.DB.prepare(`
+        UPDATE visual_page_trees SET updated_at = ? WHERE page_id = ?
+    `).bind(now, pageId));
+    await env.DB.batch(statements);
+
+    const saved = await readVisualBuilderPage(env, pageId);
+    const savedProperties = await env.DB.prepare(`
+        SELECT property.* FROM visual_node_properties property
+        INNER JOIN visual_nodes visual_node ON visual_node.id = property.node_id
+        WHERE visual_node.tree_id = ?
+        ORDER BY property.node_id, property.property_set,
+            property.property_name, property.breakpoint, property.item_position
+    `).bind(page.tree_id).all();
+    await appendVisualRevision(env, page, saved, savedProperties.results || [], now);
+    return { page: saved, unchanged: false };
 }
 
 export async function updateVisualBuilderTree(env, pageId, rawInput) {
@@ -162,7 +288,8 @@ export async function updateVisualBuilderTree(env, pageId, rawInput) {
     if (unchanged) {
         return {
             page: await readVisualBuilderPage(env, pageId, page),
-            unchanged: true
+            unchanged: true,
+            keyMap: Object.fromEntries(actualIdByKey)
         };
     }
 
@@ -300,6 +427,57 @@ export async function updateVisualBuilderTree(env, pageId, rawInput) {
         ORDER BY property.node_id, property.property_set,
             property.property_name, property.breakpoint, property.item_position
     `).bind(page.tree_id).all();
+    await appendVisualRevision(env, page, saved, savedProperties.results || [], now);
+    return {
+        page: saved,
+        unchanged: false,
+        keyMap: Object.fromEntries(actualIdByKey)
+    };
+}
+
+async function readVisualBuilderPage(env, pageId, knownPage = null) {
+    const page = knownPage || await readPageRow(env, pageId);
+    if (!page) return null;
+    const [result, propertyResult] = await Promise.all([
+        env.DB.prepare(`
+            SELECT id, parent_id, position, block_type, label
+            FROM visual_nodes WHERE tree_id = ?
+            ORDER BY ifnull(parent_id, ''), position, id
+        `).bind(page.tree_id).all(),
+        env.DB.prepare(`
+            SELECT property.node_id, property.property_set,
+                property.property_name, property.breakpoint,
+                property.item_position, property.value_kind,
+                property.text_value, property.number_value,
+                property.boolean_value
+            FROM visual_node_properties property
+            INNER JOIN visual_nodes node ON node.id = property.node_id
+            WHERE node.tree_id = ? AND property.domain <> 'technical'
+            ORDER BY property.node_id, property.property_set,
+                property.property_name, property.breakpoint, property.item_position
+        `).bind(page.tree_id).all()
+    ]);
+    const propertiesByNode = new Map();
+    for (const property of propertyResult.results || []) {
+        const properties = propertiesByNode.get(property.node_id) || [];
+        properties.push(property);
+        propertiesByNode.set(property.node_id, properties);
+    }
+    return {
+        id: page.page_id,
+        slug: page.slug,
+        title: page.title,
+        treeId: page.tree_id,
+        status: page.status,
+        updatedAt: Number(page.updated_at),
+        nodes: (result.results || []).map((node) => ({
+            ...apiNode(node),
+            values: editableValues(node.block_type, propertiesByNode.get(node.id) || [])
+        }))
+    };
+}
+
+async function appendVisualRevision(env, page, saved, properties, now) {
     await env.DB.prepare(`
         INSERT INTO content_revisions (
             entity_type, entity_id, revision_number, snapshot_json,
@@ -312,41 +490,25 @@ export async function updateVisualBuilderTree(env, pageId, rawInput) {
     `).bind(
         page.tree_id,
         JSON.stringify({
-            pageId,
+            pageId: page.page_id,
             treeId: page.tree_id,
             nodes: saved.nodes,
-            properties: savedProperties.results || []
+            properties
         }),
         page.status,
         now,
         page.tree_id
     ).run();
-    return { page: saved, unchanged: false };
 }
 
-async function readVisualBuilderPage(env, pageId, knownPage = null) {
-    const page = knownPage || await readPageRow(env, pageId);
-    if (!page) return null;
-    const result = await env.DB.prepare(`
-        SELECT id, parent_id, position, block_type, label
-        FROM visual_nodes WHERE tree_id = ?
-        ORDER BY ifnull(parent_id, ''), position, id
-    `).bind(page.tree_id).all();
+function apiNode(node) {
     return {
-        id: page.page_id,
-        slug: page.slug,
-        title: page.title,
-        treeId: page.tree_id,
-        status: page.status,
-        updatedAt: Number(page.updated_at),
-        nodes: (result.results || []).map((node) => ({
-            key: node.id,
-            parentKey: node.parent_id || null,
-            position: Number(node.position),
-            type: node.block_type,
-            label: String(node.label || TYPE_LABELS[node.block_type] || node.block_type),
-            root: !node.parent_id
-        }))
+        key: node.id,
+        parentKey: node.parent_id || null,
+        position: Number(node.position),
+        type: node.block_type,
+        label: String(node.label || TYPE_LABELS[node.block_type] || node.block_type),
+        root: !node.parent_id
     };
 }
 

@@ -12,7 +12,8 @@
     <link rel="manifest" href="./admin.webmanifest">
     <script src="./tema.js?v=20261006-map-layers1"></script>
     <link rel="stylesheet" href="./leaflet.css?v=1.9.4">
-    <link rel="stylesheet" href="./style.css?v=20261017-canvas1">
+    <link rel="stylesheet" href="./style.css?v=20261017-inspector1">
+    <link rel="stylesheet" href="./admin-visual-builder.css?v=20261017-inspector1">
 </head>
 
 <body>
@@ -338,6 +339,33 @@
                     id="adminVisualCanvas"
                     aria-describedby="adminVisualInstructions"
                 ></div>
+                <div class="admin-visual-inspector-preview">
+                    <section class="admin-visual-inspector" aria-labelledby="adminVisualInspectorTitle">
+                        <h3 id="adminVisualInspectorTitle">Proprietà del blocco</h3>
+                        <p id="adminVisualInspectorHelp">
+                            Seleziona un blocco per modificarne contenuto e aspetto.
+                        </p>
+                        <form id="adminVisualInspectorForm">
+                            <div id="adminVisualInspectorFields"></div>
+                            <button id="adminVisualInspectorSave" type="submit">
+                                Salva proprietà
+                            </button>
+                        </form>
+                    </section>
+                    <section class="admin-visual-preview" aria-labelledby="adminVisualPreviewTitle">
+                        <h3 id="adminVisualPreviewTitle">Anteprima responsive</h3>
+                        <div class="admin-visual-device-switch" role="group" aria-label="Dimensione anteprima">
+                            <button type="button" data-visual-device="phone" aria-pressed="true">Smartphone</button>
+                            <button type="button" data-visual-device="tablet" aria-pressed="false">Tablet</button>
+                            <button type="button" data-visual-device="desktop" aria-pressed="false">Desktop</button>
+                        </div>
+                        <p id="adminVisualPreviewDevice">Anteprima smartphone, 360 px</p>
+                        <div class="admin-visual-preview-stage">
+                            <div id="adminVisualPreview" data-device="phone"></div>
+                        </div>
+                        <ul id="adminVisualWarnings" aria-live="polite"></ul>
+                    </section>
+                </div>
                 <div class="admin-visual-save-actions">
                     <button id="adminVisualSave" type="button">Salva struttura</button>
                     <button class="admin-button-secondary" id="adminVisualReload" type="button">
@@ -1164,7 +1192,7 @@
     <script src="./sessione.js?v=20261008-onboarding1"></script>
     <script src="./notifiche.js"></script>
     <script src="./vendor/leaflet-1.9.4.js"></script>
-    <script src="./admin-visual-builder.js?v=20261017-canvas1"></script>
-    <script src="./admin.js?v=20261017-canvas1"></script>
+    <script src="./admin-visual-builder.js?v=20261017-inspector1"></script>
+    <script src="./admin.js?v=20261017-inspector1"></script>
 </body>
 </html>

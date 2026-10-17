@@ -70,7 +70,7 @@ accessibilità, privacy, SEO, migrazione e test.
 | 13.3 | Registro dei blocchi e renderer pubblico sicuro | Completa | 13.2 |
 | 13.4 | Migrazione dei componenti specializzati | Completa | 13.3 |
 | 13.5 | Canvas visuale a blocchi | Completa | 13.4 |
-| 13.6 | Ispettore visuale e anteprima responsive | Da iniziare | 13.5 |
+| 13.6 | Ispettore visuale e anteprima responsive | Completa | 13.5 |
 | 13.7 | Gestione completa delle pagine | Da iniziare | 13.6 |
 | 13.8 | Modelli, sezioni riutilizzabili e parti globali | Da iniziare | 13.7 |
 | 13.9 | Studio grafico globale | Da iniziare | 13.8 |
@@ -106,6 +106,11 @@ La prova dell'unità 13.5 è in `13-5-visual-canvas.md`; API strutturale,
 interfaccia a blocchi, cronologia e test delle operazioni sono in
 `worker/src/visual-builder-admin.js`, `admin-visual-builder.js` e
 `worker/tests/visual-builder-canvas.test.mjs`.
+
+La prova dell'unità 13.6 è in `13-6-visual-inspector-preview.md`; schema
+dell'ispettore, validazione server, anteprima responsive e test sono in
+`worker/src/visual-builder-inspector.js`, `admin-visual-builder.js` e
+`worker/tests/visual-builder-inspector.test.mjs`.
 
 ## Criterio finale
 

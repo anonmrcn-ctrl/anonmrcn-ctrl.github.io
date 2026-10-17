@@ -61,6 +61,7 @@ import {
 } from "./visual-builder-adapters.js";
 import {
     readVisualBuilderPages,
+    updateVisualBuilderProperties,
     updateVisualBuilderTree,
     VisualCanvasError
 } from "./visual-builder-admin.js";
@@ -762,6 +763,21 @@ export default {
             ) {
                 const pageId = path.split("/").pop();
                 return await adminUpdateVisualPage(request, env, pageId);
+            }
+
+            if (
+                request.method === "PATCH" &&
+                /^\/api\/admin\/cms\/visual-properties\/[a-z0-9]+(?:-[a-z0-9]+)*\/[a-z0-9]+(?:-[a-z0-9]+)*$/.test(path)
+            ) {
+                const pathParts = path.split("/");
+                const pageId = pathParts[5];
+                const nodeId = pathParts[6];
+                return await adminUpdateVisualProperties(
+                    request,
+                    env,
+                    pageId,
+                    nodeId
+                );
             }
 
             if (
@@ -4079,6 +4095,24 @@ async function adminUpdateVisualPage(request, env, pageId) {
     try {
         const input = await readJson(request, MAX_CMS_PAGE_REQUEST_BYTES);
         return json(request, env, await updateVisualBuilderTree(env, pageId, input));
+    } catch (error) {
+        if (!(error instanceof VisualCanvasError)) throw error;
+        return json(request, env, { error: error.message }, error.status);
+    }
+}
+
+async function adminUpdateVisualProperties(request, env, pageId, nodeId) {
+    if (!(await adminAuthorized(request, env))) {
+        return unauthorized(request, env);
+    }
+    await ensureCmsStorage(env);
+    try {
+        const input = await readJson(request, MAX_CMS_PAGE_REQUEST_BYTES);
+        return json(
+            request,
+            env,
+            await updateVisualBuilderProperties(env, pageId, nodeId, input)
+        );
     } catch (error) {
         if (!(error instanceof VisualCanvasError)) throw error;
         return json(request, env, { error: error.message }, error.status);
