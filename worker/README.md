@@ -158,6 +158,15 @@ transazione con nuove revisioni. `DELETE
 /api/admin/cms/visual-section-links/:pageId/:nodeId` scollega senza rimuovere la
 copia locale.
 
+`GET/POST/PATCH /api/admin/cms/visual-themes` alimenta lo studio grafico
+globale con token tipizzati per palette, caratteri, scala, spaziatura,
+superfici, bordi, ombre e movimento. Il server rifiuta valori liberi,
+contrasto inferiore a 4,5:1 e la disattivazione di `prefers-reduced-motion`.
+Gli endpoint `compare` e `publish` mostrano le differenze e applicano o
+ripristinano un tema su tutte le pagine in una transazione, conservando i temi
+precedenti e le revisioni. L'API visuale pubblica restituisce i token del tema
+attivo come dati strutturati, mai come CSS arbitrario.
+
 La stessa inizializzazione importa «Il Gajo tra i Praelli» in `poem_works`,
 `poem_sections` e `poem_lines`: 4 canti, 121 versi e i metadati necessari a
 ricostruire strofe, rientri e 165 righe metriche. L'endpoint

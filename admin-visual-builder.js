@@ -47,6 +47,14 @@
     const libraryImpact = document.getElementById("adminVisualLibraryImpact");
     const libraryPublish = document.getElementById("adminVisualLibraryPublish");
     const libraryImpactResult = document.getElementById("adminVisualLibraryImpactResult");
+    const themeSelect = document.getElementById("adminVisualThemeSelect");
+    const themeName = document.getElementById("adminVisualThemeName");
+    const themeFields = document.getElementById("adminVisualThemeFields");
+    const themeCreate = document.getElementById("adminVisualThemeCreate");
+    const themeSave = document.getElementById("adminVisualThemeSave");
+    const themeCompare = document.getElementById("adminVisualThemeCompare");
+    const themePublish = document.getElementById("adminVisualThemePublish");
+    const themeComparison = document.getElementById("adminVisualThemeComparison");
 
     const CATEGORY_CHILDREN = Object.freeze({
         root: ["structure", "content", "navigation", "project", "global", "functional", "personal", "legal"],
@@ -62,6 +70,9 @@
 
     let pages = [];
     let sections = [];
+    let themes = [];
+    let themeTokenSchema = [];
+    let activeThemeId = "theme-default";
     let palette = [];
     let inspectorSchemas = {};
     let nodes = [];
@@ -73,6 +84,7 @@
     let lastPageId = "";
     let activeDevice = "phone";
     let impactReadySectionId = "";
+    let comparisonReadyThemeId = "";
 
     async function request(path, options = {}) {
         const session = sessionStorage.getItem(SESSION_KEY) || "";
@@ -341,12 +353,16 @@
         if (!sessionStorage.getItem(SESSION_KEY)) return;
         status.textContent = "Caricamento del canvas…";
         try {
-            const [data, library] = await Promise.all([
+            const [data, library, themeStudio] = await Promise.all([
                 request("/api/admin/cms/visual-pages"),
-                request("/api/admin/cms/visual-sections")
+                request("/api/admin/cms/visual-sections"),
+                request("/api/admin/cms/visual-themes")
             ]);
             pages = data.pages || [];
             sections = library.sections || [];
+            themes = themeStudio.themes || [];
+            themeTokenSchema = themeStudio.tokenSchema || [];
+            activeThemeId = themeStudio.activeThemeId || "theme-default";
             palette = data.palette || [];
             inspectorSchemas = data.inspectorSchemas || {};
             const pageId = preferredId || pageSelect.value || lastPageId;
@@ -378,6 +394,18 @@
             if (sections.some((section) => section.id === selectedLibraryId)) {
                 librarySelect.value = selectedLibraryId;
             }
+            const selectedThemeId = themeSelect.value || activeThemeId;
+            themeSelect.replaceChildren(...themes.map((theme) => Object.assign(
+                document.createElement("option"),
+                {
+                    value: theme.id,
+                    textContent: `${theme.name}${theme.id === activeThemeId ? " · attivo" : ` · ${theme.status}`}`
+                }
+            )));
+            themeSelect.value = themes.some((theme) => theme.id === selectedThemeId)
+                ? selectedThemeId
+                : activeThemeId;
+            renderThemeStudio();
             paletteSelect.replaceChildren(...palette.map((item) => {
                 const option = document.createElement("option");
                 option.value = item.type;
@@ -413,6 +441,200 @@
 
     function selectedSection() {
         return sections.find((section) => section.id === librarySelect.value) || null;
+    }
+
+    function selectedTheme() {
+        return themes.find((theme) => theme.id === themeSelect.value) || null;
+    }
+
+    function renderThemeStudio() {
+        const theme = selectedTheme();
+        themeFields.replaceChildren();
+        themeName.value = theme?.name || "";
+        const values = new Map((theme?.tokens || []).map((item) => [
+            `${item.group}/${item.name}`,
+            item.value
+        ]));
+        for (const descriptor of themeTokenSchema) {
+            const key = `${descriptor.group}/${descriptor.name}`;
+            const id = `adminVisualTheme-${descriptor.group}-${descriptor.name}`;
+            const label = document.createElement("label");
+            label.htmlFor = id;
+            label.textContent = descriptor.label;
+            let control;
+            if (Array.isArray(descriptor.options)) {
+                control = document.createElement("select");
+                for (const value of descriptor.options) {
+                    control.appendChild(Object.assign(document.createElement("option"), {
+                        value,
+                        textContent: value
+                    }));
+                }
+            } else {
+                control = document.createElement("input");
+                if (descriptor.kind === "color") control.type = "color";
+                else if (descriptor.kind === "number") {
+                    control.type = "number";
+                    control.min = String(descriptor.min);
+                    control.max = String(descriptor.max);
+                    control.step = descriptor.name === "ratio" ? "0.05" : "10";
+                } else if (descriptor.kind === "boolean") control.type = "checkbox";
+                else control.type = "text";
+            }
+            control.id = id;
+            control.dataset.themeToken = key;
+            control.dataset.themeKind = descriptor.kind;
+            const value = values.has(key) ? values.get(key) : descriptor.default;
+            if (descriptor.kind === "boolean") control.checked = value === true;
+            else control.value = String(value);
+            themeFields.append(label, control);
+        }
+        const enabled = Boolean(theme);
+        themeCreate.disabled = !enabled;
+        themeSave.disabled = !enabled;
+        themeCompare.disabled = !enabled;
+        themePublish.disabled = !enabled || comparisonReadyThemeId !== theme?.id;
+        applyThemePreview();
+    }
+
+    function themeTokensFromFields() {
+        return themeTokenSchema.map((descriptor) => {
+            const key = `${descriptor.group}/${descriptor.name}`;
+            const control = themeFields.querySelector(`[data-theme-token="${key}"]`);
+            let value;
+            if (descriptor.kind === "boolean") value = control.checked;
+            else if (descriptor.kind === "number") value = Number(control.value);
+            else value = control.value;
+            return {
+                group: descriptor.group,
+                name: descriptor.name,
+                breakpoint: "all",
+                kind: descriptor.kind,
+                value
+            };
+        });
+    }
+
+    function applyThemePreview() {
+        const values = new Map(themeTokensFromFields().map((item) => [
+            `${item.group}/${item.name}`,
+            item.value
+        ]));
+        const font = {
+            system: "system-ui, sans-serif",
+            serif: "Georgia, 'Times New Roman', serif",
+            sans: "Arial, Helvetica, sans-serif",
+            mono: "ui-monospace, monospace"
+        };
+        const shadow = {
+            none: "none",
+            soft: "0 .25rem 1rem rgba(0, 0, 0, .12)",
+            strong: "0 .5rem 1.5rem rgba(0, 0, 0, .28)"
+        };
+        preview.style.setProperty("--visual-theme-ink", values.get("palette/ink"));
+        preview.style.setProperty("--visual-theme-paper", values.get("palette/paper"));
+        preview.style.setProperty("--visual-theme-accent", values.get("palette/accent"));
+        preview.style.setProperty("--visual-theme-muted", values.get("palette/muted"));
+        preview.style.setProperty("--visual-theme-panel", values.get("surface/panel"));
+        preview.style.setProperty("--visual-theme-body-font", font[values.get("typography/body")]);
+        preview.style.setProperty("--visual-theme-heading-font", font[values.get("typography/heading")]);
+        preview.style.setProperty("--visual-theme-scale", String(values.get("scale/ratio")));
+        preview.style.setProperty("--visual-theme-heading-size", `${values.get("scale/ratio")}rem`);
+        preview.style.setProperty("--visual-theme-space", values.get("spacing/base"));
+        preview.style.setProperty("--visual-theme-radius", values.get("border/radius"));
+        preview.style.setProperty("--visual-theme-shadow", shadow[values.get("shadow/elevation")]);
+        preview.style.setProperty("--visual-theme-duration", `${values.get("motion/duration")}ms`);
+    }
+
+    async function duplicateTheme() {
+        const theme = selectedTheme();
+        if (!theme) return;
+        status.textContent = "Duplicazione del tema…";
+        try {
+            const data = await request("/api/admin/cms/visual-themes", {
+                method: "POST",
+                body: JSON.stringify({
+                    name: themeName.value || `${theme.name} (copia)`,
+                    sourceThemeId: theme.id
+                })
+            });
+            await load(pageSelect.value);
+            themeSelect.value = data.theme.id;
+            renderThemeStudio();
+            status.textContent = "Tema duplicato come bozza.";
+        } catch (error) {
+            status.textContent = error.message || "Duplicazione del tema non riuscita.";
+        }
+    }
+
+    async function saveTheme() {
+        const theme = selectedTheme();
+        if (!theme) return;
+        status.textContent = "Validazione e salvataggio del tema…";
+        try {
+            const data = await request(`/api/admin/cms/visual-themes/${encodeURIComponent(theme.id)}`, {
+                method: "PATCH",
+                body: JSON.stringify({
+                    expectedUpdatedAt: theme.updatedAt,
+                    name: themeName.value,
+                    tokens: themeTokensFromFields()
+                })
+            });
+            comparisonReadyThemeId = "";
+            await load(pageSelect.value);
+            themeSelect.value = data.theme.id;
+            renderThemeStudio();
+            status.textContent = "Bozza grafica salvata. Confrontala prima della pubblicazione.";
+        } catch (error) {
+            status.textContent = error.message || "Il tema contiene valori non validi.";
+        }
+    }
+
+    async function compareTheme() {
+        const theme = selectedTheme();
+        if (!theme) return;
+        status.textContent = "Confronto del tema e delle pagine interessate…";
+        try {
+            const data = await request(
+                `/api/admin/cms/visual-themes/${encodeURIComponent(theme.id)}/compare?other=${encodeURIComponent(activeThemeId)}`
+            );
+            const summary = document.createElement("p");
+            summary.textContent = `${data.changes.length} differenze; ${data.impactCount} pagine riceveranno il tema.`;
+            const list = document.createElement("ul");
+            for (const change of data.changes) {
+                const item = document.createElement("li");
+                item.textContent = `${change.group}/${change.name}: ${change.before} → ${change.after}`;
+                list.appendChild(item);
+            }
+            themeComparison.replaceChildren(summary, list);
+            comparisonReadyThemeId = theme.id;
+            renderThemeStudio();
+            status.textContent = "Confronto pronto. Puoi pubblicare o ripristinare questo tema.";
+        } catch (error) {
+            status.textContent = error.message || "Confronto del tema non riuscito.";
+        }
+    }
+
+    async function publishTheme() {
+        const theme = selectedTheme();
+        if (!theme || comparisonReadyThemeId !== theme.id) return;
+        status.textContent = "Applicazione atomica del tema globale…";
+        try {
+            const data = await request(
+                `/api/admin/cms/visual-themes/${encodeURIComponent(theme.id)}/publish`,
+                {
+                    method: "PATCH",
+                    body: JSON.stringify({ expectedUpdatedAt: theme.updatedAt })
+                }
+            );
+            comparisonReadyThemeId = "";
+            await load(pageSelect.value);
+            themeSelect.value = data.theme.id;
+            renderThemeStudio();
+            status.textContent = `Tema applicato a ${data.appliedTo} pagine con cronologia.`;
+        } catch (error) {
+            status.textContent = error.message || "Pubblicazione del tema non riuscita.";
+        }
     }
 
     function renderLibraryControls() {
@@ -1030,6 +1252,16 @@
     libraryUnlink.addEventListener("click", unlinkSelectedSection);
     libraryImpact.addEventListener("click", showLibraryImpact);
     libraryPublish.addEventListener("click", publishLibraryItem);
+    themeSelect.addEventListener("change", () => {
+        comparisonReadyThemeId = "";
+        themeComparison.replaceChildren();
+        renderThemeStudio();
+    });
+    themeFields.addEventListener("input", applyThemePreview);
+    themeCreate.addEventListener("click", duplicateTheme);
+    themeSave.addEventListener("click", saveTheme);
+    themeCompare.addEventListener("click", compareTheme);
+    themePublish.addEventListener("click", publishTheme);
     addButton.addEventListener("click", addBlock);
     undoButton.addEventListener("click", () => {
         const previous = undoStack.pop();

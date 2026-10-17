@@ -73,7 +73,7 @@ accessibilità, privacy, SEO, migrazione e test.
 | 13.6 | Ispettore visuale e anteprima responsive | Completa | 13.5 |
 | 13.7 | Gestione completa delle pagine | Completa | 13.6 |
 | 13.8 | Modelli, sezioni riutilizzabili e parti globali | Completa | 13.7 |
-| 13.9 | Studio grafico globale | Da iniziare | 13.8 |
+| 13.9 | Studio grafico globale | Completa | 13.8 |
 | 13.10 | Comportamenti e collegamenti senza codice | Da iniziare | 13.9 |
 | 13.11 | Pubblicazione, qualità e recupero | Da iniziare | 13.10 |
 | 13.12 | Migrazione finale e audit di indipendenza | Da iniziare | 13.11 |
@@ -123,6 +123,11 @@ libreria, collegamenti normalizzati, analisi dell'impatto, sincronizzazione e
 scollegamento sono in `worker/src/visual-section-library.js`, nella migrazione
 `0020_visual_reusable_instances.sql` e in
 `worker/tests/visual-section-library.test.mjs`.
+
+La prova dell'unità 13.9 è in `13-9-global-visual-studio.md`; schema dei token,
+validazione, confronto, pubblicazione globale e ripristino sono in
+`worker/src/visual-theme-studio.js`, `admin-visual-builder.js` e
+`worker/tests/visual-theme-studio.test.mjs`.
 
 ## Criterio finale
 

@@ -13,7 +13,7 @@
     <script src="./tema.js?v=20261006-map-layers1"></script>
     <link rel="stylesheet" href="./leaflet.css?v=1.9.4">
     <link rel="stylesheet" href="./style.css?v=20261017-inspector1">
-    <link rel="stylesheet" href="./admin-visual-builder.css?v=20261018-library1">
+    <link rel="stylesheet" href="./admin-visual-builder.css?v=20261018-theme1">
 </head>
 
 <body>
@@ -412,6 +412,29 @@
                             <button id="adminVisualLibraryPublish" type="button" disabled>Pubblica e sincronizza</button>
                         </div>
                         <div id="adminVisualLibraryImpactResult" aria-live="polite"></div>
+                    </div>
+                </details>
+
+                <details class="admin-visual-page-management admin-visual-theme-studio">
+                    <summary>Studio grafico globale</summary>
+                    <p>
+                        Personalizza palette, caratteri, scala, spaziatura,
+                        superfici, bordi, ombre e movimento. I controlli
+                        proteggono contrasto, leggibilità e movimento ridotto.
+                    </p>
+                    <div class="admin-visual-theme-controls">
+                        <label for="adminVisualThemeSelect">Tema</label>
+                        <select id="adminVisualThemeSelect"></select>
+                        <label for="adminVisualThemeName">Nome del tema</label>
+                        <input id="adminVisualThemeName" maxlength="120">
+                        <div id="adminVisualThemeFields"></div>
+                        <div class="admin-visual-theme-actions">
+                            <button class="admin-button-secondary" id="adminVisualThemeCreate" type="button">Duplica come nuovo tema</button>
+                            <button id="adminVisualThemeSave" type="button">Salva bozza grafica</button>
+                            <button class="admin-button-secondary" id="adminVisualThemeCompare" type="button">Confronta e mostra impatto</button>
+                            <button id="adminVisualThemePublish" type="button" disabled>Pubblica o ripristina tema</button>
+                        </div>
+                        <div id="adminVisualThemeComparison" aria-live="polite"></div>
                     </div>
                 </details>
 
@@ -1279,7 +1302,7 @@
     <script src="./sessione.js?v=20261008-onboarding1"></script>
     <script src="./notifiche.js"></script>
     <script src="./vendor/leaflet-1.9.4.js"></script>
-    <script src="./admin-visual-builder.js?v=20261018-library1"></script>
+    <script src="./admin-visual-builder.js?v=20261018-theme1"></script>
     <script src="./admin.js?v=20261017-inspector1"></script>
 </body>
 </html>
