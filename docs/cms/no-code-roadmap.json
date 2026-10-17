@@ -1,0 +1,206 @@
+{
+  "version": 1,
+  "title": "Autonomia visuale no-code",
+  "objective": "Permettere all'amministratore di creare, comporre, personalizzare, pubblicare, archiviare e recuperare pagine senza modificare codice.",
+  "status": "planned",
+  "currentUnit": "13.1",
+  "allowedStatuses": [
+    "pending",
+    "in_progress",
+    "complete",
+    "blocked"
+  ],
+  "guardrails": [
+    "Preservare URL pubblici e storici, QR, frammenti, query compatibili e identificativi esistenti.",
+    "Preservare contenuti, geometrie, D1, R2, revisioni, privacy, accessibilità, SEO e ripieghi statici durante la migrazione.",
+    "Non esporre HTML, CSS o JavaScript arbitrario nel flusso ordinario di amministrazione.",
+    "Rendere ogni eliminazione pubblica reversibile prima dell'eventuale cancellazione definitiva.",
+    "Mantenere bozze, anteprime e aree amministrative fuori da sitemap e indicizzazione.",
+    "Non dichiarare completa un'unità senza test, build, documentazione e verifica pubblicata pertinenti."
+  ],
+  "units": [
+    {
+      "id": "13.0",
+      "title": "Roadmap e contratto no-code",
+      "status": "complete",
+      "dependsOn": [],
+      "deliverables": [
+        "docs/cms/13-no-code-visual-builder.md",
+        "docs/cms/no-code-roadmap.json",
+        "scripts/check-no-code-roadmap.mjs"
+      ],
+      "acceptance": [
+        "Ordine, dipendenze e criteri sono verificabili automaticamente.",
+        "La prima unità eseguibile è identificata senza riaprire i punti 1-12."
+      ]
+    },
+    {
+      "id": "13.1",
+      "title": "Inventario visuale e contratto dei blocchi",
+      "status": "pending",
+      "dependsOn": ["13.0"],
+      "deliverables": [
+        "Inventario di componenti, layout, comportamenti e varianti del sito corrente.",
+        "Contratto versionato per blocchi, proprietà, annidamento e compatibilità."
+      ],
+      "acceptance": [
+        "Ogni sezione pubblica e amministrativa esistente ha una destinazione nel nuovo modello.",
+        "Sono distinti contenuto, presentazione, comportamento e configurazione tecnica non modificabile."
+      ]
+    },
+    {
+      "id": "13.2",
+      "title": "Schema D1 per pagine, alberi e temi",
+      "status": "pending",
+      "dependsOn": ["13.1"],
+      "deliverables": [
+        "Migrazioni append-only per pagine, nodi, proprietà, temi e sezioni riutilizzabili.",
+        "Importazione idempotente dei record esistenti con ID stabili."
+      ],
+      "acceptance": [
+        "Ordine, annidamento, varianti responsive e riferimenti R2 sono rappresentabili senza JSON opaco non validato.",
+        "Migrazione e rollback preservano tutti i contenuti e le revisioni correnti."
+      ]
+    },
+    {
+      "id": "13.3",
+      "title": "Registro dei blocchi e renderer pubblico sicuro",
+      "status": "pending",
+      "dependsOn": ["13.2"],
+      "deliverables": [
+        "Registro versionato dei tipi di blocco e delle proprietà consentite.",
+        "Renderer condiviso con HTML semantico, sanitizzazione e ripiego."
+      ],
+      "acceptance": [
+        "Testo, titoli, immagini, gallerie, citazioni, pulsanti, liste, colonne, contenitori e separatori sono renderizzati senza codice arbitrario.",
+        "Output, canonical, dati strutturati e metadati rispettano accessibilità, privacy e SEO."
+      ]
+    },
+    {
+      "id": "13.4",
+      "title": "Migrazione dei componenti specializzati",
+      "status": "pending",
+      "dependsOn": ["13.3"],
+      "deliverables": [
+        "Blocchi sicuri per poesia, mappa, Voci, luoghi, fonti, Memorie e moduli esistenti.",
+        "Adattatori compatibili per le pagine statiche durante la transizione."
+      ],
+      "acceptance": [
+        "Tutte le funzioni correnti sono componibili come blocchi senza perdere dati o comportamento.",
+        "URL, QR, ancore, geometrie e ripieghi correnti continuano a funzionare."
+      ]
+    },
+    {
+      "id": "13.5",
+      "title": "Canvas visuale a blocchi",
+      "status": "pending",
+      "dependsOn": ["13.4"],
+      "deliverables": [
+        "Inserimento, selezione, riordino, annidamento, duplicazione e rimozione visuale dei blocchi.",
+        "Comandi equivalenti per mouse, tocco e tastiera."
+      ],
+      "acceptance": [
+        "La struttura di una pagina può essere modificata integralmente senza editare file o campi tecnici.",
+        "Focus, etichette, trascinamento alternativo e annullamento sono accessibili e responsive."
+      ]
+    },
+    {
+      "id": "13.6",
+      "title": "Ispettore visuale e anteprima responsive",
+      "status": "pending",
+      "dependsOn": ["13.5"],
+      "deliverables": [
+        "Pannello proprietà generato dallo schema del blocco.",
+        "Anteprima in tempo reale per smartphone, tablet e desktop."
+      ],
+      "acceptance": [
+        "Contenuto, allineamento, spaziatura, dimensioni, colori, sfondi, bordi e visibilità responsive sono controllabili senza CSS.",
+        "Valori non validi, contrasto insufficiente e combinazioni incompatibili vengono spiegati e bloccati."
+      ]
+    },
+    {
+      "id": "13.7",
+      "title": "Gestione completa delle pagine",
+      "status": "pending",
+      "dependsOn": ["13.6"],
+      "deliverables": [
+        "Creazione da vuoto o modello, duplicazione, rinomina, bozza, pubblicazione, archiviazione e recupero.",
+        "Eliminazione definitiva protetta con analisi delle dipendenze e destinazione degli URL."
+      ],
+      "acceptance": [
+        "Una nuova pagina ottiene ID stabile, slug, canonical, SEO, navigazione opzionale e stato editoriale senza commit manuali.",
+        "Una pagina con QR, alias, link entranti o dati collegati non può produrre un collegamento morto."
+      ]
+    },
+    {
+      "id": "13.8",
+      "title": "Modelli, sezioni riutilizzabili e parti globali",
+      "status": "pending",
+      "dependsOn": ["13.7"],
+      "deliverables": [
+        "Libreria di modelli e sezioni salvabili, duplicabili e scollegabili.",
+        "Editor visuale di intestazione, navigazione, piè di pagina e avvisi globali."
+      ],
+      "acceptance": [
+        "Le modifiche globali mostrano l'impatto prima della pubblicazione e conservano la cronologia.",
+        "I modelli accelerano la creazione senza imporre contenuti o stili irreversibili."
+      ]
+    },
+    {
+      "id": "13.9",
+      "title": "Studio grafico globale",
+      "status": "pending",
+      "dependsOn": ["13.8"],
+      "deliverables": [
+        "Controlli no-code per palette, tipografia, scala, spaziatura, superfici, bordi, ombre e movimento.",
+        "Temi nominabili, duplicabili, confrontabili e ripristinabili."
+      ],
+      "acceptance": [
+        "Il linguaggio grafico dell'intero sito è personalizzabile senza toccare CSS.",
+        "Le scelte rispettano contrasto, zoom, reduced motion, leggibilità e budget prestazionali."
+      ]
+    },
+    {
+      "id": "13.10",
+      "title": "Comportamenti e collegamenti senza codice",
+      "status": "pending",
+      "dependsOn": ["13.9"],
+      "deliverables": [
+        "Configurazione visuale di menu, ancore, pulsanti, filtri, raccolte e sorgenti dati consentite.",
+        "Blocchi funzionali prevalidati per interazioni ricorrenti."
+      ],
+      "acceptance": [
+        "Le funzioni comuni si compongono tramite proprietà e collegamenti dichiarativi, non JavaScript inserito dall'utente.",
+        "Servizi esterni, telemetria e raccolta dati restano disattivati salvo consenso e configurazione esplicita."
+      ]
+    },
+    {
+      "id": "13.11",
+      "title": "Pubblicazione, qualità e recupero",
+      "status": "pending",
+      "dependsOn": ["13.10"],
+      "deliverables": [
+        "Anteprima autenticata, confronto, undo/redo, revisioni e pubblicazione atomica dell'albero visuale.",
+        "Controlli preventivi per SEO, accessibilità, privacy, link, media e prestazioni."
+      ],
+      "acceptance": [
+        "Un errore di validazione non modifica il sito pubblico e indica il blocco da correggere.",
+        "Ogni pubblicazione può essere confrontata e ripristinata senza riscrivere la cronologia."
+      ]
+    },
+    {
+      "id": "13.12",
+      "title": "Migrazione finale e audit di indipendenza",
+      "status": "pending",
+      "dependsOn": ["13.11"],
+      "deliverables": [
+        "Tutte le pagine ordinarie gestite dal builder con compatibilità verificata.",
+        "Manuale visuale, tour guidato, diagnostica e prove end-to-end senza programmazione."
+      ],
+      "acceptance": [
+        "L'amministratore crea, personalizza, pubblica, archivia, recupera ed elimina in sicurezza una pagina usando soltanto l'interfaccia.",
+        "Audit su smartphone e desktop prova accessibilità, SEO, privacy, prestazioni, URL storici, QR e ripristino."
+      ]
+    }
+  ]
+}
