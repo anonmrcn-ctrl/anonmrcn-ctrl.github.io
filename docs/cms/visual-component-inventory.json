@@ -1,0 +1,76 @@
+{
+  "version": 1,
+  "updatedOn": "2026-10-17",
+  "sources": [
+    "21 documenti HTML pubblici e amministrativi",
+    "docs/cms/content-inventory.json",
+    "admin.html",
+    "worker/migrations"
+  ],
+  "ownershipDomains": {
+    "content": { "editable": true, "description": "Testi, media, dati e metadati editoriali." },
+    "presentation": { "editable": true, "description": "Layout, tipografia, colori e varianti responsive validate." },
+    "behavior": { "editable": true, "description": "Collegamenti e interazioni dichiarative consentite." },
+    "technical": { "editable": false, "description": "Binding, sicurezza, endpoint e segreti gestiti dal software." }
+  },
+  "pageFamilies": [
+    { "id": "poem-home", "files": ["index.html"], "targetBlocks": ["global-header", "page-root", "project-poem", "global-footer"] },
+    { "id": "project-map", "files": ["progetto.html"], "targetBlocks": ["global-header", "page-root", "project-path", "project-map", "project-sources", "approved-form", "global-footer"] },
+    { "id": "author", "files": ["autore.html"], "targetBlocks": ["global-header", "page-root", "rich-text", "link-list", "global-footer"] },
+    { "id": "logo", "files": ["logo.html"], "targetBlocks": ["global-header", "page-root", "image", "grid", "section", "global-footer"] },
+    { "id": "public-hub", "files": ["spazio-pubblico.html"], "targetBlocks": ["global-header", "page-root", "grid", "link-list", "global-footer"] },
+    { "id": "archive", "files": ["archivio.html"], "targetBlocks": ["global-header", "page-root", "project-archive", "data-filter", "global-footer"] },
+    { "id": "memories", "files": ["memorie.html"], "targetBlocks": ["global-header", "page-root", "project-map", "project-memories", "approved-form", "global-footer"] },
+    { "id": "notebook", "files": ["taccuino.html"], "targetBlocks": ["global-header", "page-root", "special-access", "personal-notebook", "global-footer"] },
+    { "id": "personal-space", "files": ["spazio-personale.html"], "targetBlocks": ["global-header", "page-root", "special-access", "personal-space", "approved-form", "global-footer"] },
+    { "id": "voices", "files": ["voci.html", "voci/cave-di-gaggio-nord.html", "voci/cave-di-gaggio.html", "voci/chiesa-di-san-giorgio.html", "voci/strada-bassa.html", "voci/zero.html"], "targetBlocks": ["global-header", "page-root", "project-voices", "data-filter", "project-sources", "gallery", "global-footer"] },
+    { "id": "places", "files": ["luogo.html", "luoghi/1.html", "luoghi/2.html"], "targetBlocks": ["global-header", "page-root", "project-places", "gallery", "project-map", "project-voices", "project-sources", "global-footer"] },
+    { "id": "privacy", "files": ["privacy.html"], "targetBlocks": ["page-root", "legal-document", "global-footer"] },
+    { "id": "special-access", "files": ["accesso.html"], "targetBlocks": ["page-root", "special-access", "legal-document"] },
+    { "id": "administration", "files": ["admin.html"], "targetBlocks": ["admin-workspace", "admin-tool-panel"] }
+  ],
+  "globalComponents": [
+    { "id": "public-shell", "targetBlocks": ["global-header", "menu", "global-footer"] },
+    { "id": "welcome-tour", "targetBlocks": ["global-notice", "data-collection"] },
+    { "id": "privacy-telemetry", "targetBlocks": ["legal-document", "approved-form"] }
+  ],
+  "adminModules": [
+    { "anchor": "adminAccessoTitolo", "targetBlocks": ["admin-tool-panel", "special-access"] },
+    { "anchor": "adminSicurezzaTitolo", "targetBlocks": ["admin-tool-panel"] },
+    { "anchor": "adminBenvenutoTitolo", "targetBlocks": ["admin-tool-panel", "global-notice"] },
+    { "anchor": "admin-riepilogo", "targetBlocks": ["admin-tool-panel", "data-collection"] },
+    { "anchor": "admin-strumenti", "targetBlocks": ["admin-tool-panel"] },
+    { "anchor": "admin-contenuti", "targetBlocks": ["admin-tool-panel", "page-root"] },
+    { "anchor": "adminPoesiaTitolo", "targetBlocks": ["admin-tool-panel", "project-poem"] },
+    { "anchor": "adminNavigazioneTitolo", "targetBlocks": ["admin-tool-panel", "menu"] },
+    { "anchor": "admin-cartografia", "targetBlocks": ["admin-tool-panel", "project-map"] },
+    { "anchor": "admin-seo-fonti", "targetBlocks": ["admin-tool-panel", "project-sources"] },
+    { "anchor": "adminLegaleTitolo", "targetBlocks": ["admin-tool-panel", "legal-document"] },
+    { "anchor": "admin-documenti", "targetBlocks": ["admin-tool-panel", "data-collection"] },
+    { "anchor": "admin-anteprima", "targetBlocks": ["admin-tool-panel", "page-root"] },
+    { "anchor": "adminVociMappaTitolo", "targetBlocks": ["admin-tool-panel", "project-voices"] },
+    { "anchor": "adminPercorsoTitolo", "targetBlocks": ["admin-tool-panel", "project-path"] },
+    { "anchor": "admin-messaggi", "targetBlocks": ["admin-tool-panel", "approved-form"] },
+    { "anchor": "adminMemorie", "targetBlocks": ["admin-tool-panel", "project-memories"] }
+  ],
+  "contentAreaCoverage": [
+    { "area": "poem", "targetBlocks": ["project-poem"] },
+    { "area": "poetry-path", "targetBlocks": ["project-path"] },
+    { "area": "project-page", "targetBlocks": ["page-root", "section", "project-map"] },
+    { "area": "author-page", "targetBlocks": ["page-root", "rich-text", "link-list"] },
+    { "area": "logo-page", "targetBlocks": ["page-root", "image", "grid"] },
+    { "area": "section-pages", "targetBlocks": ["page-root", "section"] },
+    { "area": "access-pages", "targetBlocks": ["special-access", "approved-form"] },
+    { "area": "welcome-tour", "targetBlocks": ["global-notice"] },
+    { "area": "global-navigation", "targetBlocks": ["menu", "global-header", "global-footer"] },
+    { "area": "map-content", "targetBlocks": ["project-map"] },
+    { "area": "sources", "targetBlocks": ["project-sources"] },
+    { "area": "site-metadata", "targetBlocks": ["page-root"] },
+    { "area": "privacy-policy", "targetBlocks": ["legal-document"] },
+    { "area": "map-entries", "targetBlocks": ["project-places", "project-map"] },
+    { "area": "wiki-entries", "targetBlocks": ["project-voices"] },
+    { "area": "community-content", "targetBlocks": ["project-memories", "approved-form"] },
+    { "area": "location-network", "targetBlocks": ["project-places", "project-poem"] },
+    { "area": "software-core", "targetBlocks": ["admin-workspace"] }
+  ]
+}
