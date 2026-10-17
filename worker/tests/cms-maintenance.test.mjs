@@ -177,6 +177,10 @@ test("esporta contenuti D1 e oggetti R2 senza credenziali o dati personali", asy
     assert.ok(tableNames.includes("permalinks"));
     assert.ok(tableNames.includes("cms_documents"));
     assert.ok(tableNames.includes("media_assets"));
+    assert.ok(tableNames.includes("visual_trees"));
+    assert.ok(tableNames.includes("visual_nodes"));
+    assert.ok(tableNames.includes("visual_node_properties"));
+    assert.ok(tableNames.includes("visual_themes"));
     for (const excluded of [
         "admin_credentials",
         "admin_sessions",
@@ -294,7 +298,7 @@ test("valida e ripristina D1 e R2 soltanto dopo una conferma esplicita", async (
         body: { backup, confirmation: validation.confirmation }
     });
     const restored = await restoredResponse.json();
-    assert.equal(restoredResponse.status, 200);
+    assert.equal(restoredResponse.status, 200, JSON.stringify(restored));
     assert.equal(restored.restored, true);
     assert.equal(restored.checksum, validation.checksum);
     assert.equal(restored.mediaCount, 1);

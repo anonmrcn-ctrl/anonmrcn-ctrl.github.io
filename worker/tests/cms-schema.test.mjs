@@ -28,7 +28,14 @@ const EXPECTED_TABLES = Object.freeze([
     "poem_works",
     "site_pages",
     "site_settings",
-    "sources"
+    "sources",
+    "visual_node_properties",
+    "visual_nodes",
+    "visual_page_trees",
+    "visual_reusable_sections",
+    "visual_theme_tokens",
+    "visual_themes",
+    "visual_trees"
 ]);
 const EXPECTED_FOUNDATION_TABLES = Object.freeze(
     EXPECTED_TABLES.filter((name) => ![
@@ -37,7 +44,14 @@ const EXPECTED_FOUNDATION_TABLES = Object.freeze(
         "admin_identities",
         "admin_sessions",
         "cms_documents",
-        "media_assets"
+        "media_assets",
+        "visual_node_properties",
+        "visual_nodes",
+        "visual_page_trees",
+        "visual_reusable_sections",
+        "visual_theme_tokens",
+        "visual_themes",
+        "visual_trees"
     ].includes(name))
 );
 
@@ -562,6 +576,7 @@ test("l’health check installa la fondazione prima di dichiarare il servizio sa
     assert.equal(response.status, 200);
     assert.equal(data.ok, true);
     assert.equal(data.contentSchema, 5);
+    assert.equal(data.visualBuilderSchema, 1);
     assert.equal(data.privacyVersion, "2026-10-12");
     assert.deepEqual(listCmsTables(db.database), EXPECTED_TABLES);
 });

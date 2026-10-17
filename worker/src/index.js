@@ -50,6 +50,7 @@ import {
     LEGACY_SITE_METADATA_PAGES_V1,
     SITE_SETTINGS_SEEDS
 } from "./settings-seed.js";
+import { initializeVisualBuilderContent } from "./visual-builder-storage.js";
 
 // workerd refuses PBKDF2 requests above 100,000 iterations.
 const PBKDF2_ITERATIONS = 100000;
@@ -1051,6 +1052,7 @@ export default {
                     service: "nnmrcn-rete",
                     privacyVersion: "2026-10-12",
                     contentSchema: 5,
+                    visualBuilderSchema: 1,
                     mediaStorage: env.MEDIA ? "r2" : "d1-fallback"
                 });
             }
@@ -8673,6 +8675,7 @@ async function initializeCmsStorage(env) {
     await initializeSeoSiteMetadata(env);
     await initializeSeoSocialMetadata(env);
     await initializeLegalContent(env);
+    await initializeVisualBuilderContent(env);
     await initializeContentRevisions(env);
     await initializePermalinks(env);
 }
