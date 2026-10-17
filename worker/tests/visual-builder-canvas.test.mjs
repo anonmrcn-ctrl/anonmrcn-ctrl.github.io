@@ -250,5 +250,5 @@ test("il pannello offre comandi equivalenti per mouse, tocco e tastiera", async 
     assert.match(source, /aria-selected/u);
     assert.match(css, /min-height:\s*2\.75rem/u);
     assert.match(css, /@media \(max-width: 700px\)/u);
-    assert.match(html, /admin-visual-builder\.js\?v=20261018-pages1/u);
+    assert.match(html, /admin-visual-builder\.js\?v=20261018-library1/u);
 });

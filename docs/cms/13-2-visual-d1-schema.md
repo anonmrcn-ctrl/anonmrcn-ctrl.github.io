@@ -16,6 +16,7 @@ il renderer della 13.3 non sarà completo e verificato.
 | `visual_nodes` | gerarchia, ordine e tipo registrato dei blocchi |
 | `visual_node_properties` | proprietà tipizzate di contenuto, presentazione, comportamento e configurazione tecnica |
 | `visual_reusable_sections` | identità e ciclo editoriale delle sezioni riutilizzabili |
+| `visual_reusable_instances` | collegamenti espliciti e scollegabili tra libreria e blocchi di pagina |
 
 Non esiste una colonna JSON per lo stato corrente dell'albero. Testo, numeri,
 booleani, colori, misure, URL, raccolte e riferimenti sono distinti da

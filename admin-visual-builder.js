@@ -36,6 +36,17 @@
     const deleteRedirect = document.getElementById("adminVisualDeleteRedirect");
     const deleteConfirmation = document.getElementById("adminVisualDeleteConfirmation");
     const deleteButton = document.getElementById("adminVisualDelete");
+    const libraryName = document.getElementById("adminVisualLibraryName");
+    const librarySelect = document.getElementById("adminVisualLibrarySelect");
+    const librarySave = document.getElementById("adminVisualLibrarySave");
+    const libraryUpdate = document.getElementById("adminVisualLibraryUpdate");
+    const libraryDuplicate = document.getElementById("adminVisualLibraryDuplicate");
+    const libraryInsertLinked = document.getElementById("adminVisualLibraryInsertLinked");
+    const libraryInsertCopy = document.getElementById("adminVisualLibraryInsertCopy");
+    const libraryUnlink = document.getElementById("adminVisualLibraryUnlink");
+    const libraryImpact = document.getElementById("adminVisualLibraryImpact");
+    const libraryPublish = document.getElementById("adminVisualLibraryPublish");
+    const libraryImpactResult = document.getElementById("adminVisualLibraryImpactResult");
 
     const CATEGORY_CHILDREN = Object.freeze({
         root: ["structure", "content", "navigation", "project", "global", "functional", "personal", "legal"],
@@ -50,6 +61,7 @@
     });
 
     let pages = [];
+    let sections = [];
     let palette = [];
     let inspectorSchemas = {};
     let nodes = [];
@@ -60,6 +72,7 @@
     let draggedKey = "";
     let lastPageId = "";
     let activeDevice = "phone";
+    let impactReadySectionId = "";
 
     async function request(path, options = {}) {
         const session = sessionStorage.getItem(SESSION_KEY) || "";
@@ -157,6 +170,7 @@
         }
         renderInspector();
         renderPreview();
+        renderLibraryControls();
     }
 
     function renderNode(node, level) {
@@ -327,8 +341,12 @@
         if (!sessionStorage.getItem(SESSION_KEY)) return;
         status.textContent = "Caricamento del canvas…";
         try {
-            const data = await request("/api/admin/cms/visual-pages");
+            const [data, library] = await Promise.all([
+                request("/api/admin/cms/visual-pages"),
+                request("/api/admin/cms/visual-sections")
+            ]);
             pages = data.pages || [];
+            sections = library.sections || [];
             palette = data.palette || [];
             inspectorSchemas = data.inspectorSchemas || {};
             const pageId = preferredId || pageSelect.value || lastPageId;
@@ -347,6 +365,19 @@
                     textContent: `Duplica: ${page.title}`
                 }))
             );
+            const selectedLibraryId = librarySelect.value;
+            librarySelect.replaceChildren(
+                Object.assign(document.createElement("option"), {
+                    value: "", textContent: "Scegli dalla libreria"
+                }),
+                ...sections.map((section) => Object.assign(document.createElement("option"), {
+                    value: section.id,
+                    textContent: `${section.kind === "global" ? "Globale" : "Sezione"}: ${section.name} · ${section.status}`
+                }))
+            );
+            if (sections.some((section) => section.id === selectedLibraryId)) {
+                librarySelect.value = selectedLibraryId;
+            }
             paletteSelect.replaceChildren(...palette.map((item) => {
                 const option = document.createElement("option");
                 option.value = item.type;
@@ -376,7 +407,28 @@
         dirty = false;
         propertyDirty = new Set();
         renderLifecycle(page);
+        renderLibraryControls();
         renderCanvas();
+    }
+
+    function selectedSection() {
+        return sections.find((section) => section.id === librarySelect.value) || null;
+    }
+
+    function renderLibraryControls() {
+        const page = selectedPage();
+        const node = nodeByKey(selectedKey);
+        const section = selectedSection();
+        const canUseSelection = Boolean(page && node && !node.root && !dirty);
+        librarySave.disabled = !canUseSelection;
+        libraryUpdate.disabled = !canUseSelection || !section;
+        libraryDuplicate.disabled = !section;
+        libraryInsertLinked.disabled = !page || !section || dirty;
+        libraryInsertCopy.disabled = !page || !section || dirty;
+        libraryUnlink.disabled = !canUseSelection;
+        libraryImpact.disabled = !section;
+        libraryPublish.disabled = !section || impactReadySectionId !== section.id;
+        if (section && !libraryName.value) libraryName.value = section.name;
     }
 
     function renderLifecycle(page) {
@@ -515,6 +567,182 @@
             status.textContent = `Pagina eliminata; ${data.preservedPermalinks} URL conservati con reindirizzamento.`;
         } catch (error) {
             status.textContent = error.message || "La pagina non può essere eliminata.";
+        }
+    }
+
+    async function saveSelectionToLibrary() {
+        const page = selectedPage();
+        const node = nodeByKey(selectedKey);
+        if (!page || !node || node.root) return;
+        status.textContent = "Salvataggio nella libreria…";
+        try {
+            const data = await request("/api/admin/cms/visual-sections", {
+                method: "POST",
+                body: JSON.stringify({
+                    name: libraryName.value,
+                    pageId: page.id,
+                    nodeId: node.key
+                })
+            });
+            await load(page.id);
+            librarySelect.value = data.section.id;
+            libraryName.value = data.section.name;
+            renderLibraryControls();
+            status.textContent = "Sezione salvata in libreria come bozza.";
+        } catch (error) {
+            status.textContent = error.message || "Salvataggio in libreria non riuscito.";
+        }
+    }
+
+    async function updateLibraryFromSelection() {
+        const page = selectedPage();
+        const node = nodeByKey(selectedKey);
+        const section = selectedSection();
+        if (!page || !node || node.root || !section) return;
+        status.textContent = "Aggiornamento della bozza riutilizzabile…";
+        try {
+            const data = await request(`/api/admin/cms/visual-sections/${encodeURIComponent(section.id)}`, {
+                method: "PATCH",
+                body: JSON.stringify({
+                    name: libraryName.value || section.name,
+                    pageId: page.id,
+                    nodeId: node.key,
+                    expectedUpdatedAt: section.updatedAt
+                })
+            });
+            await load(page.id);
+            librarySelect.value = data.section.id;
+            impactReadySectionId = "";
+            renderLibraryControls();
+            status.textContent = "Bozza aggiornata. Controlla l'impatto prima di pubblicare.";
+        } catch (error) {
+            status.textContent = error.message || "Aggiornamento della libreria non riuscito.";
+        }
+    }
+
+    async function duplicateLibraryItem() {
+        const section = selectedSection();
+        if (!section) return;
+        status.textContent = "Duplicazione del modello…";
+        try {
+            const data = await request(
+                `/api/admin/cms/visual-sections/${encodeURIComponent(section.id)}/duplicate`,
+                {
+                    method: "POST",
+                    body: JSON.stringify({ name: libraryName.value || `${section.name} (copia)` })
+                }
+            );
+            await load(pageSelect.value);
+            librarySelect.value = data.section.id;
+            libraryName.value = data.section.name;
+            renderLibraryControls();
+            status.textContent = "Modello duplicato come bozza indipendente.";
+        } catch (error) {
+            status.textContent = error.message || "Duplicazione non riuscita.";
+        }
+    }
+
+    async function insertLibraryItem(mode) {
+        const page = selectedPage();
+        const section = selectedSection();
+        const selected = nodeByKey(selectedKey);
+        const root = nodes.find((node) => node.root);
+        if (!page || !section || !root) return;
+        const candidate = selected && accepts(selected, { type: section.blockType })
+            ? selected
+            : root;
+        status.textContent = mode === "copy"
+            ? "Inserimento della copia indipendente…"
+            : "Inserimento della sezione collegata…";
+        try {
+            const data = await request(
+                `/api/admin/cms/visual-sections/${encodeURIComponent(section.id)}/insert`,
+                {
+                    method: "POST",
+                    body: JSON.stringify({
+                        pageId: page.id,
+                        parentNodeId: candidate.key,
+                        expectedUpdatedAt: page.updatedAt,
+                        mode
+                    })
+                }
+            );
+            await load(page.id);
+            selectedKey = data.nodeId;
+            showSelectedPage(data.nodeId);
+            status.textContent = data.linked
+                ? "Sezione collegata: le pubblicazioni globali potranno sincronizzarla."
+                : "Copia indipendente inserita e modificabile liberamente.";
+        } catch (error) {
+            status.textContent = error.message || "Inserimento dalla libreria non riuscito.";
+        }
+    }
+
+    async function unlinkSelectedSection() {
+        const page = selectedPage();
+        const node = nodeByKey(selectedKey);
+        if (!page || !node || node.root) return;
+        status.textContent = "Scollegamento dalla libreria…";
+        try {
+            await request(
+                `/api/admin/cms/visual-section-links/${encodeURIComponent(page.id)}/${encodeURIComponent(node.key)}`,
+                {
+                    method: "DELETE",
+                    body: JSON.stringify({ expectedUpdatedAt: page.updatedAt })
+                }
+            );
+            await load(page.id);
+            showSelectedPage(node.key);
+            status.textContent = "Sezione scollegata: la copia locale resta intatta.";
+        } catch (error) {
+            status.textContent = error.message || "Il blocco selezionato non è collegato.";
+        }
+    }
+
+    async function showLibraryImpact() {
+        const section = selectedSection();
+        if (!section) return;
+        status.textContent = "Calcolo delle pagine interessate…";
+        try {
+            const data = await request(
+                `/api/admin/cms/visual-sections/${encodeURIComponent(section.id)}/impact`
+            );
+            const heading = document.createElement("p");
+            heading.textContent = `${data.impactCount} inserimenti collegati saranno sincronizzati.`;
+            const list = document.createElement("ul");
+            for (const page of data.pages) {
+                const item = document.createElement("li");
+                item.textContent = `${page.title} (${page.status})`;
+                list.appendChild(item);
+            }
+            libraryImpactResult.replaceChildren(heading, list);
+            impactReadySectionId = section.id;
+            renderLibraryControls();
+            status.textContent = "Impatto pronto. Ora puoi pubblicare consapevolmente.";
+        } catch (error) {
+            status.textContent = error.message || "Analisi dell'impatto non riuscita.";
+        }
+    }
+
+    async function publishLibraryItem() {
+        const section = selectedSection();
+        if (!section || impactReadySectionId !== section.id) return;
+        status.textContent = "Pubblicazione e sincronizzazione atomica…";
+        try {
+            const data = await request(
+                `/api/admin/cms/visual-sections/${encodeURIComponent(section.id)}/publish`,
+                {
+                    method: "PATCH",
+                    body: JSON.stringify({ expectedUpdatedAt: section.updatedAt })
+                }
+            );
+            impactReadySectionId = "";
+            await load(pageSelect.value);
+            librarySelect.value = data.section.id;
+            renderLibraryControls();
+            status.textContent = `Parte pubblicata; ${data.synchronized} inserimenti sincronizzati.`;
+        } catch (error) {
+            status.textContent = error.message || "Pubblicazione della parte globale non riuscita.";
         }
     }
 
@@ -788,6 +1016,20 @@
     duplicateButton.addEventListener("click", prepareDuplicate);
     analyzeDelete.addEventListener("click", analyzeDeletion);
     deleteButton.addEventListener("click", deletePage);
+    librarySelect.addEventListener("change", () => {
+        impactReadySectionId = "";
+        libraryImpactResult.replaceChildren();
+        libraryName.value = selectedSection()?.name || "";
+        renderLibraryControls();
+    });
+    librarySave.addEventListener("click", saveSelectionToLibrary);
+    libraryUpdate.addEventListener("click", updateLibraryFromSelection);
+    libraryDuplicate.addEventListener("click", duplicateLibraryItem);
+    libraryInsertLinked.addEventListener("click", () => insertLibraryItem("linked"));
+    libraryInsertCopy.addEventListener("click", () => insertLibraryItem("copy"));
+    libraryUnlink.addEventListener("click", unlinkSelectedSection);
+    libraryImpact.addEventListener("click", showLibraryImpact);
+    libraryPublish.addEventListener("click", publishLibraryItem);
     addButton.addEventListener("click", addBlock);
     undoButton.addEventListener("click", () => {
         const previous = undoStack.pop();

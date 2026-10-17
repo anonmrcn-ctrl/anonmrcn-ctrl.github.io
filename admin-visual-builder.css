@@ -65,6 +65,32 @@
     color: #fff;
 }
 
+.admin-visual-library > p,
+.admin-visual-library-controls {
+    margin-inline: 1rem;
+}
+
+.admin-visual-library-controls {
+    display: grid;
+    grid-template-columns: minmax(10rem, .45fr) minmax(0, 1fr);
+    gap: .7rem 1rem;
+    align-items: center;
+    padding-bottom: 1rem;
+}
+
+.admin-visual-library-actions,
+#adminVisualLibraryImpactResult {
+    grid-column: 1 / -1;
+}
+
+.admin-visual-library-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: .55rem;
+}
+
+.admin-visual-library-actions button { min-height: 2.75rem; }
+
 .admin-visual-inspector-preview {
     display: grid;
     grid-template-columns: minmax(16rem, .75fr) minmax(0, 1.25fr);
@@ -242,5 +268,9 @@
     .admin-visual-page-management > .admin-visual-danger { grid-template-columns: 1fr; }
 
     .admin-visual-page-management > form > *,
-    .admin-visual-page-management > .admin-visual-danger > * { grid-column: 1; }
+    .admin-visual-page-management > .admin-visual-danger > *,
+    .admin-visual-library-controls > * { grid-column: 1; }
+
+    .admin-visual-library-controls,
+    .admin-visual-library-actions { grid-template-columns: 1fr; }
 }
