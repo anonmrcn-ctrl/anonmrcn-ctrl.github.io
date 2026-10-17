@@ -1,6 +1,11 @@
 import { VISUAL_BLOCK_REGISTRY } from "./visual-builder-renderer.js";
+import {
+    safeHref,
+    validateBehaviorValues,
+    VISUAL_BEHAVIOR_OPTIONS
+} from "./visual-builder-behaviors.js";
 
-export const VISUAL_INSPECTOR_VERSION = 1;
+export const VISUAL_INSPECTOR_VERSION = 2;
 
 const option = (value, label, color = null) => Object.freeze({ value, label, color });
 
@@ -50,6 +55,60 @@ const COPY_FIELDS = Object.freeze({
     "legal-document": [textField("title", "Titolo", "title", 200), textArea("text", "Testo", "text", 20000)]
 });
 
+const BEHAVIOR_FIELDS = Object.freeze({
+    section: [anchorField()],
+    heading: [anchorField()],
+    button: [selectField(
+        "openMode", "Apertura", "behavior.link", "openMode",
+        VISUAL_BEHAVIOR_OPTIONS.linkOpenModes, "same-window", true
+    )],
+    "link-list": [field(
+        "links", "Collegamenti: Etichetta | destinazione", "behavior.link", "href",
+        "url", "textarea", null, "all", 10000, false, "lines"
+    )],
+    menu: [selectField(
+        "navigationSource", "Voci del menu", "behavior.collection", "source",
+        VISUAL_BEHAVIOR_OPTIONS.navigationSources, "site-menu", true
+    )],
+    "table-of-contents": [selectField(
+        "navigationSource", "Titoli da includere", "behavior.collection", "source",
+        VISUAL_BEHAVIOR_OPTIONS.tableOfContentsSources, "page-headings", true
+    )],
+    breadcrumb: [selectField(
+        "navigationSource", "Percorso", "behavior.collection", "source",
+        VISUAL_BEHAVIOR_OPTIONS.breadcrumbSources, "page-hierarchy", true
+    )],
+    "global-header": [selectField(
+        "navigationSource", "Navigazione globale", "behavior.collection", "source",
+        VISUAL_BEHAVIOR_OPTIONS.navigationSources, "site-menu", true
+    )],
+    "global-footer": [selectField(
+        "navigationSource", "Navigazione globale", "behavior.collection", "source",
+        VISUAL_BEHAVIOR_OPTIONS.navigationSources, "site-menu", true
+    )],
+    "data-collection": [
+        selectField("collectionSource", "Sorgente dati", "behavior.collection", "source", VISUAL_BEHAVIOR_OPTIONS.collectionSources, "public-pages", true),
+        selectField("collectionDisplay", "Aspetto", "behavior.collection", "display", VISUAL_BEHAVIOR_OPTIONS.collectionDisplays, "list", true),
+        selectField("collectionLimit", "Elementi per pagina", "behavior.collection", "limit", VISUAL_BEHAVIOR_OPTIONS.collectionLimits, "12", true),
+        privacySelect("externalService", "Servizio esterno", "externalService", VISUAL_BEHAVIOR_OPTIONS.externalServices, "none"),
+        privacySelect("telemetry", "Telemetria", "telemetry", VISUAL_BEHAVIOR_OPTIONS.telemetryModes, "off")
+    ],
+    "data-filter": [
+        selectField("filterSource", "Sorgente da filtrare", "behavior.collection", "source", VISUAL_BEHAVIOR_OPTIONS.collectionSources, "public-pages", true),
+        selectField("filterMode", "Tipo di filtro", "behavior.collection", "filterMode", VISUAL_BEHAVIOR_OPTIONS.filterModes, "text", true),
+        field("targetCollection", "Raccolta da filtrare", "behavior.collection", "targetCollection", "text", "node-reference", null, "all", 96, true),
+        privacySelect("externalService", "Servizio esterno", "externalService", VISUAL_BEHAVIOR_OPTIONS.externalServices, "none"),
+        privacySelect("telemetry", "Telemetria", "telemetry", VISUAL_BEHAVIOR_OPTIONS.telemetryModes, "off")
+    ],
+    "approved-form": [
+        selectField("formType", "Modulo autorizzato", "behavior.form", "formType", VISUAL_BEHAVIOR_OPTIONS.formTypes, "memory-submission", true),
+        selectField("consentDocument", "Informativa", "behavior.form", "consentDocumentId", [option("privacy-current", "Informativa privacy pubblicata")], "privacy-current", true),
+        selectField("consentMode", "Consenso", "behavior.form", "consentMode", VISUAL_BEHAVIOR_OPTIONS.consentModes, "required", true),
+        selectField("externalService", "Servizio esterno", "behavior.form", "externalService", VISUAL_BEHAVIOR_OPTIONS.externalServices, "none", true),
+        selectField("telemetry", "Telemetria", "behavior.form", "telemetry", VISUAL_BEHAVIOR_OPTIONS.telemetryModes, "off", true)
+    ]
+});
+
 export const VISUAL_INSPECTOR_SCHEMAS = Object.freeze(Object.fromEntries(
     ["page-root", "section", "container", "stack", "row", "columns", "grid",
         "separator", "spacer", "heading", "rich-text", "list", "quote", "image",
@@ -60,7 +119,7 @@ export const VISUAL_INSPECTOR_SCHEMAS = Object.freeze(Object.fromEntries(
         "special-access", "legal-document", "approved-form", "data-collection", "data-filter"
     ].map((type) => {
         const allowedSets = new Set(VISUAL_BLOCK_REGISTRY[type]?.propertySets || []);
-        const fields = [...(COPY_FIELDS[type] || []), ...STYLE_FIELDS]
+        const fields = [...(COPY_FIELDS[type] || []), ...(BEHAVIOR_FIELDS[type] || []), ...STYLE_FIELDS]
             .filter((descriptor) => allowedSets.has(descriptor.propertySet));
         return [type, Object.freeze(fields)];
     })
@@ -99,7 +158,7 @@ export function normalizeInspectorValues(type, rawValues) {
     }
     const normalized = {};
     for (const descriptor of schema) {
-        const value = String(rawValues[descriptor.key] ?? "").trim();
+        const value = String(rawValues[descriptor.key] ?? descriptor.defaultValue ?? "").trim();
         if (descriptor.required && !value) {
             throw new Error(`«${descriptor.label}» è obbligatorio.`);
         }
@@ -114,6 +173,7 @@ export function normalizeInspectorValues(type, rawValues) {
         }
         normalized[descriptor.key] = value;
     }
+    validateBehaviorValues(type, normalized);
     if (["visibilityPhone", "visibilityTablet", "visibilityDesktop"].every(
         (key) => normalized[key] === "hidden"
     )) {
@@ -152,8 +212,8 @@ export function inspectorRows(normalized, now) {
     return rows;
 }
 
-function field(key, label, propertySet, propertyName, valueKind, control, options = null, breakpoint = "all", maxLength = 96, required = false, format = "single") {
-    return Object.freeze({ key, label, propertySet, propertyName, valueKind, control, options, breakpoint, maxLength, required, format });
+function field(key, label, propertySet, propertyName, valueKind, control, options = null, breakpoint = "all", maxLength = 96, required = false, format = "single", defaultValue = "") {
+    return Object.freeze({ key, label, propertySet, propertyName, valueKind, control, options, breakpoint, maxLength, required, format, defaultValue });
 }
 
 function textField(key, label, propertyName, maxLength) {
@@ -166,6 +226,18 @@ function textArea(key, label, propertyName, maxLength, format = "single") {
 
 function urlField(key, label) {
     return field(key, label, "behavior.link", "href", "url", "url", null, "all", 2048);
+}
+
+function anchorField() {
+    return field("anchorId", "Ancora della sezione", "behavior.link", "anchorId", "text", "text", null, "all", 64);
+}
+
+function selectField(key, label, propertySet, propertyName, options, defaultValue = "", required = false) {
+    return field(key, label, propertySet, propertyName, "text", "select", options, "all", 96, required, "single", defaultValue);
+}
+
+function privacySelect(key, label, propertyName, options, defaultValue) {
+    return selectField(key, label, "behavior.collection", propertyName, options, defaultValue, true);
 }
 
 function mediaField(key, label, propertyName, maxLength, required = false) {
@@ -195,10 +267,6 @@ function propertyValue(property) {
     if (property.value_kind === "boolean") return property.boolean_value ? "true" : "false";
     if (["integer", "number"].includes(property.value_kind)) return String(property.number_value ?? "");
     return String(property.text_value ?? "");
-}
-
-function safeHref(value) {
-    return /^(?:https:\/\/|mailto:|tel:|\/|\.\/|\.\.\/|#)/iu.test(value);
 }
 
 function colorValue(name) {

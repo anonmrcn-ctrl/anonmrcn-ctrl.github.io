@@ -36,7 +36,7 @@ export async function createVisualPage(env, rawInput) {
             INSERT INTO visual_trees (
                 id, schema_version, contract_version, status,
                 created_at, updated_at, published_at
-            ) VALUES (?, 1, 1, 'draft', ?, ?, NULL)
+            ) VALUES (?, 1, 2, 'draft', ?, ?, NULL)
         `).bind(treeId, now, now),
         env.DB.prepare(`
             INSERT INTO visual_page_trees (

@@ -1010,7 +1010,7 @@
     function defaultValues(type) {
         return Object.fromEntries((inspectorSchemas[type] || []).map((field) => [
             field.key,
-            field.propertyName === "visibility" ? "visible" : ""
+            field.propertyName === "visibility" ? "visible" : (field.defaultValue || "")
         ]));
     }
 
@@ -1029,7 +1029,7 @@
             const caption = document.createElement("span");
             const control = field.control === "textarea"
                 ? document.createElement("textarea")
-                : field.control === "select"
+                : ["select", "node-reference"].includes(field.control)
                     ? document.createElement("select")
                     : document.createElement("input");
             const id = `adminVisualField-${field.key}`;
@@ -1047,10 +1047,18 @@
                 if (field.propertyName !== "visibility") {
                     const empty = document.createElement("option");
                     empty.value = "";
-                    empty.textContent = "Predefinito";
+                    empty.textContent = field.control === "node-reference"
+                        ? "Scegli una raccolta"
+                        : "Predefinito";
                     control.appendChild(empty);
                 }
-                for (const item of field.options || []) {
+                const options = field.control === "node-reference"
+                    ? nodes.filter((candidate) => candidate.type === "data-collection").map((candidate) => ({
+                        value: candidate.key,
+                        label: candidate.label || "Raccolta"
+                    }))
+                    : (field.options || []);
+                for (const item of options) {
                     const option = document.createElement("option");
                     option.value = item.value;
                     option.textContent = item.label;
@@ -1058,7 +1066,7 @@
                 }
             }
             control.value = node.values?.[field.key] ||
-                (field.propertyName === "visibility" ? "visible" : "");
+                (field.propertyName === "visibility" ? "visible" : (field.defaultValue || ""));
             if (field.required) control.required = true;
             label.append(caption, control);
             inspectorFields.appendChild(label);

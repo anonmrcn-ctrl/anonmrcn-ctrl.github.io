@@ -80,7 +80,7 @@ function property(node, propertySet, name, valueKind, values = {}, position = 0)
     };
 }
 
-test("il registro eseguibile coincide con il contratto v1", async () => {
+test("il registro eseguibile coincide con il contratto v2", async () => {
     const contract = JSON.parse(await readFile(
         new URL("../../docs/cms/block-contract.json", import.meta.url),
         "utf8"
@@ -209,7 +209,8 @@ test("l'API visuale espone soltanto alberi pubblicati e conserva noindex", async
     ), env, {});
     const publicData = await publicResponse.json();
     assert.equal(publicResponse.status, 200);
-    assert.equal(publicData.page.registryVersion, 1);
+    assert.equal(publicData.page.registryVersion, 2);
+    assert.equal(publicData.page.behaviorVersion, 1);
     assert.equal(publicData.page.metadata.robots, "index,follow");
     assert.equal(
         publicData.page.metadata.canonical,

@@ -4262,7 +4262,11 @@ async function getPublicVisualPage(request, env, slug) {
             nodes,
             properties: propertyResult.results || [],
             assets,
-            adapterPayloads: await loadVisualAdapterPayloads(env, nodes),
+            adapterPayloads: await loadVisualAdapterPayloads(
+                env,
+                nodes,
+                propertyResult.results || []
+            ),
             theme: await readPublicTheme(env, page.theme_id),
             publicOrigin: env.ALLOWED_ORIGIN || "https://anonmrcn-ctrl.github.io"
         });
