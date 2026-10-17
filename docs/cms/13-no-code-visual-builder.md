@@ -69,7 +69,7 @@ accessibilità, privacy, SEO, migrazione e test.
 | 13.2 | Schema D1 per pagine, alberi e temi | Completa | 13.1 |
 | 13.3 | Registro dei blocchi e renderer pubblico sicuro | Completa | 13.2 |
 | 13.4 | Migrazione dei componenti specializzati | Completa | 13.3 |
-| 13.5 | Canvas visuale a blocchi | Da iniziare | 13.4 |
+| 13.5 | Canvas visuale a blocchi | Completa | 13.4 |
 | 13.6 | Ispettore visuale e anteprima responsive | Da iniziare | 13.5 |
 | 13.7 | Gestione completa delle pagine | Da iniziare | 13.6 |
 | 13.8 | Modelli, sezioni riutilizzabili e parti globali | Da iniziare | 13.7 |
@@ -101,6 +101,11 @@ idempotente, adattatori D1, resa sicura e prove dei ripieghi statici sono in
 `worker/src/visual-builder-adapters.js`,
 `worker/src/visual-builder-renderer.js` e
 `worker/tests/visual-builder-adapters.test.mjs`.
+
+La prova dell'unità 13.5 è in `13-5-visual-canvas.md`; API strutturale,
+interfaccia a blocchi, cronologia e test delle operazioni sono in
+`worker/src/visual-builder-admin.js`, `admin-visual-builder.js` e
+`worker/tests/visual-builder-canvas.test.mjs`.
 
 ## Criterio finale
 

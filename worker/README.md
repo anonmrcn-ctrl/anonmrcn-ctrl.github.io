@@ -120,6 +120,14 @@ messaggi richiedono entrambi i consensi. Mappa, modulo Memorie, taccuino e
 accesso mantengono collegamenti espliciti alle interfacce statiche complete
 durante la transizione. Nessun adattatore interpreta HTML, CSS o JavaScript.
 
+`GET /api/admin/cms/visual-pages` alimenta il canvas protetto senza esporre
+proprietà tecniche. `PATCH /api/admin/cms/visual-pages/:pageId` applica in una
+transazione inserimenti, ordine, annidamento, duplicazioni e rimozioni: accetta
+soltanto tipi e gerarchie del registro, mantiene gli ID esistenti, genera gli
+ID nuovi nel Worker e verifica la versione per evitare sovrascritture. Prima
+della prima modifica conserva la baseline e dopo ogni salvataggio aggiunge una
+revisione completa dell'albero e delle sue proprietà.
+
 La stessa inizializzazione importa «Il Gajo tra i Praelli» in `poem_works`,
 `poem_sections` e `poem_lines`: 4 canti, 121 versi e i metadati necessari a
 ricostruire strofe, rientri e 165 righe metriche. L'endpoint

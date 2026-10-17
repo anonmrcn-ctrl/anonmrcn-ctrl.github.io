@@ -59,6 +59,11 @@ import {
     initializeVisualSpecializedBlocks,
     loadVisualAdapterPayloads
 } from "./visual-builder-adapters.js";
+import {
+    readVisualBuilderPages,
+    updateVisualBuilderTree,
+    VisualCanvasError
+} from "./visual-builder-admin.js";
 
 // workerd refuses PBKDF2 requests above 100,000 iterations.
 const PBKDF2_ITERATIONS = 100000;
@@ -742,6 +747,21 @@ export default {
                 path === "/api/admin/cms/pages"
             ) {
                 return await adminListCmsPages(request, env);
+            }
+
+            if (
+                request.method === "GET" &&
+                path === "/api/admin/cms/visual-pages"
+            ) {
+                return await adminListVisualPages(request, env);
+            }
+
+            if (
+                request.method === "PATCH" &&
+                /^\/api\/admin\/cms\/visual-pages\/[a-z0-9]+(?:-[a-z0-9]+)*$/.test(path)
+            ) {
+                const pageId = path.split("/").pop();
+                return await adminUpdateVisualPage(request, env, pageId);
             }
 
             if (
@@ -4041,6 +4061,28 @@ async function adminListCmsPages(request, env) {
     return json(request, env, {
         pages: await readCmsPages(env)
     });
+}
+
+async function adminListVisualPages(request, env) {
+    if (!(await adminAuthorized(request, env))) {
+        return unauthorized(request, env);
+    }
+    await ensureCmsStorage(env);
+    return json(request, env, await readVisualBuilderPages(env));
+}
+
+async function adminUpdateVisualPage(request, env, pageId) {
+    if (!(await adminAuthorized(request, env))) {
+        return unauthorized(request, env);
+    }
+    await ensureCmsStorage(env);
+    try {
+        const input = await readJson(request, MAX_CMS_PAGE_REQUEST_BYTES);
+        return json(request, env, await updateVisualBuilderTree(env, pageId, input));
+    } catch (error) {
+        if (!(error instanceof VisualCanvasError)) throw error;
+        return json(request, env, { error: error.message }, error.status);
+    }
 }
 
 async function adminUpdateCmsPage(request, env, pageId) {

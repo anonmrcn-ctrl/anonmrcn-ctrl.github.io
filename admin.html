@@ -12,7 +12,7 @@
     <link rel="manifest" href="./admin.webmanifest">
     <script src="./tema.js?v=20261006-map-layers1"></script>
     <link rel="stylesheet" href="./leaflet.css?v=1.9.4">
-    <link rel="stylesheet" href="./style.css?v=20261011-privacy2">
+    <link rel="stylesheet" href="./style.css?v=20261017-canvas1">
 </head>
 
 <body>
@@ -93,6 +93,7 @@
                 <ul>
                     <li><a href="#admin-riepilogo">Riepilogo</a></li>
                     <li><a href="#admin-contenuti">Contenuti</a></li>
+                    <li><a href="#admin-canvas">Componi pagine</a></li>
                     <li><a href="#admin-cartografia">Mappe e luoghi</a></li>
                     <li><a href="#admin-seo-fonti">SEO e fonti</a></li>
                     <li><a href="#admin-documenti">Media e documenti</a></li>
@@ -305,6 +306,45 @@
                         aria-live="polite"
                     ></p>
                 </form>
+            </section>
+
+            <section class="admin-voci-mappa admin-visual-builder" id="admin-canvas" aria-labelledby="adminVisualTitle">
+                <h2 id="adminVisualTitle">Componi la pagina a blocchi</h2>
+                <p>
+                    Aggiungi, ordina, annida, duplica o rimuovi sezioni senza
+                    modificare codice. Le modifiche restano locali finché non
+                    scegli «Salva struttura».
+                </p>
+
+                <div class="admin-visual-toolbar">
+                    <label for="adminVisualPageSelect">Pagina</label>
+                    <select id="adminVisualPageSelect"></select>
+                    <label for="adminVisualPalette">Nuovo blocco</label>
+                    <select id="adminVisualPalette"></select>
+                    <button id="adminVisualAdd" type="button">Aggiungi blocco</button>
+                    <button class="admin-button-secondary" id="adminVisualUndo" type="button" disabled>
+                        Annulla ultima modifica
+                    </button>
+                </div>
+
+                <p class="admin-voci-mappa-aiuto" id="adminVisualInstructions">
+                    Seleziona un blocco. Usa i pulsanti oppure Alt e i tasti
+                    freccia per spostarlo; con il mouse puoi trascinarlo tra
+                    blocchi dello stesso livello. Tutti i comandi funzionano
+                    anche con tocco e tastiera.
+                </p>
+                <div
+                    class="admin-visual-canvas"
+                    id="adminVisualCanvas"
+                    aria-describedby="adminVisualInstructions"
+                ></div>
+                <div class="admin-visual-save-actions">
+                    <button id="adminVisualSave" type="button">Salva struttura</button>
+                    <button class="admin-button-secondary" id="adminVisualReload" type="button">
+                        Ricarica senza salvare
+                    </button>
+                </div>
+                <p class="admin-status" id="adminVisualStatus" aria-live="polite"></p>
             </section>
 
             <section class="admin-voci-mappa" aria-labelledby="adminPoesiaTitolo">
@@ -1124,6 +1164,7 @@
     <script src="./sessione.js?v=20261008-onboarding1"></script>
     <script src="./notifiche.js"></script>
     <script src="./vendor/leaflet-1.9.4.js"></script>
-    <script src="./admin.js?v=20261011-adminux2"></script>
+    <script src="./admin-visual-builder.js?v=20261017-canvas1"></script>
+    <script src="./admin.js?v=20261017-canvas1"></script>
 </body>
 </html>

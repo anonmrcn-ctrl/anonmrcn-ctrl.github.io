@@ -89,40 +89,12 @@ export function renderVisualPage({
     if (!page || page.status !== "published") {
         throw new VisualRenderError("La pagina non è pubblicata.");
     }
-    const nodeById = new Map();
-    const childrenByParent = new Map();
-    for (const rawNode of nodes || []) {
-        if (nodeById.has(rawNode.id)) throw new VisualRenderError("ID di nodo duplicato.");
-        const definition = VISUAL_BLOCK_REGISTRY[rawNode.block_type];
-        if (!definition) throw new VisualRenderError(`Tipo di blocco sconosciuto: ${rawNode.block_type}`);
-        const node = { ...rawNode, definition };
-        nodeById.set(node.id, node);
-        const parentKey = node.parent_id || "";
-        const siblings = childrenByParent.get(parentKey) || [];
-        siblings.push(node);
-        childrenByParent.set(parentKey, siblings);
-    }
-    for (const siblings of childrenByParent.values()) {
-        if (siblings.length > MAX_CHILDREN) throw new VisualRenderError("Troppi blocchi allo stesso livello.");
-        siblings.sort((a, b) => Number(a.position) - Number(b.position) || a.id.localeCompare(b.id));
-        const positions = new Set(siblings.map((node) => Number(node.position)));
-        if (positions.size !== siblings.length) throw new VisualRenderError("Posizione di blocco duplicata.");
-    }
-    const roots = childrenByParent.get("") || [];
-    if (roots.length !== 1 || roots[0].block_type !== "page-root") {
-        throw new VisualRenderError("L'albero deve avere una sola radice pagina.");
-    }
-    for (const node of nodeById.values()) {
-        if (node.parent_id && !nodeById.has(node.parent_id)) {
-            throw new VisualRenderError(`Genitore mancante per ${node.id}.`);
-        }
-    }
-
+    const { nodeById, childrenByParent } = prepareVisualTree(nodes);
     const valuesByNode = normalizeProperties(properties, nodeById);
     const assetsById = new Map((assets || []).map((asset) => [asset.id, asset]));
     const visited = new Set();
     const html = renderNode(
-        roots[0],
+        (childrenByParent.get("") || [])[0],
         1,
         childrenByParent,
         valuesByNode,
@@ -153,6 +125,57 @@ export function renderVisualPage({
             } : null
         }
     };
+}
+
+export function validateVisualTreeStructure(nodes) {
+    prepareVisualTree(nodes);
+    return true;
+}
+
+function prepareVisualTree(nodes) {
+    const nodeById = new Map();
+    const childrenByParent = new Map();
+    for (const rawNode of nodes || []) {
+        if (nodeById.has(rawNode.id)) throw new VisualRenderError("ID di nodo duplicato.");
+        const definition = VISUAL_BLOCK_REGISTRY[rawNode.block_type];
+        if (!definition) throw new VisualRenderError(`Tipo di blocco sconosciuto: ${rawNode.block_type}`);
+        const node = { ...rawNode, definition };
+        nodeById.set(node.id, node);
+        const parentKey = node.parent_id || "";
+        const siblings = childrenByParent.get(parentKey) || [];
+        siblings.push(node);
+        childrenByParent.set(parentKey, siblings);
+    }
+    for (const siblings of childrenByParent.values()) {
+        if (siblings.length > MAX_CHILDREN) throw new VisualRenderError("Troppi blocchi allo stesso livello.");
+        siblings.sort((a, b) => Number(a.position) - Number(b.position) || a.id.localeCompare(b.id));
+        const positions = new Set(siblings.map((node) => Number(node.position)));
+        if (positions.size !== siblings.length) throw new VisualRenderError("Posizione di blocco duplicata.");
+    }
+    const roots = childrenByParent.get("") || [];
+    if (roots.length !== 1 || roots[0].block_type !== "page-root") {
+        throw new VisualRenderError("L'albero deve avere una sola radice pagina.");
+    }
+    for (const node of nodeById.values()) {
+        if (node.parent_id && !nodeById.has(node.parent_id)) {
+            throw new VisualRenderError(`Genitore mancante per ${node.id}.`);
+        }
+    }
+    const visited = new Set();
+    const visit = (node, depth) => {
+        if (depth > MAX_DEPTH) throw new VisualRenderError("Profondità massima superata.");
+        if (visited.has(node.id)) throw new VisualRenderError("Ciclo nell'albero dei blocchi.");
+        visited.add(node.id);
+        for (const child of childrenByParent.get(node.id) || []) {
+            if (!CATEGORY_CHILDREN[node.definition.category].includes(child.definition.category)) {
+                throw new VisualRenderError(`Annidamento non consentito: ${node.block_type} > ${child.block_type}`);
+            }
+            visit(child, depth + 1);
+        }
+    };
+    visit(roots[0], 1);
+    if (visited.size !== nodeById.size) throw new VisualRenderError("L'albero contiene nodi irraggiungibili o ciclici.");
+    return { nodeById, childrenByParent };
 }
 
 function normalizeProperties(properties, nodeById) {
