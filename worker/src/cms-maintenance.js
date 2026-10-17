@@ -32,7 +32,14 @@ export const CMS_BACKUP_TABLES = Object.freeze([
     "map_entries",
     "map_entry_images",
     "cms_documents",
-    "media_assets"
+    "media_assets",
+    "visual_themes",
+    "visual_theme_tokens",
+    "visual_trees",
+    "visual_page_trees",
+    "visual_nodes",
+    "visual_node_properties",
+    "visual_reusable_sections"
 ]);
 
 export async function createCmsBackup(env, now = Date.now()) {

@@ -3,7 +3,7 @@
   "title": "Autonomia visuale no-code",
   "objective": "Permettere all'amministratore di creare, comporre, personalizzare, pubblicare, archiviare e recuperare pagine senza modificare codice.",
   "status": "in_progress",
-  "currentUnit": "13.2",
+  "currentUnit": "13.3",
   "allowedStatuses": [
     "pending",
     "in_progress",
@@ -51,7 +51,7 @@
     {
       "id": "13.2",
       "title": "Schema D1 per pagine, alberi e temi",
-      "status": "pending",
+      "status": "complete",
       "dependsOn": ["13.1"],
       "deliverables": [
         "Migrazioni append-only per pagine, nodi, proprietà, temi e sezioni riutilizzabili.",

@@ -88,6 +88,15 @@ soltanto a registrare la prima passkey: appena D1 contiene una credenziale, il
 Worker rifiuta il token condiviso per tutte le operazioni e accetta soltanto
 sessioni personali firmate da una passkey con verifica dell’utente.
 
+La migrazione append-only `0019_visual_builder_schema.sql` aggiunge alberi di
+pagina, nodi, proprietà tipizzate, temi e sezioni riutilizzabili per il builder
+no-code. Il primo health check importa una sola volta le 9 pagine e i 60 blocchi
+esistenti con gli stessi ID, senza modificare `site_pages`, `page_blocks` o le
+revisioni. Le proprietà responsive e i riferimenti a pagine e media R2 sono
+normalizzati; lo schema non accetta codice arbitrario né uno stato corrente
+dell'albero conservato in JSON opaco. L'health check conferma l'installazione
+con `"visualBuilderSchema": 1`.
+
 Al primo accesso a una pagina pubblica, il Worker importa una sola volta in
 `site_pages` e `page_blocks` i 60 blocchi editoriali di Progetto, Autore, Logo,
 Spazio pubblico, Archivio, Memorie, Taccuino, Spazio personale e Accesso. Gli

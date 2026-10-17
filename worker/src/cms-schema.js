@@ -1,3 +1,5 @@
+import { VISUAL_BUILDER_STORAGE_STATEMENTS } from "./visual-builder-storage.js";
+
 export const MEDIA_ASSET_STORAGE_STATEMENTS = Object.freeze([
     `CREATE TABLE IF NOT EXISTS media_assets (
         id TEXT PRIMARY KEY CHECK (length(id) BETWEEN 1 AND 160),
@@ -384,5 +386,6 @@ export const CMS_STORAGE_STATEMENTS = Object.freeze([
     `CREATE INDEX IF NOT EXISTS idx_cms_documents_updated
         ON cms_documents(updated_at DESC, id)`,
     ...MEDIA_ASSET_STORAGE_STATEMENTS,
-    ...ADMIN_AUTH_STORAGE_STATEMENTS
+    ...ADMIN_AUTH_STORAGE_STATEMENTS,
+    ...VISUAL_BUILDER_STORAGE_STATEMENTS
 ]);
