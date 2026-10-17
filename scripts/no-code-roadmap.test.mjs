@@ -8,7 +8,7 @@ import {
 
 test("la roadmap no-code pubblicata è coerente", async () => {
     const roadmap = await checkNoCodeRoadmap();
-    assert.equal(roadmap.currentUnit, "13.7");
+    assert.equal(roadmap.currentUnit, "13.8");
     assert.equal(roadmap.units[0].status, "complete");
     assert.equal(roadmap.units[1].status, "complete");
     assert.equal(roadmap.units[2].status, "complete");
@@ -16,6 +16,7 @@ test("la roadmap no-code pubblicata è coerente", async () => {
     assert.equal(roadmap.units[4].status, "complete");
     assert.equal(roadmap.units[5].status, "complete");
     assert.equal(roadmap.units[6].status, "complete");
+    assert.equal(roadmap.units[7].status, "complete");
     assert.equal(roadmap.units.at(-1).id, "13.12");
 });
 

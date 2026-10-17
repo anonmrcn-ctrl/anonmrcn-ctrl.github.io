@@ -3,7 +3,7 @@
   "title": "Autonomia visuale no-code",
   "objective": "Permettere all'amministratore di creare, comporre, personalizzare, pubblicare, archiviare e recuperare pagine senza modificare codice.",
   "status": "in_progress",
-  "currentUnit": "13.7",
+  "currentUnit": "13.8",
   "allowedStatuses": [
     "pending",
     "in_progress",
@@ -121,7 +121,7 @@
     {
       "id": "13.7",
       "title": "Gestione completa delle pagine",
-      "status": "pending",
+      "status": "complete",
       "dependsOn": ["13.6"],
       "deliverables": [
         "Creazione da vuoto o modello, duplicazione, rinomina, bozza, pubblicazione, archiviazione e recupero.",

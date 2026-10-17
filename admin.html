@@ -13,7 +13,7 @@
     <script src="./tema.js?v=20261006-map-layers1"></script>
     <link rel="stylesheet" href="./leaflet.css?v=1.9.4">
     <link rel="stylesheet" href="./style.css?v=20261017-inspector1">
-    <link rel="stylesheet" href="./admin-visual-builder.css?v=20261017-inspector1">
+    <link rel="stylesheet" href="./admin-visual-builder.css?v=20261018-pages1">
 </head>
 
 <body>
@@ -317,6 +317,27 @@
                     scegli «Salva struttura».
                 </p>
 
+                <details class="admin-visual-page-management">
+                    <summary>Crea o duplica una pagina</summary>
+                    <form id="adminVisualCreateForm">
+                        <label for="adminVisualCreateTitle">Titolo</label>
+                        <input id="adminVisualCreateTitle" maxlength="200" required>
+                        <label for="adminVisualCreateSlug">Indirizzo breve</label>
+                        <input id="adminVisualCreateSlug" maxlength="160" pattern="[a-z0-9]+(?:-[a-z0-9]+)*" required>
+                        <label for="adminVisualCreateDescription">Descrizione SEO</label>
+                        <textarea id="adminVisualCreateDescription" maxlength="500" rows="3"></textarea>
+                        <label for="adminVisualCreateTemplate">Partenza</label>
+                        <select id="adminVisualCreateTemplate">
+                            <option value="">Pagina vuota</option>
+                        </select>
+                        <label class="admin-visual-check">
+                            <input id="adminVisualCreateNavigation" type="checkbox">
+                            Aggiungi al menu quando verrà pubblicata
+                        </label>
+                        <button type="submit">Crea pagina in bozza</button>
+                    </form>
+                </details>
+
                 <div class="admin-visual-toolbar">
                     <label for="adminVisualPageSelect">Pagina</label>
                     <select id="adminVisualPageSelect"></select>
@@ -327,6 +348,46 @@
                         Annulla ultima modifica
                     </button>
                 </div>
+
+                <details class="admin-visual-page-management">
+                    <summary>Impostazioni e ciclo di vita</summary>
+                    <form id="adminVisualLifecycleForm">
+                        <label for="adminVisualLifecycleTitle">Titolo</label>
+                        <input id="adminVisualLifecycleTitle" maxlength="200" required>
+                        <label for="adminVisualLifecycleSlug">Indirizzo breve</label>
+                        <input id="adminVisualLifecycleSlug" maxlength="160" pattern="[a-z0-9]+(?:-[a-z0-9]+)*" required>
+                        <label for="adminVisualLifecycleDescription">Descrizione SEO</label>
+                        <textarea id="adminVisualLifecycleDescription" maxlength="500" rows="3"></textarea>
+                        <label for="adminVisualLifecycleStatus">Stato</label>
+                        <select id="adminVisualLifecycleStatus">
+                            <option value="draft">Bozza</option>
+                            <option value="published">Pubblicata</option>
+                            <option value="archived">Archiviata</option>
+                        </select>
+                        <label class="admin-visual-check">
+                            <input id="adminVisualLifecycleNavigation" type="checkbox">
+                            Mostra nel menu principale quando pubblicata
+                        </label>
+                        <p id="adminVisualCanonical"></p>
+                        <button type="submit">Salva impostazioni</button>
+                        <button class="admin-button-secondary" id="adminVisualDuplicate" type="button">
+                            Duplica questa pagina
+                        </button>
+                    </form>
+                    <div class="admin-visual-danger">
+                        <button class="admin-button-secondary" id="adminVisualAnalyzeDelete" type="button">
+                            Controlla prima di eliminare
+                        </button>
+                        <div id="adminVisualDependencies" aria-live="polite"></div>
+                        <label for="adminVisualDeleteRedirect">Destinazione degli URL precedenti</label>
+                        <input id="adminVisualDeleteRedirect" placeholder="/index.html">
+                        <label for="adminVisualDeleteConfirmation">Conferma richiesta</label>
+                        <input id="adminVisualDeleteConfirmation" autocomplete="off">
+                        <button id="adminVisualDelete" type="button" disabled>
+                            Elimina definitivamente
+                        </button>
+                    </div>
+                </details>
 
                 <p class="admin-voci-mappa-aiuto" id="adminVisualInstructions">
                     Seleziona un blocco. Usa i pulsanti oppure Alt e i tasti
@@ -1192,7 +1253,7 @@
     <script src="./sessione.js?v=20261008-onboarding1"></script>
     <script src="./notifiche.js"></script>
     <script src="./vendor/leaflet-1.9.4.js"></script>
-    <script src="./admin-visual-builder.js?v=20261017-inspector1"></script>
+    <script src="./admin-visual-builder.js?v=20261018-pages1"></script>
     <script src="./admin.js?v=20261017-inspector1"></script>
 </body>
 </html>

@@ -73,8 +73,8 @@ export class VisualCanvasError extends Error {
 
 export async function readVisualBuilderPages(env) {
     const result = await env.DB.prepare(`
-        SELECT page.id AS page_id, page.slug, page.title,
-            tree.id AS tree_id, tree.status, tree.updated_at
+        SELECT page.id AS page_id, page.slug, page.title, page.description,
+            page.published_at, tree.id AS tree_id, tree.status, tree.updated_at
         FROM site_pages page
         INNER JOIN visual_page_trees mapping ON mapping.page_id = page.id
         INNER JOIN visual_trees tree ON tree.id = mapping.tree_id
@@ -438,7 +438,7 @@ export async function updateVisualBuilderTree(env, pageId, rawInput) {
 async function readVisualBuilderPage(env, pageId, knownPage = null) {
     const page = knownPage || await readPageRow(env, pageId);
     if (!page) return null;
-    const [result, propertyResult] = await Promise.all([
+    const [result, propertyResult, navigation] = await Promise.all([
         env.DB.prepare(`
             SELECT id, parent_id, position, block_type, label
             FROM visual_nodes WHERE tree_id = ?
@@ -455,7 +455,14 @@ async function readVisualBuilderPage(env, pageId, knownPage = null) {
             WHERE node.tree_id = ? AND property.domain <> 'technical'
             ORDER BY property.node_id, property.property_set,
                 property.property_name, property.breakpoint, property.item_position
-        `).bind(page.tree_id).all()
+        `).bind(page.tree_id).all(),
+        env.DB.prepare(`
+            SELECT id FROM navigation_items
+            WHERE href IN (?, ?, ?) AND status <> 'archived'
+            LIMIT 1
+        `).bind(
+            `./${page.slug}.html`, `/${page.slug}.html`, `${page.slug}.html`
+        ).first()
     ]);
     const propertiesByNode = new Map();
     for (const property of propertyResult.results || []) {
@@ -467,9 +474,14 @@ async function readVisualBuilderPage(env, pageId, knownPage = null) {
         id: page.page_id,
         slug: page.slug,
         title: page.title,
+        description: page.description,
+        canonicalPath: `/${page.slug}.html`,
+        builderManaged: page.page_id.startsWith("visual-page-"),
+        inNavigation: Boolean(navigation),
         treeId: page.tree_id,
         status: page.status,
         updatedAt: Number(page.updated_at),
+        publishedAt: page.published_at === null ? null : Number(page.published_at),
         nodes: (result.results || []).map((node) => ({
             ...apiNode(node),
             values: editableValues(node.block_type, propertiesByNode.get(node.id) || [])
@@ -514,8 +526,8 @@ function apiNode(node) {
 
 async function readPageRow(env, pageId) {
     return await env.DB.prepare(`
-        SELECT page.id AS page_id, page.slug, page.title,
-            tree.id AS tree_id, tree.status, tree.updated_at
+        SELECT page.id AS page_id, page.slug, page.title, page.description,
+            page.published_at, tree.id AS tree_id, tree.status, tree.updated_at
         FROM site_pages page
         INNER JOIN visual_page_trees mapping ON mapping.page_id = page.id
         INNER JOIN visual_trees tree ON tree.id = mapping.tree_id
