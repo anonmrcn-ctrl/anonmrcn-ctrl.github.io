@@ -152,6 +152,19 @@
     background: var(--soft);
 }
 
+.admin-visual-media-card__audio {
+    display: grid;
+    min-height: 6rem;
+    place-items: center;
+    padding: .75rem;
+    border: 1px dashed var(--line);
+    background: var(--soft);
+}
+
+.admin-visual-media-card__audio audio {
+    width: 100%;
+}
+
 .admin-visual-media-card p {
     margin: 0;
     overflow-wrap: anywhere;

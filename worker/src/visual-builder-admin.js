@@ -30,6 +30,7 @@ const TYPE_LABELS = Object.freeze({
     quote: "Citazione",
     image: "Immagine",
     gallery: "Galleria",
+    audio: "Audio",
     button: "Pulsante",
     "link-list": "Elenco di collegamenti",
     menu: "Menu",
@@ -729,7 +730,12 @@ function normalizePreviewPage(value, page) {
 }
 
 async function validateVisualMediaSelection(env, type, values) {
-    if (!['image', 'gallery'].includes(type)) return;
+    if (!['image', 'gallery', 'audio'].includes(type)) return;
+    if (type === 'audio') {
+        await validateVisualAsset(env, values.audioAssetId, 'audio', true);
+        if (values.coverAssetId) await validateVisualAsset(env, values.coverAssetId, 'image', false);
+        return;
+    }
     const raw = type === 'gallery' ? values.assetIds : values.assetId;
     const ids = String(raw || '').split(/\r?\n/u).map((id) => id.trim()).filter(Boolean);
     if (!ids.length) {
@@ -741,13 +747,7 @@ async function validateVisualMediaSelection(env, type, values) {
     }
     const rows = [];
     for (const id of ids) {
-        const asset = await env.DB.prepare(`
-            SELECT id, media_type, alt_text
-            FROM media_assets
-            WHERE id = ? AND state = 'current' AND variant_key = 'original'
-                AND owner_type IN ('wiki_image', 'map_entry')
-            LIMIT 1
-        `).bind(id).first();
+        const asset = await validateVisualAsset(env, id, 'image', true);
         if (!asset || !String(asset.media_type || '').startsWith('image/')) {
             throw new VisualCanvasError("Il media scelto non è un'immagine disponibile nella libreria.");
         }
@@ -758,6 +758,28 @@ async function validateVisualMediaSelection(env, type, values) {
             "Ogni immagine della galleria deve avere un testo alternativo nel catalogo."
         );
     }
+}
+
+async function validateVisualAsset(env, id, kind, required) {
+    if (!id && !required) return null;
+    const asset = id ? await env.DB.prepare(`
+        SELECT id, media_type, alt_text
+        FROM media_assets
+        WHERE id = ? AND state = 'current' AND variant_key = 'original'
+            AND (
+                owner_type IN ('wiki_image', 'map_entry')
+                OR (owner_type = 'memory' AND owner_id LIKE 'visual-%')
+            )
+        LIMIT 1
+    `).bind(id).first() : null;
+    if (!asset || !String(asset.media_type || '').startsWith(`${kind}/`)) {
+        throw new VisualCanvasError(
+            kind === 'audio'
+                ? "Scegli un file audio disponibile nella libreria."
+                : "Il media scelto non è un’immagine disponibile nella libreria."
+        );
+    }
+    return asset;
 }
 
 function normalizeInput(rawInput) {

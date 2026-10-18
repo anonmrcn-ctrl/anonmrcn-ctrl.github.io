@@ -3,7 +3,7 @@
   "title": "Anteprima, media, audio e video nel builder visuale",
   "objective": "Rendere fedele l'anteprima delle modifiche e permettere di scegliere, caricare e configurare immagini, gallerie, audio e video interamente dal CMS a blocchi.",
   "status": "in_progress",
-  "currentUnit": "14.4",
+  "currentUnit": "14.5",
   "allowedStatuses": [
     "pending",
     "in_progress",
@@ -88,11 +88,12 @@
     {
       "id": "14.4",
       "title": "Blocco audio accessibile e responsive",
-      "status": "pending",
+      "status": "complete",
       "dependsOn": ["14.3"],
       "deliverables": [
-        "Tipo di blocco audio registrato, renderer sicuro e sorgenti catalogate in R2.",
-        "Controlli no-code per copertina, titolo, descrizione, trascrizione, preload, loop e audio."
+        "Tipo di blocco audio registrato, renderer sicuro, migrazione D1 conservativa e sorgenti catalogate in R2.",
+        "Controlli no-code per scelta o upload, copertina, titolo, descrizione, trascrizione, preload e loop.",
+        "worker/tests/visual-audio.test.mjs prova migrazione, privacy, HTTP Range, accessibilità, assenza di autoplay e AudioObject."
       ],
       "acceptance": [
         "L'audio è aggiungibile e configurabile senza codice, assetId, chiavi R2 o URL arbitrari.",

@@ -17,7 +17,7 @@
   },
   "propertySets": {
     "content.copy": { "domain": "content", "properties": ["eyebrow", "title", "text", "caption", "items"] },
-    "content.media": { "domain": "content", "properties": ["assetId", "alt", "caption", "credit", "focalPoint"] },
+    "content.media": { "domain": "content", "properties": ["assetId", "audioAssetId", "coverAssetId", "alt", "caption", "credit", "focalPoint", "transcript", "preload", "loop"] },
     "presentation.box": { "domain": "presentation", "properties": ["surface", "padding", "margin", "border", "radius", "shadow"] },
     "presentation.layout": { "domain": "presentation", "properties": ["width", "alignment", "gap", "columns", "order"] },
     "presentation.typography": { "domain": "presentation", "properties": ["style", "size", "weight", "lineHeight", "color"] },
@@ -56,6 +56,7 @@
     { "id": "quote", "category": "content", "propertySets": ["content.copy", "presentation.box", "presentation.typography", "presentation.responsive"] },
     { "id": "image", "category": "content", "propertySets": ["content.media", "presentation.box", "presentation.layout", "presentation.responsive", "behavior.link", "technical.binding"] },
     { "id": "gallery", "category": "content", "propertySets": ["content.media", "presentation.layout", "presentation.responsive", "technical.binding"] },
+    { "id": "audio", "category": "content", "propertySets": ["content.copy", "content.media", "presentation.box", "presentation.layout", "presentation.responsive", "technical.binding"] },
     { "id": "button", "category": "content", "propertySets": ["content.copy", "presentation.box", "presentation.typography", "behavior.link"] },
     { "id": "link-list", "category": "navigation", "propertySets": ["content.copy", "presentation.layout", "behavior.link"] },
     { "id": "menu", "category": "navigation", "propertySets": ["content.copy", "presentation.layout", "presentation.responsive", "behavior.collection", "technical.binding"] },

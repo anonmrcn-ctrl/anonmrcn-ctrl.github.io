@@ -31,6 +31,7 @@ export const VISUAL_BLOCK_REGISTRY = Object.freeze({
     "quote": entry("content", ["content.copy", "presentation.box", "presentation.typography", "presentation.responsive"], "quote"),
     "image": entry("content", ["content.media", "presentation.box", "presentation.layout", "presentation.responsive", "behavior.link", "technical.binding"], "image"),
     "gallery": entry("content", ["content.media", "presentation.layout", "presentation.responsive", "technical.binding"], "gallery"),
+    "audio": entry("content", ["content.copy", "content.media", "presentation.box", "presentation.layout", "presentation.responsive", "technical.binding"], "audio"),
     "button": entry("content", ["content.copy", "presentation.box", "presentation.typography", "behavior.link"], "button"),
     "link-list": entry("navigation", ["content.copy", "presentation.layout", "behavior.link"], "link-list"),
     "menu": entry("navigation", ["content.copy", "presentation.layout", "presentation.responsive", "behavior.collection", "technical.binding"], "nav"),
@@ -115,6 +116,16 @@ export function renderVisualPage({
     const indexable = !PRIVATE_PAGE_SLUGS.has(page.slug);
     const path = page.slug === "index" ? "/" : `/${encodeURIComponent(page.slug)}.html`;
     const canonical = indexable ? new URL(path, publicOrigin).href : null;
+    const webPageData = indexable ? {
+        "@type": "WebPage",
+        name: String(page.title || ""),
+        description: String(page.description || ""),
+        url: canonical,
+        inLanguage: "it"
+    } : null;
+    const audioData = indexable
+        ? audioStructuredData(nodes, valuesByNode, assetsById, publicOrigin)
+        : [];
     return {
         registryVersion: VISUAL_BLOCK_REGISTRY_VERSION,
         behaviorVersion: VISUAL_BEHAVIOR_VERSION,
@@ -125,14 +136,11 @@ export function renderVisualPage({
             description: String(page.description || ""),
             canonical,
             robots: indexable ? "index,follow" : "noindex,nofollow",
-            structuredData: indexable ? {
-                "@context": "https://schema.org",
-                "@type": "WebPage",
-                name: String(page.title || ""),
-                description: String(page.description || ""),
-                url: canonical,
-                inLanguage: "it"
-            } : null
+            structuredData: indexable
+                ? audioData.length
+                    ? { "@context": "https://schema.org", "@graph": [webPageData, ...audioData] }
+                    : { "@context": "https://schema.org", ...webPageData }
+                : null
         }
     };
 }
@@ -275,6 +283,8 @@ function renderNode(
             return renderImage(node, values, assetsById, attributes);
         case "gallery":
             return renderGallery(values, assetsById, attributes, childHtml);
+        case "audio":
+            return renderAudio(values, assetsById, attributes);
         case "button":
             return renderButton(values, attributes, title || text);
         case "link-list": {
@@ -438,6 +448,53 @@ function renderGallery(values, assetsById, attributes, childHtml) {
         return [`<figure><img src="${escapeHtml(safeMediaUrl(asset.publicUrl))}" alt="${escapeHtml(alt)}"${asset.width ? ` width="${Number(asset.width)}"` : ""}${asset.height ? ` height="${Number(asset.height)}"` : ""} loading="lazy" decoding="async">${caption ? `<figcaption>${escapeHtml(caption)}</figcaption>` : ""}</figure>`];
     }).join("");
     return `<div${attributes} role="group" aria-label="Galleria">${images}${childHtml}</div>`;
+}
+
+function renderAudio(values, assetsById, attributes) {
+    const reference = first(values, "content.media/audioAssetId");
+    const asset = reference?.type === "asset" ? assetsById.get(reference.id) : null;
+    const title = first(values, "content.copy/title");
+    const description = first(values, "content.copy/text");
+    const transcript = first(values, "content.media/transcript");
+    const preload = ["none", "metadata"].includes(first(values, "content.media/preload"))
+        ? first(values, "content.media/preload")
+        : "metadata";
+    const loop = first(values, "content.media/loop") === "yes" ? " loop" : "";
+    if (!asset?.publicUrl || !String(asset.media_type || "").startsWith("audio/")) {
+        return `<figure${attributes} data-media-fallback="true"><figcaption>Audio non disponibile</figcaption></figure>`;
+    }
+    const coverReference = first(values, "content.media/coverAssetId");
+    const cover = coverReference?.type === "asset" ? assetsById.get(coverReference.id) : null;
+    const coverHtml = cover?.publicUrl && String(cover.media_type || "").startsWith("image/")
+        ? `<img src="${escapeHtml(safeMediaUrl(cover.publicUrl))}" alt=""${cover.width ? ` width="${Number(cover.width)}"` : ""}${cover.height ? ` height="${Number(cover.height)}"` : ""} loading="lazy" decoding="async">`
+        : "";
+    const transcriptHtml = transcript
+        ? `<details><summary>Trascrizione</summary><p>${escapeHtml(transcript)}</p></details>`
+        : "";
+    return `<figure${attributes}>${coverHtml}<figcaption>${title ? `<strong>${escapeHtml(title)}</strong>` : ""}${description ? `<p>${escapeHtml(description)}</p>` : ""}</figcaption><audio controls preload="${preload}"${loop} src="${escapeHtml(safeMediaUrl(asset.publicUrl))}">Il browser non supporta l’audio. <a href="${escapeHtml(safeMediaUrl(asset.publicUrl))}">Scarica il file audio</a>.</audio>${transcriptHtml}</figure>`;
+}
+
+function audioStructuredData(nodes, valuesByNode, assetsById, publicOrigin) {
+    return (nodes || []).flatMap((node) => {
+        if (node.block_type !== "audio") return [];
+        const values = valuesByNode.get(node.id) || new Map();
+        const reference = first(values, "content.media/audioAssetId");
+        const asset = reference?.type === "asset" ? assetsById.get(reference.id) : null;
+        const name = first(values, "content.copy/title");
+        const description = first(values, "content.copy/text");
+        const transcript = first(values, "content.media/transcript");
+        if (!asset?.publicUrl || !name || !description || !transcript ||
+            !String(asset.media_type || "").startsWith("audio/")) return [];
+        return [{
+            "@type": "AudioObject",
+            name,
+            description,
+            transcript,
+            contentUrl: new URL(safeMediaUrl(asset.publicUrl), publicOrigin).href,
+            encodingFormat: asset.media_type,
+            inLanguage: "it"
+        }];
+    });
 }
 
 function first(values, prefix) {
