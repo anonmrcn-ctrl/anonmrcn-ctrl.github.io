@@ -2,8 +2,8 @@
   "version": 1,
   "title": "Anteprima, media, audio e video nel builder visuale",
   "objective": "Rendere fedele l'anteprima delle modifiche e permettere di scegliere, caricare e configurare immagini, gallerie, audio e video interamente dal CMS a blocchi.",
-  "status": "planned",
-  "currentUnit": "14.1",
+  "status": "in_progress",
+  "currentUnit": "14.2",
   "allowedStatuses": [
     "pending",
     "in_progress",
@@ -40,11 +40,12 @@
     {
       "id": "14.1",
       "title": "Anteprima fedele delle modifiche correnti",
-      "status": "pending",
+      "status": "complete",
       "dependsOn": ["14.0"],
       "deliverables": [
-        "Test di regressione che riproducono l'anteprima non aggiornata.",
-        "Anteprima autenticata dello stato di lavoro con renderer condiviso e viste responsive."
+        "worker/tests/visual-publication.test.mjs prova rendering temporaneo e assenza di scritture o pubblicazione.",
+        "scripts/admin-ui.e2e.mjs prova modifiche non salvate e permanenza della resa server nelle viste responsive.",
+        "docs/cms/14-1-live-preview.md registra contratto, privacy e verifiche ripetibili."
       ],
       "acceptance": [
         "Struttura, proprietà e contenuti modificati appaiono nell'anteprima prima della pubblicazione.",

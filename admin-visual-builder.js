@@ -136,6 +136,8 @@
     let impactReadySectionId = "";
     let comparisonReadyThemeId = "";
     let publicationState = null;
+    let serverPreviewHtml = "";
+    let serverPreviewSignature = "";
     let guideIndex = 0;
 
     function clearGuideTarget() {
@@ -522,6 +524,8 @@
         undoStack = [];
         redoStack = [];
         publicationState = null;
+        serverPreviewHtml = "";
+        serverPreviewSignature = "";
         dirty = false;
         propertyDirty = new Set();
         renderLifecycle(page);
@@ -1164,10 +1168,17 @@
     }
 
     function renderPreview() {
-        preview.replaceChildren();
         preview.dataset.device = activeDevice;
         const root = nodes.find((node) => node.root);
-        if (root) preview.appendChild(previewNode(root));
+        const signature = workingPreviewSignature();
+        if (serverPreviewHtml && serverPreviewSignature === signature) {
+            preview.innerHTML = serverPreviewHtml;
+            preview.dataset.previewSource = "server";
+        } else {
+            preview.replaceChildren();
+            preview.dataset.previewSource = "local";
+            if (root) preview.appendChild(previewNode(root));
+        }
         const labels = {
             phone: "Anteprima smartphone, 360 px",
             tablet: "Anteprima tablet, 768 px",
@@ -1327,7 +1338,7 @@
         const page = selectedPage();
         const hasUnsavedChanges = dirty || propertyDirty.size > 0;
         preflightButton.disabled = !page || hasUnsavedChanges;
-        serverPreviewButton.disabled = !page || hasUnsavedChanges;
+        serverPreviewButton.disabled = !page;
         comparePageButton.disabled = !page || hasUnsavedChanges;
         publishPageButton.disabled = !page || hasUnsavedChanges ||
             !publicationState?.canPublish || !publicationState?.comparison?.changed;
@@ -1409,19 +1420,59 @@
 
     async function showServerPreview() {
         const page = selectedPage();
-        if (!page || dirty || propertyDirty.size) return;
-        status.textContent = "Preparazione dell'anteprima privata…";
+        if (!page) return;
+        const payload = workingPreviewPayload(page);
+        const signature = JSON.stringify(payload);
+        serverPreviewButton.disabled = true;
+        preview.setAttribute("aria-busy", "true");
+        status.textContent = "Preparazione dell'anteprima fedele e privata…";
         try {
             const data = await request(
-                `/api/admin/cms/visual-preview/${encodeURIComponent(page.id)}`
+                `/api/admin/cms/visual-preview/${encodeURIComponent(page.id)}`,
+                {
+                    method: "POST",
+                    body: signature
+                }
             );
-            preview.innerHTML = data.page.html;
+            serverPreviewHtml = data.page.html;
+            serverPreviewSignature = signature;
+            renderPreview();
             status.textContent = data.page.metadata.robots === "noindex,nofollow"
-                ? "Anteprima autenticata caricata; è esclusa dall'indicizzazione."
+                ? "Anteprima fedele caricata senza salvare né pubblicare; è esclusa dall'indicizzazione."
                 : "Anteprima caricata.";
         } catch (error) {
+            serverPreviewHtml = "";
+            serverPreviewSignature = "";
+            renderPreview();
             status.textContent = error.message || "Anteprima non disponibile.";
+        } finally {
+            preview.removeAttribute("aria-busy");
+            renderPublicationControls();
         }
+    }
+
+    function workingPreviewPayload(page) {
+        return {
+            expectedUpdatedAt: page.updatedAt,
+            page: {
+                title: lifecycleTitle.value || page.title,
+                description: lifecycleDescription.value
+            },
+            nodes: nodes.map((node) => ({
+                key: node.key,
+                parentKey: node.parentKey,
+                position: node.position,
+                type: node.type,
+                label: node.label,
+                copyOf: node.copyOf || null,
+                values: { ...(node.values || {}) }
+            }))
+        };
+    }
+
+    function workingPreviewSignature() {
+        const page = selectedPage();
+        return page ? JSON.stringify(workingPreviewPayload(page)) : "";
     }
 
     async function publishCurrentPage() {

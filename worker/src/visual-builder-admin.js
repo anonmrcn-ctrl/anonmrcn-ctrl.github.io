@@ -223,6 +223,163 @@ export async function updateVisualBuilderProperties(env, pageId, nodeId, rawInpu
     return { page: saved, unchanged: false };
 }
 
+export async function buildVisualBuilderPreview(env, pageId, rawInput) {
+    const page = await readPageRow(env, pageId);
+    if (!page) throw new VisualCanvasError("Pagina visuale non trovata.", 404);
+    const input = normalizeInput(rawInput);
+    if (input.expectedUpdatedAt !== Number(page.updated_at)) {
+        throw new VisualCanvasError(
+            "La pagina è stata modificata altrove. Ricaricala prima di aggiornare l'anteprima.",
+            409
+        );
+    }
+    const previewPage = normalizePreviewPage(rawInput?.page, page);
+    const [nodeResult, propertyResult] = await Promise.all([
+        env.DB.prepare(`
+            SELECT id, tree_id, parent_id, position, block_type, label
+            FROM visual_nodes WHERE tree_id = ?
+            ORDER BY ifnull(parent_id, ''), position, id
+        `).bind(page.tree_id).all(),
+        env.DB.prepare(`
+            SELECT property.node_id, property.domain, property.property_set,
+                property.property_name, property.breakpoint,
+                property.item_position, property.value_kind,
+                property.text_value, property.number_value,
+                property.boolean_value, property.asset_id,
+                property.page_reference_id, property.collection_key
+            FROM visual_node_properties property
+            INNER JOIN visual_nodes node ON node.id = property.node_id
+            WHERE node.tree_id = ?
+            ORDER BY property.node_id, property.property_set,
+                property.property_name, property.breakpoint,
+                property.item_position
+        `).bind(page.tree_id).all()
+    ]);
+    const currentNodes = nodeResult.results || [];
+    const currentById = new Map(currentNodes.map((node) => [node.id, node]));
+    const currentRoot = currentNodes.find((node) => !node.parent_id);
+    const rawByKey = new Map(rawInput.nodes.map((node) => [String(node?.key || ""), node]));
+    const desiredNodes = input.nodes.map((node) => ({
+        id: node.key,
+        tree_id: page.tree_id,
+        parent_id: node.parentKey,
+        position: node.position,
+        block_type: node.type,
+        label: node.label,
+        copyOf: node.copyOf
+    }));
+    const desiredRoot = desiredNodes.find((node) => !node.parent_id);
+    if (
+        !currentRoot || !desiredRoot || desiredRoot.id !== currentRoot.id ||
+        desiredRoot.block_type !== "page-root" || desiredRoot.position !== 1
+    ) {
+        throw new VisualCanvasError("La radice della pagina non può essere spostata o sostituita.");
+    }
+    for (const node of desiredNodes) {
+        const current = currentById.get(node.id);
+        if (!current && !NEW_KEY_PATTERN.test(node.id)) {
+            throw new VisualCanvasError("L'anteprima contiene un blocco sconosciuto.");
+        }
+        if (current && current.block_type !== node.block_type) {
+            throw new VisualCanvasError("Il tipo di un blocco esistente non può essere alterato.");
+        }
+        if (!current && node.block_type === "page-root") {
+            throw new VisualCanvasError("Non è possibile aggiungere una seconda radice.");
+        }
+        if (!current && node.copyOf) {
+            const source = currentById.get(node.copyOf);
+            if (!source || source.block_type !== node.block_type || !source.parent_id) {
+                throw new VisualCanvasError("Il blocco da duplicare non è valido.");
+            }
+        }
+    }
+    try {
+        validateVisualTreeStructure(desiredNodes);
+    } catch (error) {
+        throw new VisualCanvasError(error.message || "Struttura dei blocchi non valida.");
+    }
+
+    const baseProperties = propertyResult.results || [];
+    const propertiesByNode = new Map();
+    for (const property of baseProperties) {
+        const rows = propertiesByNode.get(property.node_id) || [];
+        rows.push(property);
+        propertiesByNode.set(property.node_id, rows);
+    }
+    const properties = [];
+    const normalizedByNode = new Map();
+    const now = Date.now();
+    for (const node of desiredNodes) {
+        const rawNode = rawByKey.get(node.id) || {};
+        let normalized;
+        try {
+            normalized = normalizeInspectorValues(node.block_type, rawNode.values || {});
+        } catch (error) {
+            throw new VisualCanvasError(
+                `${node.label}: ${error.message || "Proprietà visuali non valide."}`
+            );
+        }
+        normalizedByNode.set(node.id, normalized.values);
+        const replaced = new Set(normalized.schema.map((descriptor) =>
+            `${descriptor.propertySet}/${descriptor.propertyName}/${descriptor.breakpoint}`
+        ));
+        const sourceId = currentById.has(node.id) ? node.id : node.copyOf;
+        for (const property of propertiesByNode.get(sourceId) || []) {
+            const key = `${property.property_set}/${property.property_name}/${property.breakpoint || "all"}`;
+            if (!replaced.has(key)) properties.push({ ...property, node_id: node.id });
+        }
+        for (const row of inspectorRows(normalized, now)) {
+            properties.push({
+                node_id: node.id,
+                domain: row.domain,
+                property_set: row.propertySet,
+                property_name: row.propertyName,
+                breakpoint: row.breakpoint,
+                item_position: row.itemPosition,
+                value_kind: row.valueKind,
+                text_value: row.textValue,
+                number_value: null,
+                boolean_value: null,
+                asset_id: null,
+                page_reference_id: null,
+                collection_key: null
+            });
+        }
+    }
+    for (const node of desiredNodes) {
+        try {
+            validateBehaviorRelationships(
+                node.block_type,
+                node.id,
+                normalizedByNode.get(node.id),
+                desiredNodes,
+                properties
+            );
+        } catch (error) {
+            throw new VisualCanvasError(error.message || "Collegamento visuale non valido.");
+        }
+    }
+    return {
+        version: 1,
+        page: {
+            id: page.page_id,
+            slug: page.slug,
+            title: previewPage.title,
+            description: previewPage.description,
+            status: page.status,
+            updatedAt: Number(page.updated_at),
+            publishedAt: page.published_at === null ? null : Number(page.published_at)
+        },
+        tree: {
+            id: page.tree_id,
+            contractVersion: Number(page.contract_version || 2),
+            updatedAt: Number(page.updated_at)
+        },
+        nodes: desiredNodes.map(({ copyOf, ...node }) => node),
+        properties
+    };
+}
+
 export async function updateVisualBuilderTree(env, pageId, rawInput) {
     const page = await readPageRow(env, pageId);
     if (!page) throw new VisualCanvasError("Pagina visuale non trovata.", 404);
@@ -546,12 +703,25 @@ function apiNode(node) {
 async function readPageRow(env, pageId) {
     return await env.DB.prepare(`
         SELECT page.id AS page_id, page.slug, page.title, page.description,
-            page.published_at, tree.id AS tree_id, tree.status, tree.updated_at
+            page.published_at, tree.id AS tree_id, tree.status,
+            tree.contract_version, tree.updated_at
         FROM site_pages page
         INNER JOIN visual_page_trees mapping ON mapping.page_id = page.id
         INNER JOIN visual_trees tree ON tree.id = mapping.tree_id
         WHERE page.id = ? LIMIT 1
     `).bind(pageId).first();
+}
+
+function normalizePreviewPage(value, page) {
+    const title = String(value?.title ?? page.title ?? "").trim();
+    const description = String(value?.description ?? page.description ?? "").trim();
+    if (!title || title.length > 200) {
+        throw new VisualCanvasError("Il titolo dell'anteprima deve contenere da 1 a 200 caratteri.");
+    }
+    if (description.length > 500) {
+        throw new VisualCanvasError("La descrizione dell'anteprima non può superare 500 caratteri.");
+    }
+    return { title, description };
 }
 
 function normalizeInput(rawInput) {

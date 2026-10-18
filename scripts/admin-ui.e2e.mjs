@@ -127,10 +127,141 @@ async function auditViewport(name, viewport) {
     await context.close();
 }
 
+async function auditLivePreview() {
+    const context = await browser.newContext({
+        locale: "it-IT",
+        viewport: { width: 1440, height: 1000 }
+    });
+    const page = await context.newPage();
+    let previewPayload = null;
+    const visualPage = {
+        id: "page-test",
+        slug: "test",
+        title: "Pagina di prova",
+        description: "Descrizione di prova",
+        status: "draft",
+        updatedAt: 100,
+        publishedAt: null,
+        canonicalPath: "/test.html",
+        inNavigation: false,
+        nodes: [
+            {
+                key: "root-test",
+                parentKey: null,
+                position: 1,
+                type: "page-root",
+                label: "Pagina",
+                root: true,
+                values: {}
+            },
+            {
+                key: "heading-test",
+                parentKey: "root-test",
+                position: 1,
+                type: "heading",
+                label: "Titolo",
+                root: false,
+                values: { title: "Titolo salvato" }
+            }
+        ]
+    };
+
+    await page.route(/\/api\/admin\/auth\/status(?:\?.*)?$/u, (route) =>
+        route.fulfill({ contentType: "application/json", body: "{\"configured\":true}" })
+    );
+    await page.route(/\/api\/admin\/cms\/visual-pages$/u, (route) =>
+        route.fulfill({
+            contentType: "application/json",
+            body: JSON.stringify({
+                pages: [visualPage],
+                palette: [{ type: "heading", label: "Titolo", category: "content" }],
+                inspectorSchemas: {
+                    heading: [{
+                        key: "title",
+                        label: "Titolo",
+                        control: "text",
+                        propertyName: "text",
+                        maxLength: 200,
+                        required: true,
+                        defaultValue: ""
+                    }]
+                }
+            })
+        })
+    );
+    await page.route(/\/api\/admin\/cms\/visual-sections$/u, (route) =>
+        route.fulfill({ contentType: "application/json", body: "{\"sections\":[]}" })
+    );
+    await page.route(/\/api\/admin\/cms\/visual-themes$/u, (route) =>
+        route.fulfill({
+            contentType: "application/json",
+            body: "{\"themes\":[],\"tokenSchema\":[],\"activeThemeId\":\"theme-default\"}"
+        })
+    );
+    await page.route(/\/api\/admin\/cms\/visual-publication\/page-test$/u, (route) =>
+        route.fulfill({
+            contentType: "application/json",
+            body: JSON.stringify({
+                canPublish: false,
+                audit: { errors: [], warnings: [] },
+                comparison: { changed: false },
+                revisions: []
+            })
+        })
+    );
+    await page.route(/\/api\/admin\/cms\/visual-preview\/page-test$/u, async (route) => {
+        previewPayload = route.request().postDataJSON();
+        const title = previewPayload.nodes.find((node) => node.key === "heading-test")
+            .values.title;
+        await route.fulfill({
+            contentType: "application/json",
+            headers: {
+                "Cache-Control": "no-store",
+                "X-Robots-Tag": "noindex, nofollow"
+            },
+            body: JSON.stringify({
+                page: {
+                    html: `<main><h2 data-server-preview>${title}</h2></main>`,
+                    metadata: { robots: "noindex,nofollow" }
+                }
+            })
+        });
+    });
+
+    await page.goto(baseUrl, { waitUntil: "domcontentloaded" });
+    await page.evaluate(async () => {
+        sessionStorage.setItem("nnmrcn_admin_session", "sessione-test");
+        document.getElementById("adminPanel").hidden = false;
+        await window.NNMRCN_VISUAL_BUILDER.load();
+    });
+    await page.locator('[data-visual-select="heading-test"]').click();
+    await page.locator("#adminVisualField-title").fill("Titolo corrente non salvato");
+
+    const previewButton = page.locator("#adminVisualServerPreview");
+    assert.equal(await previewButton.isEnabled(), true);
+    await previewButton.click();
+    await page.locator("#adminVisualPreview[data-preview-source='server']").waitFor();
+    assert.equal(previewPayload.nodes.find((node) => node.key === "heading-test")
+        .values.title, "Titolo corrente non salvato");
+    assert.equal(
+        await page.locator("#adminVisualPreview [data-server-preview]").textContent(),
+        "Titolo corrente non salvato"
+    );
+    assert.match(await page.locator("#adminVisualStatus").textContent(), /senza salvare né pubblicare/u);
+
+    await page.locator('[data-visual-device="desktop"]').click();
+    assert.equal(
+        await page.locator("#adminVisualPreview").getAttribute("data-preview-source"),
+        "server"
+    );
+    await context.close();
+}
+
 try {
     await auditViewport("mobile", { width: 375, height: 812 });
     await auditViewport("desktop", { width: 1440, height: 1000 });
-    console.log("Audit pannello superato: mobile, desktop, guida, tastiera, etichette e feedback.");
+    await auditLivePreview();
+    console.log("Audit pannello superato: mobile, desktop, guida, tastiera, etichette, feedback e anteprima fedele.");
 } finally {
     await browser.close();
 }
