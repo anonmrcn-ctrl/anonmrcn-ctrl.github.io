@@ -416,6 +416,9 @@ function pageShell({
     body,
     stylesheet
 }) {
+    const stylesheetLink = stylesheet === "public-content.css?v=20261011-editorial1"
+        ? ""
+        : `    <link rel="stylesheet" href="/${stylesheet}">\n`;
     const imageDetails = [
         `<meta property="og:image:secure_url" content="${escapeHtml(image)}">`,
         imageType ? `<meta property="og:image:type" content="${escapeHtml(imageType)}">` : "",
@@ -447,14 +450,77 @@ function pageShell({
     <meta name="twitter:image" content="${escapeHtml(image)}">
     <meta name="twitter:image:alt" content="${escapeHtml(imageAlt)}">
     <link rel="icon" href="/favicon.ico?v=logo3" sizes="any">
-    <link rel="stylesheet" href="/style.css?v=20261009-admin-actions1">
-    <link rel="stylesheet" href="/${stylesheet}">
-    <link rel="stylesheet" href="/public-content.css?v=20261011-editorial1">
+    <link rel="stylesheet" href="/style.css?v=20261018-visual1">
+${stylesheetLink}    <link rel="stylesheet" href="/public-content.css?v=20261011-editorial1">
     <script type="application/ld+json">${safeJson(jsonLd)}</script>
 </head>
 ${body}
 </html>
 `;
+}
+
+const VISUAL_FONT = Object.freeze({
+    system: "system-ui, sans-serif",
+    serif: "Georgia, 'Times New Roman', serif",
+    sans: "Arial, Helvetica, sans-serif",
+    mono: "ui-monospace, monospace"
+});
+const VISUAL_SHADOW = Object.freeze({
+    none: "none",
+    soft: "0 .35rem 1rem rgba(0,0,0,.12)",
+    strong: "0 .55rem 1.5rem rgba(0,0,0,.24)"
+});
+
+function visualThemeStyle(theme) {
+    const tokens = new Map((theme?.tokens || []).map((token) => [
+        `${token.group}/${token.name}`,
+        token.value
+    ]));
+    const color = (key, fallback) => /^#[0-9a-f]{6}$/iu.test(String(tokens.get(key) || ""))
+        ? String(tokens.get(key))
+        : fallback;
+    const length = (key, fallback) => /^(?:0|0\.25rem|0\.5rem|0\.75rem|1rem|1\.5rem|2rem|3rem)$/u.test(String(tokens.get(key) || ""))
+        ? String(tokens.get(key))
+        : fallback;
+    const numeric = (key, fallback, minimum, maximum) => {
+        const value = Number(tokens.get(key));
+        return Number.isFinite(value) && value >= minimum && value <= maximum ? value : fallback;
+    };
+    const bodyFont = VISUAL_FONT[tokens.get("typography/body")] || VISUAL_FONT.system;
+    const headingFont = VISUAL_FONT[tokens.get("typography/heading")] || VISUAL_FONT.serif;
+    const shadow = VISUAL_SHADOW[tokens.get("shadow/elevation")] || VISUAL_SHADOW.soft;
+    return `<style id="visual-theme">:root{--visual-ink:${color("palette/ink", "#191919")};--visual-paper:${color("palette/paper", "#f4f1e8")};--visual-accent:${color("palette/accent", "#8b1f11")};--visual-muted:${color("palette/muted", "#5b5b5b")};--visual-panel:${color("surface/panel", "#e6e0d2")};--visual-body-font:${bodyFont};--visual-heading-font:${headingFont};--visual-scale:${numeric("scale/ratio", 1.2, 1, 1.5)};--visual-space:${length("spacing/base", "1rem")};--visual-radius:${length("border/radius", ".25rem")};--visual-shadow:${shadow};--visual-duration:${numeric("motion/duration", 160, 0, 400)}ms}</style>`;
+}
+
+export function renderVisualStaticPage(publication, options) {
+    const page = publication?.page || {};
+    const metadata = page.metadata || {};
+    if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/u.test(page.slug || "")) {
+        throw new Error(`Slug visuale non valido: ${page.slug || "?"}`);
+    }
+    if (!String(page.html || "").startsWith("<main") || /<script\b/iu.test(page.html || "")) {
+        throw new Error(`HTML visuale non valido per ${page.slug}`);
+    }
+    const pathName = `/${page.slug}.html`;
+    const canonical = `${options.siteOrigin}${pathName}`;
+    if (metadata.canonical !== canonical || metadata.robots !== "index,follow") {
+        throw new Error(`Metadati visuali non coerenti per ${page.slug}`);
+    }
+    const shell = pageShell({
+        title: metadata.title,
+        description: metadata.description,
+        canonical,
+        image: options.defaultImage,
+        type: "website",
+        stylesheet: "public-content.css?v=20261011-editorial1",
+        jsonLd: metadata.structuredData,
+        body: `<body class="pagina-contenuto-statico pagina-visuale-generata">
+    <nav class="contenuto-statico-breadcrumb" aria-label="Percorso"><a href="/">anonMrcn</a><span aria-hidden="true">/</span><span aria-current="page">${escapeHtml(metadata.title)}</span></nav>
+    ${page.html}
+    <nav class="contenuto-statico-azioni" aria-label="Continua la navigazione"><a href="/">Torna alla poesia</a><a href="/spazio-pubblico.html">Spazio pubblico</a></nav>
+</body>`
+    });
+    return shell.replace("</head>", `    ${visualThemeStyle(page.theme)}\n</head>`);
 }
 
 export function renderWikiPage(entry, wikis, options) {
@@ -693,12 +759,30 @@ export async function generatePublicPages({ root, apiBase = DEFAULT_API_BASE }) 
         readFile(path.join(root, "editorial-program.json"), "utf8").then(JSON.parse)
     ]);
     const normalizedApiBase = String(apiBase).replace(/\/+$/u, "");
-    const [wikiList, mapList] = await Promise.all([
+    const previousManifest = await readFile(path.join(root, "public-content-manifest.json"), "utf8")
+        .then(JSON.parse)
+        .catch(() => ({ visual: [] }));
+    const [wikiList, mapList, visualList] = await Promise.all([
         fetchJson(normalizedApiBase, "/api/public/wiki"),
-        fetchJson(normalizedApiBase, "/api/public/map-entries")
+        fetchJson(normalizedApiBase, "/api/public/map-entries"),
+        fetchJson(normalizedApiBase, "/api/public/visual-pages")
     ]);
     const summaries = Array.isArray(wikiList.entries) ? wikiList.entries : [];
     const places = Array.isArray(mapList.entries) ? mapList.entries : [];
+    const protectedFiles = new Set([
+        ...config.indexablePages.map((page) => page.file),
+        ...config.noindexPages
+    ]);
+    const visualSummaries = (Array.isArray(visualList.pages) ? visualList.pages : [])
+        .filter((page) => page.generated && page.indexable)
+        .filter((page) => !protectedFiles.has(`${page.slug}.html`));
+    const visualPages = await Promise.all(visualSummaries.map(async (summary) => {
+        const data = await fetchJson(
+            normalizedApiBase,
+            `/api/public/visual-pages/${encodeURIComponent(summary.slug)}`
+        );
+        return data;
+    }));
     const wikis = await Promise.all(summaries.map(async (summary) => {
         if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/u.test(summary.slug)) {
             throw new Error(`Slug pubblico non valido: ${summary.slug}`);
@@ -750,6 +834,33 @@ export async function generatePublicPages({ root, apiBase = DEFAULT_API_BASE }) 
             )
         };
     }).sort((first, second) => first.path.localeCompare(second.path, "it"));
+    const visualOutputs = visualPages.map((publication) => {
+        const page = publication.page;
+        const pathName = `/${page.slug}.html`;
+        return {
+            file: `${page.slug}.html`,
+            path: pathName,
+            html: renderVisualStaticPage(publication, options),
+            manifest: {
+                id: page.id,
+                file: `${page.slug}.html`,
+                path: pathName,
+                title: page.metadata.title,
+                description: page.metadata.description,
+                revisionNumber: Number(page.revisionNumber),
+                updatedAt: Number(page.updatedAt) || 0
+            }
+        };
+    }).sort((first, second) => first.path.localeCompare(second.path, "it"));
+
+    const currentVisualFiles = new Set(visualOutputs.map((output) => output.file));
+    const obsoleteVisualFiles = (previousManifest.visual || []).flatMap((entry) => {
+        const file = String(entry?.file || "");
+        return /^[a-z0-9]+(?:-[a-z0-9]+)*\.html$/u.test(file) &&
+            !protectedFiles.has(file) && !currentVisualFiles.has(file)
+            ? [unlink(path.join(root, file)).catch(() => {})]
+            : [];
+    });
 
     await Promise.all([
         clearGeneratedHtml(wikiDirectory),
@@ -757,6 +868,7 @@ export async function generatePublicPages({ root, apiBase = DEFAULT_API_BASE }) 
     ]);
     await Promise.all([
         updateWikiCollectionFallback(root, wikis),
+        ...obsoleteVisualFiles,
         ...wikiOutputs.map((output) => writeFile(
             path.join(root, output.file),
             output.html,
@@ -766,16 +878,22 @@ export async function generatePublicPages({ root, apiBase = DEFAULT_API_BASE }) 
             path.join(root, output.file),
             output.html,
             "utf8"
+        )),
+        ...visualOutputs.map((output) => writeFile(
+            path.join(root, output.file),
+            output.html,
+            "utf8"
         ))
     ]);
 
     const manifest = {
-        version: 1,
+        version: 2,
         source: "D1 public API",
         wiki: wikiOutputs.map((output) => output.manifest),
-        places: placeOutputs.map((output) => output.manifest)
+        places: placeOutputs.map((output) => output.manifest),
+        visual: visualOutputs.map((output) => output.manifest)
     };
-    const generated = [...manifest.wiki, ...manifest.places];
+    const generated = [...manifest.wiki, ...manifest.places, ...manifest.visual];
     await Promise.all([
         writeFile(
             path.join(root, config.generatedManifest),
@@ -801,7 +919,7 @@ if (import.meta.url === invokedPath) {
         .then((manifest) => {
             console.log(
                 `Pagine pubbliche generate: ${manifest.wiki.length} Voci e ` +
-                `${manifest.places.length} luoghi.`
+                `${manifest.places.length} luoghi, ${manifest.visual.length} pagine visuali.`
             );
         })
         .catch((error) => {

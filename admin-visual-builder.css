@@ -282,6 +282,35 @@
 #adminVisualPublicationResult > :first-child { margin-top: 0; }
 #adminVisualPublicationResult > :last-child { margin-bottom: 0; }
 
+.admin-visual-guide {
+    margin-block: 1rem;
+    padding: 1rem;
+    border: 1px solid color-mix(in srgb, var(--ink) 28%, transparent);
+    border-radius: .75rem;
+    background: color-mix(in srgb, var(--paper) 90%, var(--brand-yellow));
+}
+
+.admin-visual-guide > :first-child,
+.admin-visual-guide-panel > :first-child { margin-top: 0; }
+
+.admin-visual-guide-panel {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid color-mix(in srgb, var(--ink) 22%, transparent);
+}
+
+.admin-visual-guide-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .65rem;
+}
+
+.is-visual-guide-target {
+    outline: .25rem solid var(--brand-yellow);
+    outline-offset: .3rem;
+    scroll-margin-block: 7rem;
+}
+
 .visual-block[data-visual-align="center"] { text-align: center; }
 .visual-block[data-visual-align="right"] { text-align: right; }
 .visual-block[data-visual-width="compact"] { width: min(100%, 36rem); margin-inline: auto; }

@@ -170,7 +170,7 @@ test("ogni pagina conserva un blocco statico per ciascun contenuto D1", async ()
         );
         assert.match(
             html,
-            /<script(?: defer)? src="\.\/api\.js"><\/script>[\s\S]*?<script(?: defer)? src="\.\/page-content\.js\?v=20261008-pages1"><\/script>/u,
+            /<script(?: defer)? src="\.\/api\.js"><\/script>[\s\S]*?<script(?: defer)? src="\.\/page-content\.js\?v=20261018-visual1"><\/script>/u,
             `${page.slug}.html deve caricare il contenuto dopo il client API`
         );
     }
@@ -213,19 +213,31 @@ async function executePageLoader(request) {
     return { document, event: await ready, target };
 }
 
-test("il client applica D1 senza sostituire gli elementi interattivi", async () => {
+test("il client applica la pubblicazione visuale senza sostituire gli elementi interattivi", async () => {
     const result = await executePageLoader(async () => ({
         page: {
-            blocks: [{
+            compatibilityBlocks: [{
                 id: "progetto-title",
-                content: { text: "Titolo da D1" }
-            }]
+                text: "Titolo visuale"
+            }],
+            html: ""
         }
     }));
 
-    assert.equal(result.target.textContent, "Titolo da D1");
-    assert.equal(result.document.documentElement.dataset.cmsPageSource, "d1");
+    assert.equal(result.target.textContent, "Titolo visuale");
+    assert.equal(result.document.documentElement.dataset.cmsPageSource, "visual");
     assert.equal(result.event.detail.slug, "progetto");
+    assert.equal(result.event.detail.source, "visual");
+});
+
+test("il client ripiega sull'API precedente se la pubblicazione visuale non è disponibile", async () => {
+    const result = await executePageLoader(async (path) => {
+        if (path.includes("/visual-pages/")) throw new Error("Visuale non disponibile");
+        return { page: { blocks: [{ id: "progetto-title", content: { text: "Titolo D1" } }] } };
+    });
+
+    assert.equal(result.target.textContent, "Titolo D1");
+    assert.equal(result.document.documentElement.dataset.cmsPageSource, "d1");
     assert.equal(result.event.detail.source, "d1");
 });
 

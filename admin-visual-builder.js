@@ -63,6 +63,47 @@
     const publicationResult = document.getElementById("adminVisualPublicationResult");
     const revisionSelect = document.getElementById("adminVisualRevisionSelect");
     const restoreRevisionButton = document.getElementById("adminVisualRestoreRevision");
+    const guideStart = document.getElementById("adminVisualGuideStart");
+    const guidePanel = document.getElementById("adminVisualGuidePanel");
+    const guideProgress = document.getElementById("adminVisualGuideProgress");
+    const guideStepTitle = document.getElementById("adminVisualGuideStepTitle");
+    const guideStepText = document.getElementById("adminVisualGuideStepText");
+    const guidePrevious = document.getElementById("adminVisualGuidePrevious");
+    const guideNext = document.getElementById("adminVisualGuideNext");
+    const guideClose = document.getElementById("adminVisualGuideClose");
+
+    const GUIDE_STEPS = Object.freeze([
+        Object.freeze({
+            target: ".admin-visual-toolbar",
+            title: "Scegli la pagina",
+            text: "Seleziona una pagina esistente, oppure apri «Crea o duplica una pagina» per partire da zero o da un modello."
+        }),
+        Object.freeze({
+            target: "#adminVisualCanvas",
+            title: "Componi con i blocchi",
+            text: "Aggiungi un blocco, selezionalo e usa i pulsanti, il tocco o la tastiera per spostarlo, annidarlo o duplicarlo."
+        }),
+        Object.freeze({
+            target: "#adminVisualInspectorForm",
+            title: "Personalizza senza codice",
+            text: "Cambia contenuto, grafica responsive e comportamenti usando soltanto i campi consentiti, poi salva le proprietà."
+        }),
+        Object.freeze({
+            target: ".admin-visual-preview",
+            title: "Controlla ogni schermo",
+            text: "Passa tra smartphone, tablet e desktop. Gli avvisi indicano ciò che va corretto prima di pubblicare."
+        }),
+        Object.freeze({
+            target: ".admin-visual-publication",
+            title: "Verifica e pubblica",
+            text: "Esegui i controlli, apri l'anteprima autenticata e confronta la bozza con il sito pubblico prima della pubblicazione."
+        }),
+        Object.freeze({
+            target: ".admin-visual-revision-controls",
+            title: "Recupera senza perdere la storia",
+            text: "Se serve, scegli una versione precedente e ripristinala come nuova bozza. La versione pubblica cambia solo dopo un'altra pubblicazione."
+        })
+    ]);
 
     const CATEGORY_CHILDREN = Object.freeze({
         root: ["structure", "content", "navigation", "project", "global", "functional", "personal", "legal"],
@@ -95,6 +136,39 @@
     let impactReadySectionId = "";
     let comparisonReadyThemeId = "";
     let publicationState = null;
+    let guideIndex = 0;
+
+    function clearGuideTarget() {
+        document.querySelectorAll(".is-visual-guide-target").forEach((element) => {
+            element.classList.remove("is-visual-guide-target");
+        });
+    }
+
+    function showGuideStep(index) {
+        guideIndex = Math.max(0, Math.min(GUIDE_STEPS.length - 1, index));
+        const step = GUIDE_STEPS[guideIndex];
+        clearGuideTarget();
+        guidePanel.hidden = false;
+        guideProgress.textContent = `Passaggio ${guideIndex + 1} di ${GUIDE_STEPS.length}`;
+        guideStepTitle.textContent = step.title;
+        guideStepText.textContent = step.text;
+        guidePrevious.disabled = guideIndex === 0;
+        guideNext.textContent = guideIndex === GUIDE_STEPS.length - 1 ? "Concludi" : "Avanti";
+        const target = document.querySelector(step.target);
+        const details = target?.closest("details");
+        if (details) details.open = true;
+        target?.classList.add("is-visual-guide-target");
+        target?.scrollIntoView({ behavior: "smooth", block: "center" });
+        guideStepTitle.setAttribute("tabindex", "-1");
+        guideStepTitle.focus({ preventScroll: true });
+    }
+
+    function closeGuide(completed = false) {
+        clearGuideTarget();
+        guidePanel.hidden = true;
+        if (completed) localStorage.setItem("nnmrcn_visual_guide_complete", "1");
+        guideStart.focus();
+    }
 
     async function request(path, options = {}) {
         const session = sessionStorage.getItem(SESSION_KEY) || "";
@@ -1436,6 +1510,13 @@
     themeCompare.addEventListener("click", compareTheme);
     themePublish.addEventListener("click", publishTheme);
     addButton.addEventListener("click", addBlock);
+    guideStart.addEventListener("click", () => showGuideStep(0));
+    guidePrevious.addEventListener("click", () => showGuideStep(guideIndex - 1));
+    guideNext.addEventListener("click", () => {
+        if (guideIndex === GUIDE_STEPS.length - 1) closeGuide(true);
+        else showGuideStep(guideIndex + 1);
+    });
+    guideClose.addEventListener("click", () => closeGuide(false));
     undoButton.addEventListener("click", () => {
         const previous = undoStack.pop();
         if (!previous) return;

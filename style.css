@@ -4930,3 +4930,92 @@ html.poesia-mappa-mini .percorso-narrativo-scheda > p:not(.percorso-narrativo-ve
         font-size: 0.68rem;
     }
 }
+
+/* Contenuti visuali pubblicati dal CMS: solo token e attributi prevalidati. */
+.cms-visual-additions,
+.pagina-visuale-generata .visual-block--page-root {
+    box-sizing: border-box;
+    width: min(100% - 2rem, 76rem);
+    margin: 2rem auto;
+    color: var(--visual-ink, var(--ink));
+    font-family: var(--visual-body-font, inherit);
+}
+
+.pagina-visuale-generata {
+    background: var(--visual-paper, var(--paper));
+    color: var(--visual-ink, var(--ink));
+}
+
+.pagina-visuale-generata h1,
+.pagina-visuale-generata h2,
+.pagina-visuale-generata h3,
+.cms-visual-additions h2,
+.cms-visual-additions h3 {
+    font-family: var(--visual-heading-font, inherit);
+}
+
+.visual-block--section,
+.visual-block--container,
+.visual-block--aside,
+.visual-block--article {
+    padding: var(--visual-space, 1rem);
+    border-radius: var(--visual-radius, .25rem);
+}
+
+.visual-block[data-visual-align="center"] { text-align: center; }
+.visual-block[data-visual-align="right"] { text-align: right; }
+.visual-block[data-visual-width="compact"] { width: min(100%, 36rem); margin-inline: auto; }
+.visual-block[data-visual-width="content"] { width: min(100%, 56rem); margin-inline: auto; }
+.visual-block[data-visual-width="wide"] { width: min(100%, 76rem); margin-inline: auto; }
+.visual-block[data-visual-width="full"] { width: 100%; }
+.visual-block[data-visual-space-top="space-0"] { margin-top: 0; }
+.visual-block[data-visual-space-top="space-1"] { margin-top: .25rem; }
+.visual-block[data-visual-space-top="space-2"] { margin-top: .5rem; }
+.visual-block[data-visual-space-top="space-3"] { margin-top: 1rem; }
+.visual-block[data-visual-space-top="space-4"] { margin-top: 1.5rem; }
+.visual-block[data-visual-space-top="space-5"] { margin-top: 2rem; }
+.visual-block[data-visual-space-top="space-6"] { margin-top: 3rem; }
+.visual-block[data-visual-space-bottom="space-0"] { margin-bottom: 0; }
+.visual-block[data-visual-space-bottom="space-1"] { margin-bottom: .25rem; }
+.visual-block[data-visual-space-bottom="space-2"] { margin-bottom: .5rem; }
+.visual-block[data-visual-space-bottom="space-3"] { margin-bottom: 1rem; }
+.visual-block[data-visual-space-bottom="space-4"] { margin-bottom: 1.5rem; }
+.visual-block[data-visual-space-bottom="space-5"] { margin-bottom: 2rem; }
+.visual-block[data-visual-space-bottom="space-6"] { margin-bottom: 3rem; }
+.visual-block[data-visual-font="serif"] { font-family: Georgia, "Times New Roman", serif; }
+.visual-block[data-visual-font="sans"] { font-family: Arial, Helvetica, sans-serif; }
+.visual-block[data-visual-font="display"] { font-family: Impact, Haettenschweiler, sans-serif; }
+.visual-block[data-visual-size="small"] { font-size: .875rem; }
+.visual-block[data-visual-size="normal"] { font-size: 1rem; }
+.visual-block[data-visual-size="large"] { font-size: 1.25rem; }
+.visual-block[data-visual-size="xlarge"] { font-size: 1.75rem; }
+.visual-block[data-visual-color="ink"] { color: #191919; }
+.visual-block[data-visual-color="muted"] { color: #5b5b5b; }
+.visual-block[data-visual-color="paper"] { color: #f4f1e8; }
+.visual-block[data-visual-color="soft"] { color: #e6e0d2; }
+.visual-block[data-visual-color="accent"] { color: #8b1f11; }
+.visual-block[data-visual-color="dark"] { color: #202733; }
+.visual-block[data-visual-background="ink"] { background: #191919; }
+.visual-block[data-visual-background="muted"] { background: #5b5b5b; }
+.visual-block[data-visual-background="paper"] { background: #f4f1e8; }
+.visual-block[data-visual-background="soft"] { background: #e6e0d2; }
+.visual-block[data-visual-background="accent"] { background: #8b1f11; }
+.visual-block[data-visual-background="dark"] { background: #202733; }
+.visual-block[data-visual-border="none"] { border: 0; }
+.visual-block[data-visual-border="thin"] { border: 1px solid currentColor; }
+.visual-block[data-visual-border="strong"] { border: 3px solid currentColor; }
+.visual-block[data-visual-radius="none"] { border-radius: 0; }
+.visual-block[data-visual-radius="small"] { border-radius: .35rem; }
+.visual-block[data-visual-radius="large"] { border-radius: 1rem; }
+
+@media (max-width: 560px) {
+    .visual-block[data-visual-phone="hidden"] { display: none; }
+}
+
+@media (min-width: 561px) and (max-width: 960px) {
+    .visual-block[data-visual-tablet="hidden"] { display: none; }
+}
+
+@media (min-width: 961px) {
+    .visual-block[data-visual-desktop="hidden"] { display: none; }
+}

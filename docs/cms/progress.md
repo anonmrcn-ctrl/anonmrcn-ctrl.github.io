@@ -9,8 +9,8 @@ misurazioni e le correzioni trasversali che non modificano dati possono
 affiancare il primo passaggio tecnico incompleto, ma non sostituirlo.
 
 **Stato complessivo:** i punti 1–12 sono stati completati il 12 ottobre 2026.
-Il 17 ottobre 2026 è stata aperta l'estensione 13 per l'autonomia visuale
-no-code; le unità 13.1–13.11 sono complete e la prima unità da eseguire è la 13.12.
+L'estensione 13 per l'autonomia visuale no-code è completa dal 18 ottobre 2026:
+tutte le unità 13.0–13.12 sono chiuse e non rimangono unità di sviluppo aperte.
 L'esportazione dei primi dati
 Search Console dal 9 novembre e i rapporti trimestrali successivi appartengono
 alla manutenzione ordinaria e non riaprono le unità concluse.
@@ -31,7 +31,7 @@ alla manutenzione ordinaria e non riaprono le unità concluse.
 | 10 | Programma editoriale e monitoraggio organico | Completo | Programma, collegamenti contestuali, proprietà Search Console, sitemap, finestra iniziale e validatore dei rapporti aggregati sono completi; PR #28 e i run SEO `38272655867`, Pages `38272655643` e prestazioni `38272655858` sono riusciti. Il primo export reale è manutenzione operativa programmata dal 9 novembre 2026 |
 | 11 | Amministrazione più user friendly | Completo | Navigazione per attività, feedback comprensibili, protezione delle modifiche e audit Chrome a 375/1440 px sono documentati in `11-admin-usability.md`; i run SEO `38154750211` e prestazioni/UX `38154750212` sono riusciti |
 | 12 | Rafforzamento della privacy | Completo | Inventario, retention, telemetria opt-in, librerie locali, informativa v2, esportazione e cancellazione self-service sono verificati localmente, in CI e sui servizi pubblicati; PR #26 e prove ripetibili sono registrate nell'unità 12.4 |
-| 13 | Autonomia visuale no-code | In corso | Le unità 13.1–13.11 forniscono inventario, schema e renderer sicuri, componenti specializzati, canvas, ispettore responsive, gestione pagine, libreria, studio grafico, comportamenti dichiarativi e pubblicazione atomica. Bozza e snapshot pubblico sono separati; preflight SEO/accessibilità/privacy/link/media/prestazioni, anteprima autenticata `noindex`, confronto, undo/redo e recupero append-only impediscono che un errore modifichi il sito pubblico. Le prove sono nei documenti `13-1-*`–`13-11-*` e la prima unità eseguibile è 13.12 |
+| 13 | Autonomia visuale no-code | Completo | Le unità 13.0–13.12 forniscono builder a blocchi, ispettore responsive, gestione completa delle pagine, libreria, studio grafico, comportamenti dichiarativi, pubblicazione atomica, migrazione visual-first con ripiego statico e generazione automatica di HTML/canonical/sitemap. Tour guidato, manuale e diagnostica completano il flusso senza codice. `13-12-final-migration-independence-audit.md` registra 184 test, build Worker e verifiche smartphone/desktop eseguite dalla CI |
 
 ## Traguardi SEO trasversali
 
@@ -91,7 +91,9 @@ Da eseguire dalla radice del repository:
 node scripts/check-content-boundary.mjs
 node scripts/check-seo.mjs
 node scripts/check-no-code-roadmap.mjs
+node scripts/check-no-code-independence.mjs
 node scripts/check-visual-inventory.mjs
+node --test scripts/*.test.mjs
 node --test scripts/visual-inventory.test.mjs
 node --test worker/tests/*.test.mjs
 ```

@@ -78,4 +78,18 @@ test("l’audit browser copre smartphone, desktop, tastiera e moduli", async () 
     assert.match(e2e, /pulsanti inferiori a 44px/u);
     assert.match(e2e, /data-state='busy'/u);
     assert.match(e2e, /data-state='success'/u);
+    assert.match(e2e, /Passaggio 1 di 6/u);
+    assert.match(e2e, /nnmrcn_visual_guide_complete/u);
+});
+
+test("il percorso guidato visuale è progressivo e non salva contenuti", async () => {
+    const visualScript = await readFile(new URL("../admin-visual-builder.js", import.meta.url), "utf8");
+    assert.match(adminHtml, /id="adminVisualGuideStart"/u);
+    assert.match(adminHtml, /id="adminVisualGuidePanel"[^>]+hidden/u);
+    assert.match(visualScript, /GUIDE_STEPS/u);
+    assert.match(visualScript, /Passaggio \$\{guideIndex \+ 1\} di \$\{GUIDE_STEPS\.length\}/u);
+    assert.match(visualScript, /localStorage\.setItem\("nnmrcn_visual_guide_complete", "1"\)/u);
+    const closeGuide = visualScript.match(/function closeGuide\(completed = false\) \{[\s\S]*?\n    \}/u)?.[0] || "";
+    assert.ok(closeGuide);
+    assert.doesNotMatch(closeGuide, /request\(/u);
 });

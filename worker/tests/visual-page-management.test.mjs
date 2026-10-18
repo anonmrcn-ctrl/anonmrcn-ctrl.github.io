@@ -344,5 +344,5 @@ test("la gestione pagine è disponibile senza codice e con conferme esplicite", 
     assert.match(source, /window\.confirm/u);
     assert.match(css, /admin-visual-page-management/u);
     assert.match(css, /admin-visual-danger/u);
-    assert.match(html, /admin-visual-builder\.js\?v=20261018-publish1/u);
+    assert.match(html, /admin-visual-builder\.js\?v=20261018-independence1/u);
 });

@@ -47,6 +47,39 @@ export async function runCmsDiagnostics(env, fetchImpl = fetch, now = Date.now()
             : `${mediaRows.length} oggetti D1 presenti in R2 con la dimensione attesa.`
     );
 
+    const visualResult = await env.DB.prepare(`
+        SELECT page.id, page.slug, page.status, mapping.tree_id,
+            publication.revision_number, publication.snapshot_json
+        FROM site_pages page
+        LEFT JOIN visual_page_trees mapping ON mapping.page_id = page.id
+        LEFT JOIN visual_tree_publications publication
+            ON publication.tree_id = mapping.tree_id
+        ORDER BY page.id
+    `).all();
+    const visualRows = visualResult.results || [];
+    const missingTrees = visualRows.filter((row) => !row.tree_id);
+    const missingPublications = visualRows.filter((row) =>
+        row.status === "published" && !row.snapshot_json
+    );
+    const invalidSnapshots = visualRows.filter((row) => {
+        if (!row.snapshot_json) return false;
+        try {
+            const snapshot = JSON.parse(row.snapshot_json);
+            return snapshot?.page?.id !== row.id || !Array.isArray(snapshot?.nodes) ||
+                !snapshot.nodes.length || !Array.isArray(snapshot?.properties);
+        } catch (_) {
+            return true;
+        }
+    });
+    add(
+        "visual-builder",
+        "Copertura del builder visuale",
+        missingTrees.length || missingPublications.length || invalidSnapshots.length ? "fail" : "pass",
+        missingTrees.length || missingPublications.length || invalidSnapshots.length
+            ? `${missingTrees.length} pagine senza albero, ${missingPublications.length} pubblicazioni mancanti e ${invalidSnapshots.length} snapshot non validi.`
+            : `${visualRows.length} pagine gestite a blocchi; ogni pagina pubblicata ha uno snapshot autonomo.`
+    );
+
     const [healthResponse, manifestResponse, sitemapResponse, robotsResponse] =
         await Promise.all([
             fetchImpl(`${WORKER_ORIGIN}/api/health`, { headers: { Accept: "application/json" } }),
@@ -116,8 +149,30 @@ export async function runCmsDiagnostics(env, fetchImpl = fetch, now = Date.now()
             : `${manifest.wiki.length} Voci e ${manifest.places.length} luoghi allineati a D1.`
     );
 
+    const generatedVisual = visualRows.filter((row) =>
+        row.status === "published" && String(row.id).startsWith("visual-page-")
+    );
+    const manifestVisual = Array.isArray(manifest.visual) ? manifest.visual : [];
+    const pendingVisual = generatedVisual.filter((row) => {
+        const item = manifestVisual.find((entry) => entry.id === row.id);
+        return !item || item.path !== `/${row.slug}.html` ||
+            Number(item.revisionNumber) !== Number(row.revision_number);
+    });
+    const staleVisual = manifestVisual.filter((entry) =>
+        !generatedVisual.some((row) => row.id === entry.id)
+    );
+    add(
+        "visual-static-sync",
+        "Pagine visuali autonome",
+        pendingVisual.length || staleVisual.length ? "warn" : "pass",
+        pendingVisual.length || staleVisual.length
+            ? `${pendingVisual.length} pagine attendono la generazione statica e ${staleVisual.length} file risultano da rimuovere.`
+            : `${manifestVisual.length} pagine create dal builder hanno file HTML, canonical e revisione allineati.`
+    );
+
     const sitemapUrls = parseSitemapUrls(sitemap);
     const expectedGenerated = [...manifest.wiki, ...manifest.places]
+        .concat(manifestVisual)
         .map((entry) => `${SITE_ORIGIN}${entry.path}`);
     const sitemapInvalid = !sitemapResponse.ok || sitemapUrls.length === 0 ||
         expectedGenerated.some((url) => !sitemapUrls.includes(url)) ||
@@ -245,7 +300,8 @@ function diagnosticReport(checks, now, manifestResponse, manifest) {
     const warnings = checks.filter((check) => check.status === "warn").length;
     const timestamps = [
         ...(manifest?.wiki || []),
-        ...(manifest?.places || [])
+        ...(manifest?.places || []),
+        ...(manifest?.visual || [])
     ].map((entry) => Number(entry.updatedAt) || 0);
     return {
         ok: failures === 0,
