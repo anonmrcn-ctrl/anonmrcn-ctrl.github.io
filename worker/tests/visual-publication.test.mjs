@@ -252,6 +252,68 @@ test("ripristina una revisione come nuova bozza senza riscrivere la cronologia o
     assert.equal(restored.data.state.comparison.changed, true);
 });
 
+test("mostra le modifiche correnti in anteprima senza salvarle o pubblicarle", async () => {
+    const env = environment();
+    const pages = await call(env, "/api/admin/cms/visual-pages", { admin: true });
+    const page = pages.data.pages.find((item) => item.id === "page-autore");
+    const heading = page.nodes.find((node) => node.type === "heading");
+    const root = page.nodes.find((node) => node.root);
+    const rootChildren = page.nodes.filter((node) => node.parentKey === root.key);
+    const payload = {
+        expectedUpdatedAt: page.updatedAt,
+        page: { title: page.title, description: page.description },
+        nodes: page.nodes.map((node) => ({
+            key: node.key,
+            parentKey: node.parentKey,
+            position: node.position,
+            type: node.type,
+            label: node.label,
+            copyOf: null,
+            values: node.key === heading.key
+                ? { ...node.values, title: "Titolo soltanto in anteprima" }
+                : node.values
+        }))
+    };
+    payload.nodes.push({
+        key: "new-preview-test",
+        parentKey: root.key,
+        position: rootChildren.length + 1,
+        type: "rich-text",
+        label: "Testo temporaneo",
+        copyOf: null,
+        values: { text: "Blocco nuovo soltanto in anteprima" }
+    });
+    const denied = await call(
+        env,
+        `/api/admin/cms/visual-preview/${page.id}`,
+        { method: "POST", body: payload }
+    );
+    assert.equal(denied.response.status, 401);
+
+    const preview = await call(
+        env,
+        `/api/admin/cms/visual-preview/${page.id}`,
+        { admin: true, method: "POST", body: payload }
+    );
+    assert.equal(preview.response.status, 200);
+    assert.match(preview.data.page.html, /Titolo soltanto in anteprima/u);
+    assert.match(preview.data.page.html, /Blocco nuovo soltanto in anteprima/u);
+    assert.equal(preview.data.page.metadata.robots, "noindex,nofollow");
+    assert.equal(preview.response.headers.get("Cache-Control"), "no-store");
+    assert.equal(preview.response.headers.get("X-Robots-Tag"), "noindex, nofollow");
+
+    const saved = await call(env, "/api/admin/cms/visual-pages", { admin: true });
+    const savedHeading = saved.data.pages
+        .find((item) => item.id === page.id).nodes
+        .find((node) => node.key === heading.key);
+    assert.notEqual(savedHeading.values.title, "Titolo soltanto in anteprima");
+    assert.equal(saved.data.pages
+        .find((item) => item.id === page.id).nodes
+        .some((node) => node.key === "new-preview-test"), false);
+    const publicPage = await call(env, "/api/public/visual-pages/autore");
+    assert.doesNotMatch(publicPage.data.page.html, /Titolo soltanto in anteprima/u);
+});
+
 test("il pannello espone preview, preflight, confronto, redo e recupero", async () => {
     const [html, source, css] = await Promise.all([
         readFile(new URL("../../admin.html", import.meta.url), "utf8"),
@@ -265,6 +327,8 @@ test("il pannello espone preview, preflight, confronto, redo e recupero", async 
     ]) assert.match(html, new RegExp(`id="${id}"`, "u"));
     assert.match(source, /redoStack/u);
     assert.match(source, /visual-preview/u);
+    assert.match(source, /workingPreviewPayload/u);
+    assert.match(source, /method: "POST"/u);
     assert.match(source, /visual-publication/u);
     assert.match(source, /noindex,nofollow/u);
     assert.match(css, /admin-visual-publication-actions/u);

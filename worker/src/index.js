@@ -60,6 +60,7 @@ import {
     loadVisualAdapterPayloads
 } from "./visual-builder-adapters.js";
 import {
+    buildVisualBuilderPreview,
     readVisualBuilderPages,
     updateVisualBuilderProperties,
     updateVisualBuilderTree,
@@ -982,7 +983,7 @@ export default {
             }
 
             if (
-                request.method === "GET" &&
+                ["GET", "POST"].includes(request.method) &&
                 /^\/api\/admin\/cms\/visual-preview\/[a-z0-9]+(?:-[a-z0-9]+)*$/.test(path)
             ) {
                 const pageId = path.split("/").pop();
@@ -4456,7 +4457,13 @@ async function adminVisualPreview(request, env, pageId) {
     if (!(await adminAuthorized(request, env))) return unauthorized(request, env);
     await ensureCmsStorage(env);
     try {
-        const snapshot = await captureVisualSnapshot(env, pageId);
+        const snapshot = request.method === "POST"
+            ? await buildVisualBuilderPreview(
+                env,
+                pageId,
+                await readJson(request, 640000)
+            )
+            : await captureVisualSnapshot(env, pageId);
         const mapping = await env.DB.prepare(`
             SELECT theme_id FROM visual_page_trees WHERE page_id = ? LIMIT 1
         `).bind(pageId).first();
@@ -4474,7 +4481,7 @@ async function adminVisualPreview(request, env, pageId) {
             theme: await readPublicTheme(env, mapping?.theme_id),
             publicOrigin: env.ALLOWED_ORIGIN || "https://anonmrcn-ctrl.github.io"
         });
-        return json(request, env, {
+        const response = json(request, env, {
             page: {
                 id: snapshot.page.id,
                 slug: snapshot.page.slug,
@@ -4488,8 +4495,10 @@ async function adminVisualPreview(request, env, pageId) {
                 }
             }
         });
+        response.headers.set("X-Robots-Tag", "noindex, nofollow");
+        return response;
     } catch (error) {
-        if (error instanceof VisualPublicationError) {
+        if (error instanceof VisualPublicationError || error instanceof VisualCanvasError) {
             return json(request, env, { error: error.message }, error.status);
         }
         if (!(error instanceof VisualRenderError)) throw error;

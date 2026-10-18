@@ -59,8 +59,8 @@ devono riprodurre i problemi prima di correggerli.
 | Unità | Risultato | Stato | Dipendenza |
 |---:|---|---|---|
 | 14.0 | Roadmap, diagnosi e controllo automatico | Completa | Punto 13 |
-| 14.1 | Anteprima fedele delle modifiche correnti | Da fare | 14.0 |
-| 14.2 | Selettore della libreria media nei blocchi | Da fare | 14.1 |
+| 14.1 | Anteprima fedele delle modifiche correnti | Completa | 14.0 |
+| 14.2 | Selettore della libreria media nei blocchi | Da fare — prossima | 14.1 |
 | 14.3 | Caricamento e gestione media dal builder | Da fare | 14.2 |
 | 14.4 | Blocco audio accessibile e responsive | Da fare | 14.3 |
 | 14.5 | Blocco video accessibile e responsive | Da fare | 14.4 |
@@ -79,6 +79,16 @@ comprese le modifiche non ancora pubblicate, usando lo stesso renderer sicuro
 del sito. Deve funzionare nelle viste smartphone, tablet e desktop e mostrare
 errori comprensibili senza perdere il lavoro. Salvataggio della bozza e
 pubblicazione restano azioni distinte.
+
+Completata il 18 ottobre 2026. Il browser invia al Worker l'albero, le
+proprietà e i metadati correnti con una richiesta autenticata, senza salvarli;
+il Worker li valida e li rende in memoria con lo stesso renderer sicuro del
+sito. La risposta imposta `no-store`, `X-Robots-Tag: noindex, nofollow` e
+metadati `noindex,nofollow`. La prova automatica copre una proprietà modificata
+e un blocco appena aggiunto, verifica che D1 e la pagina pubblica restino
+immutati e controlla nel browser che il pulsante funzioni anche con modifiche
+non salvate e nelle viste responsive. Dettagli e comandi ripetibili sono in
+`14-1-live-preview.md`.
 
 ### 14.2 — Selezione dei media
 

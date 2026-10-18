@@ -137,6 +137,13 @@ nascosti su tutti i dispositivi; non modifica binding o altre proprietà
 tecniche. L'anteprima amministrativa usa gli stessi token per smartphone,
 tablet e desktop e non interpreta HTML o CSS fornito dall'utente.
 
+`GET /api/admin/cms/visual-preview/:pageId` conserva la compatibilità con
+l'anteprima della bozza salvata. `POST` sullo stesso endpoint riceve lo stato
+corrente del canvas e dell'ispettore, lo valida e lo rende in memoria senza
+scrivere in D1 né pubblicarlo. Entrambe le risposte sono autenticate,
+`no-store` e `noindex,nofollow`; la versione `POST` mantiene inalterate le
+proprietà tecniche non modificabili dal browser.
+
 `POST /api/admin/cms/visual-pages` crea una pagina in bozza da vuoto o
 duplicando un albero esistente. `PATCH
 /api/admin/cms/visual-page-lifecycle/:pageId` gestisce titolo, descrizione SEO,
