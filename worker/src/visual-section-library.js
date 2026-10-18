@@ -499,7 +499,7 @@ function pushReplaceInstance(statements, env, current, clone, now) {
 
 function pushPageTouch(statements, env, page, now) {
     statements.push(env.DB.prepare(`
-        UPDATE visual_trees SET updated_at = ? WHERE id = ?
+        UPDATE visual_trees SET status = 'draft', updated_at = ? WHERE id = ?
     `).bind(now, page.tree_id));
     statements.push(env.DB.prepare(`
         UPDATE visual_page_trees SET updated_at = ? WHERE page_id = ?

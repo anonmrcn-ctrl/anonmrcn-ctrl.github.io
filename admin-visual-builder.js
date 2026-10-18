@@ -7,6 +7,7 @@
     const paletteSelect = document.getElementById("adminVisualPalette");
     const addButton = document.getElementById("adminVisualAdd");
     const undoButton = document.getElementById("adminVisualUndo");
+    const redoButton = document.getElementById("adminVisualRedo");
     const canvas = document.getElementById("adminVisualCanvas");
     const inspectorForm = document.getElementById("adminVisualInspectorForm");
     const inspectorFields = document.getElementById("adminVisualInspectorFields");
@@ -55,6 +56,13 @@
     const themeCompare = document.getElementById("adminVisualThemeCompare");
     const themePublish = document.getElementById("adminVisualThemePublish");
     const themeComparison = document.getElementById("adminVisualThemeComparison");
+    const preflightButton = document.getElementById("adminVisualPreflight");
+    const serverPreviewButton = document.getElementById("adminVisualServerPreview");
+    const comparePageButton = document.getElementById("adminVisualComparePage");
+    const publishPageButton = document.getElementById("adminVisualPublishPage");
+    const publicationResult = document.getElementById("adminVisualPublicationResult");
+    const revisionSelect = document.getElementById("adminVisualRevisionSelect");
+    const restoreRevisionButton = document.getElementById("adminVisualRestoreRevision");
 
     const CATEGORY_CHILDREN = Object.freeze({
         root: ["structure", "content", "navigation", "project", "global", "functional", "personal", "legal"],
@@ -78,6 +86,7 @@
     let nodes = [];
     let selectedKey = "";
     let undoStack = [];
+    let redoStack = [];
     let dirty = false;
     let propertyDirty = new Set();
     let draggedKey = "";
@@ -85,6 +94,7 @@
     let activeDevice = "phone";
     let impactReadySectionId = "";
     let comparisonReadyThemeId = "";
+    let publicationState = null;
 
     async function request(path, options = {}) {
         const session = sessionStorage.getItem(SESSION_KEY) || "";
@@ -138,6 +148,7 @@
     function remember() {
         undoStack.push(snapshot());
         if (undoStack.length > 30) undoStack.shift();
+        redoStack = [];
         dirty = true;
     }
 
@@ -176,7 +187,9 @@
         tree.appendChild(renderNode(root, 1));
         canvas.appendChild(tree);
         undoButton.disabled = undoStack.length === 0;
+        redoButton.disabled = redoStack.length === 0;
         saveButton.disabled = !dirty;
+        renderPublicationControls();
         if (focusSelected) {
             canvas.querySelector(`[data-visual-select="${CSS.escape(selectedKey)}"]`)?.focus();
         }
@@ -414,6 +427,7 @@
             }));
             if (pages.some((page) => page.id === pageId)) pageSelect.value = pageId;
             showSelectedPage();
+            await loadPublicationState({ quiet: true });
             status.textContent = pages.length ? "" : "Nessuna pagina visuale disponibile.";
         } catch (error) {
             status.textContent = error.message || "Non è stato possibile caricare il canvas.";
@@ -432,6 +446,8 @@
             ? preferredKey
             : nodes.find((node) => node.root)?.key || nodes[0]?.key || "";
         undoStack = [];
+        redoStack = [];
+        publicationState = null;
         dirty = false;
         propertyDirty = new Set();
         renderLifecycle(page);
@@ -1233,6 +1249,154 @@
         }
     }
 
+    function renderPublicationControls() {
+        const page = selectedPage();
+        const hasUnsavedChanges = dirty || propertyDirty.size > 0;
+        preflightButton.disabled = !page || hasUnsavedChanges;
+        serverPreviewButton.disabled = !page || hasUnsavedChanges;
+        comparePageButton.disabled = !page || hasUnsavedChanges;
+        publishPageButton.disabled = !page || hasUnsavedChanges ||
+            !publicationState?.canPublish || !publicationState?.comparison?.changed;
+        restoreRevisionButton.disabled = !page || hasUnsavedChanges ||
+            !revisionSelect.value;
+    }
+
+    function renderPublicationState(mode = "audit") {
+        publicationResult.replaceChildren();
+        revisionSelect.replaceChildren(
+            Object.assign(document.createElement("option"), {
+                value: "",
+                textContent: "Scegli una versione"
+            }),
+            ...(publicationState?.revisions || [])
+                .filter((revision) => revision.restorable)
+                .map((revision) => Object.assign(document.createElement("option"), {
+                    value: String(revision.revisionNumber),
+                    textContent: `Revisione ${revision.revisionNumber} · ${revision.state}`
+                }))
+        );
+        if (!publicationState) {
+            renderPublicationControls();
+            return;
+        }
+        const heading = document.createElement("p");
+        const errors = publicationState.audit?.errors || [];
+        const warningsList = publicationState.audit?.warnings || [];
+        if (mode === "comparison") {
+            const comparison = publicationState.comparison;
+            heading.textContent = comparison.hasPublishedVersion
+                ? `Confronto: ${comparison.added.length} aggiunti, ${comparison.removed.length} rimossi, ${comparison.modified.length} modificati.`
+                : "Non esiste ancora una versione pubblicata: tutta la pagina è una nuova bozza.";
+        } else {
+            heading.textContent = errors.length
+                ? `${errors.length} errori bloccano la pubblicazione; ${warningsList.length} avvisi da valutare.`
+                : `Controlli superati; ${warningsList.length} avvisi non bloccanti.`;
+        }
+        publicationResult.appendChild(heading);
+        const issues = [...errors.map((issue) => ({ ...issue, level: "Errore" })),
+            ...warningsList.map((issue) => ({ ...issue, level: "Avviso" }))];
+        if (issues.length) {
+            const list = document.createElement("ul");
+            for (const issue of issues) {
+                const item = document.createElement("li");
+                item.textContent = `${issue.level} ${issue.category}${issue.nodeId ? ` · blocco ${issue.nodeId}` : ""}: ${issue.message}`;
+                list.appendChild(item);
+            }
+            publicationResult.appendChild(list);
+        }
+        renderPublicationControls();
+    }
+
+    async function loadPublicationState({ quiet = false, comparison = false } = {}) {
+        const page = selectedPage();
+        if (!page || dirty || propertyDirty.size) {
+            renderPublicationControls();
+            return null;
+        }
+        if (!quiet) status.textContent = "Controllo della bozza in corso…";
+        try {
+            publicationState = await request(
+                `/api/admin/cms/visual-publication/${encodeURIComponent(page.id)}`
+            );
+            renderPublicationState(comparison ? "comparison" : "audit");
+            if (!quiet) {
+                status.textContent = publicationState.canPublish
+                    ? "Bozza pronta per la pubblicazione atomica."
+                    : "Correggi gli errori indicati prima di pubblicare.";
+            }
+            return publicationState;
+        } catch (error) {
+            publicationState = null;
+            renderPublicationState();
+            status.textContent = error.message || "Controlli di pubblicazione non disponibili.";
+            return null;
+        }
+    }
+
+    async function showServerPreview() {
+        const page = selectedPage();
+        if (!page || dirty || propertyDirty.size) return;
+        status.textContent = "Preparazione dell'anteprima privata…";
+        try {
+            const data = await request(
+                `/api/admin/cms/visual-preview/${encodeURIComponent(page.id)}`
+            );
+            preview.innerHTML = data.page.html;
+            status.textContent = data.page.metadata.robots === "noindex,nofollow"
+                ? "Anteprima autenticata caricata; è esclusa dall'indicizzazione."
+                : "Anteprima caricata.";
+        } catch (error) {
+            status.textContent = error.message || "Anteprima non disponibile.";
+        }
+    }
+
+    async function publishCurrentPage() {
+        const page = selectedPage();
+        if (!page || dirty || propertyDirty.size) return;
+        if (!publicationState?.canPublish) {
+            await loadPublicationState();
+            if (!publicationState?.canPublish) return;
+        }
+        publishPageButton.disabled = true;
+        status.textContent = "Pubblicazione atomica della versione controllata…";
+        try {
+            const data = await request(
+                `/api/admin/cms/visual-publication/${encodeURIComponent(page.id)}/publish`,
+                {
+                    method: "PATCH",
+                    body: JSON.stringify({ expectedUpdatedAt: page.updatedAt })
+                }
+            );
+            await load(page.id);
+            status.textContent = `Versione ${data.revisionNumber} pubblicata; la cronologia precedente è intatta.`;
+        } catch (error) {
+            status.textContent = error.message || "Pubblicazione non riuscita.";
+            await loadPublicationState({ quiet: true });
+        }
+    }
+
+    async function restoreSelectedRevision() {
+        const page = selectedPage();
+        const revision = Number(revisionSelect.value);
+        if (!page || !revision || dirty || propertyDirty.size) return;
+        restoreRevisionButton.disabled = true;
+        status.textContent = `Ripristino della revisione ${revision} come nuova bozza…`;
+        try {
+            await request(
+                `/api/admin/cms/visual-publication/${encodeURIComponent(page.id)}/restore/${revision}`,
+                {
+                    method: "POST",
+                    body: JSON.stringify({ expectedUpdatedAt: page.updatedAt })
+                }
+            );
+            await load(page.id);
+            status.textContent = "Revisione recuperata come nuova bozza; il sito pubblico non è cambiato.";
+        } catch (error) {
+            status.textContent = error.message || "Ripristino non riuscito.";
+            renderPublicationControls();
+        }
+    }
+
     pageSelect.addEventListener("change", () => {
         if ((dirty || propertyDirty.size) &&
             !window.confirm("Abbandonare le modifiche non salvate del canvas?")) {
@@ -1240,6 +1404,7 @@
             return;
         }
         showSelectedPage();
+        loadPublicationState({ quiet: true });
     });
     createForm.addEventListener("submit", createPage);
     lifecycleForm.addEventListener("submit", saveLifecycle);
@@ -1274,9 +1439,25 @@
     undoButton.addEventListener("click", () => {
         const previous = undoStack.pop();
         if (!previous) return;
+        redoStack.push(snapshot());
         restore(previous);
         status.textContent = "Ultima modifica annullata.";
     });
+    redoButton.addEventListener("click", () => {
+        const next = redoStack.pop();
+        if (!next) return;
+        undoStack.push(snapshot());
+        restore(next);
+        status.textContent = "Modifica ripetuta.";
+    });
+    preflightButton.addEventListener("click", () => loadPublicationState());
+    comparePageButton.addEventListener("click", () =>
+        loadPublicationState({ comparison: true })
+    );
+    serverPreviewButton.addEventListener("click", showServerPreview);
+    publishPageButton.addEventListener("click", publishCurrentPage);
+    revisionSelect.addEventListener("change", renderPublicationControls);
+    restoreRevisionButton.addEventListener("click", restoreSelectedRevision);
     saveButton.addEventListener("click", save);
     reloadButton.addEventListener("click", () => {
         if ((!dirty && !propertyDirty.size) ||

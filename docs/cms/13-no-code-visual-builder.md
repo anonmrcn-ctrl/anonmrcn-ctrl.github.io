@@ -75,7 +75,7 @@ accessibilità, privacy, SEO, migrazione e test.
 | 13.8 | Modelli, sezioni riutilizzabili e parti globali | Completa | 13.7 |
 | 13.9 | Studio grafico globale | Completa | 13.8 |
 | 13.10 | Comportamenti e collegamenti senza codice | Completa | 13.9 |
-| 13.11 | Pubblicazione, qualità e recupero | Da iniziare | 13.10 |
+| 13.11 | Pubblicazione, qualità e recupero | Completa | 13.10 |
 | 13.12 | Migrazione finale e audit di indipendenza | Da iniziare | 13.11 |
 
 I criteri dettagliati e lo stato eseguibile sono in
@@ -135,6 +135,13 @@ locale dei filtri sono in `worker/src/visual-builder-behaviors.js`,
 `worker/src/visual-builder-inspector.js`, `worker/src/visual-builder-adapters.js`,
 `worker/src/visual-builder-renderer.js`, `visual-behaviors.js` e
 `worker/tests/visual-builder-behaviors.test.mjs`.
+
+La prova dell'unità 13.11 è in `13-11-publication-quality-recovery.md`;
+snapshot pubblico separato, preflight, anteprima autenticata, confronto,
+pubblicazione atomica e recupero append-only sono in
+`worker/src/visual-publication.js`, nella migrazione
+`0021_visual_publications.sql`, in `admin-visual-builder.js` e in
+`worker/tests/visual-publication.test.mjs`.
 
 ## Criterio finale
 

@@ -130,10 +130,22 @@ test("l'ispettore salva contenuto e stile tipizzati senza toccare i binding", as
 
     const publicPage = await call(env, "/api/public/visual-pages/progetto");
     assert.equal(publicPage.response.status, 200);
-    assert.match(publicPage.data.page.html, /Titolo visuale aggiornato/u);
-    assert.match(publicPage.data.page.html, /data-visual-align="center"/u);
-    assert.match(publicPage.data.page.html, /data-visual-background="dark"/u);
-    assert.match(publicPage.data.page.html, /data-visual-phone="hidden"/u);
+    assert.doesNotMatch(publicPage.data.page.html, /Titolo visuale aggiornato/u);
+    const published = await call(
+        env,
+        `/api/admin/cms/visual-publication/${page.id}/publish`,
+        {
+            admin: true,
+            method: "PATCH",
+            body: { expectedUpdatedAt: saved.data.page.updatedAt }
+        }
+    );
+    assert.equal(published.response.status, 200);
+    const publicAfterPublish = await call(env, "/api/public/visual-pages/progetto");
+    assert.match(publicAfterPublish.data.page.html, /Titolo visuale aggiornato/u);
+    assert.match(publicAfterPublish.data.page.html, /data-visual-align="center"/u);
+    assert.match(publicAfterPublish.data.page.html, /data-visual-background="dark"/u);
+    assert.match(publicAfterPublish.data.page.html, /data-visual-phone="hidden"/u);
     assert.doesNotMatch(publicPage.data.page.html, /style=/u);
 
     const invalidContrast = await call(
@@ -143,7 +155,7 @@ test("l'ispettore salva contenuto e stile tipizzati senza toccare i binding", as
             admin: true,
             method: "PATCH",
             body: {
-                expectedUpdatedAt: saved.data.page.updatedAt,
+                expectedUpdatedAt: published.data.state.draftUpdatedAt,
                 values: { ...values, textColor: "accent", background: "paper" }
             }
         }
@@ -200,5 +212,5 @@ test("l'anteprima genera i campi dallo schema e mostra breakpoint e avvisi", asy
     assert.match(css, /data-visual-background="dark"/u);
     assert.match(css, /data-visual-phone="hidden"/u);
     assert.match(css, /width:\s*min\(360px, 100%\)/u);
-    assert.match(html, /admin-visual-builder\.css\?v=20261018-behavior1/u);
+    assert.match(html, /admin-visual-builder\.css\?v=20261018-publish1/u);
 });

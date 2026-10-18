@@ -36,6 +36,7 @@ const EXPECTED_TABLES = Object.freeze([
     "visual_reusable_sections",
     "visual_theme_tokens",
     "visual_themes",
+    "visual_tree_publications",
     "visual_trees"
 ]);
 const EXPECTED_FOUNDATION_TABLES = Object.freeze(
@@ -53,6 +54,7 @@ const EXPECTED_FOUNDATION_TABLES = Object.freeze(
         "visual_reusable_sections",
         "visual_theme_tokens",
         "visual_themes",
+        "visual_tree_publications",
         "visual_trees"
     ].includes(name))
 );
