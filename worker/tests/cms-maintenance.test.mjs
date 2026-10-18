@@ -181,6 +181,7 @@ test("esporta contenuti D1 e oggetti R2 senza credenziali o dati personali", asy
     assert.ok(tableNames.includes("visual_nodes"));
     assert.ok(tableNames.includes("visual_node_properties"));
     assert.ok(tableNames.includes("visual_themes"));
+    assert.ok(tableNames.includes("visual_tree_publications"));
     for (const excluded of [
         "admin_credentials",
         "admin_sessions",

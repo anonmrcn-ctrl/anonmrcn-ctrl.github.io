@@ -138,6 +138,16 @@ test("crea, duplica, pubblica, archivia ed elimina senza spezzare gli URL", asyn
     );
     assert.equal(published.response.status, 200);
     assert.equal(published.data.page.canonicalPath, "/pagina-pubblicata.html");
+    const publishedVisual = await call(
+        env,
+        `/api/admin/cms/visual-publication/${page.id}/publish`,
+        {
+            admin: true,
+            method: "PATCH",
+            body: { expectedUpdatedAt: published.data.page.updatedAt }
+        }
+    );
+    assert.equal(publishedVisual.response.status, 200);
     const publicPage = await call(env, "/api/public/visual-pages/pagina-pubblicata");
     assert.equal(publicPage.response.status, 200);
     assert.match(publicPage.data.page.html, /Pagina pubblicata/u);
@@ -159,7 +169,7 @@ test("crea, duplica, pubblica, archivia ed elimina senza spezzare gli URL", asyn
             admin: true,
             method: "PATCH",
             body: {
-                expectedUpdatedAt: published.data.page.updatedAt,
+                expectedUpdatedAt: publishedVisual.data.state.draftUpdatedAt,
                 title: published.data.page.title,
                 slug: published.data.page.slug,
                 description: published.data.page.description,
@@ -334,5 +344,5 @@ test("la gestione pagine è disponibile senza codice e con conferme esplicite", 
     assert.match(source, /window\.confirm/u);
     assert.match(css, /admin-visual-page-management/u);
     assert.match(css, /admin-visual-danger/u);
-    assert.match(html, /admin-visual-builder\.js\?v=20261018-behavior1/u);
+    assert.match(html, /admin-visual-builder\.js\?v=20261018-publish1/u);
 });

@@ -40,7 +40,8 @@ export const CMS_BACKUP_TABLES = Object.freeze([
     "visual_nodes",
     "visual_node_properties",
     "visual_reusable_sections",
-    "visual_reusable_instances"
+    "visual_reusable_instances",
+    "visual_tree_publications"
 ]);
 
 export async function createCmsBackup(env, now = Date.now()) {

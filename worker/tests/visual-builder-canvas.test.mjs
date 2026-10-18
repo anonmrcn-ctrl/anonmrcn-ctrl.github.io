@@ -174,7 +174,19 @@ test("il canvas protetto modifica, duplica e rimuove blocchi con cronologia", as
 
     const publicPage = await call(env, "/api/public/visual-pages/autore");
     assert.equal(publicPage.response.status, 200);
-    assert.ok(publicPage.data.page.html.includes(`data-block-id="${section.key}"`));
+    assert.ok(!publicPage.data.page.html.includes(`data-block-id="${section.key}"`));
+    const published = await call(
+        env,
+        `/api/admin/cms/visual-publication/${page.id}/publish`,
+        {
+            admin: true,
+            method: "PATCH",
+            body: { expectedUpdatedAt: saved.data.page.updatedAt }
+        }
+    );
+    assert.equal(published.response.status, 200);
+    const publicAfterPublish = await call(env, "/api/public/visual-pages/autore");
+    assert.ok(publicAfterPublish.data.page.html.includes(`data-block-id="${section.key}"`));
 
     const stale = await call(env, `/api/admin/cms/visual-pages/${page.id}`, {
         admin: true,
@@ -250,5 +262,5 @@ test("il pannello offre comandi equivalenti per mouse, tocco e tastiera", async 
     assert.match(source, /aria-selected/u);
     assert.match(css, /min-height:\s*2\.75rem/u);
     assert.match(css, /@media \(max-width: 700px\)/u);
-    assert.match(html, /admin-visual-builder\.js\?v=20261018-behavior1/u);
+    assert.match(html, /admin-visual-builder\.js\?v=20261018-publish1/u);
 });

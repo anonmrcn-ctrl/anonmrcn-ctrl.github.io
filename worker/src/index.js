@@ -92,6 +92,15 @@ import {
     updateVisualTheme,
     VisualThemeStudioError
 } from "./visual-theme-studio.js";
+import {
+    captureVisualSnapshot,
+    initializeVisualPublications,
+    publishVisualPage,
+    readPublishedVisualSnapshotBySlug,
+    readVisualPublicationState,
+    restoreVisualRevision,
+    VisualPublicationError
+} from "./visual-publication.js";
 
 // workerd refuses PBKDF2 requests above 100,000 iterations.
 const PBKDF2_ITERATIONS = 100000;
@@ -956,6 +965,53 @@ export default {
             ) {
                 const pageId = path.split("/").pop();
                 return await adminGetVisualPageDependencies(request, env, pageId);
+            }
+
+            if (
+                request.method === "GET" &&
+                /^\/api\/admin\/cms\/visual-publication\/[a-z0-9]+(?:-[a-z0-9]+)*$/.test(path)
+            ) {
+                const pageId = path.split("/").pop();
+                return await adminVisualPublicationResponse(request, env, () =>
+                    readVisualPublicationState(env, pageId)
+                );
+            }
+
+            if (
+                request.method === "GET" &&
+                /^\/api\/admin\/cms\/visual-preview\/[a-z0-9]+(?:-[a-z0-9]+)*$/.test(path)
+            ) {
+                const pageId = path.split("/").pop();
+                return await adminVisualPreview(request, env, pageId);
+            }
+
+            if (
+                request.method === "PATCH" &&
+                /^\/api\/admin\/cms\/visual-publication\/[a-z0-9]+(?:-[a-z0-9]+)*\/publish$/.test(path)
+            ) {
+                const pageId = path.split("/")[5];
+                return await adminVisualPublicationResponse(request, env, async () =>
+                    publishVisualPage(
+                        env,
+                        pageId,
+                        await readJson(request, MAX_CMS_PAGE_REQUEST_BYTES)
+                    )
+                );
+            }
+
+            if (
+                request.method === "POST" &&
+                /^\/api\/admin\/cms\/visual-publication\/[a-z0-9]+(?:-[a-z0-9]+)*\/restore\/\d+$/.test(path)
+            ) {
+                const parts = path.split("/");
+                return await adminVisualPublicationResponse(request, env, async () =>
+                    restoreVisualRevision(
+                        env,
+                        parts[5],
+                        Number(parts[7]),
+                        await readJson(request, MAX_CMS_PAGE_REQUEST_BYTES)
+                    )
+                );
             }
 
             if (
@@ -4167,34 +4223,45 @@ async function getPublicPage(request, env, slug) {
 
 async function getPublicVisualPage(request, env, slug) {
     await ensureCmsStorage(env);
-    const page = await env.DB.prepare(`
-        SELECT
-            page.id,
-            page.slug,
-            page.title,
-            page.description,
-            page.status,
-            page.updated_at,
-            page.published_at,
-            tree.id AS tree_id,
-            mapping.theme_id
-        FROM site_pages page
-        INNER JOIN visual_page_trees mapping ON mapping.page_id = page.id
-        INNER JOIN visual_trees tree ON tree.id = mapping.tree_id
-        WHERE page.slug = ?
-            AND page.status = 'published'
-            AND tree.status = 'published'
-        LIMIT 1
-    `).bind(slug).first();
-    if (!page) return json(request, env, { error: "Pagina non trovata." }, 404);
+    const publication = await readPublishedVisualSnapshotBySlug(env, slug);
+    if (!publication) return json(request, env, { error: "Pagina non trovata." }, 404);
+    const { snapshot, themeId, revisionNumber } = publication;
+    const page = snapshot.page;
+    const nodes = snapshot.nodes;
+    const properties = snapshot.properties;
+    await ensureVisualAdapterStorages(env, nodes);
+    try {
+        const rendered = renderVisualPage({
+            page,
+            nodes,
+            properties,
+            assets: await readVisualAssets(env),
+            adapterPayloads: await loadVisualAdapterPayloads(env, nodes, properties),
+            theme: await readPublicTheme(env, themeId),
+            publicOrigin: env.ALLOWED_ORIGIN || "https://anonmrcn-ctrl.github.io"
+        });
+        return json(request, env, {
+            page: {
+                id: page.id,
+                slug: page.slug,
+                updatedAt: Number(snapshot.tree.updatedAt),
+                publishedAt: Number(page.publishedAt),
+                revisionNumber,
+                ...rendered
+            }
+        });
+    } catch (error) {
+        if (!(error instanceof VisualRenderError)) throw error;
+        console.error(JSON.stringify({
+            event: "visual_page_render_failed",
+            pageId: page.id,
+            error: error.message
+        }));
+        return json(request, env, { error: "Pagina visuale non disponibile." }, 409);
+    }
+}
 
-    const nodeResult = await env.DB.prepare(`
-        SELECT id, tree_id, parent_id, position, block_type, label
-        FROM visual_nodes
-        WHERE tree_id = ?
-        ORDER BY ifnull(parent_id, ''), position, id
-    `).bind(page.tree_id).all();
-    const nodes = nodeResult.results || [];
+async function ensureVisualAdapterStorages(env, nodes) {
     const nodeTypes = new Set(nodes.map((node) => node.block_type));
     if (nodeTypes.has("project-voices")) await ensureWikiStorage(env);
     if (nodeTypes.has("project-places")) await ensureMapEntryStorage(env);
@@ -4208,86 +4275,21 @@ async function getPublicVisualPage(request, env, slug) {
         `).first();
         if (messagesTable) await ensureMessageArchiveStorage(env);
     }
+}
 
-    const [propertyResult, assetResult] = await Promise.all([
-        env.DB.prepare(`
-            SELECT
-                property.node_id,
-                property.domain,
-                property.property_set,
-                property.property_name,
-                property.breakpoint,
-                property.item_position,
-                property.value_kind,
-                property.text_value,
-                property.number_value,
-                property.boolean_value,
-                property.asset_id,
-                property.page_reference_id,
-                property.collection_key
-            FROM visual_node_properties property
-            INNER JOIN visual_nodes node ON node.id = property.node_id
-            WHERE node.tree_id = ?
-            ORDER BY property.node_id, property.property_set,
-                property.property_name, property.breakpoint,
-                property.item_position
-        `).bind(page.tree_id).all(),
-        env.DB.prepare(`
-            SELECT DISTINCT
-                asset.id,
-                asset.owner_type,
-                asset.owner_id,
-                asset.alt_text,
-                asset.caption,
-                asset.width,
-                asset.height
-            FROM visual_node_properties property
-            INNER JOIN visual_nodes node ON node.id = property.node_id
-            INNER JOIN media_assets asset ON asset.id = property.asset_id
-            WHERE node.tree_id = ?
-                AND asset.state = 'current'
-                AND asset.owner_type IN ('wiki_image', 'map_entry')
-        `).bind(page.tree_id).all()
-    ]);
-
-    const assets = (assetResult.results || []).map((asset) => ({
+async function readVisualAssets(env) {
+    const result = await env.DB.prepare(`
+        SELECT id, owner_type, owner_id, alt_text, caption, width, height
+        FROM media_assets
+        WHERE state = 'current' AND owner_type IN ('wiki_image', 'map_entry')
+        ORDER BY id
+    `).all();
+    return (result.results || []).map((asset) => ({
         ...asset,
         publicUrl: asset.owner_type === "wiki_image"
             ? `/api/public/wiki-images/${encodeURIComponent(asset.owner_id)}`
             : `/api/public/map-entry-images/${encodeURIComponent(asset.owner_id)}`
     }));
-    try {
-        const rendered = renderVisualPage({
-            page,
-            nodes,
-            properties: propertyResult.results || [],
-            assets,
-            adapterPayloads: await loadVisualAdapterPayloads(
-                env,
-                nodes,
-                propertyResult.results || []
-            ),
-            theme: await readPublicTheme(env, page.theme_id),
-            publicOrigin: env.ALLOWED_ORIGIN || "https://anonmrcn-ctrl.github.io"
-        });
-        return json(request, env, {
-            page: {
-                id: page.id,
-                slug: page.slug,
-                updatedAt: Number(page.updated_at),
-                publishedAt: Number(page.published_at),
-                ...rendered
-            }
-        });
-    } catch (error) {
-        if (!(error instanceof VisualRenderError)) throw error;
-        console.error(JSON.stringify({
-            event: "visual_page_render_failed",
-            pageId: page.id,
-            error: error.message
-        }));
-        return json(request, env, { error: "Pagina visuale non disponibile." }, 409);
-    }
 }
 
 async function adminListCmsPages(request, env) {
@@ -4378,6 +4380,68 @@ async function adminVisualThemeResponse(request, env, operation, successStatus =
     } catch (error) {
         if (!(error instanceof VisualThemeStudioError)) throw error;
         return json(request, env, { error: error.message }, error.status);
+    }
+}
+
+async function adminVisualPublicationResponse(request, env, operation, successStatus = 200) {
+    if (!(await adminAuthorized(request, env))) return unauthorized(request, env);
+    await ensureCmsStorage(env);
+    try {
+        return json(request, env, await operation(), successStatus);
+    } catch (error) {
+        if (!(error instanceof VisualPublicationError)) throw error;
+        return json(request, env, {
+            error: error.message,
+            ...(error.details || {})
+        }, error.status);
+    }
+}
+
+async function adminVisualPreview(request, env, pageId) {
+    if (!(await adminAuthorized(request, env))) return unauthorized(request, env);
+    await ensureCmsStorage(env);
+    try {
+        const snapshot = await captureVisualSnapshot(env, pageId);
+        const mapping = await env.DB.prepare(`
+            SELECT theme_id FROM visual_page_trees WHERE page_id = ? LIMIT 1
+        `).bind(pageId).first();
+        await ensureVisualAdapterStorages(env, snapshot.nodes);
+        const rendered = renderVisualPage({
+            page: { ...snapshot.page, status: "published" },
+            nodes: snapshot.nodes,
+            properties: snapshot.properties,
+            assets: await readVisualAssets(env),
+            adapterPayloads: await loadVisualAdapterPayloads(
+                env,
+                snapshot.nodes,
+                snapshot.properties
+            ),
+            theme: await readPublicTheme(env, mapping?.theme_id),
+            publicOrigin: env.ALLOWED_ORIGIN || "https://anonmrcn-ctrl.github.io"
+        });
+        return json(request, env, {
+            page: {
+                id: snapshot.page.id,
+                slug: snapshot.page.slug,
+                updatedAt: snapshot.tree.updatedAt,
+                ...rendered,
+                metadata: {
+                    ...rendered.metadata,
+                    canonical: null,
+                    robots: "noindex,nofollow",
+                    structuredData: null
+                }
+            }
+        });
+    } catch (error) {
+        if (error instanceof VisualPublicationError) {
+            return json(request, env, { error: error.message }, error.status);
+        }
+        if (!(error instanceof VisualRenderError)) throw error;
+        return json(request, env, {
+            error: "La bozza non può essere mostrata finché non correggi la struttura.",
+            details: error.message
+        }, 409);
     }
 }
 
@@ -9183,6 +9247,7 @@ async function initializeCmsStorage(env) {
     await initializeVisualBuilderContent(env);
     await initializeVisualSpecializedBlocks(env);
     await initializeContentRevisions(env);
+    await initializeVisualPublications(env);
     await initializePermalinks(env);
 }
 

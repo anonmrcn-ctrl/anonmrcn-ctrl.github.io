@@ -202,7 +202,9 @@ export async function updateVisualBuilderProperties(env, pageId, nodeId, rawInpu
         UPDATE visual_nodes SET updated_at = ? WHERE id = ?
     `).bind(now, node.id));
     statements.push(env.DB.prepare(`
-        UPDATE visual_trees SET contract_version = 2, updated_at = ? WHERE id = ?
+        UPDATE visual_trees
+        SET contract_version = 2, status = 'draft', updated_at = ?
+        WHERE id = ?
     `).bind(now, page.tree_id));
     statements.push(env.DB.prepare(`
         UPDATE visual_page_trees SET updated_at = ? WHERE page_id = ?
@@ -426,7 +428,9 @@ export async function updateVisualBuilderTree(env, pageId, rawInput) {
         }
     }
     statements.push(env.DB.prepare(`
-        UPDATE visual_trees SET contract_version = 2, updated_at = ? WHERE id = ?
+        UPDATE visual_trees
+        SET contract_version = 2, status = 'draft', updated_at = ?
+        WHERE id = ?
     `).bind(now, page.tree_id));
     statements.push(env.DB.prepare(`
         UPDATE visual_page_trees SET updated_at = ? WHERE page_id = ?

@@ -59,6 +59,7 @@ class D1DatabaseMock {
 function environment() {
     return {
         DB: new D1DatabaseMock(),
+        ADMIN_TOKEN: "test-admin",
         ALLOWED_ORIGIN: "https://anonmrcn-ctrl.github.io"
     };
 }
@@ -68,6 +69,20 @@ async function visualPage(env, slug) {
         `https://worker.test/api/public/visual-pages/${slug}`,
         { headers: { Origin: env.ALLOWED_ORIGIN } }
     ), env, {});
+    return { response, data: await response.json() };
+}
+
+async function adminCall(env, path, options = {}) {
+    const headers = new Headers({
+        Origin: env.ALLOWED_ORIGIN,
+        "X-Admin-Token": env.ADMIN_TOKEN
+    });
+    if (options.body) headers.set("Content-Type", "application/json");
+    const response = await worker.fetch(new Request(`https://worker.test${path}`, {
+        method: options.method || "GET",
+        headers,
+        body: options.body ? JSON.stringify(options.body) : undefined
+    }), env, {});
     return { response, data: await response.json() };
 }
 
@@ -227,6 +242,21 @@ test("poesia e funzioni personali restano blocchi sicuri e collegati alle pagine
             created_at, updated_at
         ) VALUES ('visual-progetto-poesia', ?, ?, ?, 'project-poem', 'Poesia', ?, ?)
     `).run(projectTree.tree_id, root.id, position, Date.now(), Date.now());
+    env.DB.database.prepare(`
+        UPDATE visual_trees SET status = 'draft', updated_at = updated_at + 1
+        WHERE id = ?
+    `).run(projectTree.tree_id);
+    const pages = await adminCall(env, "/api/admin/cms/visual-pages");
+    const page = pages.data.pages.find((item) => item.id === "page-progetto");
+    const published = await adminCall(
+        env,
+        "/api/admin/cms/visual-publication/page-progetto/publish",
+        {
+            method: "PATCH",
+            body: { expectedUpdatedAt: page.updatedAt }
+        }
+    );
+    assert.equal(published.response.status, 200);
 
     const project = await visualPage(env, "progetto");
     assert.equal(project.response.status, 200);

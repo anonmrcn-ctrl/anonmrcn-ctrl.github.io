@@ -13,7 +13,7 @@
     <script src="./tema.js?v=20261006-map-layers1"></script>
     <link rel="stylesheet" href="./leaflet.css?v=1.9.4">
     <link rel="stylesheet" href="./style.css?v=20261017-inspector1">
-    <link rel="stylesheet" href="./admin-visual-builder.css?v=20261018-behavior1">
+    <link rel="stylesheet" href="./admin-visual-builder.css?v=20261018-publish1">
 </head>
 
 <body>
@@ -347,6 +347,9 @@
                     <button class="admin-button-secondary" id="adminVisualUndo" type="button" disabled>
                         Annulla ultima modifica
                     </button>
+                    <button class="admin-button-secondary" id="adminVisualRedo" type="button" disabled>
+                        Ripeti modifica
+                    </button>
                 </div>
 
                 <details class="admin-visual-page-management">
@@ -385,6 +388,37 @@
                         <input id="adminVisualDeleteConfirmation" autocomplete="off">
                         <button id="adminVisualDelete" type="button" disabled>
                             Elimina definitivamente
+                        </button>
+                    </div>
+                </details>
+
+                <details class="admin-visual-page-management admin-visual-publication" open>
+                    <summary>Controlla, confronta e pubblica</summary>
+                    <p>
+                        La bozza resta separata dal sito pubblico. Prima della
+                        pubblicazione vengono controllati SEO, accessibilità,
+                        privacy, collegamenti, media e prestazioni.
+                    </p>
+                    <div class="admin-visual-publication-actions">
+                        <button class="admin-button-secondary" id="adminVisualPreflight" type="button">
+                            Esegui controlli
+                        </button>
+                        <button class="admin-button-secondary" id="adminVisualServerPreview" type="button">
+                            Anteprima bozza autenticata
+                        </button>
+                        <button class="admin-button-secondary" id="adminVisualComparePage" type="button">
+                            Confronta con il sito pubblico
+                        </button>
+                        <button id="adminVisualPublishPage" type="button" disabled>
+                            Pubblica questa versione
+                        </button>
+                    </div>
+                    <div id="adminVisualPublicationResult" aria-live="polite"></div>
+                    <div class="admin-visual-revision-controls">
+                        <label for="adminVisualRevisionSelect">Versione da recuperare</label>
+                        <select id="adminVisualRevisionSelect"></select>
+                        <button class="admin-button-secondary" id="adminVisualRestoreRevision" type="button" disabled>
+                            Ripristina come nuova bozza
                         </button>
                     </div>
                 </details>
@@ -1304,7 +1338,7 @@
     <script src="./sessione.js?v=20261008-onboarding1"></script>
     <script src="./notifiche.js"></script>
     <script src="./vendor/leaflet-1.9.4.js"></script>
-    <script src="./admin-visual-builder.js?v=20261018-behavior1"></script>
+    <script src="./admin-visual-builder.js?v=20261018-publish1"></script>
     <script src="./admin.js?v=20261017-inspector1"></script>
 </body>
 </html>

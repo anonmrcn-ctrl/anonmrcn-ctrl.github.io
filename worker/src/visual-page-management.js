@@ -348,6 +348,9 @@ export async function deleteVisualPage(env, pageId, rawInput) {
             DELETE FROM visual_node_properties
             WHERE node_id IN (SELECT id FROM visual_nodes WHERE tree_id = ?)
         `).bind(page.tree_id),
+        env.DB.prepare(`
+            DELETE FROM visual_tree_publications WHERE tree_id = ?
+        `).bind(page.tree_id),
         env.DB.prepare(`DELETE FROM visual_nodes WHERE tree_id = ?`).bind(page.tree_id),
         env.DB.prepare(`DELETE FROM visual_page_trees WHERE page_id = ?`).bind(pageId),
         env.DB.prepare(`DELETE FROM visual_trees WHERE id = ?`).bind(page.tree_id),

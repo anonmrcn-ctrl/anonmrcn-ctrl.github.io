@@ -3,7 +3,7 @@
   "title": "Autonomia visuale no-code",
   "objective": "Permettere all'amministratore di creare, comporre, personalizzare, pubblicare, archiviare e recuperare pagine senza modificare codice.",
   "status": "in_progress",
-  "currentUnit": "13.11",
+  "currentUnit": "13.12",
   "allowedStatuses": [
     "pending",
     "in_progress",
@@ -177,7 +177,7 @@
     {
       "id": "13.11",
       "title": "Pubblicazione, qualità e recupero",
-      "status": "pending",
+      "status": "complete",
       "dependsOn": ["13.10"],
       "deliverables": [
         "Anteprima autenticata, confronto, undo/redo, revisioni e pubblicazione atomica dell'albero visuale.",

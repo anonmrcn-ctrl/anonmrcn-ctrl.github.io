@@ -237,5 +237,13 @@ test("l'API visuale espone soltanto alberi pubblicati e conserva noindex", async
         "https://worker.test/api/public/visual-pages/progetto",
         { headers: { Origin: env.ALLOWED_ORIGIN } }
     ), env, {});
-    assert.equal(draftResponse.status, 404);
+    assert.equal(draftResponse.status, 200, "la bozza non sostituisce lo snapshot pubblico");
+    db.database.prepare(`
+        UPDATE site_pages SET status = 'draft' WHERE id = 'page-progetto'
+    `).run();
+    const unpublishedResponse = await worker.fetch(new Request(
+        "https://worker.test/api/public/visual-pages/progetto",
+        { headers: { Origin: env.ALLOWED_ORIGIN } }
+    ), env, {});
+    assert.equal(unpublishedResponse.status, 404);
 });
