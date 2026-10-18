@@ -3,7 +3,7 @@
   "title": "Anteprima, media, audio e video nel builder visuale",
   "objective": "Rendere fedele l'anteprima delle modifiche e permettere di scegliere, caricare e configurare immagini, gallerie, audio e video interamente dal CMS a blocchi.",
   "status": "in_progress",
-  "currentUnit": "14.2",
+  "currentUnit": "14.3",
   "allowedStatuses": [
     "pending",
     "in_progress",
@@ -56,11 +56,12 @@
     {
       "id": "14.2",
       "title": "Selettore della libreria media nei blocchi",
-      "status": "pending",
+      "status": "complete",
       "dependsOn": ["14.1"],
       "deliverables": [
-        "Selettore visuale del catalogo D1/R2 per immagini e gallerie.",
-        "Controlli per ricerca, miniatura, sostituzione, riordino, testo alternativo, didascalia, credito e punto focale."
+        "worker/tests/visual-media-picker.test.mjs prova catalogo filtrato e riferimenti asset normalizzati.",
+        "admin-visual-builder.js e admin-visual-builder.css offrono ricerca, filtro, miniature, sostituzione, riordino e rimozione responsive.",
+        "docs/cms/14-2-media-picker.md registra contratto, accessibilità e verifiche ripetibili."
       ],
       "acceptance": [
         "Un'immagine e una galleria possono essere compilate e modificate senza inserire assetId o URL tecnici.",

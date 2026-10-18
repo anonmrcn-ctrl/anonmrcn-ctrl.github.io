@@ -6,6 +6,7 @@ import {
 } from "./visual-builder-behaviors.js";
 
 export const VISUAL_INSPECTOR_VERSION = 2;
+const ASSET_ID_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/u;
 
 const option = (value, label, color = null) => Object.freeze({ value, label, color });
 
@@ -48,7 +49,18 @@ const COPY_FIELDS = Object.freeze({
     quote: [textArea("text", "Citazione", "text", 5000), textField("title", "Autore", "title", 200)],
     button: [textField("title", "Etichetta", "title", 160), urlField("href", "Destinazione")],
     "link-list": [textArea("items", "Elementi, uno per riga", "items", 10000, "lines")],
-    image: [mediaField("alt", "Testo alternativo", "alt", 300, true), mediaField("caption", "Didascalia", "caption", 500)],
+    image: [
+        assetField("assetId", "Immagine", false),
+        mediaField("alt", "Testo alternativo", "alt", 300, true),
+        mediaField("caption", "Didascalia", "caption", 500),
+        mediaField("credit", "Credito", "credit", 300),
+        selectField("focalPoint", "Punto focale", "content.media", "focalPoint", [
+            option("center", "Centro"), option("top", "Alto"),
+            option("right", "Destra"), option("bottom", "Basso"),
+            option("left", "Sinistra")
+        ], "center")
+    ],
+    gallery: [assetField("assetIds", "Immagini della galleria", true)],
     "global-header": [textField("title", "Titolo", "title", 200), textArea("text", "Testo", "text", 2000)],
     "global-footer": [textArea("text", "Testo", "text", 2000)],
     "global-notice": [textField("title", "Titolo", "title", 200), textArea("text", "Avviso", "text", 2000)],
@@ -171,6 +183,15 @@ export function normalizeInspectorValues(type, rawValues) {
         if (descriptor.control === "url" && value && !safeHref(value)) {
             throw new Error("La destinazione deve essere HTTPS, locale, email, telefono o ancora.");
         }
+        if (descriptor.control === "media-picker" && value) {
+            const ids = value.split(/\r?\n/u).map((item) => item.trim()).filter(Boolean);
+            if (ids.some((id) => !ASSET_ID_PATTERN.test(id)) || new Set(ids).size !== ids.length) {
+                throw new Error(`Selezione non valida per «${descriptor.label}».`);
+            }
+            if (descriptor.format !== "lines" && ids.length !== 1) {
+                throw new Error(`«${descriptor.label}» accetta un solo media.`);
+            }
+        }
         normalized[descriptor.key] = value;
     }
     validateBehaviorValues(type, normalized);
@@ -204,7 +225,8 @@ export function inspectorRows(normalized, now) {
             breakpoint: descriptor.breakpoint,
             itemPosition: descriptor.format === "lines" ? index + 1 : 0,
             valueKind: descriptor.valueKind,
-            textValue: item,
+            textValue: descriptor.valueKind === "asset" ? null : item,
+            assetId: descriptor.valueKind === "asset" ? item : null,
             createdAt: now,
             updatedAt: now
         }));
@@ -244,6 +266,22 @@ function mediaField(key, label, propertyName, maxLength, required = false) {
     return field(key, label, "content.media", propertyName, "text", "text", null, "all", maxLength, required);
 }
 
+function assetField(key, label, multiple) {
+    return field(
+        key,
+        label,
+        "content.media",
+        "assetId",
+        "asset",
+        "media-picker",
+        null,
+        "all",
+        multiple ? 8192 : 128,
+        true,
+        multiple ? "lines" : "single"
+    );
+}
+
 function spacing() {
     return Array.from({ length: 7 }, (_, index) => option(`space-${index}`, String(index)));
 }
@@ -266,6 +304,7 @@ function visibility() {
 function propertyValue(property) {
     if (property.value_kind === "boolean") return property.boolean_value ? "true" : "false";
     if (["integer", "number"].includes(property.value_kind)) return String(property.number_value ?? "");
+    if (property.value_kind === "asset") return String(property.asset_id ?? "");
     return String(property.text_value ?? "");
 }
 

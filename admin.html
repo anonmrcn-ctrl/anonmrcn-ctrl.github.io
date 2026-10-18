@@ -1356,6 +1356,36 @@
 
             <div class="admin-list" id="adminList"></div>
         </section>
+        <dialog id="adminVisualMediaDialog" class="admin-visual-media-dialog" aria-labelledby="adminVisualMediaTitle">
+            <form method="dialog" class="admin-visual-media-dialog__header">
+                <h2 id="adminVisualMediaTitle">Scegli dalla libreria media</h2>
+                <button class="admin-button-secondary" value="cancel" type="submit">Chiudi</button>
+            </form>
+            <p>
+                Cerca per nome, descrizione o didascalia. Le immagini sono
+                collegate dal catalogo D1/R2: non devi copiare URL o codici.
+            </p>
+            <div class="admin-visual-media-filters">
+                <label for="adminVisualMediaSearch">Cerca</label>
+                <input id="adminVisualMediaSearch" type="search" autocomplete="off">
+                <label for="adminVisualMediaSource">Origine</label>
+                <select id="adminVisualMediaSource">
+                    <option value="all">Tutte</option>
+                    <option value="voices">Voci</option>
+                    <option value="places">Luoghi</option>
+                </select>
+            </div>
+            <p id="adminVisualMediaStatus" class="admin-status" aria-live="polite"></p>
+            <div id="adminVisualMediaResults" class="admin-visual-media-results"></div>
+            <section aria-labelledby="adminVisualMediaSelectedTitle">
+                <h3 id="adminVisualMediaSelectedTitle">Selezione e ordine</h3>
+                <div id="adminVisualMediaSelected" class="admin-visual-media-selected"></div>
+            </section>
+            <div class="admin-visual-media-actions">
+                <button id="adminVisualMediaApply" type="button">Usa nella pagina</button>
+                <button id="adminVisualMediaClear" class="admin-button-secondary" type="button">Rimuovi selezione</button>
+            </div>
+        </dialog>
     </main>
 
     <script src="./config.js"></script>

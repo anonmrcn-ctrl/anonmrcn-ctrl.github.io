@@ -53,6 +53,110 @@
     min-height: 1.25rem;
 }
 
+.admin-visual-media-field {
+    display: grid;
+    gap: .65rem;
+    padding: .8rem;
+    border: 1px solid var(--line);
+}
+
+.admin-visual-media-field__label {
+    font-weight: 800;
+}
+
+.admin-visual-media-field__selection {
+    display: grid;
+    grid-template-columns: 4rem minmax(0, 1fr);
+    gap: .5rem;
+    align-items: center;
+}
+
+.admin-visual-media-field__selection img {
+    width: 4rem;
+    height: 3rem;
+    object-fit: cover;
+}
+
+.admin-visual-media-dialog {
+    width: min(58rem, calc(100% - 2rem));
+    max-height: calc(100dvh - 2rem);
+    padding: 1rem;
+    border: 2px solid var(--ink);
+    background: var(--paper);
+    color: var(--ink);
+}
+
+.admin-visual-media-dialog::backdrop {
+    background: rgb(0 0 0 / 55%);
+}
+
+.admin-visual-media-dialog__header,
+.admin-visual-media-filters,
+.admin-visual-media-actions,
+.admin-visual-media-selected__row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .75rem;
+    align-items: center;
+}
+
+.admin-visual-media-dialog__header {
+    justify-content: space-between;
+}
+
+.admin-visual-media-results {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+    gap: .8rem;
+    margin: 1rem 0;
+}
+
+.admin-visual-media-card {
+    display: grid;
+    gap: .55rem;
+    align-content: start;
+    padding: .7rem;
+    border: 1px solid var(--line);
+}
+
+.admin-visual-media-card img {
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    object-fit: cover;
+    background: var(--soft);
+}
+
+.admin-visual-media-card p {
+    margin: 0;
+    overflow-wrap: anywhere;
+}
+
+.admin-visual-media-selected {
+    display: grid;
+    gap: .5rem;
+    margin-bottom: 1rem;
+}
+
+.admin-visual-media-selected__row {
+    padding: .5rem;
+    border-bottom: 1px solid var(--line);
+}
+
+.admin-visual-media-selected__row span {
+    flex: 1 1 12rem;
+}
+
+@media (max-width: 42rem) {
+    .admin-visual-media-dialog {
+        width: calc(100% - 1rem);
+        max-height: calc(100dvh - 1rem);
+    }
+
+    .admin-visual-media-filters > * {
+        width: 100%;
+    }
+}
+
 .admin-visual-danger {
     margin: 0 1rem 1rem;
     padding-top: 1rem !important;
