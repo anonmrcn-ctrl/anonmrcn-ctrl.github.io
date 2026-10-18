@@ -163,3 +163,10 @@ Il criterio è soddisfatto dall'insieme dei test del ciclo di vita visuale,
 dell'ispettore, della pubblicazione e dell'interfaccia responsive elencati
 nell'audit 13.12. Il flusso conserva permalink e redirect prima di permettere
 la cancellazione definitiva e non include bozze o anteprime nella sitemap.
+
+## Estensione successiva
+
+I problemi riscontrati dopo la chiusura riguardo l'anteprima delle modifiche,
+l'inserimento dei media e l'aggiunta di audio e video non retrocedono le unità 13 già
+verificate. Sono tracciati, ordinati e sottoposti a nuovi criteri end-to-end nel
+punto 14: `14-visual-preview-media-audio-video.md`.
