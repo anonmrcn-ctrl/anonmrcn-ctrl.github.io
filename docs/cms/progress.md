@@ -10,7 +10,10 @@ affiancare il primo passaggio tecnico incompleto, ma non sostituirlo.
 
 **Stato complessivo:** i punti 1–12 sono stati completati il 12 ottobre 2026.
 L'estensione 13 per l'autonomia visuale no-code è completa dal 18 ottobre 2026:
-tutte le unità 13.0–13.12 sono chiuse e non rimangono unità di sviluppo aperte.
+tutte le unità 13.0–13.12 sono chiuse. Nella stessa data è stato aperto il
+punto 14 per correggere l'anteprima delle modifiche e rendere immagini,
+gallerie, audio e video realmente aggiungibili dal builder; la prima unità eseguibile
+è la 14.1.
 L'esportazione dei primi dati
 Search Console dal 9 novembre e i rapporti trimestrali successivi appartengono
 alla manutenzione ordinaria e non riaprono le unità concluse.
@@ -32,6 +35,7 @@ alla manutenzione ordinaria e non riaprono le unità concluse.
 | 11 | Amministrazione più user friendly | Completo | Navigazione per attività, feedback comprensibili, protezione delle modifiche e audit Chrome a 375/1440 px sono documentati in `11-admin-usability.md`; i run SEO `38154750211` e prestazioni/UX `38154750212` sono riusciti |
 | 12 | Rafforzamento della privacy | Completo | Inventario, retention, telemetria opt-in, librerie locali, informativa v2, esportazione e cancellazione self-service sono verificati localmente, in CI e sui servizi pubblicati; PR #26 e prove ripetibili sono registrate nell'unità 12.4 |
 | 13 | Autonomia visuale no-code | Completo | Le unità 13.0–13.12 forniscono builder a blocchi, ispettore responsive, gestione completa delle pagine, libreria, studio grafico, comportamenti dichiarativi, pubblicazione atomica, migrazione visual-first con ripiego statico e generazione automatica di HTML/canonical/sitemap. Tour guidato, manuale e diagnostica completano il flusso senza codice. `13-12-final-migration-independence-audit.md` registra 184 test, build Worker e verifiche smartphone/desktop eseguite dalla CI |
+| 14 | Anteprima, media, audio e video nel builder visuale | In programma — prossima 14.1 | `14-visual-preview-media-audio-video.md` e `visual-media-roadmap.json` registrano le regressioni dell'anteprima e dell'inserimento media, quindi i nuovi blocchi audio e video; il validatore impedisce salti e false chiusure |
 
 ## Traguardi SEO trasversali
 
@@ -65,6 +69,22 @@ alla manutenzione ordinaria e non riaprono le unità concluse.
     prima l'interfaccia corrente, poi introdurre modello, renderer, canvas,
     gestione pagine e personalizzazione grafica nell'ordine definito in
     `13-no-code-visual-builder.md`.
+11. Conservare il punto 13 completo e risolvere nel punto 14 prima l'anteprima
+    delle modifiche, poi selezione e caricamento dei media, quindi i blocchi
+    audio e video e l'audit end-to-end, nell'ordine definito in
+    `14-visual-preview-media-audio-video.md`.
+
+## Punto 14 — ordine vincolante
+
+| Ordine | Unità | Stato | Criterio e prova |
+|---:|---|---|---|
+| 14.0 | Roadmap, diagnosi e contratto di regressione | Completo | `14-visual-preview-media-audio-video.md`, `visual-media-roadmap.json`, validatore e test distinguono i due difetti dalle nuove funzioni audio e video |
+| 14.1 | Anteprima fedele delle modifiche correnti | Da fare — prossima | Lo stato di lavoro corrente deve essere reso con lo stesso renderer sicuro del sito, senza pubblicarlo né indicizzarlo |
+| 14.2 | Selettore della libreria media nei blocchi | Da fare | Immagini e gallerie devono usare catalogo D1/R2, miniature e metadati accessibili senza assetId o URL tecnici |
+| 14.3 | Caricamento e gestione media dal builder | Da fare | Upload, avanzamento, varianti, validazione, quote e riferimenti devono essere gestibili senza lasciare il builder |
+| 14.4 | Blocco audio accessibile e responsive | Da fare | Audio, copertina, trascrizione e metadati devono essere configurabili a blocchi, con Range, privacy e prestazioni verificate |
+| 14.5 | Blocco video accessibile e responsive | Da fare | Video, poster, sottotitoli e metadati devono essere configurabili a blocchi, con Range, privacy e prestazioni verificate |
+| 14.6 | Pubblicazione, diagnostica e audit end-to-end | Da fare | Smartphone e desktop devono provare anteprima, media, audio, video, pubblicazione, ripristino e integrità D1/R2 |
 
 ## Punto 2 — ordine vincolante
 
@@ -93,17 +113,16 @@ node scripts/check-seo.mjs
 node scripts/check-no-code-roadmap.mjs
 node scripts/check-no-code-independence.mjs
 node scripts/check-visual-inventory.mjs
+node scripts/check-visual-media-roadmap.mjs
 node --test scripts/*.test.mjs
 node --test scripts/visual-inventory.test.mjs
 node --test worker/tests/*.test.mjs
 ```
 
-La prima verifica controlla che tutte le aree inventariate esistano e abbiano
-una destinazione. La seconda controlla title, descrizioni, canonical, direttive
-robots, sitemap, JSON-LD, immagini e collegamenti interni. La terza applica sia
-lo schema completo sia le migrazioni a SQLite, verifica le relazioni, prova che
-revisioni, permalink e versioni legali pubblicate non possano essere riscritti
-e controlla importazione, pubblicazione e ripiego dei contenuti.
+Le verifiche controllano confine dei contenuti, SEO, stato delle roadmap,
+indipendenza no-code, inventario visuale e coerenza del nuovo ordine
+anteprima/media/audio/video. Le suite successive provano importazione, pubblicazione,
+ripiego, privacy e immutabilità delle revisioni e dei permalink.
 
 I file statici rimangono disponibili come ripiego finché la relativa unità del
 punto 2 non è completa. Non vanno eliminati durante una migrazione parziale.

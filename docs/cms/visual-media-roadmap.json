@@ -1,0 +1,131 @@
+{
+  "version": 1,
+  "title": "Anteprima, media, audio e video nel builder visuale",
+  "objective": "Rendere fedele l'anteprima delle modifiche e permettere di scegliere, caricare e configurare immagini, gallerie, audio e video interamente dal CMS a blocchi.",
+  "status": "planned",
+  "currentUnit": "14.1",
+  "allowedStatuses": [
+    "pending",
+    "in_progress",
+    "complete",
+    "blocked"
+  ],
+  "guardrails": [
+    "Preservare URL pubblici e storici, QR, frammenti, query compatibili, identificativi e revisioni.",
+    "Riutilizzare il catalogo D1 e lo storage R2 esistenti senza archivi o URL tecnici paralleli.",
+    "Mantenere bozze, anteprime, pannello e media non pubblicati autenticati, noindex e fuori dalla sitemap.",
+    "Non esporre HTML, CSS, JavaScript, chiavi R2 o identificativi tecnici nel flusso editoriale.",
+    "Non cancellare media referenziati e conservare ripieghi, cronologia e recupero append-only.",
+    "Applicare accessibilità, privacy, SEO, prestazioni e responsive design a immagini, gallerie, audio e video.",
+    "Non incorporare servizi audio o video di terze parti o telemetria senza integrazione separata, consenso e controllo privacy.",
+    "Non dichiarare completa un'unità senza test, build, documentazione e verifica browser o pubblicata pertinenti."
+  ],
+  "units": [
+    {
+      "id": "14.0",
+      "title": "Roadmap, diagnosi e contratto di regressione",
+      "status": "complete",
+      "dependsOn": [],
+      "deliverables": [
+        "docs/cms/14-visual-preview-media-audio-video.md",
+        "docs/cms/visual-media-roadmap.json",
+        "scripts/check-visual-media-roadmap.mjs",
+        "scripts/visual-media-roadmap.test.mjs"
+      ],
+      "acceptance": [
+        "I problemi di anteprima e media sono distinti dalle nuove funzioni audio e video e ordinati per dipendenza.",
+        "La prima unità aperta è verificabile automaticamente senza riaprire i punti 1-13."
+      ]
+    },
+    {
+      "id": "14.1",
+      "title": "Anteprima fedele delle modifiche correnti",
+      "status": "pending",
+      "dependsOn": ["14.0"],
+      "deliverables": [
+        "Test di regressione che riproducono l'anteprima non aggiornata.",
+        "Anteprima autenticata dello stato di lavoro con renderer condiviso e viste responsive."
+      ],
+      "acceptance": [
+        "Struttura, proprietà e contenuti modificati appaiono nell'anteprima prima della pubblicazione.",
+        "Salvataggio bozza, anteprima e pubblicazione restano separati; errori e recupero del lavoro sono comprensibili.",
+        "Anteprima e risorse private sono noindex, non pubbliche e non memorizzabili in cache condivisa."
+      ]
+    },
+    {
+      "id": "14.2",
+      "title": "Selettore della libreria media nei blocchi",
+      "status": "pending",
+      "dependsOn": ["14.1"],
+      "deliverables": [
+        "Selettore visuale del catalogo D1/R2 per immagini e gallerie.",
+        "Controlli per ricerca, miniatura, sostituzione, riordino, testo alternativo, didascalia, credito e punto focale."
+      ],
+      "acceptance": [
+        "Un'immagine e una galleria possono essere compilate e modificate senza inserire assetId o URL tecnici.",
+        "Il server valida riferimenti, stato editoriale e metadati accessibili prima del salvataggio.",
+        "Mouse, tastiera e tocco offrono comandi equivalenti su smartphone e desktop."
+      ]
+    },
+    {
+      "id": "14.3",
+      "title": "Caricamento e gestione media dal builder",
+      "status": "pending",
+      "dependsOn": ["14.2"],
+      "deliverables": [
+        "Upload R2 avviabile dall'ispettore con avanzamento, annullamento ed errori comprensibili.",
+        "Registrazione D1, varianti, checksum, quote e gestione sicura degli oggetti orfani."
+      ],
+      "acceptance": [
+        "Un file ammesso può essere caricato, catalogato e collegato al blocco senza lasciare il builder.",
+        "Tipo, dimensione, quota e integrità sono verificati prima di rendere il media selezionabile.",
+        "Sostituzione o rimozione non cancella oggetti ancora referenziati da pagine, revisioni o pubblicazioni."
+      ]
+    },
+    {
+      "id": "14.4",
+      "title": "Blocco audio accessibile e responsive",
+      "status": "pending",
+      "dependsOn": ["14.3"],
+      "deliverables": [
+        "Tipo di blocco audio registrato, renderer sicuro e sorgenti catalogate in R2.",
+        "Controlli no-code per copertina, titolo, descrizione, trascrizione, preload, loop e audio."
+      ],
+      "acceptance": [
+        "L'audio è aggiungibile e configurabile senza codice, assetId, chiavi R2 o URL arbitrari.",
+        "La resa è responsive, accessibile, supporta HTTP Range, non usa autoplay o tracciamento implicito e offre una trascrizione.",
+        "I dati strutturati pertinenti compaiono solo su pagine pubblicate e indicizzabili con metadati completi."
+      ]
+    },
+    {
+      "id": "14.5",
+      "title": "Blocco video accessibile e responsive",
+      "status": "pending",
+      "dependsOn": ["14.4"],
+      "deliverables": [
+        "Tipo di blocco video registrato, renderer sicuro e sorgenti catalogate in R2.",
+        "Controlli no-code per poster, titolo, descrizione o trascrizione, sottotitoli, preload, loop e audio."
+      ],
+      "acceptance": [
+        "Il video è aggiungibile e configurabile senza codice, assetId, chiavi R2 o URL arbitrari.",
+        "La resa è responsive, accessibile, supporta HTTP Range e non usa autoplay sonoro o tracciamento implicito.",
+        "VideoObject compare solo su pagine pubblicate e indicizzabili con metadati completi."
+      ]
+    },
+    {
+      "id": "14.6",
+      "title": "Pubblicazione, diagnostica e audit end-to-end",
+      "status": "pending",
+      "dependsOn": ["14.5"],
+      "deliverables": [
+        "Diagnostica amministrativa per anteprima, riferimenti media, varianti audio/video e metadati mancanti.",
+        "Audit completo su smartphone e desktop dal caricamento alla pagina pubblicata e al ripristino."
+      ],
+      "acceptance": [
+        "Anteprima, immagini, galleria, audio e video sono verificati nel flusso reale senza modificare codice o identificativi tecnici.",
+        "Build e test provano privacy, accessibilità, SEO, prestazioni, Range, revisioni, ripristino e integrità D1/R2.",
+        "La verifica pubblicata conferma canonical e sitemap corretti e l'assenza di bozze, anteprime e media privati dagli indici."
+      ]
+    }
+  ]
+}
