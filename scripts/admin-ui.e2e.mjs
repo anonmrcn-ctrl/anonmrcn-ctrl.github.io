@@ -162,6 +162,15 @@ async function auditLivePreview() {
                 label: "Titolo",
                 root: false,
                 values: { title: "Titolo salvato" }
+            },
+            {
+                key: "image-test",
+                parentKey: "root-test",
+                position: 2,
+                type: "image",
+                label: "Immagine",
+                root: false,
+                values: { assetId: "", alt: "", caption: "", credit: "", focalPoint: "center" }
             }
         ]
     };
@@ -184,7 +193,19 @@ async function auditLivePreview() {
                         maxLength: 200,
                         required: true,
                         defaultValue: ""
-                    }]
+                    }],
+                    image: [
+                        {
+                            key: "assetId", label: "Immagine", control: "media-picker",
+                            propertyName: "assetId", maxLength: 128, required: true,
+                            defaultValue: "", format: "single"
+                        },
+                        {
+                            key: "alt", label: "Testo alternativo", control: "text",
+                            propertyName: "alt", maxLength: 300, required: true,
+                            defaultValue: ""
+                        }
+                    ]
                 }
             })
         })
@@ -196,6 +217,34 @@ async function auditLivePreview() {
         route.fulfill({
             contentType: "application/json",
             body: "{\"themes\":[],\"tokenSchema\":[],\"activeThemeId\":\"theme-default\"}"
+        })
+    );
+    await page.route(/\/api\/admin\/cms\/visual-media$/u, (route) =>
+        route.fulfill({
+            contentType: "application/json",
+            body: JSON.stringify({
+                assets: [{
+                    id: "asset-browser-test",
+                    kind: "image",
+                    source: "voices",
+                    name: "Immagine del test browser",
+                    mediaType: "image/webp",
+                    byteSize: 120,
+                    width: 640,
+                    height: 480,
+                    alt: "Paesaggio di prova",
+                    caption: "Didascalia di prova",
+                    thumbnailUrl: "/api/public/wiki-images/test?variant=small",
+                    publicUrl: "/api/public/wiki-images/test",
+                    accessible: true
+                }]
+            })
+        })
+    );
+    await page.route(/\/api\/public\/wiki-images\/test(?:\?.*)?$/u, (route) =>
+        route.fulfill({
+            contentType: "image/svg+xml",
+            body: '<svg xmlns="http://www.w3.org/2000/svg" width="64" height="48"></svg>'
         })
     );
     await page.route(/\/api\/admin\/cms\/visual-publication\/page-test$/u, (route) =>
@@ -254,6 +303,17 @@ async function auditLivePreview() {
         await page.locator("#adminVisualPreview").getAttribute("data-preview-source"),
         "server"
     );
+
+    await page.locator('[data-visual-select="image-test"]').click();
+    await page.getByRole("button", { name: "Scegli immagine" }).click();
+    await page.locator("#adminVisualMediaDialog").waitFor({ state: "visible" });
+    await page.locator("#adminVisualMediaSearch").fill("paesaggio");
+    await page.locator("#adminVisualMediaResults").getByRole("button", {
+        name: "Seleziona"
+    }).click();
+    await page.locator("#adminVisualMediaApply").click();
+    assert.equal(await page.locator("#adminVisualField-assetId").inputValue(), "asset-browser-test");
+    assert.equal(await page.locator("#adminVisualField-alt").inputValue(), "Paesaggio di prova");
     await context.close();
 }
 

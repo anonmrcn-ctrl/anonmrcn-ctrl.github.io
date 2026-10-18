@@ -966,6 +966,13 @@ export default {
 
             if (
                 request.method === "GET" &&
+                path === "/api/admin/cms/visual-media"
+            ) {
+                return await adminListVisualMedia(request, env);
+            }
+
+            if (
+                request.method === "GET" &&
                 /^\/api\/admin\/cms\/visual-page-dependencies\/[a-z0-9]+(?:-[a-z0-9]+)*$/.test(path)
             ) {
                 const pageId = path.split("/").pop();
@@ -4335,9 +4342,11 @@ async function ensureVisualAdapterStorages(env, nodes) {
 
 async function readVisualAssets(env) {
     const result = await env.DB.prepare(`
-        SELECT id, owner_type, owner_id, alt_text, caption, width, height
+        SELECT id, owner_type, owner_id, media_name, media_type, byte_size,
+            alt_text, caption, width, height
         FROM media_assets
-        WHERE state = 'current' AND owner_type IN ('wiki_image', 'map_entry')
+        WHERE state = 'current' AND variant_key = 'original'
+            AND owner_type IN ('wiki_image', 'map_entry')
         ORDER BY id
     `).all();
     return (result.results || []).map((asset) => ({
@@ -4346,6 +4355,31 @@ async function readVisualAssets(env) {
             ? `/api/public/wiki-images/${encodeURIComponent(asset.owner_id)}`
             : `/api/public/map-entry-images/${encodeURIComponent(asset.owner_id)}`
     }));
+}
+
+async function adminListVisualMedia(request, env) {
+    if (!(await adminAuthorized(request, env))) return unauthorized(request, env);
+    await ensureCmsStorage(env);
+    const assets = await readVisualAssets(env);
+    return json(request, env, {
+        assets: assets.map((asset) => ({
+            id: asset.id,
+            kind: "image",
+            source: asset.owner_type === "wiki_image" ? "voices" : "places",
+            name: asset.media_name || (asset.owner_type === "wiki_image"
+                ? "Immagine di una Voce"
+                : "Immagine di un luogo"),
+            mediaType: asset.media_type,
+            byteSize: Number(asset.byte_size) || 0,
+            width: Number(asset.width) || null,
+            height: Number(asset.height) || null,
+            alt: asset.alt_text || "",
+            caption: asset.caption || "",
+            thumbnailUrl: `${asset.publicUrl}?variant=small`,
+            publicUrl: asset.publicUrl,
+            accessible: Boolean(String(asset.alt_text || "").trim())
+        }))
+    });
 }
 
 async function adminListCmsPages(request, env) {

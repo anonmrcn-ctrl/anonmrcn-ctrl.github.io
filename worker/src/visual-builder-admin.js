@@ -117,6 +117,7 @@ export async function updateVisualBuilderProperties(env, pageId, nodeId, rawInpu
     } catch (error) {
         throw new VisualCanvasError(error.message || "Proprietà visuali non valide.");
     }
+    await validateVisualMediaSelection(env, node.block_type, normalized.values);
 
     const [nodeResult, propertyResult] = await Promise.all([
         env.DB.prepare(`
@@ -183,8 +184,9 @@ export async function updateVisualBuilderProperties(env, pageId, nodeId, rawInpu
         statements.push(env.DB.prepare(`
             INSERT INTO visual_node_properties (
                 node_id, domain, property_set, property_name, breakpoint,
-                item_position, value_kind, text_value, created_at, updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                item_position, value_kind, text_value, asset_id,
+                created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `).bind(
             node.id,
             row.domain,
@@ -194,6 +196,7 @@ export async function updateVisualBuilderProperties(env, pageId, nodeId, rawInpu
             row.itemPosition,
             row.valueKind,
             row.textValue,
+            row.assetId,
             row.createdAt,
             row.updatedAt
         ));
@@ -320,6 +323,7 @@ export async function buildVisualBuilderPreview(env, pageId, rawInput) {
             );
         }
         normalizedByNode.set(node.id, normalized.values);
+        await validateVisualMediaSelection(env, node.block_type, normalized.values);
         const replaced = new Set(normalized.schema.map((descriptor) =>
             `${descriptor.propertySet}/${descriptor.propertyName}/${descriptor.breakpoint}`
         ));
@@ -340,7 +344,7 @@ export async function buildVisualBuilderPreview(env, pageId, rawInput) {
                 text_value: row.textValue,
                 number_value: null,
                 boolean_value: null,
-                asset_id: null,
+                asset_id: row.assetId,
                 page_reference_id: null,
                 collection_key: null
             });
@@ -722,6 +726,38 @@ function normalizePreviewPage(value, page) {
         throw new VisualCanvasError("La descrizione dell'anteprima non può superare 500 caratteri.");
     }
     return { title, description };
+}
+
+async function validateVisualMediaSelection(env, type, values) {
+    if (!['image', 'gallery'].includes(type)) return;
+    const raw = type === 'gallery' ? values.assetIds : values.assetId;
+    const ids = String(raw || '').split(/\r?\n/u).map((id) => id.trim()).filter(Boolean);
+    if (!ids.length) {
+        throw new VisualCanvasError(
+            type === 'gallery'
+                ? "Scegli almeno un'immagine per la galleria."
+                : "Scegli un'immagine dalla libreria."
+        );
+    }
+    const rows = [];
+    for (const id of ids) {
+        const asset = await env.DB.prepare(`
+            SELECT id, media_type, alt_text
+            FROM media_assets
+            WHERE id = ? AND state = 'current' AND variant_key = 'original'
+                AND owner_type IN ('wiki_image', 'map_entry')
+            LIMIT 1
+        `).bind(id).first();
+        if (!asset || !String(asset.media_type || '').startsWith('image/')) {
+            throw new VisualCanvasError("Il media scelto non è un'immagine disponibile nella libreria.");
+        }
+        rows.push(asset);
+    }
+    if (type === 'gallery' && rows.some((asset) => !String(asset.alt_text || '').trim())) {
+        throw new VisualCanvasError(
+            "Ogni immagine della galleria deve avere un testo alternativo nel catalogo."
+        );
+    }
 }
 
 function normalizeInput(rawInput) {

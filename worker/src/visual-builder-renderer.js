@@ -274,7 +274,7 @@ function renderNode(
         case "image":
             return renderImage(node, values, assetsById, attributes);
         case "gallery":
-            return `<div${attributes} role="group" aria-label="Galleria">${childHtml}</div>`;
+            return renderGallery(values, assetsById, attributes, childHtml);
         case "button":
             return renderButton(values, attributes, title || text);
         case "link-list": {
@@ -422,8 +422,22 @@ function renderImage(node, values, assetsById, attributes) {
     }
     const alt = first(values, "content.media/alt") || asset.alt_text || "";
     const caption = first(values, "content.media/caption") || asset.caption || "";
-    const image = `<img src="${escapeHtml(safeMediaUrl(asset.publicUrl))}" alt="${escapeHtml(alt)}"${asset.width ? ` width="${Number(asset.width)}"` : ""}${asset.height ? ` height="${Number(asset.height)}"` : ""} loading="lazy" decoding="async">`;
-    return `<figure${attributes}>${image}${caption ? `<figcaption>${escapeHtml(caption)}</figcaption>` : ""}</figure>`;
+    const credit = first(values, "content.media/credit");
+    const focalPoint = first(values, "content.media/focalPoint") || "center";
+    const image = `<img src="${escapeHtml(safeMediaUrl(asset.publicUrl))}" alt="${escapeHtml(alt)}"${asset.width ? ` width="${Number(asset.width)}"` : ""}${asset.height ? ` height="${Number(asset.height)}"` : ""} loading="lazy" decoding="async" data-focal-point="${escapeHtml(focalPoint)}">`;
+    const legend = [caption, credit ? `Foto: ${credit}` : ""].filter(Boolean).join(" · ");
+    return `<figure${attributes}>${image}${legend ? `<figcaption>${escapeHtml(legend)}</figcaption>` : ""}</figure>`;
+}
+
+function renderGallery(values, assetsById, attributes, childHtml) {
+    const images = all(values, "content.media/assetId").flatMap((reference) => {
+        const asset = reference?.type === "asset" ? assetsById.get(reference.id) : null;
+        if (!asset?.publicUrl) return [];
+        const alt = asset.alt_text || "";
+        const caption = asset.caption || "";
+        return [`<figure><img src="${escapeHtml(safeMediaUrl(asset.publicUrl))}" alt="${escapeHtml(alt)}"${asset.width ? ` width="${Number(asset.width)}"` : ""}${asset.height ? ` height="${Number(asset.height)}"` : ""} loading="lazy" decoding="async">${caption ? `<figcaption>${escapeHtml(caption)}</figcaption>` : ""}</figure>`];
+    }).join("");
+    return `<div${attributes} role="group" aria-label="Galleria">${images}${childHtml}</div>`;
 }
 
 function first(values, prefix) {

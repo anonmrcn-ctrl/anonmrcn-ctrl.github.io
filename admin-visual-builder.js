@@ -71,6 +71,14 @@
     const guidePrevious = document.getElementById("adminVisualGuidePrevious");
     const guideNext = document.getElementById("adminVisualGuideNext");
     const guideClose = document.getElementById("adminVisualGuideClose");
+    const mediaDialog = document.getElementById("adminVisualMediaDialog");
+    const mediaSearch = document.getElementById("adminVisualMediaSearch");
+    const mediaSource = document.getElementById("adminVisualMediaSource");
+    const mediaStatus = document.getElementById("adminVisualMediaStatus");
+    const mediaResults = document.getElementById("adminVisualMediaResults");
+    const mediaSelected = document.getElementById("adminVisualMediaSelected");
+    const mediaApply = document.getElementById("adminVisualMediaApply");
+    const mediaClear = document.getElementById("adminVisualMediaClear");
 
     const GUIDE_STEPS = Object.freeze([
         Object.freeze({
@@ -138,6 +146,8 @@
     let publicationState = null;
     let serverPreviewHtml = "";
     let serverPreviewSignature = "";
+    let mediaAssets = [];
+    let mediaPicker = null;
     let guideIndex = 0;
 
     function clearGuideTarget() {
@@ -442,10 +452,11 @@
         if (!sessionStorage.getItem(SESSION_KEY)) return;
         status.textContent = "Caricamento del canvas…";
         try {
-            const [data, library, themeStudio] = await Promise.all([
+            const [data, library, themeStudio, mediaLibrary] = await Promise.all([
                 request("/api/admin/cms/visual-pages"),
                 request("/api/admin/cms/visual-sections"),
-                request("/api/admin/cms/visual-themes")
+                request("/api/admin/cms/visual-themes"),
+                request("/api/admin/cms/visual-media")
             ]);
             pages = data.pages || [];
             sections = library.sections || [];
@@ -454,6 +465,7 @@
             activeThemeId = themeStudio.activeThemeId || "theme-default";
             palette = data.palette || [];
             inspectorSchemas = data.inspectorSchemas || {};
+            mediaAssets = mediaLibrary.assets || [];
             const pageId = preferredId || pageSelect.value || lastPageId;
             pageSelect.replaceChildren(...pages.map((page) => {
                 const option = document.createElement("option");
@@ -1119,6 +1131,10 @@
             return;
         }
         for (const field of schema) {
+            if (field.control === "media-picker") {
+                renderMediaInspectorField(field, node);
+                continue;
+            }
             const label = document.createElement("label");
             const caption = document.createElement("span");
             const control = field.control === "textarea"
@@ -1165,6 +1181,182 @@
             label.append(caption, control);
             inspectorFields.appendChild(label);
         }
+    }
+
+    function mediaIds(value) {
+        return String(value || "").split(/\r?\n/u).map((id) => id.trim()).filter(Boolean);
+    }
+
+    function renderMediaInspectorField(field, node) {
+        const container = document.createElement("div");
+        container.className = "admin-visual-media-field";
+        const heading = document.createElement("span");
+        heading.className = "admin-visual-media-field__label";
+        heading.textContent = field.label;
+        const input = document.createElement("input");
+        input.type = "hidden";
+        input.id = `adminVisualField-${field.key}`;
+        input.name = field.key;
+        input.dataset.visualField = field.key;
+        input.value = node.values?.[field.key] || "";
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "admin-button-secondary";
+        button.textContent = field.format === "lines"
+            ? "Scegli e ordina immagini"
+            : (input.value ? "Sostituisci immagine" : "Scegli immagine");
+        button.addEventListener("click", () => openMediaPicker(field, node));
+        const summary = document.createElement("div");
+        summary.className = "admin-visual-media-field__selection";
+        const selectedAssets = mediaIds(input.value)
+            .map((id) => mediaAssets.find((asset) => asset.id === id))
+            .filter(Boolean);
+        if (!selectedAssets.length) {
+            summary.textContent = "Nessun media selezionato.";
+        } else {
+            for (const asset of selectedAssets) {
+                const image = document.createElement("img");
+                image.src = `${api.baseUrl}${asset.thumbnailUrl}`;
+                image.alt = "";
+                image.loading = "lazy";
+                const text = document.createElement("span");
+                text.textContent = asset.name;
+                summary.append(image, text);
+            }
+        }
+        container.append(heading, input, button, summary);
+        inspectorFields.appendChild(container);
+    }
+
+    function openMediaPicker(field, node) {
+        mediaPicker = {
+            field,
+            nodeKey: node.key,
+            ids: mediaIds(node.values?.[field.key]),
+            multiple: field.format === "lines"
+        };
+        mediaSearch.value = "";
+        mediaSource.value = "all";
+        renderMediaPicker();
+        mediaDialog.showModal();
+        mediaSearch.focus();
+    }
+
+    function renderMediaPicker() {
+        if (!mediaPicker) return;
+        const query = mediaSearch.value.trim().toLocaleLowerCase("it");
+        const source = mediaSource.value;
+        const visible = mediaAssets.filter((asset) =>
+            (source === "all" || asset.source === source) &&
+            (!query || [asset.name, asset.alt, asset.caption]
+                .some((value) => String(value || "").toLocaleLowerCase("it").includes(query)))
+        );
+        mediaResults.replaceChildren(...visible.map(mediaResultCard));
+        if (!visible.length) {
+            mediaResults.textContent = "Nessuna immagine corrisponde alla ricerca.";
+        }
+        mediaSelected.replaceChildren(...mediaPicker.ids.map((id, index) =>
+            selectedMediaCard(id, index)
+        ).filter(Boolean));
+        if (!mediaPicker.ids.length) mediaSelected.textContent = "Nessuna immagine selezionata.";
+        mediaApply.disabled = !mediaPicker.ids.length;
+        mediaStatus.textContent = mediaPicker.multiple
+            ? `${mediaPicker.ids.length} immagini selezionate. Usa i pulsanti per cambiarne l'ordine.`
+            : (mediaPicker.ids.length ? "Immagine pronta per essere collegata." : "Scegli un'immagine.");
+    }
+
+    function mediaResultCard(asset) {
+        const card = document.createElement("article");
+        card.className = "admin-visual-media-card";
+        const image = document.createElement("img");
+        image.src = `${api.baseUrl}${asset.thumbnailUrl}`;
+        image.alt = "";
+        image.loading = "lazy";
+        const title = document.createElement("strong");
+        title.textContent = asset.name;
+        const metadata = document.createElement("p");
+        metadata.textContent = [
+            asset.alt ? `Alt: ${asset.alt}` : "Testo alternativo mancante",
+            asset.caption || "Senza didascalia",
+            asset.width && asset.height ? `${asset.width} × ${asset.height} px` : "Dimensioni non disponibili"
+        ].join(" · ");
+        const button = document.createElement("button");
+        button.type = "button";
+        const selected = mediaPicker.ids.includes(asset.id);
+        button.textContent = selected ? "Rimuovi" : "Seleziona";
+        button.setAttribute("aria-pressed", String(selected));
+        button.disabled = mediaPicker.multiple && !asset.accessible && !selected;
+        if (button.disabled) button.title = "Aggiungi prima il testo alternativo nel catalogo.";
+        button.addEventListener("click", () => {
+            if (selected) {
+                mediaPicker.ids = mediaPicker.ids.filter((id) => id !== asset.id);
+            } else if (mediaPicker.multiple) {
+                mediaPicker.ids.push(asset.id);
+            } else {
+                mediaPicker.ids = [asset.id];
+            }
+            renderMediaPicker();
+        });
+        card.append(image, title, metadata, button);
+        return card;
+    }
+
+    function selectedMediaCard(id, index) {
+        const asset = mediaAssets.find((candidate) => candidate.id === id);
+        if (!asset) return null;
+        const row = document.createElement("div");
+        row.className = "admin-visual-media-selected__row";
+        const label = document.createElement("span");
+        label.textContent = `${index + 1}. ${asset.name}`;
+        const actions = [
+            ["Su", index - 1],
+            ["Giù", index + 1]
+        ];
+        row.appendChild(label);
+        if (mediaPicker.multiple) {
+            for (const [text, target] of actions) {
+                const button = document.createElement("button");
+                button.type = "button";
+                button.className = "admin-button-secondary";
+                button.textContent = text;
+                button.disabled = target < 0 || target >= mediaPicker.ids.length;
+                button.addEventListener("click", () => {
+                    const [moved] = mediaPicker.ids.splice(index, 1);
+                    mediaPicker.ids.splice(target, 0, moved);
+                    renderMediaPicker();
+                });
+                row.appendChild(button);
+            }
+        }
+        const remove = document.createElement("button");
+        remove.type = "button";
+        remove.className = "admin-button-secondary";
+        remove.textContent = "Rimuovi";
+        remove.addEventListener("click", () => {
+            mediaPicker.ids.splice(index, 1);
+            renderMediaPicker();
+        });
+        row.appendChild(remove);
+        return row;
+    }
+
+    function applyMediaSelection() {
+        const node = nodeByKey(mediaPicker?.nodeKey);
+        if (!node || !mediaPicker) return;
+        const value = mediaPicker.ids.join("\n");
+        node.values = { ...(node.values || {}), [mediaPicker.field.key]: value };
+        if (!mediaPicker.multiple && mediaPicker.ids.length) {
+            const asset = mediaAssets.find((candidate) => candidate.id === mediaPicker.ids[0]);
+            if (asset) {
+                if (!String(node.values.alt || "").trim()) node.values.alt = asset.alt || "";
+                if (!String(node.values.caption || "").trim()) node.values.caption = asset.caption || "";
+            }
+        }
+        propertyDirty.add(node.key);
+        mediaDialog.close();
+        mediaPicker = null;
+        renderCanvas(true);
+        status.textContent = currentWarnings()[0] || "Media collegato. Controlla l'anteprima e salva.";
     }
 
     function renderPreview() {
@@ -1270,6 +1462,19 @@
         );
         if (node.type === "image" && !String(values.alt || "").trim()) {
             messages.push("Aggiungi il testo alternativo prima di salvare l'immagine.");
+        }
+        if (node.type === "image" && !mediaIds(values.assetId).length) {
+            messages.push("Scegli un'immagine dalla libreria prima di salvare.");
+        }
+        if (node.type === "gallery") {
+            const selected = mediaIds(values.assetIds);
+            if (!selected.length) {
+                messages.push("Scegli almeno un'immagine per la galleria.");
+            } else if (selected.some((id) =>
+                !mediaAssets.find((asset) => asset.id === id)?.accessible
+            )) {
+                messages.push("Ogni immagine della galleria richiede un testo alternativo.");
+            }
         }
         return messages;
     }
@@ -1678,6 +1883,17 @@
         canvas.querySelectorAll(".is-dragging").forEach((item) => {
             item.classList.remove("is-dragging");
         });
+    });
+    mediaSearch.addEventListener("input", renderMediaPicker);
+    mediaSource.addEventListener("change", renderMediaPicker);
+    mediaApply.addEventListener("click", applyMediaSelection);
+    mediaClear.addEventListener("click", () => {
+        if (!mediaPicker) return;
+        mediaPicker.ids = [];
+        renderMediaPicker();
+    });
+    mediaDialog.addEventListener("close", () => {
+        mediaPicker = null;
     });
     window.addEventListener("beforeunload", (event) => {
         if (!dirty && !propertyDirty.size) return;

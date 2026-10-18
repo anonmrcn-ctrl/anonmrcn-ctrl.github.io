@@ -12,8 +12,8 @@ affiancare il primo passaggio tecnico incompleto, ma non sostituirlo.
 L'estensione 13 per l'autonomia visuale no-code è completa dal 18 ottobre 2026:
 tutte le unità 13.0–13.12 sono chiuse. Nella stessa data è stato aperto il
 punto 14 per correggere l'anteprima delle modifiche e rendere immagini,
-gallerie, audio e video realmente aggiungibili dal builder. L'anteprima fedele
-dello stato di lavoro è completa; la prima unità eseguibile è la 14.2.
+gallerie, audio e video realmente aggiungibili dal builder. Anteprima fedele e
+selettore del catalogo D1/R2 sono completi; la prima unità eseguibile è la 14.3.
 L'esportazione dei primi dati
 Search Console dal 9 novembre e i rapporti trimestrali successivi appartengono
 alla manutenzione ordinaria e non riaprono le unità concluse.
@@ -35,7 +35,7 @@ alla manutenzione ordinaria e non riaprono le unità concluse.
 | 11 | Amministrazione più user friendly | Completo | Navigazione per attività, feedback comprensibili, protezione delle modifiche e audit Chrome a 375/1440 px sono documentati in `11-admin-usability.md`; i run SEO `38154750211` e prestazioni/UX `38154750212` sono riusciti |
 | 12 | Rafforzamento della privacy | Completo | Inventario, retention, telemetria opt-in, librerie locali, informativa v2, esportazione e cancellazione self-service sono verificati localmente, in CI e sui servizi pubblicati; PR #26 e prove ripetibili sono registrate nell'unità 12.4 |
 | 13 | Autonomia visuale no-code | Completo | Le unità 13.0–13.12 forniscono builder a blocchi, ispettore responsive, gestione completa delle pagine, libreria, studio grafico, comportamenti dichiarativi, pubblicazione atomica, migrazione visual-first con ripiego statico e generazione automatica di HTML/canonical/sitemap. Tour guidato, manuale e diagnostica completano il flusso senza codice. `13-12-final-migration-independence-audit.md` registra 184 test, build Worker e verifiche smartphone/desktop eseguite dalla CI |
-| 14 | Anteprima, media, audio e video nel builder visuale | In corso — prossima 14.2 | L'unità 14.1 rende in memoria le modifiche non salvate con il renderer condiviso, senza scritture o indicizzazione; `14-1-live-preview.md`, test Worker e audit browser registrano le prove. Segue il selettore visuale D1/R2 |
+| 14 | Anteprima, media, audio e video nel builder visuale | In corso — prossima 14.3 | Le unità 14.1–14.2 coprono anteprima non salvata e selezione visuale di immagini/gallerie dal catalogo D1/R2 con validazione dei riferimenti e dei metadati accessibili. Segue l'upload diretto dal builder |
 
 ## Traguardi SEO trasversali
 
@@ -80,8 +80,8 @@ alla manutenzione ordinaria e non riaprono le unità concluse.
 |---:|---|---|---|
 | 14.0 | Roadmap, diagnosi e contratto di regressione | Completo | `14-visual-preview-media-audio-video.md`, `visual-media-roadmap.json`, validatore e test distinguono i due difetti dalle nuove funzioni audio e video |
 | 14.1 | Anteprima fedele delle modifiche correnti | Completo | Il POST autenticato rende albero, proprietà e metadati correnti senza scriverli; test Worker prova D1 e pagina pubblica immutati, audit Playwright prova modifiche non salvate e viste responsive, `14-1-live-preview.md` registra il contratto `no-store`/`noindex` |
-| 14.2 | Selettore della libreria media nei blocchi | Da fare — prossima | Immagini e gallerie devono usare catalogo D1/R2, miniature e metadati accessibili senza assetId o URL tecnici |
-| 14.3 | Caricamento e gestione media dal builder | Da fare | Upload, avanzamento, varianti, validazione, quote e riferimenti devono essere gestibili senza lasciare il builder |
+| 14.2 | Selettore della libreria media nei blocchi | Completo | `14-2-media-picker.md` registra endpoint autenticato e minimizzato, ricerca/filtro/miniature, sostituzione, selezione multipla, riordino e rimozione; test API prova asset D1 tipizzati, ordine e rifiuto di versioni non selezionabili |
+| 14.3 | Caricamento e gestione media dal builder | Da fare — prossima | Upload, avanzamento, varianti, validazione, quote e riferimenti devono essere gestibili senza lasciare il builder |
 | 14.4 | Blocco audio accessibile e responsive | Da fare | Audio, copertina, trascrizione e metadati devono essere configurabili a blocchi, con Range, privacy e prestazioni verificate |
 | 14.5 | Blocco video accessibile e responsive | Da fare | Video, poster, sottotitoli e metadati devono essere configurabili a blocchi, con Range, privacy e prestazioni verificate |
 | 14.6 | Pubblicazione, diagnostica e audit end-to-end | Da fare | Smartphone e desktop devono provare anteprima, media, audio, video, pubblicazione, ripristino e integrità D1/R2 |

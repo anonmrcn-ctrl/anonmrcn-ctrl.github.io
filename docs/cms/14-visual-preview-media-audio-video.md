@@ -60,8 +60,8 @@ devono riprodurre i problemi prima di correggerli.
 |---:|---|---|---|
 | 14.0 | Roadmap, diagnosi e controllo automatico | Completa | Punto 13 |
 | 14.1 | Anteprima fedele delle modifiche correnti | Completa | 14.0 |
-| 14.2 | Selettore della libreria media nei blocchi | Da fare — prossima | 14.1 |
-| 14.3 | Caricamento e gestione media dal builder | Da fare | 14.2 |
+| 14.2 | Selettore della libreria media nei blocchi | Completa | 14.1 |
+| 14.3 | Caricamento e gestione media dal builder | Da fare — prossima | 14.2 |
 | 14.4 | Blocco audio accessibile e responsive | Da fare | 14.3 |
 | 14.5 | Blocco video accessibile e responsive | Da fare | 14.4 |
 | 14.6 | Pubblicazione, diagnostica e audit end-to-end | Da fare | 14.5 |
@@ -96,6 +96,15 @@ L'ispettore di `image` e `gallery` deve aprire la libreria esistente, consentire
 ricerca, filtro, selezione, sostituzione, riordino e rimozione e mostrare
 miniatura e metadati. Testo alternativo, didascalia, credito e punto focale
 devono essere gestibili nello stesso flusso con validazione contestuale.
+
+Completata il 18 ottobre 2026. L'ispettore apre una finestra accessibile con
+ricerca, filtro per origine, miniature, metadati e comandi a pulsante per
+selezionare, sostituire, rimuovere e riordinare. Le immagini usano riferimenti
+`asset` reali al catalogo corrente D1/R2; la galleria conserva l'ordine come
+righe normalizzate, non come URL o JSON opaco. Il blocco immagine gestisce
+anche alt, didascalia, credito e punto focale. Il Worker esclude asset ritirati,
+varianti tecniche e documenti, e rifiuta gallerie con media privi di testo
+alternativo. Prove e comandi sono in `14-2-media-picker.md`.
 
 ### 14.3 — Caricamento dal builder
 
