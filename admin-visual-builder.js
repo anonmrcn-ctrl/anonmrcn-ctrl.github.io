@@ -86,6 +86,12 @@
     const mediaUploadCancel = document.getElementById("adminVisualMediaUploadCancel");
     const mediaUploadProgress = document.getElementById("adminVisualMediaUploadProgress");
     const mediaUploadStatus = document.getElementById("adminVisualMediaUploadStatus");
+    const mediaUploadSummary = document.getElementById("adminVisualMediaUploadSummary");
+    const mediaUploadHelp = document.getElementById("adminVisualMediaUploadHelp");
+    const mediaFileLabel = document.getElementById("adminVisualMediaFileLabel");
+    const mediaAltLabel = document.getElementById("adminVisualMediaAltLabel");
+    const mediaAltHelp = document.getElementById("adminVisualMediaAltHelp");
+    const mediaCaptionLabel = document.getElementById("adminVisualMediaCaptionLabel");
 
     const GUIDE_STEPS = Object.freeze([
         Object.freeze({
@@ -1211,9 +1217,10 @@
         const button = document.createElement("button");
         button.type = "button";
         button.className = "admin-button-secondary";
+        const mediaName = field.mediaKind === "audio" ? "audio" : "immagine";
         button.textContent = field.format === "lines"
             ? "Scegli e ordina immagini"
-            : (input.value ? "Sostituisci immagine" : "Scegli immagine");
+            : (input.value ? `Sostituisci ${mediaName}` : `Scegli ${mediaName}`);
         button.addEventListener("click", () => openMediaPicker(field, node));
         const summary = document.createElement("div");
         summary.className = "admin-visual-media-field__selection";
@@ -1224,13 +1231,16 @@
             summary.textContent = "Nessun media selezionato.";
         } else {
             for (const asset of selectedAssets) {
-                const image = document.createElement("img");
-                image.alt = "";
-                image.loading = "lazy";
-                setMediaImageSource(image, asset, asset.thumbnailUrl);
                 const text = document.createElement("span");
                 text.textContent = asset.name;
-                summary.append(image, text);
+                if (asset.kind === "image") {
+                    const image = document.createElement("img");
+                    image.alt = "";
+                    image.loading = "lazy";
+                    setProtectedMediaSource(image, asset, asset.thumbnailUrl);
+                    summary.append(image);
+                }
+                summary.append(text);
             }
         }
         container.append(heading, input, button, summary);
@@ -1249,6 +1259,7 @@
         mediaFile.value = "";
         mediaAlt.value = "";
         mediaCaption.value = "";
+        configureMediaUpload(field.mediaKind || "image");
         resetMediaUpload();
         renderMediaPicker();
         mediaDialog.showModal();
@@ -1259,36 +1270,55 @@
         if (!mediaPicker) return;
         const query = mediaSearch.value.trim().toLocaleLowerCase("it");
         const source = mediaSource.value;
+        const kind = mediaPicker.field.mediaKind || "image";
         const visible = mediaAssets.filter((asset) =>
+            asset.kind === kind &&
             (source === "all" || asset.source === source) &&
             (!query || [asset.name, asset.alt, asset.caption]
                 .some((value) => String(value || "").toLocaleLowerCase("it").includes(query)))
         );
         mediaResults.replaceChildren(...visible.map(mediaResultCard));
         if (!visible.length) {
-            mediaResults.textContent = "Nessuna immagine corrisponde alla ricerca.";
+            mediaResults.textContent = kind === "audio"
+                ? "Nessun audio corrisponde alla ricerca."
+                : "Nessuna immagine corrisponde alla ricerca.";
         }
         mediaSelected.replaceChildren(...mediaPicker.ids.map((id, index) =>
             selectedMediaCard(id, index)
         ).filter(Boolean));
-        if (!mediaPicker.ids.length) mediaSelected.textContent = "Nessuna immagine selezionata.";
+        if (!mediaPicker.ids.length) mediaSelected.textContent = kind === "audio"
+            ? "Nessun audio selezionato."
+            : "Nessuna immagine selezionata.";
         mediaApply.disabled = !mediaPicker.ids.length;
         mediaStatus.textContent = mediaPicker.multiple
             ? `${mediaPicker.ids.length} immagini selezionate. Usa i pulsanti per cambiarne l'ordine.`
-            : (mediaPicker.ids.length ? "Immagine pronta per essere collegata." : "Scegli un'immagine.");
+            : (mediaPicker.ids.length
+                ? `${kind === "audio" ? "Audio" : "Immagine"} pronto per essere collegato.`
+                : `Scegli ${kind === "audio" ? "un audio" : "un’immagine"}.`);
     }
 
     function mediaResultCard(asset) {
         const card = document.createElement("article");
         card.className = "admin-visual-media-card";
-        const image = document.createElement("img");
-        image.alt = "";
-        image.loading = "lazy";
-        setMediaImageSource(image, asset, asset.thumbnailUrl);
+        const mediaPreview = asset.kind === "image"
+            ? document.createElement("img")
+            : document.createElement("span");
+        if (asset.kind === "image") {
+            mediaPreview.alt = "";
+            mediaPreview.loading = "lazy";
+            setProtectedMediaSource(mediaPreview, asset, asset.thumbnailUrl);
+        } else {
+            mediaPreview.className = "admin-visual-media-card__audio";
+            mediaPreview.textContent = "Audio";
+        }
         const title = document.createElement("strong");
         title.textContent = asset.name;
         const metadata = document.createElement("p");
-        metadata.textContent = [
+        metadata.textContent = asset.kind === "audio" ? [
+            asset.mediaType,
+            `${(asset.byteSize / 1024 / 1024).toFixed(1)} MB`,
+            asset.caption || "Senza descrizione"
+        ].join(" · ") : [
             asset.alt ? `Alt: ${asset.alt}` : "Testo alternativo mancante",
             asset.caption || "Senza didascalia",
             asset.width && asset.height ? `${asset.width} × ${asset.height} px` : "Dimensioni non disponibili"
@@ -1310,16 +1340,16 @@
             }
             renderMediaPicker();
         });
-        card.append(image, title, metadata, button);
+        card.append(mediaPreview, title, metadata, button);
         return card;
     }
 
-    async function setMediaImageSource(image, asset, source = asset.publicUrl) {
+    async function setProtectedMediaSource(element, asset, source = asset.publicUrl) {
         if (!asset.private) {
-            image.src = `${api.baseUrl}${source}`;
+            element.src = `${api.baseUrl}${source}`;
             return;
         }
-        image.setAttribute("aria-busy", "true");
+        element.setAttribute("aria-busy", "true");
         try {
             const response = await fetch(`${api.baseUrl}${source}`, {
                 headers: { Authorization: `Bearer ${sessionStorage.getItem(SESSION_KEY) || ""}` }
@@ -1327,16 +1357,35 @@
             if (!response.ok) throw new Error("Media privato non disponibile.");
             const objectUrl = URL.createObjectURL(await response.blob());
             mediaObjectUrls.add(objectUrl);
-            image.addEventListener("load", () => {
+            element.addEventListener(asset.kind === "audio" ? "loadedmetadata" : "load", () => {
                 URL.revokeObjectURL(objectUrl);
                 mediaObjectUrls.delete(objectUrl);
             }, { once: true });
-            image.src = objectUrl;
+            element.src = objectUrl;
         } catch (_) {
-            image.alt = "Anteprima non disponibile";
+            if (element instanceof HTMLImageElement) element.alt = "Anteprima non disponibile";
         } finally {
-            image.removeAttribute("aria-busy");
+            element.removeAttribute("aria-busy");
         }
+    }
+
+    function configureMediaUpload(kind) {
+        const audio = kind === "audio";
+        mediaFile.accept = audio
+            ? "audio/mpeg,audio/ogg,audio/webm,audio/mp4,audio/wav"
+            : "image/jpeg,image/png,image/webp";
+        mediaAlt.maxLength = audio ? 200 : 300;
+        mediaCaption.maxLength = audio ? 1000 : 500;
+        mediaUploadSummary.textContent = audio ? "Carica un nuovo audio" : "Carica una nuova immagine";
+        mediaUploadHelp.textContent = audio
+            ? "MP3, OGG, WebM, M4A o WAV, massimo 16 MB. Nessun autoplay o servizio esterno."
+            : "JPEG, PNG o WebP, massimo 8 MB. Il CMS prepara automaticamente le varianti responsive.";
+        mediaFileLabel.textContent = audio ? "File audio" : "File immagine";
+        mediaAltLabel.textContent = audio ? "Titolo audio" : "Testo alternativo";
+        mediaAltHelp.textContent = audio
+            ? "Usa un titolo breve e riconoscibile. La trascrizione si aggiunge nel blocco."
+            : "Descrivi ciò che è utile capire nell’immagine.";
+        mediaCaptionLabel.textContent = audio ? "Descrizione (facoltativa)" : "Didascalia (facoltativa)";
     }
 
     function revokeMediaObjectUrls() {
@@ -1430,20 +1479,26 @@
     }
 
     async function uploadVisualMedia() {
+        const kind = mediaPicker?.field?.mediaKind || "image";
         const file = mediaFile.files?.[0];
         const alt = mediaAlt.value.trim();
         if (!file) {
-            mediaUploadStatus.textContent = "Scegli un’immagine da caricare.";
+            mediaUploadStatus.textContent = kind === "audio"
+                ? "Scegli un file audio da caricare."
+                : "Scegli un’immagine da caricare.";
             mediaFile.focus();
             return;
         }
         if (!alt) {
-            mediaUploadStatus.textContent = "Aggiungi il testo alternativo prima di caricare.";
+            mediaUploadStatus.textContent = kind === "audio"
+                ? "Aggiungi il titolo audio prima di caricare."
+                : "Aggiungi il testo alternativo prima di caricare.";
             mediaAlt.focus();
             return;
         }
-        if (file.size > 8 * 1024 * 1024) {
-            mediaUploadStatus.textContent = "Il file supera il limite di 8 MB.";
+        const maxBytes = kind === "audio" ? 16 * 1024 * 1024 : 8 * 1024 * 1024;
+        if (file.size > maxBytes) {
+            mediaUploadStatus.textContent = `Il file supera il limite di ${kind === "audio" ? 16 : 8} MB.`;
             return;
         }
         const task = { cancelled: false, readers: new Set(), xhr: null };
@@ -1452,17 +1507,22 @@
         mediaUploadCancel.hidden = false;
         mediaUploadProgress.hidden = false;
         mediaUploadProgress.value = 1;
-        mediaUploadStatus.textContent = "Preparazione delle varianti responsive…";
+        mediaUploadStatus.textContent = kind === "audio"
+            ? "Preparazione del file audio…"
+            : "Preparazione delle varianti responsive…";
         try {
             const [data, variants] = await Promise.all([
-                readBlobDataUrl(file, task), responsiveImageVariants(file, task)
+                readBlobDataUrl(file, task),
+                kind === "audio" ? Promise.resolve([]) : responsiveImageVariants(file, task)
             ]);
             if (task.cancelled) return;
             mediaUploadProgress.value = 30;
             mediaUploadStatus.textContent = "Caricamento protetto in R2 e verifica dell’integrità…";
             const result = await sendVisualMedia({
-                alt,
-                caption: mediaCaption.value.trim(),
+                kind,
+                ...(kind === "audio"
+                    ? { title: alt, description: mediaCaption.value.trim() }
+                    : { alt, caption: mediaCaption.value.trim() }),
                 file: { name: file.name, type: file.type, data, variants }
             }, task);
             if (task.cancelled) return;
@@ -1470,7 +1530,7 @@
             if (mediaPicker.multiple) mediaPicker.ids.push(result.asset.id);
             else mediaPicker.ids = [result.asset.id];
             mediaUploadProgress.value = 100;
-            mediaUploadStatus.textContent = "Immagine verificata e collegata al blocco.";
+            mediaUploadStatus.textContent = `${kind === "audio" ? "Audio" : "Immagine"} verificato e collegato al blocco.`;
             applyMediaSelection();
         } catch (error) {
             if (error.name !== "AbortError") mediaUploadStatus.textContent = error.message || "Caricamento non riuscito.";
@@ -1527,9 +1587,12 @@
         node.values = { ...(node.values || {}), [mediaPicker.field.key]: value };
         if (!mediaPicker.multiple && mediaPicker.ids.length) {
             const asset = mediaAssets.find((candidate) => candidate.id === mediaPicker.ids[0]);
-            if (asset) {
+            if (asset && asset.kind === "image") {
                 if (!String(node.values.alt || "").trim()) node.values.alt = asset.alt || "";
                 if (!String(node.values.caption || "").trim()) node.values.caption = asset.caption || "";
+            } else if (asset?.kind === "audio") {
+                if (!String(node.values.title || "").trim()) node.values.title = asset.alt || asset.name || "";
+                if (!String(node.values.text || "").trim()) node.values.text = asset.caption || "";
             }
         }
         propertyDirty.add(node.key);
@@ -1546,7 +1609,7 @@
         if (serverPreviewHtml && serverPreviewSignature === signature) {
             preview.innerHTML = serverPreviewHtml;
             preview.dataset.previewSource = "server";
-            hydrateProtectedPreviewImages();
+            hydrateProtectedPreviewMedia();
         } else {
             preview.replaceChildren();
             preview.dataset.previewSource = "local";
@@ -1561,12 +1624,12 @@
         renderWarnings();
     }
 
-    function hydrateProtectedPreviewImages() {
-        for (const image of preview.querySelectorAll('img[src^="/api/public/visual-media/"]')) {
-            const path = image.getAttribute("src");
+    function hydrateProtectedPreviewMedia() {
+        for (const element of preview.querySelectorAll('img[src^="/api/public/visual-media/"], audio[src^="/api/public/visual-media/"]')) {
+            const path = element.getAttribute("src");
             const assetId = path.split("/").pop()?.split("?")[0] || "";
             const asset = mediaAssets.find((candidate) => candidate.id === assetId);
-            if (asset) setMediaImageSource(image, asset, path);
+            if (asset) setProtectedMediaSource(element, asset, path);
         }
     }
 
@@ -1665,6 +1728,12 @@
             )) {
                 messages.push("Ogni immagine della galleria richiede un testo alternativo.");
             }
+        }
+        if (node.type === "audio") {
+            if (!mediaIds(values.audioAssetId).length) messages.push("Scegli un file audio dalla libreria.");
+            if (!String(values.title || "").trim()) messages.push("Aggiungi il titolo dell’audio.");
+            if (!String(values.text || "").trim()) messages.push("Aggiungi una descrizione dell’audio.");
+            if (!String(values.transcript || "").trim()) messages.push("Aggiungi la trascrizione accessibile dell’audio.");
         }
         return messages;
     }

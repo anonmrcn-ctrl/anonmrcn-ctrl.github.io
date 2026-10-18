@@ -13,7 +13,7 @@
     <script src="./tema.js?v=20261006-map-layers1"></script>
     <link rel="stylesheet" href="./leaflet.css?v=1.9.4">
     <link rel="stylesheet" href="./style.css?v=20261017-inspector1">
-    <link rel="stylesheet" href="./admin-visual-builder.css?v=20261018-upload1">
+    <link rel="stylesheet" href="./admin-visual-builder.css?v=20261019-audio1">
 </head>
 
 <body>
@@ -1366,15 +1366,15 @@
                 collegate dal catalogo D1/R2: non devi copiare URL o codici.
             </p>
             <details class="admin-visual-media-upload">
-                <summary>Carica una nuova immagine</summary>
-                <p>JPEG, PNG o WebP, massimo 8 MB. Il CMS prepara automaticamente le varianti responsive.</p>
-                <label for="adminVisualMediaFile">File</label>
+                <summary id="adminVisualMediaUploadSummary">Carica una nuova immagine</summary>
+                <p id="adminVisualMediaUploadHelp">JPEG, PNG o WebP, massimo 8 MB. Il CMS prepara automaticamente le varianti responsive.</p>
+                <label id="adminVisualMediaFileLabel" for="adminVisualMediaFile">File immagine</label>
                 <input id="adminVisualMediaFile" type="file" accept="image/jpeg,image/png,image/webp">
-                <label for="adminVisualMediaAlt">Testo alternativo</label>
+                <label id="adminVisualMediaAltLabel" for="adminVisualMediaAlt">Testo alternativo</label>
                 <input id="adminVisualMediaAlt" type="text" maxlength="300" autocomplete="off"
                     aria-describedby="adminVisualMediaAltHelp">
                 <small id="adminVisualMediaAltHelp">Descrivi ciò che è utile capire nell’immagine.</small>
-                <label for="adminVisualMediaCaption">Didascalia (facoltativa)</label>
+                <label id="adminVisualMediaCaptionLabel" for="adminVisualMediaCaption">Didascalia (facoltativa)</label>
                 <textarea id="adminVisualMediaCaption" maxlength="500" rows="2"></textarea>
                 <div class="admin-visual-media-upload__actions">
                     <button id="adminVisualMediaUpload" type="button">Carica e usa</button>
@@ -1414,7 +1414,7 @@
     <script src="./sessione.js?v=20261008-onboarding1"></script>
     <script src="./notifiche.js"></script>
     <script src="./vendor/leaflet-1.9.4.js"></script>
-    <script src="./admin-visual-builder.js?v=20261018-upload1"></script>
+    <script src="./admin-visual-builder.js?v=20261019-audio1"></script>
     <script src="./admin.js?v=20261017-inspector1"></script>
 </body>
 </html>

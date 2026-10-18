@@ -50,7 +50,10 @@ import {
     LEGACY_SITE_METADATA_PAGES_V1,
     SITE_SETTINGS_SEEDS
 } from "./settings-seed.js";
-import { initializeVisualBuilderContent } from "./visual-builder-storage.js";
+import {
+    ensureVisualNodeBlockTypes,
+    initializeVisualBuilderContent
+} from "./visual-builder-storage.js";
 import {
     renderVisualPage,
     VisualRenderError
@@ -191,7 +194,8 @@ const MAX_CMS_PERMALINK_REQUEST_BYTES = 16000;
 const MAX_CMS_DOCUMENT_BYTES = 8 * 1024 * 1024;
 const MAX_CMS_DOCUMENT_REQUEST_BYTES = 12 * 1024 * 1024;
 const MAX_VISUAL_IMAGE_BYTES = 8 * 1024 * 1024;
-const MAX_VISUAL_MEDIA_REQUEST_BYTES = 16 * 1024 * 1024;
+const MAX_VISUAL_AUDIO_BYTES = 16 * 1024 * 1024;
+const MAX_VISUAL_MEDIA_REQUEST_BYTES = 24 * 1024 * 1024;
 const MAX_VISUAL_MEDIA_ITEMS = 250;
 const MAX_VISUAL_MEDIA_TOTAL_BYTES = 256 * 1024 * 1024;
 const MAX_CMS_BACKUP_REQUEST_BYTES = 80 * 1024 * 1024;
@@ -229,6 +233,13 @@ const WIKI_IMAGE_TYPES = new Set([
     "image/jpeg",
     "image/png",
     "image/webp"
+]);
+const VISUAL_AUDIO_TYPES = new Set([
+    "audio/mpeg",
+    "audio/ogg",
+    "audio/webm",
+    "audio/mp4",
+    "audio/wav"
 ]);
 const CMS_DOCUMENT_TYPES = new Set([
     "application/pdf",
@@ -2474,6 +2485,10 @@ function memoryMediaSignatureMatches(type, bytes) {
         return ascii(4, "ftyp");
     }
 
+    if (type === "audio/wav") {
+        return ascii(0, "RIFF") && ascii(8, "WAVE");
+    }
+
     return false;
 }
 
@@ -2717,6 +2732,7 @@ function memoryMediaExtension(type) {
         "audio/ogg": "ogg",
         "audio/webm": "webm",
         "audio/mp4": "m4a",
+        "audio/wav": "wav",
         "application/pdf": "pdf",
         "text/plain": "txt",
         "text/markdown": "md",
@@ -3002,10 +3018,30 @@ async function storedMediaResponse(request, env, media, options) {
     }
 
     if (asset && env.MEDIA) {
-        let object = await env.MEDIA.get(asset.object_key);
+        const range = options.allowRange
+            ? requestedByteRange(request.headers.get("Range"), Number(asset.byte_size))
+            : null;
+        if (range?.invalid) {
+            return new Response(null, {
+                status: 416,
+                headers: {
+                    "Content-Range": `bytes */${Number(asset.byte_size)}`,
+                    "Accept-Ranges": "bytes",
+                    "Cache-Control": options.cacheControl,
+                    "X-Content-Type-Options": "nosniff",
+                    ...(options.noindex ? { "X-Robots-Tag": "noindex, nofollow" } : {}),
+                    ...corsHeaders(request, env)
+                }
+            });
+        }
+        let object = await env.MEDIA.get(asset.object_key, range ? {
+            range: { offset: range.start, length: range.length }
+        } : undefined);
         if (!object && asset.variant_key !== "original") {
             asset = await currentMediaAsset(env, options.ownerType, options.ownerId);
-            object = asset ? await env.MEDIA.get(asset.object_key) : null;
+            object = asset ? await env.MEDIA.get(asset.object_key, range ? {
+                range: { offset: range.start, length: range.length }
+            } : undefined) : null;
         }
 
         if (object) {
@@ -3013,7 +3049,7 @@ async function storedMediaResponse(request, env, media, options) {
             let width = Number(asset.width) || null;
             let height = Number(asset.height) || null;
 
-            if (asset.media_type.startsWith("image/") && (!width || !height)) {
+            if (!range && asset.media_type.startsWith("image/") && (!width || !height)) {
                 const bytes = new Uint8Array(await new Response(object.body).arrayBuffer());
                 responseBody = bytes;
                 const dimensions = imageDimensions(asset.media_type, bytes);
@@ -3031,7 +3067,8 @@ async function storedMediaResponse(request, env, media, options) {
             return mediaBinaryResponse(request, responseBody, {
                 mediaType: asset.media_type,
                 mediaName: asset.media_name,
-                byteSize: Number(object.size),
+                byteSize: range ? range.length : Number(object.size),
+                totalByteSize: Number(asset.byte_size),
                 width,
                 height,
                 variant: asset.variant_key,
@@ -3039,7 +3076,12 @@ async function storedMediaResponse(request, env, media, options) {
                 fallbackName: options.fallbackName,
                 storage: "r2",
                 disposition: options.disposition,
-                noindex: options.noindex
+                noindex: options.noindex,
+                acceptRanges: options.allowRange,
+                contentRange: range
+                    ? `bytes ${range.start}-${range.end}/${Number(asset.byte_size)}`
+                    : null,
+                status: range ? 206 : 200
             }, env);
         }
     }
@@ -3086,6 +3128,7 @@ function mediaBinaryResponse(request, body, media, env) {
         : `${safeName}.${extension}`;
 
     return new Response(body, {
+        status: media.status || 200,
         headers: {
             "Content-Type": media.mediaType,
             "Content-Length": String(media.byteSize),
@@ -3096,10 +3139,35 @@ function mediaBinaryResponse(request, body, media, env) {
             ...(media.width ? { "X-Media-Width": String(media.width) } : {}),
             ...(media.height ? { "X-Media-Height": String(media.height) } : {}),
             "X-Content-Type-Options": "nosniff",
+            ...(media.acceptRanges ? { "Accept-Ranges": "bytes" } : {}),
+            ...(media.contentRange ? { "Content-Range": media.contentRange } : {}),
             ...(media.noindex ? { "X-Robots-Tag": "noindex, nofollow" } : {}),
             ...corsHeaders(request, env)
         }
     });
+}
+
+function requestedByteRange(header, total) {
+    if (!header) return null;
+    const match = /^bytes=(\d*)-(\d*)$/u.exec(String(header).trim());
+    if (!match || (!match[1] && !match[2]) || !Number.isSafeInteger(total) || total < 1) {
+        return { invalid: true };
+    }
+    let start;
+    let end;
+    if (!match[1]) {
+        const suffix = Number(match[2]);
+        if (!Number.isSafeInteger(suffix) || suffix < 1) return { invalid: true };
+        start = Math.max(0, total - suffix);
+        end = total - 1;
+    } else {
+        start = Number(match[1]);
+        end = match[2] ? Number(match[2]) : total - 1;
+        if (!Number.isSafeInteger(start) || !Number.isSafeInteger(end) ||
+            start < 0 || start >= total || end < start) return { invalid: true };
+        end = Math.min(end, total - 1);
+    }
+    return { start, end, length: end - start + 1, invalid: false };
 }
 
 async function migrateLegacyMediaBatch(env, limit = 25) {
@@ -4392,20 +4460,22 @@ async function readVisualAssets(env) {
 }
 
 function visualMediaPayload(asset) {
+    const kind = String(asset.media_type || "").startsWith("audio/") ? "audio" : "image";
     return {
         id: asset.id,
-        kind: "image",
+        kind,
         source: asset.source,
         name: asset.media_name || (asset.source === "voices"
             ? "Immagine di una Voce"
-            : asset.source === "places" ? "Immagine di un luogo" : "Immagine caricata"),
+            : asset.source === "places" ? "Immagine di un luogo"
+                : kind === "audio" ? "Audio caricato" : "Immagine caricata"),
         mediaType: asset.media_type,
         byteSize: Number(asset.byte_size) || 0,
         width: Number(asset.width) || null,
         height: Number(asset.height) || null,
         alt: asset.alt_text || "",
         caption: asset.caption || "",
-        thumbnailUrl: `${asset.publicUrl}?variant=small`,
+        thumbnailUrl: kind === "image" ? `${asset.publicUrl}?variant=small` : null,
         publicUrl: asset.publicUrl,
         private: asset.source === "builder",
         accessible: Boolean(String(asset.alt_text || "").trim())
@@ -4419,8 +4489,8 @@ async function adminListVisualMedia(request, env) {
     return json(request, env, {
         assets: assets.map(visualMediaPayload),
         upload: {
-            acceptedTypes: [...WIKI_IMAGE_TYPES],
-            maxBytes: MAX_VISUAL_IMAGE_BYTES,
+            image: { acceptedTypes: [...WIKI_IMAGE_TYPES], maxBytes: MAX_VISUAL_IMAGE_BYTES },
+            audio: { acceptedTypes: [...VISUAL_AUDIO_TYPES], maxBytes: MAX_VISUAL_AUDIO_BYTES },
             maxItems: MAX_VISUAL_MEDIA_ITEMS,
             maxTotalBytes: MAX_VISUAL_MEDIA_TOTAL_BYTES
         }
@@ -4433,9 +4503,11 @@ async function adminCreateVisualMedia(request, env) {
         error: "L’archivio R2 non è disponibile: il file non è stato salvato."
     }, 503);
     await ensureCmsStorage(env);
-    const input = await validateVisualImageUpload(
-        await readJson(request, MAX_VISUAL_MEDIA_REQUEST_BYTES)
-    );
+    const body = await readJson(request, MAX_VISUAL_MEDIA_REQUEST_BYTES);
+    const kind = String(body?.kind || "image").trim().toLowerCase();
+    const input = kind === "audio"
+        ? await validateVisualAudioUpload(body)
+        : await validateVisualImageUpload(body);
     if (input.error) return json(request, env, { error: input.error }, 400);
     const usage = await env.DB.prepare(`
         SELECT
@@ -4450,7 +4522,7 @@ async function adminCreateVisualMedia(request, env) {
             error: "La quota della libreria visuale è esaurita. Archivia media non usati prima di riprovare."
         }, 409);
     }
-    const ownerId = `visual-${crypto.randomUUID()}`;
+    const ownerId = `visual-${kind}-${crypto.randomUUID()}`;
     const stored = await migrateMediaToR2(env, {
         ownerType: "memory",
         ownerId,
@@ -4460,8 +4532,8 @@ async function adminCreateVisualMedia(request, env) {
         width: input.width,
         height: input.height,
         variants: input.variants,
-        altText: input.alt,
-        caption: input.caption,
+        altText: input.alt || input.title,
+        caption: input.caption || input.description,
         now: Date.now()
     });
     const asset = await env.DB.prepare(`
@@ -4485,6 +4557,41 @@ async function adminCreateVisualMedia(request, env) {
             maxBytes: MAX_VISUAL_MEDIA_TOTAL_BYTES
         }
     }, 201);
+}
+
+async function validateVisualAudioUpload(value) {
+    const file = value?.file;
+    const title = String(value?.title || "").trim();
+    const description = String(value?.description || "").trim();
+    if (!file || typeof file !== "object" || Array.isArray(file)) {
+        return { error: "Seleziona un file audio da caricare." };
+    }
+    if (!title || title.length > 200) {
+        return { error: "Il titolo audio deve contenere da 1 a 200 caratteri." };
+    }
+    if (description.length > 1000) {
+        return { error: "La descrizione audio non può superare 1000 caratteri." };
+    }
+    const type = String(file.type || "").trim().toLowerCase();
+    const name = String(file.name || "audio").trim().slice(0, 500);
+    const data = String(file.data || "").replace(/\s+/gu, "");
+    const maxBase64Length = Math.ceil(MAX_VISUAL_AUDIO_BYTES / 3) * 4 + 4;
+    if (!VISUAL_AUDIO_TYPES.has(type)) {
+        return { error: "Formato non supportato. Usa MP3, OGG, WebM, M4A o WAV." };
+    }
+    if (!name || !data || data.length > maxBase64Length || !/^[A-Za-z0-9+/]*={0,2}$/u.test(data)) {
+        return { error: "Il file audio è troppo grande o non è valido." };
+    }
+    let bytes;
+    try { bytes = fromBase64(data); } catch (_) { return { error: "Il file audio non è valido." }; }
+    if (!bytes.length || bytes.length > MAX_VISUAL_AUDIO_BYTES ||
+        !memoryMediaSignatureMatches(type, bytes)) {
+        return { error: "Il contenuto del file non corrisponde al formato audio indicato." };
+    }
+    return {
+        type, name, data, title, description, variants: [],
+        width: null, height: null, totalByteSize: bytes.byteLength
+    };
 }
 
 async function validateVisualImageUpload(value) {
@@ -4548,6 +4655,7 @@ async function getVisualMedia(request, env, assetId) {
         ownerId: asset.owner_id,
         cacheControl: published ? "public, max-age=31536000, immutable" : "private, no-store",
         noindex: !published,
+        allowRange: String(asset.media_type || "").startsWith("audio/"),
         fallbackName: `media-${assetId}`
     }) || json(request, env, { error: "Media non disponibile." }, 404);
 }
@@ -9512,6 +9620,8 @@ async function initializeCmsStorage(env) {
             env.DB.prepare(statement)
         )
     );
+
+    await ensureVisualNodeBlockTypes(env);
 
     await ensureSourcePublicationState(env);
 

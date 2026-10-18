@@ -61,6 +61,19 @@ const COPY_FIELDS = Object.freeze({
         ], "center")
     ],
     gallery: [assetField("assetIds", "Immagini della galleria", true)],
+    audio: [
+        assetField("audioAssetId", "File audio", false, "audio", true, "audioAssetId"),
+        assetField("coverAssetId", "Copertina (facoltativa)", false, "image", false, "coverAssetId"),
+        field("title", "Titolo", "content.copy", "title", "text", "text", null, "all", 200, true),
+        textArea("text", "Descrizione", "text", 1000),
+        field("transcript", "Trascrizione", "content.media", "transcript", "text", "textarea", null, "all", 20000, true),
+        selectField("preload", "Precaricamento", "content.media", "preload", [
+            option("none", "Nessuno"), option("metadata", "Solo informazioni")
+        ], "metadata", true),
+        selectField("loop", "Ripetizione", "content.media", "loop", [
+            option("no", "No"), option("yes", "Sì")
+        ], "no", true)
+    ],
     "global-header": [textField("title", "Titolo", "title", 200), textArea("text", "Testo", "text", 2000)],
     "global-footer": [textArea("text", "Testo", "text", 2000)],
     "global-notice": [textField("title", "Titolo", "title", 200), textArea("text", "Avviso", "text", 2000)],
@@ -124,7 +137,7 @@ const BEHAVIOR_FIELDS = Object.freeze({
 export const VISUAL_INSPECTOR_SCHEMAS = Object.freeze(Object.fromEntries(
     ["page-root", "section", "container", "stack", "row", "columns", "grid",
         "separator", "spacer", "heading", "rich-text", "list", "quote", "image",
-        "gallery", "button", "link-list", "menu", "table-of-contents", "breadcrumb",
+        "gallery", "audio", "button", "link-list", "menu", "table-of-contents", "breadcrumb",
         "global-header", "global-footer", "global-notice", "project-poem", "project-path",
         "project-map", "project-voices", "project-places", "project-sources",
         "project-memories", "project-archive", "personal-notebook", "personal-space",
@@ -266,20 +279,20 @@ function mediaField(key, label, propertyName, maxLength, required = false) {
     return field(key, label, "content.media", propertyName, "text", "text", null, "all", maxLength, required);
 }
 
-function assetField(key, label, multiple) {
-    return field(
+function assetField(key, label, multiple, mediaKind = "image", required = true, propertyName = "assetId") {
+    return Object.freeze({ ...field(
         key,
         label,
         "content.media",
-        "assetId",
+        propertyName,
         "asset",
         "media-picker",
         null,
         "all",
         multiple ? 8192 : 128,
-        true,
+        required,
         multiple ? "lines" : "single"
-    );
+    ), mediaKind });
 }
 
 function spacing() {

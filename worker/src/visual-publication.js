@@ -401,6 +401,16 @@ export async function auditVisualSnapshot(env, snapshot) {
                 add("warning", "media", "Il blocco immagine usa il ripiego finché non scegli un media.", node.id);
             }
         }
+        if (node.block_type === "audio") {
+            const source = propertyValue(properties, "content.media", "audioAssetId");
+            const title = propertyValue(properties, "content.copy", "title");
+            const description = propertyValue(properties, "content.copy", "text");
+            const transcript = propertyValue(properties, "content.media", "transcript");
+            if (!source) add("error", "media", "Scegli un file audio dalla libreria.", node.id);
+            if (!String(title || "").trim()) add("error", "accessibility", "L’audio richiede un titolo.", node.id);
+            if (!String(description || "").trim()) add("error", "seo", "L’audio richiede una descrizione.", node.id);
+            if (!String(transcript || "").trim()) add("error", "accessibility", "L’audio richiede una trascrizione.", node.id);
+        }
         for (const property of properties) {
             if (property.property_set === "behavior.link" && property.property_name === "href" &&
                 property.text_value && !safeHref(property.text_value) && node.block_type !== "link-list") {
@@ -446,14 +456,28 @@ function compareSnapshots(draft, published) {
 }
 
 async function auditReferences(env, snapshot, add) {
-    const assetIds = new Set(snapshot.properties.map((row) => row.asset_id).filter(Boolean));
+    const assetProperties = snapshot.properties.filter((row) => row.asset_id);
+    const assetIds = new Set(assetProperties.map((row) => row.asset_id));
     const pageIds = new Set(snapshot.properties.map((row) => row.page_reference_id).filter(Boolean));
     for (const id of assetIds) {
         const asset = await env.DB.prepare(`
-            SELECT id, alt_text FROM media_assets
+            SELECT id, media_type, alt_text FROM media_assets
             WHERE id = ? AND state = 'current' LIMIT 1
         `).bind(id).first();
-        if (!asset) add("error", "media", `Media non disponibile: ${id}.`);
+        if (!asset) {
+            add("error", "media", `Media non disponibile: ${id}.`);
+            continue;
+        }
+        for (const property of assetProperties.filter((row) => row.asset_id === id)) {
+            if (property.property_name === "audioAssetId" &&
+                !String(asset.media_type || "").startsWith("audio/")) {
+                add("error", "media", "Il blocco audio contiene un file di tipo errato.", property.node_id);
+            }
+            if (property.property_name === "coverAssetId" &&
+                !String(asset.media_type || "").startsWith("image/")) {
+                add("error", "media", "La copertina dell’audio deve essere un’immagine.", property.node_id);
+            }
+        }
     }
     for (const id of pageIds) {
         const page = await env.DB.prepare(`

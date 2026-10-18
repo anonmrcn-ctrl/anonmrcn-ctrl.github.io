@@ -216,7 +216,7 @@ test("il pannello offre ricerca, filtro, miniature, sostituzione, ordine e rimoz
     assert.match(source, /\/api\/admin\/cms\/visual-media/u);
     assert.match(source, /openMediaPicker/u);
     assert.match(source, /mediaPicker\.ids\.splice/u);
-    assert.match(source, /Sostituisci immagine/u);
+    assert.match(source, /Sostituisci \$\{mediaName\}/u);
     assert.match(css, /admin-visual-media-results/u);
     assert.match(css, /max-width:\s*42rem/u);
 });

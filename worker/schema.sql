@@ -848,7 +848,7 @@ CREATE TABLE IF NOT EXISTS visual_nodes (
     block_type TEXT NOT NULL CHECK (block_type IN (
         'page-root', 'section', 'container', 'stack', 'row', 'columns', 'grid',
         'separator', 'spacer', 'heading', 'rich-text', 'list', 'quote', 'image',
-        'gallery', 'button', 'link-list', 'menu', 'table-of-contents', 'breadcrumb',
+        'gallery', 'audio', 'button', 'link-list', 'menu', 'table-of-contents', 'breadcrumb',
         'global-header', 'global-footer', 'global-notice', 'project-poem',
         'project-path', 'project-map', 'project-voices', 'project-places',
         'project-sources', 'project-memories', 'project-archive', 'personal-notebook',

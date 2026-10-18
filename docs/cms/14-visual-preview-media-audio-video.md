@@ -62,8 +62,8 @@ devono riprodurre i problemi prima di correggerli.
 | 14.1 | Anteprima fedele delle modifiche correnti | Completa | 14.0 |
 | 14.2 | Selettore della libreria media nei blocchi | Completa | 14.1 |
 | 14.3 | Caricamento e gestione media dal builder | Completa | 14.2 |
-| 14.4 | Blocco audio accessibile e responsive | Da fare — prossima | 14.3 |
-| 14.5 | Blocco video accessibile e responsive | Da fare | 14.4 |
+| 14.4 | Blocco audio accessibile e responsive | Completa | 14.3 |
+| 14.5 | Blocco video accessibile e responsive | Da fare — prossima | 14.4 |
 | 14.6 | Pubblicazione, diagnostica e audit end-to-end | Da fare | 14.5 |
 
 I criteri eseguibili e lo stato corrente sono in
@@ -130,6 +130,16 @@ precaricamento dichiarativo. La resa deve essere responsive, supportare
 richieste HTTP Range e formati esplicitamente ammessi, non avviare autoplay e
 fornire una trascrizione accessibile. I dati strutturati pertinenti sono
 prodotti soltanto per pagine pubblicate e indicizzabili con metadati completi.
+
+Completata il 19 ottobre 2026. Il catalogo, il renderer e l'ispettore includono
+il blocco `audio`; la libreria protetta permette scelta e upload nello stesso
+catalogo D1/R2 con titolo, descrizione, copertina e trascrizione. La resa usa
+controlli nativi responsive senza autoplay e supporta HTTP Range sia in
+anteprima autenticata sia, dopo la pubblicazione, con cache pubblica. La
+migrazione conserva nodi e proprietà precedenti; test dedicati coprono firme e
+formati ammessi, privacy, intervalli validi e non validi, audit di
+pubblicazione e `AudioObject` limitato alle pagine indicizzabili. Dettagli e
+comandi ripetibili sono in `14-4-audio-block.md`.
 
 ### 14.5 — Video no-code
 

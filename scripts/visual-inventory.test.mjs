@@ -13,7 +13,7 @@ test("l'inventario pubblicato copre sito, pannello e contratto", async () => {
         families: 14,
         adminModules: 17,
         areas: 18,
-        blockTypes: 40
+        blockTypes: 41
     });
 });
 
