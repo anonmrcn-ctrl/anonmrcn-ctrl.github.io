@@ -93,11 +93,37 @@
 .admin-visual-media-dialog__header,
 .admin-visual-media-filters,
 .admin-visual-media-actions,
+.admin-visual-media-upload__actions,
 .admin-visual-media-selected__row {
     display: flex;
     flex-wrap: wrap;
     gap: .75rem;
     align-items: center;
+}
+
+.admin-visual-media-upload {
+    margin-block: 1rem;
+    padding: .75rem;
+    border: 1px solid var(--line);
+    border-radius: .75rem;
+}
+
+.admin-visual-media-upload summary {
+    cursor: pointer;
+    font-weight: 700;
+}
+
+.admin-visual-media-upload label,
+.admin-visual-media-upload input,
+.admin-visual-media-upload textarea,
+.admin-visual-media-upload progress {
+    display: block;
+    width: 100%;
+    margin-top: .5rem;
+}
+
+.admin-visual-media-upload progress {
+    min-height: 1rem;
 }
 
 .admin-visual-media-dialog__header {

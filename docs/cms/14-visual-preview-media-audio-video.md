@@ -61,8 +61,8 @@ devono riprodurre i problemi prima di correggerli.
 | 14.0 | Roadmap, diagnosi e controllo automatico | Completa | Punto 13 |
 | 14.1 | Anteprima fedele delle modifiche correnti | Completa | 14.0 |
 | 14.2 | Selettore della libreria media nei blocchi | Completa | 14.1 |
-| 14.3 | Caricamento e gestione media dal builder | Da fare — prossima | 14.2 |
-| 14.4 | Blocco audio accessibile e responsive | Da fare | 14.3 |
+| 14.3 | Caricamento e gestione media dal builder | Completa | 14.2 |
+| 14.4 | Blocco audio accessibile e responsive | Da fare — prossima | 14.3 |
 | 14.5 | Blocco video accessibile e responsive | Da fare | 14.4 |
 | 14.6 | Pubblicazione, diagnostica e audit end-to-end | Da fare | 14.5 |
 
@@ -112,6 +112,15 @@ Il builder deve caricare file ammessi in R2, registrarli nel catalogo D1,
 mostrare avanzamento ed errori e collegare il risultato al blocco senza un
 passaggio tecnico separato. Tipo, dimensione, checksum, quota, varianti,
 annullamento e gestione sicura degli oggetti orfani devono essere verificati.
+
+Completata il 19 ottobre 2026. La libreria accetta JPEG, PNG e WebP fino a 8
+MB, richiede il testo alternativo, genera varianti responsive e mostra
+avanzamento, annullamento ed errori accessibili. Il Worker ricontrolla firma,
+dimensioni, metadati, quota e integrità, calcola SHA-256, scrive nel bucket R2
+privato e registra gli oggetti nello stesso catalogo `media_assets`. Il media
+viene collegato al blocco corrente senza URL o identificativi; finché non
+compare in uno snapshot pubblicato richiede autenticazione, `no-store` e
+`noindex`. Dettagli e prove sono in `14-3-media-upload.md`.
 
 ### 14.4 — Audio no-code
 

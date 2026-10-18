@@ -151,6 +151,12 @@ documenti o varianti tecniche. L'ispettore salva i riferimenti nella colonna
 `asset_id`; il Worker ricontrolla tipo, stato, variante e testo alternativo
 delle gallerie prima di modificare la bozza.
 
+`POST /api/admin/cms/visual-media` carica un'immagine dal builder nello stesso
+catalogo D1/R2, verifica firma, dimensioni, varianti, checksum e quota e
+restituisce il riferimento selezionabile. `GET
+/api/public/visual-media/:assetId` resta autenticato, `no-store` e `noindex`
+finché lo snapshot pubblicato di una pagina non contiene quel riferimento.
+
 `POST /api/admin/cms/visual-pages` crea una pagina in bozza da vuoto o
 duplicando un albero esistente. `PATCH
 /api/admin/cms/visual-page-lifecycle/:pageId` gestisce titolo, descrizione SEO,

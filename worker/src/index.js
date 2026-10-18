@@ -190,6 +190,10 @@ const MAX_CMS_LEGAL_REQUEST_BYTES = 512000;
 const MAX_CMS_PERMALINK_REQUEST_BYTES = 16000;
 const MAX_CMS_DOCUMENT_BYTES = 8 * 1024 * 1024;
 const MAX_CMS_DOCUMENT_REQUEST_BYTES = 12 * 1024 * 1024;
+const MAX_VISUAL_IMAGE_BYTES = 8 * 1024 * 1024;
+const MAX_VISUAL_MEDIA_REQUEST_BYTES = 16 * 1024 * 1024;
+const MAX_VISUAL_MEDIA_ITEMS = 250;
+const MAX_VISUAL_MEDIA_TOTAL_BYTES = 256 * 1024 * 1024;
 const MAX_CMS_BACKUP_REQUEST_BYTES = 80 * 1024 * 1024;
 
 class RequestBodyTooLargeError extends Error {}
@@ -693,6 +697,13 @@ export default {
                 return await getWikiImage(request, env, imageId, false);
             }
 
+            if (
+                request.method === "GET" &&
+                /^\/api\/public\/visual-media\/[a-z0-9]+(?:-[a-z0-9]+)*$/.test(path)
+            ) {
+                return await getVisualMedia(request, env, path.split("/").pop());
+            }
+
             if (request.method === "POST" && path === "/api/memories") {
                 return await createMemory(request, env, ctx);
             }
@@ -969,6 +980,14 @@ export default {
                 path === "/api/admin/cms/visual-media"
             ) {
                 return await adminListVisualMedia(request, env);
+            }
+
+
+            if (
+                request.method === "POST" &&
+                path === "/api/admin/cms/visual-media"
+            ) {
+                return await adminCreateVisualMedia(request, env);
             }
 
             if (
@@ -2788,6 +2807,7 @@ async function migrateMediaToR2(env, media) {
     };
     const versionKey = `${now}-${crypto.randomUUID()}-${originalChecksum.slice(0, 16)}`;
     const uploads = [{
+        id: `media-${crypto.randomUUID()}`,
         key: "original",
         type: media.mediaType,
         bytes: originalBytes,
@@ -2799,6 +2819,7 @@ async function migrateMediaToR2(env, media) {
     for (const variant of media.variants || []) {
         const bytes = fromBase64(variant.data);
         uploads.push({
+            id: `media-${crypto.randomUUID()}`,
             key: variant.key,
             type: variant.type,
             bytes,
@@ -2834,7 +2855,8 @@ async function migrateMediaToR2(env, media) {
             });
             uploadedKeys.push(upload.objectKey);
             const stored = await env.MEDIA.head(upload.objectKey);
-            if (!stored || Number(stored.size) !== upload.bytes.byteLength) {
+            if (!stored || Number(stored.size) !== upload.bytes.byteLength ||
+                (stored.customMetadata?.checksum && stored.customMetadata.checksum !== upload.checksum)) {
                 throw new Error("R2 verification failed after upload.");
             }
         }
@@ -2861,7 +2883,7 @@ async function migrateMediaToR2(env, media) {
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
                 'current', ?, ?)
         `).bind(
-            `media-${crypto.randomUUID()}`,
+            upload.id,
             media.ownerType,
             String(media.ownerId),
             upload.key,
@@ -2879,7 +2901,7 @@ async function migrateMediaToR2(env, media) {
         ))
     ];
 
-    if (media.ownerType === "memory") {
+    if (media.ownerType === "memory" && /^\d+$/u.test(String(media.ownerId))) {
         statements.push(env.DB.prepare(`
             UPDATE memories SET media_data = NULL
             WHERE id = ? AND media_data = ?
@@ -2904,6 +2926,7 @@ async function migrateMediaToR2(env, media) {
     }
 
     return {
+        assetId: uploads[0].id,
         objectKey: uploads[0].objectKey,
         checksum: originalChecksum,
         byteSize: originalBytes.byteLength,
@@ -3015,7 +3038,8 @@ async function storedMediaResponse(request, env, media, options) {
                 cacheControl: options.cacheControl,
                 fallbackName: options.fallbackName,
                 storage: "r2",
-                disposition: options.disposition
+                disposition: options.disposition,
+                noindex: options.noindex
             }, env);
         }
     }
@@ -3044,7 +3068,8 @@ async function storedMediaResponse(request, env, media, options) {
         cacheControl: options.cacheControl,
         fallbackName: options.fallbackName,
         storage: "d1",
-        disposition: options.disposition
+        disposition: options.disposition,
+        noindex: options.noindex
     }, env);
 }
 
@@ -3071,6 +3096,7 @@ function mediaBinaryResponse(request, body, media, env) {
             ...(media.width ? { "X-Media-Width": String(media.width) } : {}),
             ...(media.height ? { "X-Media-Height": String(media.height) } : {}),
             "X-Content-Type-Options": "nosniff",
+            ...(media.noindex ? { "X-Robots-Tag": "noindex, nofollow" } : {}),
             ...corsHeaders(request, env)
         }
     });
@@ -4346,15 +4372,44 @@ async function readVisualAssets(env) {
             alt_text, caption, width, height
         FROM media_assets
         WHERE state = 'current' AND variant_key = 'original'
-            AND owner_type IN ('wiki_image', 'map_entry')
+            AND (
+                owner_type IN ('wiki_image', 'map_entry')
+                OR (owner_type = 'memory' AND owner_id LIKE 'visual-%')
+            )
         ORDER BY id
     `).all();
     return (result.results || []).map((asset) => ({
         ...asset,
+        source: asset.owner_type === "wiki_image"
+            ? "voices"
+            : asset.owner_type === "map_entry" ? "places" : "builder",
         publicUrl: asset.owner_type === "wiki_image"
             ? `/api/public/wiki-images/${encodeURIComponent(asset.owner_id)}`
-            : `/api/public/map-entry-images/${encodeURIComponent(asset.owner_id)}`
+            : asset.owner_type === "map_entry"
+                ? `/api/public/map-entry-images/${encodeURIComponent(asset.owner_id)}`
+                : `/api/public/visual-media/${encodeURIComponent(asset.id)}`
     }));
+}
+
+function visualMediaPayload(asset) {
+    return {
+        id: asset.id,
+        kind: "image",
+        source: asset.source,
+        name: asset.media_name || (asset.source === "voices"
+            ? "Immagine di una Voce"
+            : asset.source === "places" ? "Immagine di un luogo" : "Immagine caricata"),
+        mediaType: asset.media_type,
+        byteSize: Number(asset.byte_size) || 0,
+        width: Number(asset.width) || null,
+        height: Number(asset.height) || null,
+        alt: asset.alt_text || "",
+        caption: asset.caption || "",
+        thumbnailUrl: `${asset.publicUrl}?variant=small`,
+        publicUrl: asset.publicUrl,
+        private: asset.source === "builder",
+        accessible: Boolean(String(asset.alt_text || "").trim())
+    };
 }
 
 async function adminListVisualMedia(request, env) {
@@ -4362,23 +4417,151 @@ async function adminListVisualMedia(request, env) {
     await ensureCmsStorage(env);
     const assets = await readVisualAssets(env);
     return json(request, env, {
-        assets: assets.map((asset) => ({
-            id: asset.id,
-            kind: "image",
-            source: asset.owner_type === "wiki_image" ? "voices" : "places",
-            name: asset.media_name || (asset.owner_type === "wiki_image"
-                ? "Immagine di una Voce"
-                : "Immagine di un luogo"),
-            mediaType: asset.media_type,
-            byteSize: Number(asset.byte_size) || 0,
-            width: Number(asset.width) || null,
-            height: Number(asset.height) || null,
-            alt: asset.alt_text || "",
-            caption: asset.caption || "",
-            thumbnailUrl: `${asset.publicUrl}?variant=small`,
-            publicUrl: asset.publicUrl,
-            accessible: Boolean(String(asset.alt_text || "").trim())
-        }))
+        assets: assets.map(visualMediaPayload),
+        upload: {
+            acceptedTypes: [...WIKI_IMAGE_TYPES],
+            maxBytes: MAX_VISUAL_IMAGE_BYTES,
+            maxItems: MAX_VISUAL_MEDIA_ITEMS,
+            maxTotalBytes: MAX_VISUAL_MEDIA_TOTAL_BYTES
+        }
+    });
+}
+
+async function adminCreateVisualMedia(request, env) {
+    if (!(await adminAuthorized(request, env))) return unauthorized(request, env);
+    if (!env.MEDIA) return json(request, env, {
+        error: "L’archivio R2 non è disponibile: il file non è stato salvato."
+    }, 503);
+    await ensureCmsStorage(env);
+    const input = await validateVisualImageUpload(
+        await readJson(request, MAX_VISUAL_MEDIA_REQUEST_BYTES)
+    );
+    if (input.error) return json(request, env, { error: input.error }, 400);
+    const usage = await env.DB.prepare(`
+        SELECT
+            SUM(CASE WHEN variant_key = 'original' THEN 1 ELSE 0 END) AS item_count,
+            COALESCE(SUM(byte_size), 0) AS total_bytes
+        FROM media_assets
+        WHERE owner_type = 'memory' AND owner_id LIKE 'visual-%' AND state = 'current'
+    `).first();
+    if (Number(usage?.item_count || 0) >= MAX_VISUAL_MEDIA_ITEMS ||
+        Number(usage?.total_bytes || 0) + input.totalByteSize > MAX_VISUAL_MEDIA_TOTAL_BYTES) {
+        return json(request, env, {
+            error: "La quota della libreria visuale è esaurita. Archivia media non usati prima di riprovare."
+        }, 409);
+    }
+    const ownerId = `visual-${crypto.randomUUID()}`;
+    const stored = await migrateMediaToR2(env, {
+        ownerType: "memory",
+        ownerId,
+        mediaType: input.type,
+        mediaName: input.name,
+        data: input.data,
+        width: input.width,
+        height: input.height,
+        variants: input.variants,
+        altText: input.alt,
+        caption: input.caption,
+        now: Date.now()
+    });
+    const asset = await env.DB.prepare(`
+        SELECT id, owner_type, owner_id, media_name, media_type, byte_size,
+            alt_text, caption, width, height
+        FROM media_assets
+        WHERE id = ? AND state = 'current' AND variant_key = 'original' LIMIT 1
+    `).bind(stored.assetId).first();
+    return json(request, env, {
+        asset: visualMediaPayload({
+            ...asset,
+            source: "builder",
+            publicUrl: `/api/public/visual-media/${encodeURIComponent(asset.id)}`
+        }),
+        checksum: stored.checksum,
+        variants: stored.variants,
+        quota: {
+            items: Number(usage?.item_count || 0) + 1,
+            maxItems: MAX_VISUAL_MEDIA_ITEMS,
+            bytes: Number(usage?.total_bytes || 0) + input.totalByteSize,
+            maxBytes: MAX_VISUAL_MEDIA_TOTAL_BYTES
+        }
+    }, 201);
+}
+
+async function validateVisualImageUpload(value) {
+    const file = value?.file;
+    const alt = String(value?.alt || "").trim();
+    const caption = String(value?.caption || "").trim();
+    if (!file || typeof file !== "object" || Array.isArray(file)) {
+        return { error: "Seleziona un’immagine da caricare." };
+    }
+    if (!alt || alt.length > MAX_WIKI_IMAGE_ALT_LENGTH) {
+        return { error: `Il testo alternativo deve contenere da 1 a ${MAX_WIKI_IMAGE_ALT_LENGTH} caratteri.` };
+    }
+    if (caption.length > MAX_WIKI_IMAGE_CAPTION_LENGTH) {
+        return { error: `La didascalia non può superare ${MAX_WIKI_IMAGE_CAPTION_LENGTH} caratteri.` };
+    }
+    const type = String(file.type || "").trim().toLowerCase();
+    const name = String(file.name || "immagine").trim().slice(0, 500);
+    const data = String(file.data || "").replace(/\s+/gu, "");
+    const maxBase64Length = Math.ceil(MAX_VISUAL_IMAGE_BYTES / 3) * 4 + 4;
+    if (!WIKI_IMAGE_TYPES.has(type)) return { error: "Formato non supportato. Usa JPEG, PNG o WebP." };
+    if (!name || !data || data.length > maxBase64Length || !/^[A-Za-z0-9+/]*={0,2}$/u.test(data)) {
+        return { error: "L’immagine è troppo grande o non è valida." };
+    }
+    let bytes;
+    try { bytes = fromBase64(data); } catch (_) { return { error: "L’immagine non è valida." }; }
+    if (!bytes.length || bytes.length > MAX_VISUAL_IMAGE_BYTES ||
+        !memoryMediaSignatureMatches(type, bytes)) {
+        return { error: "Il contenuto del file non corrisponde al formato indicato." };
+    }
+    const dimensions = imageDimensions(type, bytes);
+    if (!dimensions) return { error: "Non è stato possibile leggere le dimensioni dell’immagine." };
+    const variants = normalizeResponsiveVariants(file.variants, dimensions);
+    if (variants.error) return variants;
+    return {
+        type, name, data, alt, caption, variants, ...dimensions,
+        totalByteSize: bytes.byteLength + variants.reduce(
+            (total, variant) => total + fromBase64(variant.data).byteLength, 0
+        )
+    };
+}
+
+async function getVisualMedia(request, env, assetId) {
+    await ensureCmsStorage(env);
+    const asset = await env.DB.prepare(`
+        SELECT id, owner_type, owner_id, media_type, media_name
+        FROM media_assets
+        WHERE id = ? AND owner_type = 'memory' AND owner_id LIKE 'visual-%'
+            AND variant_key = 'original' AND state = 'current' LIMIT 1
+    `).bind(assetId).first();
+    if (!asset) return json(request, env, { error: "Media non disponibile." }, 404);
+    const published = await visualMediaIsPublished(env, assetId);
+    if (!published && !(await adminAuthorized(request, env))) {
+        return json(request, env, { error: "Media non disponibile." }, 404);
+    }
+    return await storedMediaResponse(request, env, {
+        media_data: null,
+        media_type: asset.media_type,
+        media_name: asset.media_name
+    }, {
+        ownerType: asset.owner_type,
+        ownerId: asset.owner_id,
+        cacheControl: published ? "public, max-age=31536000, immutable" : "private, no-store",
+        noindex: !published,
+        fallbackName: `media-${assetId}`
+    }) || json(request, env, { error: "Media non disponibile." }, 404);
+}
+
+async function visualMediaIsPublished(env, assetId) {
+    const rows = await env.DB.prepare(`
+        SELECT snapshot_json FROM visual_tree_publications WHERE snapshot_json LIKE ?
+    `).bind(`%${assetId}%`).all();
+    return (rows.results || []).some((row) => {
+        try {
+            return JSON.parse(row.snapshot_json).properties?.some(
+                (property) => property.asset_id === assetId
+            );
+        } catch (_) { return false; }
     });
 }
 

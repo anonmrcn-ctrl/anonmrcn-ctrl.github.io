@@ -3,7 +3,7 @@
   "title": "Anteprima, media, audio e video nel builder visuale",
   "objective": "Rendere fedele l'anteprima delle modifiche e permettere di scegliere, caricare e configurare immagini, gallerie, audio e video interamente dal CMS a blocchi.",
   "status": "in_progress",
-  "currentUnit": "14.3",
+  "currentUnit": "14.4",
   "allowedStatuses": [
     "pending",
     "in_progress",
@@ -72,11 +72,12 @@
     {
       "id": "14.3",
       "title": "Caricamento e gestione media dal builder",
-      "status": "pending",
+      "status": "complete",
       "dependsOn": ["14.2"],
       "deliverables": [
-        "Upload R2 avviabile dall'ispettore con avanzamento, annullamento ed errori comprensibili.",
-        "Registrazione D1, varianti, checksum, quote e gestione sicura degli oggetti orfani."
+        "admin-visual-builder.js e admin.html offrono upload R2 dall'ispettore con avanzamento, annullamento, varianti responsive ed errori comprensibili.",
+        "worker/tests/visual-media-upload.test.mjs prova catalogo D1, checksum, quote, privacy, pubblicazione e pulizia atomica degli oggetti R2.",
+        "docs/cms/14-3-media-upload.md registra contratto, limiti, retention e verifiche ripetibili."
       ],
       "acceptance": [
         "Un file ammesso può essere caricato, catalogato e collegato al blocco senza lasciare il builder.",

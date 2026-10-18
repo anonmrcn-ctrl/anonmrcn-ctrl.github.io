@@ -79,6 +79,13 @@
     const mediaSelected = document.getElementById("adminVisualMediaSelected");
     const mediaApply = document.getElementById("adminVisualMediaApply");
     const mediaClear = document.getElementById("adminVisualMediaClear");
+    const mediaFile = document.getElementById("adminVisualMediaFile");
+    const mediaAlt = document.getElementById("adminVisualMediaAlt");
+    const mediaCaption = document.getElementById("adminVisualMediaCaption");
+    const mediaUpload = document.getElementById("adminVisualMediaUpload");
+    const mediaUploadCancel = document.getElementById("adminVisualMediaUploadCancel");
+    const mediaUploadProgress = document.getElementById("adminVisualMediaUploadProgress");
+    const mediaUploadStatus = document.getElementById("adminVisualMediaUploadStatus");
 
     const GUIDE_STEPS = Object.freeze([
         Object.freeze({
@@ -148,6 +155,8 @@
     let serverPreviewSignature = "";
     let mediaAssets = [];
     let mediaPicker = null;
+    let mediaUploadTask = null;
+    const mediaObjectUrls = new Set();
     let guideIndex = 0;
 
     function clearGuideTarget() {
@@ -1216,9 +1225,9 @@
         } else {
             for (const asset of selectedAssets) {
                 const image = document.createElement("img");
-                image.src = `${api.baseUrl}${asset.thumbnailUrl}`;
                 image.alt = "";
                 image.loading = "lazy";
+                setMediaImageSource(image, asset, asset.thumbnailUrl);
                 const text = document.createElement("span");
                 text.textContent = asset.name;
                 summary.append(image, text);
@@ -1237,6 +1246,10 @@
         };
         mediaSearch.value = "";
         mediaSource.value = "all";
+        mediaFile.value = "";
+        mediaAlt.value = "";
+        mediaCaption.value = "";
+        resetMediaUpload();
         renderMediaPicker();
         mediaDialog.showModal();
         mediaSearch.focus();
@@ -1269,9 +1282,9 @@
         const card = document.createElement("article");
         card.className = "admin-visual-media-card";
         const image = document.createElement("img");
-        image.src = `${api.baseUrl}${asset.thumbnailUrl}`;
         image.alt = "";
         image.loading = "lazy";
+        setMediaImageSource(image, asset, asset.thumbnailUrl);
         const title = document.createElement("strong");
         title.textContent = asset.name;
         const metadata = document.createElement("p");
@@ -1299,6 +1312,173 @@
         });
         card.append(image, title, metadata, button);
         return card;
+    }
+
+    async function setMediaImageSource(image, asset, source = asset.publicUrl) {
+        if (!asset.private) {
+            image.src = `${api.baseUrl}${source}`;
+            return;
+        }
+        image.setAttribute("aria-busy", "true");
+        try {
+            const response = await fetch(`${api.baseUrl}${source}`, {
+                headers: { Authorization: `Bearer ${sessionStorage.getItem(SESSION_KEY) || ""}` }
+            });
+            if (!response.ok) throw new Error("Media privato non disponibile.");
+            const objectUrl = URL.createObjectURL(await response.blob());
+            mediaObjectUrls.add(objectUrl);
+            image.addEventListener("load", () => {
+                URL.revokeObjectURL(objectUrl);
+                mediaObjectUrls.delete(objectUrl);
+            }, { once: true });
+            image.src = objectUrl;
+        } catch (_) {
+            image.alt = "Anteprima non disponibile";
+        } finally {
+            image.removeAttribute("aria-busy");
+        }
+    }
+
+    function revokeMediaObjectUrls() {
+        for (const objectUrl of mediaObjectUrls) URL.revokeObjectURL(objectUrl);
+        mediaObjectUrls.clear();
+    }
+
+    function resetMediaUpload() {
+        mediaUpload.disabled = false;
+        mediaUploadCancel.hidden = true;
+        mediaUploadProgress.hidden = true;
+        mediaUploadProgress.value = 0;
+        mediaUploadStatus.textContent = "";
+    }
+
+    function cancelMediaUpload() {
+        if (!mediaUploadTask) return;
+        mediaUploadTask.cancelled = true;
+        for (const reader of mediaUploadTask.readers || []) reader.abort();
+        mediaUploadTask.xhr?.abort();
+        mediaUploadTask = null;
+        resetMediaUpload();
+        mediaUploadStatus.textContent = "Caricamento annullato: nessun collegamento è stato modificato.";
+    }
+
+    function readBlobDataUrl(blob, task) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            task.readers.add(reader);
+            reader.onload = () => {
+                task.readers.delete(reader);
+                resolve(String(reader.result || "").split(",")[1] || "");
+            };
+            reader.onerror = () => reject(new Error("Non è stato possibile leggere il file."));
+            reader.onabort = () => reject(new DOMException("Caricamento annullato.", "AbortError"));
+            reader.onprogress = (event) => {
+                if (event.lengthComputable) mediaUploadProgress.value = Math.round(event.loaded / event.total * 20);
+            };
+            reader.readAsDataURL(blob);
+        });
+    }
+
+    function canvasBlob(canvas, type, quality) {
+        return new Promise((resolve, reject) => canvas.toBlob(
+            (blob) => blob ? resolve(blob) : reject(new Error("Variante responsive non disponibile.")),
+            type, quality
+        ));
+    }
+
+    async function responsiveImageVariants(file, task) {
+        const bitmap = await createImageBitmap(file);
+        try {
+            const variants = [];
+            for (const [key, maxWidth] of [["small", 480], ["medium", 960]]) {
+                if (task.cancelled) throw new DOMException("Caricamento annullato.", "AbortError");
+                if (bitmap.width <= maxWidth) continue;
+                const width = maxWidth;
+                const height = Math.max(1, Math.round(bitmap.height * width / bitmap.width));
+                const canvas = document.createElement("canvas");
+                canvas.width = width;
+                canvas.height = height;
+                canvas.getContext("2d").drawImage(bitmap, 0, 0, width, height);
+                let blob = await canvasBlob(canvas, "image/webp", .82);
+                if (blob.size > 700000) blob = await canvasBlob(canvas, "image/webp", .65);
+                variants.push({ key, type: blob.type, data: await readBlobDataUrl(blob, task) });
+            }
+            return variants;
+        } finally { bitmap.close(); }
+    }
+
+    function sendVisualMedia(payload, task) {
+        return new Promise((resolve, reject) => {
+            const xhr = new XMLHttpRequest();
+            task.xhr = xhr;
+            xhr.open("POST", `${api.baseUrl}/api/admin/cms/visual-media`);
+            xhr.setRequestHeader("Authorization", `Bearer ${sessionStorage.getItem(SESSION_KEY) || ""}`);
+            xhr.setRequestHeader("Content-Type", "application/json");
+            xhr.upload.addEventListener("progress", (event) => {
+                if (event.lengthComputable) mediaUploadProgress.value = 35 + Math.round(event.loaded / event.total * 65);
+            });
+            xhr.addEventListener("load", () => {
+                let body = {};
+                try { body = JSON.parse(xhr.responseText || "{}"); } catch (_) {}
+                if (xhr.status >= 200 && xhr.status < 300) resolve(body);
+                else reject(new Error(body.error || "Caricamento non riuscito."));
+            });
+            xhr.addEventListener("error", () => reject(new Error("Connessione interrotta durante il caricamento.")));
+            xhr.addEventListener("abort", () => reject(new DOMException("Caricamento annullato.", "AbortError")));
+            xhr.send(JSON.stringify(payload));
+        });
+    }
+
+    async function uploadVisualMedia() {
+        const file = mediaFile.files?.[0];
+        const alt = mediaAlt.value.trim();
+        if (!file) {
+            mediaUploadStatus.textContent = "Scegli un’immagine da caricare.";
+            mediaFile.focus();
+            return;
+        }
+        if (!alt) {
+            mediaUploadStatus.textContent = "Aggiungi il testo alternativo prima di caricare.";
+            mediaAlt.focus();
+            return;
+        }
+        if (file.size > 8 * 1024 * 1024) {
+            mediaUploadStatus.textContent = "Il file supera il limite di 8 MB.";
+            return;
+        }
+        const task = { cancelled: false, readers: new Set(), xhr: null };
+        mediaUploadTask = task;
+        mediaUpload.disabled = true;
+        mediaUploadCancel.hidden = false;
+        mediaUploadProgress.hidden = false;
+        mediaUploadProgress.value = 1;
+        mediaUploadStatus.textContent = "Preparazione delle varianti responsive…";
+        try {
+            const [data, variants] = await Promise.all([
+                readBlobDataUrl(file, task), responsiveImageVariants(file, task)
+            ]);
+            if (task.cancelled) return;
+            mediaUploadProgress.value = 30;
+            mediaUploadStatus.textContent = "Caricamento protetto in R2 e verifica dell’integrità…";
+            const result = await sendVisualMedia({
+                alt,
+                caption: mediaCaption.value.trim(),
+                file: { name: file.name, type: file.type, data, variants }
+            }, task);
+            if (task.cancelled) return;
+            mediaAssets.unshift(result.asset);
+            if (mediaPicker.multiple) mediaPicker.ids.push(result.asset.id);
+            else mediaPicker.ids = [result.asset.id];
+            mediaUploadProgress.value = 100;
+            mediaUploadStatus.textContent = "Immagine verificata e collegata al blocco.";
+            applyMediaSelection();
+        } catch (error) {
+            if (error.name !== "AbortError") mediaUploadStatus.textContent = error.message || "Caricamento non riuscito.";
+        } finally {
+            if (mediaUploadTask === task) mediaUploadTask = null;
+            mediaUpload.disabled = false;
+            mediaUploadCancel.hidden = true;
+        }
     }
 
     function selectedMediaCard(id, index) {
@@ -1366,6 +1546,7 @@
         if (serverPreviewHtml && serverPreviewSignature === signature) {
             preview.innerHTML = serverPreviewHtml;
             preview.dataset.previewSource = "server";
+            hydrateProtectedPreviewImages();
         } else {
             preview.replaceChildren();
             preview.dataset.previewSource = "local";
@@ -1378,6 +1559,15 @@
         };
         previewDevice.textContent = labels[activeDevice];
         renderWarnings();
+    }
+
+    function hydrateProtectedPreviewImages() {
+        for (const image of preview.querySelectorAll('img[src^="/api/public/visual-media/"]')) {
+            const path = image.getAttribute("src");
+            const assetId = path.split("/").pop()?.split("?")[0] || "";
+            const asset = mediaAssets.find((candidate) => candidate.id === assetId);
+            if (asset) setMediaImageSource(image, asset, path);
+        }
     }
 
     function previewNode(node) {
@@ -1887,14 +2077,18 @@
     mediaSearch.addEventListener("input", renderMediaPicker);
     mediaSource.addEventListener("change", renderMediaPicker);
     mediaApply.addEventListener("click", applyMediaSelection);
+    mediaUpload.addEventListener("click", uploadVisualMedia);
+    mediaUploadCancel.addEventListener("click", cancelMediaUpload);
     mediaClear.addEventListener("click", () => {
         if (!mediaPicker) return;
         mediaPicker.ids = [];
         renderMediaPicker();
     });
     mediaDialog.addEventListener("close", () => {
+        if (mediaUploadTask) cancelMediaUpload();
         mediaPicker = null;
     });
+    window.addEventListener("pagehide", revokeMediaObjectUrls);
     window.addEventListener("beforeunload", (event) => {
         if (!dirty && !propertyDirty.size) return;
         event.preventDefault();
