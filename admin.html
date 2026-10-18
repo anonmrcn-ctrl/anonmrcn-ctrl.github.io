@@ -13,7 +13,7 @@
     <script src="./tema.js?v=20261006-map-layers1"></script>
     <link rel="stylesheet" href="./leaflet.css?v=1.9.4">
     <link rel="stylesheet" href="./style.css?v=20261017-inspector1">
-    <link rel="stylesheet" href="./admin-visual-builder.css?v=20261018-publish1">
+    <link rel="stylesheet" href="./admin-visual-builder.css?v=20261018-independence1">
 </head>
 
 <body>
@@ -223,9 +223,9 @@
                 </details>
                 <h3>Diagnostica CMS e SEO</h3>
                 <p>
-                    Controlla D1, R2, API pubblica, pubblicazione statica,
-                    sitemap, canonical, collegamenti e immagini senza mostrare
-                    contenuti privati.
+                    Controlla D1, R2, copertura del builder, snapshot pubblici,
+                    generazione delle pagine visuali, API, sitemap, canonical,
+                    collegamenti e immagini senza mostrare contenuti privati.
                 </p>
                 <button id="adminCmsDiagnostics" type="button">
                     Esegui diagnostica
@@ -316,6 +316,28 @@
                     modificare codice. Le modifiche restano locali finché non
                     scegli «Salva struttura».
                 </p>
+
+                <section class="admin-visual-guide" aria-labelledby="adminVisualGuideTitle">
+                    <h3 id="adminVisualGuideTitle">Prima volta? Segui il percorso guidato</h3>
+                    <p>
+                        Sei passaggi mostrano come scegliere una pagina, comporla,
+                        personalizzarla, controllarla e pubblicarla. Non modifica
+                        né salva contenuti al posto tuo.
+                    </p>
+                    <button class="admin-button-secondary" id="adminVisualGuideStart" type="button">
+                        Avvia il percorso guidato
+                    </button>
+                    <div id="adminVisualGuidePanel" class="admin-visual-guide-panel" hidden aria-live="polite">
+                        <p id="adminVisualGuideProgress"></p>
+                        <h4 id="adminVisualGuideStepTitle"></h4>
+                        <p id="adminVisualGuideStepText"></p>
+                        <div class="admin-visual-guide-actions">
+                            <button class="admin-button-secondary" id="adminVisualGuidePrevious" type="button">Indietro</button>
+                            <button id="adminVisualGuideNext" type="button">Avanti</button>
+                            <button class="admin-button-secondary" id="adminVisualGuideClose" type="button">Chiudi guida</button>
+                        </div>
+                    </div>
+                </section>
 
                 <details class="admin-visual-page-management">
                     <summary>Crea o duplica una pagina</summary>
@@ -1338,7 +1360,7 @@
     <script src="./sessione.js?v=20261008-onboarding1"></script>
     <script src="./notifiche.js"></script>
     <script src="./vendor/leaflet-1.9.4.js"></script>
-    <script src="./admin-visual-builder.js?v=20261018-publish1"></script>
+    <script src="./admin-visual-builder.js?v=20261018-independence1"></script>
     <script src="./admin.js?v=20261017-inspector1"></script>
 </body>
 </html>

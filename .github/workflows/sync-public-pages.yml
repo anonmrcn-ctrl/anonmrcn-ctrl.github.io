@@ -14,7 +14,7 @@ concurrency:
 
 jobs:
   generate:
-    name: Genera Voci, luoghi e sitemap
+    name: Genera Voci, luoghi, pagine visuali e sitemap
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -42,7 +42,7 @@ jobs:
       - name: Pubblica solo gli aggiornamenti generati
         shell: bash
         run: |
-          git add -A -- sitemap.xml public-content-manifest.json voci luoghi
+          git add -A -- sitemap.xml public-content-manifest.json voci luoghi '*.html'
           if git diff --cached --quiet; then
             echo "Le pagine pubbliche sono già aggiornate."
             exit 0

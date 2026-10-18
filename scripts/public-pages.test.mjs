@@ -4,6 +4,7 @@ import test from "node:test";
 import {
     renderEditorialRelationships,
     renderPlacePage,
+    renderVisualStaticPage,
     renderWikiCollectionFallback,
     renderWikiPage
 } from "./generate-public-pages.mjs";
@@ -13,6 +14,41 @@ const options = {
     siteOrigin: "https://site.example",
     defaultImage: "https://site.example/logo.png"
 };
+
+test("la pagina visuale autonoma ha HTML statico, canonical, tema e nessun codice eseguibile", () => {
+    const html = renderVisualStaticPage({
+        page: {
+            id: "visual-page-1",
+            slug: "pagina-autonoma",
+            revisionNumber: 3,
+            updatedAt: 1791500000000,
+            html: '<main class="visual-block visual-block--page-root" data-block-id="root"><h1>Pagina autonoma</h1><p class="visual-block visual-block--rich-text" data-block-id="testo">Testo pubblico.</p></main>',
+            metadata: {
+                title: "Pagina autonoma",
+                description: "Una pagina creata senza programmazione.",
+                canonical: "https://site.example/pagina-autonoma.html",
+                robots: "index,follow",
+                structuredData: {
+                    "@context": "https://schema.org",
+                    "@type": "WebPage",
+                    name: "Pagina autonoma"
+                }
+            },
+            theme: {
+                tokens: [
+                    { group: "palette", name: "accent", value: "#005f73" },
+                    { group: "typography", name: "heading", value: "serif" }
+                ]
+            }
+        }
+    }, options);
+
+    assert.match(html, /<h1>Pagina autonoma<\/h1>/u);
+    assert.match(html, /rel="canonical" href="https:\/\/site\.example\/pagina-autonoma\.html"/u);
+    assert.match(html, /--visual-accent:#005f73/u);
+    assert.match(html, /application\/ld\+json/u);
+    assert.doesNotMatch(html, /<script\b(?![^>]*application\/ld\+json)/u);
+});
 
 const wikis = [
     {

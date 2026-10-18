@@ -76,6 +76,26 @@ async function auditViewport(name, viewport) {
     );
     assert.deepEqual(shortButtons, [], `${name}: pulsanti inferiori a 44px`);
 
+    const guideStart = page.locator("#adminVisualGuideStart");
+    await guideStart.scrollIntoViewIfNeeded();
+    await guideStart.click();
+    const guidePanel = page.locator("#adminVisualGuidePanel");
+    await guidePanel.waitFor({ state: "visible" });
+    assert.equal(await page.locator("#adminVisualGuideProgress").textContent(), "Passaggio 1 di 6");
+    for (let step = 2; step <= 6; step += 1) {
+        await page.locator("#adminVisualGuideNext").click();
+        assert.equal(
+            await page.locator("#adminVisualGuideProgress").textContent(),
+            `Passaggio ${step} di 6`
+        );
+    }
+    await page.locator("#adminVisualGuideNext").click();
+    assert.equal(await guidePanel.isHidden(), true);
+    assert.equal(
+        await page.evaluate(() => localStorage.getItem("nnmrcn_visual_guide_complete")),
+        "1"
+    );
+
     const firstNavigationLink = navigation.locator("a").first();
     await firstNavigationLink.focus();
     assert.equal(await firstNavigationLink.evaluate((element) =>
@@ -110,7 +130,7 @@ async function auditViewport(name, viewport) {
 try {
     await auditViewport("mobile", { width: 375, height: 812 });
     await auditViewport("desktop", { width: 1440, height: 1000 });
-    console.log("Audit pannello superato: mobile, desktop, tastiera, etichette e feedback.");
+    console.log("Audit pannello superato: mobile, desktop, guida, tastiera, etichette e feedback.");
 } finally {
     await browser.close();
 }

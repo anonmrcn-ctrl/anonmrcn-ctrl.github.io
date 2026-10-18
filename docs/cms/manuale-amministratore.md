@@ -183,3 +183,63 @@ riservati.
   di analisi.
 - Usare Search Console e dati aggregati per il monitoraggio SEO.
 - Uscire dal pannello sui dispositivi condivisi e non condividere la passkey.
+
+## 14. Creare e gestire una pagina visuale senza programmazione
+
+Aprire «Componi la pagina a blocchi». Se è la prima volta, premere «Avvia il
+percorso guidato»: i sei passaggi evidenziano i controlli da usare, ma non
+salvano e non pubblicano nulla automaticamente.
+
+### Creare o duplicare
+
+1. Aprire «Crea o duplica una pagina».
+2. Scrivere titolo, indirizzo breve e descrizione SEO.
+3. Scegliere «Pagina vuota» oppure una pagina esistente come modello.
+4. Decidere se predisporre la voce di menu e premere «Crea pagina in bozza».
+
+L'indirizzo breve usa solo lettere minuscole, numeri e trattini. Dopo la prima
+pubblicazione, un cambio di indirizzo conserva il precedente come
+reindirizzamento. Le pagine create dal builder ricevono automaticamente un file
+HTML autonomo, canonical e voce di sitemap durante la sincronizzazione pubblica;
+non occorre creare file nel repository.
+
+### Comporre e personalizzare
+
+1. Scegliere un tipo nel menu «Nuovo blocco» e premere «Aggiungi blocco».
+2. Selezionare un blocco nel canvas; usare i pulsanti, il trascinamento, il
+   tocco oppure `Alt` con i tasti freccia per ordinare e annidare.
+3. Compilare «Proprietà del blocco» per contenuto, grafica responsive e
+   comportamenti dichiarativi. Non incollare HTML, CSS o JavaScript.
+4. Controllare smartphone, tablet e desktop, quindi salvare proprietà e
+   struttura. «Annulla» e «Ripeti» agiscono sulle modifiche non ancora salvate.
+5. Per grafica condivisa usare «Studio grafico globale»; per parti ripetute
+   usare «Modelli, sezioni e parti globali».
+
+Le pagine storiche continuano a mantenere mappe, moduli, QR, frammenti e
+interazioni speciali: il caricatore visuale aggiorna i blocchi amministrabili e
+lascia il ripiego statico quando Worker o rete non sono disponibili.
+
+### Controllare, pubblicare e recuperare
+
+1. Salvare ogni campo e premere «Esegui controlli».
+2. Correggere gli errori su SEO, accessibilità, privacy, media, link e peso.
+3. Aprire l'anteprima autenticata, che resta `noindex`, e confrontare la bozza
+   con la versione pubblica.
+4. Premere «Pubblica questa versione». Solo questo comando cambia lo snapshot
+   pubblico; la generazione HTML successiva allinea file e sitemap.
+5. Per tornare indietro, scegliere una revisione e «Ripristina come nuova
+   bozza», controllarla e pubblicarla nuovamente.
+
+### Archiviare ed eliminare
+
+Una pagina va prima archiviata. «Controlla prima di eliminare» elenca URL,
+alias, QR, menu, collegamenti e dati dipendenti. La cancellazione definitiva è
+possibile soltanto dopo aver scelto una destinazione valida per tutti gli URL e
+aver copiato la frase di conferma. Se esiste una dipendenza non trasferibile,
+la pagina resta conservata e il pannello spiega cosa risolvere.
+
+Dopo una pubblicazione eseguire «Diagnostica CMS e SEO»: i controlli «Copertura
+del builder visuale» e «Pagine visuali autonome» devono risultare superati. Un
+avviso di sincronizzazione indica che il contenuto è pubblicato in D1 ma il
+file HTML automatico non è ancora stato rigenerato; non cambiare slug o QR per
+forzarlo.

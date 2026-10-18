@@ -98,6 +98,17 @@ test("isola la bozza, blocca una pubblicazione non valida e pubblica in modo ato
     const heading = page.nodes.find((node) => node.type === "heading");
     const publicBefore = await call(env, "/api/public/visual-pages/autore");
     const originalHtml = publicBefore.data.page.html;
+    assert.ok(publicBefore.data.page.compatibilityBlocks.some((block) =>
+        block.id === "autore-title" && block.text === "L’autore"
+    ));
+    const publicIndex = await call(env, "/api/public/visual-pages");
+    assert.equal(publicIndex.response.status, 200);
+    assert.equal(publicIndex.data.pages.length, 9);
+    assert.ok(publicIndex.data.pages.every((item) => item.generated === false));
+    assert.equal(
+        publicIndex.data.pages.find((item) => item.slug === "accesso").indexable,
+        false
+    );
 
     const now = page.updatedAt + 1;
     env.DB.database.prepare(`

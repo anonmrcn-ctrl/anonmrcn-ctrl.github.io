@@ -1,6 +1,6 @@
 # Punto 13 — autonomia visuale no-code
 
-Aggiornato il 17 ottobre 2026. Questa roadmap estende il CMS già pubblicato:
+Aggiornato il 18 ottobre 2026. Questa roadmap estende il CMS già pubblicato:
 non riapre né sostituisce i punti 1–12, che restano la base tecnica e le
 garanzie da preservare.
 
@@ -76,7 +76,7 @@ accessibilità, privacy, SEO, migrazione e test.
 | 13.9 | Studio grafico globale | Completa | 13.8 |
 | 13.10 | Comportamenti e collegamenti senza codice | Completa | 13.9 |
 | 13.11 | Pubblicazione, qualità e recupero | Completa | 13.10 |
-| 13.12 | Migrazione finale e audit di indipendenza | Da iniziare | 13.11 |
+| 13.12 | Migrazione finale e audit di indipendenza | Completa | 13.11 |
 
 I criteri dettagliati e lo stato eseguibile sono in
 `docs/cms/no-code-roadmap.json`. Dopo ogni unità completa si aggiornano insieme
@@ -143,6 +143,13 @@ pubblicazione atomica e recupero append-only sono in
 `0021_visual_publications.sql`, in `admin-visual-builder.js` e in
 `worker/tests/visual-publication.test.mjs`.
 
+La prova dell'unità 13.12 è in `13-12-final-migration-independence-audit.md`.
+Le nove pagine ordinarie storiche leggono prima lo snapshot visuale e conservano
+il contenuto HTML come ultimo ripiego; le nuove pagine pubblicate dal builder
+ottengono automaticamente HTML autonomo, canonical, JSON-LD, manifest e
+sitemap. Tour guidato, manuale, diagnostica e audit automatico coprono l'intero
+percorso senza richiedere codice o accesso al repository.
+
 ## Criterio finale
 
 La roadmap è conclusa soltanto quando una prova end-to-end dimostra che, da
@@ -151,3 +158,8 @@ blocchi, personalizzarne grafica e comportamento, controllarne SEO e
 accessibilità, pubblicarla, inserirla nella navigazione, archiviarla,
 recuperarla ed eliminarla in sicurezza senza modificare codice o usare il
 repository.
+
+Il criterio è soddisfatto dall'insieme dei test del ciclo di vita visuale,
+dell'ispettore, della pubblicazione e dell'interfaccia responsive elencati
+nell'audit 13.12. Il flusso conserva permalink e redirect prima di permettere
+la cancellazione definitiva e non include bozze o anteprime nella sitemap.

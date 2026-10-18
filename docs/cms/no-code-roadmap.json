@@ -2,8 +2,8 @@
   "version": 1,
   "title": "Autonomia visuale no-code",
   "objective": "Permettere all'amministratore di creare, comporre, personalizzare, pubblicare, archiviare e recuperare pagine senza modificare codice.",
-  "status": "in_progress",
-  "currentUnit": "13.12",
+  "status": "complete",
+  "currentUnit": null,
   "allowedStatuses": [
     "pending",
     "in_progress",
@@ -191,7 +191,7 @@
     {
       "id": "13.12",
       "title": "Migrazione finale e audit di indipendenza",
-      "status": "pending",
+      "status": "complete",
       "dependsOn": ["13.11"],
       "deliverables": [
         "Tutte le pagine ordinarie gestite dal builder con compatibilità verificata.",

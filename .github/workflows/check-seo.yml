@@ -31,9 +31,11 @@ jobs:
           node scripts/check-editorial-program.mjs
           node scripts/check-organic-report.mjs
           node scripts/check-privacy.mjs
+          node scripts/check-no-code-roadmap.mjs
+          node scripts/check-no-code-independence.mjs
 
       - name: Prova pagine pubbliche, pannello e privacy
-        run: node --test scripts/public-pages.test.mjs scripts/organic-report.test.mjs scripts/admin-ux.test.mjs scripts/privacy-telemetry.test.mjs
+        run: node --test scripts/public-pages.test.mjs scripts/organic-report.test.mjs scripts/admin-ux.test.mjs scripts/privacy-telemetry.test.mjs scripts/no-code-independence.test.mjs
 
       - name: Controlla il confine contenuti-software
         run: node scripts/check-content-boundary.mjs

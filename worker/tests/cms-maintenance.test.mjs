@@ -407,8 +407,10 @@ test("la diagnostica confronta D1, R2, sitemap, canonical e immagini", async () 
         [
             ["d1-foreign-keys", "pass"],
             ["r2-catalog", "pass"],
+            ["visual-builder", "pass"],
             ["worker-health", "pass"],
             ["static-manifest", "pass"],
+            ["visual-static-sync", "pass"],
             ["sitemap", "pass"],
             ["public-pages", "pass"],
             ["internal-links", "pass"],

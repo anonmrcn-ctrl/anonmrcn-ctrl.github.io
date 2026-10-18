@@ -584,6 +584,10 @@ export default {
                 return await listPublicMapEntries(request, env);
             }
 
+            if (request.method === "GET" && path === "/api/public/visual-pages") {
+                return await listPublicVisualPages(request, env);
+            }
+
             if (
                 request.method === "GET" &&
                 /^\/api\/public\/visual-pages\/[a-z0-9]+(?:-[a-z0-9]+)*$/.test(path)
@@ -4247,6 +4251,7 @@ async function getPublicVisualPage(request, env, slug) {
                 updatedAt: Number(snapshot.tree.updatedAt),
                 publishedAt: Number(page.publishedAt),
                 revisionNumber,
+                compatibilityBlocks: visualCompatibilityBlocks(nodes, properties),
                 ...rendered
             }
         });
@@ -4259,6 +4264,56 @@ async function getPublicVisualPage(request, env, slug) {
         }));
         return json(request, env, { error: "Pagina visuale non disponibile." }, 409);
     }
+}
+
+async function listPublicVisualPages(request, env) {
+    await ensureCmsStorage(env);
+    const result = await env.DB.prepare(`
+        SELECT page.id, page.slug, page.title, page.description,
+            publication.revision_number, publication.published_at,
+            publication.updated_at
+        FROM site_pages page
+        INNER JOIN visual_page_trees mapping ON mapping.page_id = page.id
+        INNER JOIN visual_tree_publications publication
+            ON publication.tree_id = mapping.tree_id
+        WHERE page.status = 'published'
+        ORDER BY page.slug, page.id
+    `).all();
+    return json(request, env, {
+        pages: (result.results || []).map((page) => ({
+            id: page.id,
+            slug: page.slug,
+            title: page.title,
+            description: page.description,
+            revisionNumber: Number(page.revision_number),
+            publishedAt: Number(page.published_at),
+            updatedAt: Number(page.updated_at),
+            generated: String(page.id).startsWith("visual-page-"),
+            indexable: !["accesso", "spazio-personale", "taccuino"].includes(page.slug)
+        }))
+    });
+}
+
+function visualCompatibilityBlocks(nodes, properties) {
+    const values = new Map();
+    for (const property of properties || []) {
+        if (
+            property.property_set !== "content.copy" ||
+            !["title", "eyebrow", "text"].includes(property.property_name) ||
+            Number(property.item_position || 0) !== 0
+        ) continue;
+        const entry = values.get(property.node_id) || {};
+        entry[property.property_name] = String(property.text_value || "");
+        values.set(property.node_id, entry);
+    }
+    return (nodes || []).flatMap((node) => {
+        if (node.block_type === "page-root") return [];
+        const value = values.get(node.id) || {};
+        const text = node.block_type === "heading"
+            ? value.title || value.eyebrow || value.text
+            : value.text || value.title || value.eyebrow;
+        return typeof text === "string" ? [{ id: node.id, text }] : [];
+    });
 }
 
 async function ensureVisualAdapterStorages(env, nodes) {
