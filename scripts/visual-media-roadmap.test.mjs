@@ -9,9 +9,9 @@ import {
 test("la roadmap anteprima, media, audio e video pubblicata è coerente", async () => {
     const roadmap = await checkVisualMediaRoadmap();
     assert.equal(roadmap.status, "in_progress");
-    assert.equal(roadmap.currentUnit, "14.3");
-    assert.ok(roadmap.units.slice(0, 3).every((unit) => unit.status === "complete"));
-    assert.ok(roadmap.units.slice(3).every((unit) => unit.status === "pending"));
+    assert.equal(roadmap.currentUnit, "14.4");
+    assert.ok(roadmap.units.slice(0, 4).every((unit) => unit.status === "complete"));
+    assert.ok(roadmap.units.slice(4).every((unit) => unit.status === "pending"));
     assert.equal(roadmap.units.at(-1).id, "14.6");
 });
 

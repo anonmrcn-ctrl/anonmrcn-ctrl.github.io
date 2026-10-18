@@ -13,7 +13,7 @@
     <script src="./tema.js?v=20261006-map-layers1"></script>
     <link rel="stylesheet" href="./leaflet.css?v=1.9.4">
     <link rel="stylesheet" href="./style.css?v=20261017-inspector1">
-    <link rel="stylesheet" href="./admin-visual-builder.css?v=20261018-independence1">
+    <link rel="stylesheet" href="./admin-visual-builder.css?v=20261018-upload1">
 </head>
 
 <body>
@@ -1365,12 +1365,31 @@
                 Cerca per nome, descrizione o didascalia. Le immagini sono
                 collegate dal catalogo D1/R2: non devi copiare URL o codici.
             </p>
+            <details class="admin-visual-media-upload">
+                <summary>Carica una nuova immagine</summary>
+                <p>JPEG, PNG o WebP, massimo 8 MB. Il CMS prepara automaticamente le varianti responsive.</p>
+                <label for="adminVisualMediaFile">File</label>
+                <input id="adminVisualMediaFile" type="file" accept="image/jpeg,image/png,image/webp">
+                <label for="adminVisualMediaAlt">Testo alternativo</label>
+                <input id="adminVisualMediaAlt" type="text" maxlength="300" autocomplete="off"
+                    aria-describedby="adminVisualMediaAltHelp">
+                <small id="adminVisualMediaAltHelp">Descrivi ciò che è utile capire nell’immagine.</small>
+                <label for="adminVisualMediaCaption">Didascalia (facoltativa)</label>
+                <textarea id="adminVisualMediaCaption" maxlength="500" rows="2"></textarea>
+                <div class="admin-visual-media-upload__actions">
+                    <button id="adminVisualMediaUpload" type="button">Carica e usa</button>
+                    <button id="adminVisualMediaUploadCancel" class="admin-button-secondary" type="button" hidden>Annulla</button>
+                </div>
+                <progress id="adminVisualMediaUploadProgress" max="100" value="0" hidden></progress>
+                <p id="adminVisualMediaUploadStatus" class="admin-status" aria-live="polite"></p>
+            </details>
             <div class="admin-visual-media-filters">
                 <label for="adminVisualMediaSearch">Cerca</label>
                 <input id="adminVisualMediaSearch" type="search" autocomplete="off">
                 <label for="adminVisualMediaSource">Origine</label>
                 <select id="adminVisualMediaSource">
                     <option value="all">Tutte</option>
+                    <option value="builder">Caricate dal builder</option>
                     <option value="voices">Voci</option>
                     <option value="places">Luoghi</option>
                 </select>
@@ -1395,7 +1414,7 @@
     <script src="./sessione.js?v=20261008-onboarding1"></script>
     <script src="./notifiche.js"></script>
     <script src="./vendor/leaflet-1.9.4.js"></script>
-    <script src="./admin-visual-builder.js?v=20261018-independence1"></script>
+    <script src="./admin-visual-builder.js?v=20261018-upload1"></script>
     <script src="./admin.js?v=20261017-inspector1"></script>
 </body>
 </html>
