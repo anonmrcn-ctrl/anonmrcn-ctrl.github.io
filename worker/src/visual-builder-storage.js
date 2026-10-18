@@ -241,7 +241,7 @@ export async function initializeVisualBuilderContent(env) {
             INSERT OR IGNORE INTO visual_trees (
                 id, schema_version, contract_version, status,
                 created_at, updated_at, published_at
-            ) VALUES (?, 1, 1, ?, ?, ?, ?)
+            ) VALUES (?, 1, 2, ?, ?, ?, ?)
         `).bind(
             treeId,
             page.status,

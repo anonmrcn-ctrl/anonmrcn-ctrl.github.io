@@ -3,7 +3,7 @@
   "title": "Autonomia visuale no-code",
   "objective": "Permettere all'amministratore di creare, comporre, personalizzare, pubblicare, archiviare e recuperare pagine senza modificare codice.",
   "status": "in_progress",
-  "currentUnit": "13.10",
+  "currentUnit": "13.11",
   "allowedStatuses": [
     "pending",
     "in_progress",
@@ -163,7 +163,7 @@
     {
       "id": "13.10",
       "title": "Comportamenti e collegamenti senza codice",
-      "status": "pending",
+      "status": "complete",
       "dependsOn": ["13.9"],
       "deliverables": [
         "Configurazione visuale di menu, ancore, pulsanti, filtri, raccolte e sorgenti dati consentite.",

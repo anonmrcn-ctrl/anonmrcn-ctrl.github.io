@@ -74,7 +74,7 @@ accessibilità, privacy, SEO, migrazione e test.
 | 13.7 | Gestione completa delle pagine | Completa | 13.6 |
 | 13.8 | Modelli, sezioni riutilizzabili e parti globali | Completa | 13.7 |
 | 13.9 | Studio grafico globale | Completa | 13.8 |
-| 13.10 | Comportamenti e collegamenti senza codice | Da iniziare | 13.9 |
+| 13.10 | Comportamenti e collegamenti senza codice | Completa | 13.9 |
 | 13.11 | Pubblicazione, qualità e recupero | Da iniziare | 13.10 |
 | 13.12 | Migrazione finale e audit di indipendenza | Da iniziare | 13.11 |
 
@@ -128,6 +128,13 @@ La prova dell'unità 13.9 è in `13-9-global-visual-studio.md`; schema dei token
 validazione, confronto, pubblicazione globale e ripristino sono in
 `worker/src/visual-theme-studio.js`, `admin-visual-builder.js` e
 `worker/tests/visual-theme-studio.test.mjs`.
+
+La prova dell'unità 13.10 è in `13-10-behaviors-links.md`; registro dei
+comportamenti, controlli generati, sorgenti D1 prevalidate, renderer e runtime
+locale dei filtri sono in `worker/src/visual-builder-behaviors.js`,
+`worker/src/visual-builder-inspector.js`, `worker/src/visual-builder-adapters.js`,
+`worker/src/visual-builder-renderer.js`, `visual-behaviors.js` e
+`worker/tests/visual-builder-behaviors.test.mjs`.
 
 ## Criterio finale
 

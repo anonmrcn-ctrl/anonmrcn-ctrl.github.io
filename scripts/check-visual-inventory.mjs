@@ -32,7 +32,7 @@ export async function validateVisualInventory(inventory, contract, contentInvent
     const blockIds = new Set(blockTypes.map((block) => block.id));
 
     if (inventory.version !== 1) errors.push("versione inventario non supportata");
-    if (contract.version !== 1) errors.push("versione contratto non supportata");
+    if (contract.version !== 2) errors.push("versione contratto non supportata");
     if (contract.compatibleContentSchema !== 5) errors.push("schema contenuti incompatibile");
     if (contract.limits?.maxDepth < 1 || contract.limits?.maxDepth > 12) errors.push("limite profondità non valido");
     if (contract.limits?.maxChildrenPerNode < 1 || contract.limits?.maxChildrenPerNode > 500) errors.push("limite figli non valido");

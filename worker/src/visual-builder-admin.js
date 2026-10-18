@@ -9,6 +9,7 @@ import {
     VISUAL_INSPECTOR_SCHEMAS,
     VISUAL_INSPECTOR_VERSION
 } from "./visual-builder-inspector.js";
+import { validateBehaviorRelationships } from "./visual-builder-behaviors.js";
 
 const MAX_CANVAS_NODES = 400;
 const ID_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/u;
@@ -131,6 +132,17 @@ export async function updateVisualBuilderProperties(env, pageId, nodeId, rawInpu
                 property.property_name, property.breakpoint, property.item_position
         `).bind(page.tree_id).all()
     ]);
+    try {
+        validateBehaviorRelationships(
+            node.block_type,
+            node.id,
+            normalized.values,
+            nodeResult.results || [],
+            propertyResult.results || []
+        );
+    } catch (error) {
+        throw new VisualCanvasError(error.message || "Collegamento visuale non valido.");
+    }
     const now = Math.max(Date.now(), Number(page.updated_at) + 1);
     const baselineSnapshot = JSON.stringify({
         pageId,
@@ -190,7 +202,7 @@ export async function updateVisualBuilderProperties(env, pageId, nodeId, rawInpu
         UPDATE visual_nodes SET updated_at = ? WHERE id = ?
     `).bind(now, node.id));
     statements.push(env.DB.prepare(`
-        UPDATE visual_trees SET updated_at = ? WHERE id = ?
+        UPDATE visual_trees SET contract_version = 2, updated_at = ? WHERE id = ?
     `).bind(now, page.tree_id));
     statements.push(env.DB.prepare(`
         UPDATE visual_page_trees SET updated_at = ? WHERE page_id = ?
@@ -414,7 +426,7 @@ export async function updateVisualBuilderTree(env, pageId, rawInput) {
         }
     }
     statements.push(env.DB.prepare(`
-        UPDATE visual_trees SET updated_at = ? WHERE id = ?
+        UPDATE visual_trees SET contract_version = 2, updated_at = ? WHERE id = ?
     `).bind(now, page.tree_id));
     statements.push(env.DB.prepare(`
         UPDATE visual_page_trees SET updated_at = ? WHERE page_id = ?

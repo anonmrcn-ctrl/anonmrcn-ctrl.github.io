@@ -2,15 +2,22 @@ import {
     VISUAL_BLOCK_TYPES,
     VISUAL_PROPERTY_SETS
 } from "./visual-builder-storage.js";
+import {
+    behaviorData,
+    parseLinkEntries,
+    safeAnchorId,
+    safeHref,
+    VISUAL_BEHAVIOR_VERSION
+} from "./visual-builder-behaviors.js";
 
-export const VISUAL_BLOCK_REGISTRY_VERSION = 1;
+export const VISUAL_BLOCK_REGISTRY_VERSION = 2;
 
 const entry = (category, propertySets, renderAs = "section") =>
     Object.freeze({ category, propertySets: Object.freeze(propertySets), renderAs });
 
 export const VISUAL_BLOCK_REGISTRY = Object.freeze({
     "page-root": entry("root", ["content.copy", "presentation.box", "presentation.layout", "presentation.responsive", "behavior.link"], "main"),
-    "section": entry("structure", ["content.copy", "presentation.box", "presentation.layout", "presentation.responsive"], "section"),
+    "section": entry("structure", ["content.copy", "presentation.box", "presentation.layout", "presentation.responsive", "behavior.link"], "section"),
     "container": entry("structure", ["presentation.box", "presentation.layout", "presentation.responsive"], "div"),
     "stack": entry("structure", ["presentation.layout", "presentation.responsive"], "div"),
     "row": entry("structure", ["presentation.layout", "presentation.responsive"], "div"),
@@ -18,7 +25,7 @@ export const VISUAL_BLOCK_REGISTRY = Object.freeze({
     "grid": entry("structure", ["presentation.layout", "presentation.responsive"], "div"),
     "separator": entry("structure", ["presentation.box", "presentation.responsive"], "hr"),
     "spacer": entry("structure", ["presentation.box", "presentation.responsive"], "spacer"),
-    "heading": entry("content", ["content.copy", "presentation.box", "presentation.layout", "presentation.typography", "presentation.responsive"], "heading"),
+    "heading": entry("content", ["content.copy", "presentation.box", "presentation.layout", "presentation.typography", "presentation.responsive", "behavior.link"], "heading"),
     "rich-text": entry("content", ["content.copy", "presentation.typography", "presentation.responsive"], "paragraph"),
     "list": entry("content", ["content.copy", "presentation.typography", "presentation.responsive"], "list"),
     "quote": entry("content", ["content.copy", "presentation.box", "presentation.typography", "presentation.responsive"], "quote"),
@@ -110,6 +117,7 @@ export function renderVisualPage({
     const canonical = indexable ? new URL(path, publicOrigin).href : null;
     return {
         registryVersion: VISUAL_BLOCK_REGISTRY_VERSION,
+        behaviorVersion: VISUAL_BEHAVIOR_VERSION,
         html,
         theme,
         metadata: {
@@ -249,7 +257,8 @@ function renderNode(
     const text = first(values, "content.copy/text");
     const items = all(values, "content.copy/items");
     const className = `visual-block visual-block--${node.block_type}`;
-    const attributes = ` class="${className}" data-block-id="${escapeHtml(node.id)}"${presentationAttributes(values)}`;
+    const anchorId = safeAnchorId(first(values, "behavior.link/anchorId"));
+    const attributes = `${anchorId ? ` id="${escapeHtml(anchorId)}"` : ""} class="${className}" data-block-id="${escapeHtml(node.id)}"${presentationAttributes(values)}`;
 
     switch (node.definition.renderAs) {
         case "main":
@@ -267,11 +276,13 @@ function renderNode(
         case "gallery":
             return `<div${attributes} role="group" aria-label="Galleria">${childHtml}</div>`;
         case "button":
-            return `<a${attributes} href="${escapeHtml(safeHref(first(values, "behavior.link/href")))}">${escapeHtml(title || text)}</a>`;
-        case "link-list":
-            return `<ul${attributes}>${items.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}${childHtml}</ul>`;
+            return renderButton(values, attributes, title || text);
+        case "link-list": {
+            const links = all(values, "behavior.link/href").flatMap((item) => parseLinkEntries(item));
+            return `<ul${attributes}>${links.map(({ label, href }) => `<li><a href="${escapeHtml(safeHref(href) || "#")}">${escapeHtml(label)}</a></li>`).join("") || items.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}${childHtml}</ul>`;
+        }
         case "nav":
-            return `<nav${attributes} aria-label="${escapeHtml(title || "Navigazione")}">${childHtml}</nav>`;
+            return `<nav${attributes}${behaviorData(values, [["behavior.collection/source", "data-navigation-source"]])} aria-label="${escapeHtml(title || "Navigazione")}">${childHtml}</nav>`;
         case "header": return `<header${attributes}>${text ? `<p>${escapeHtml(text)}</p>` : ""}${childHtml}</header>`;
         case "footer": return `<footer${attributes}>${text ? `<p>${escapeHtml(text)}</p>` : ""}${childHtml}</footer>`;
         case "aside": return `<aside${attributes}>${title ? `<h2>${escapeHtml(title)}</h2>` : ""}${text ? `<p>${escapeHtml(text)}</p>` : ""}${childHtml}</aside>`;
@@ -279,6 +290,16 @@ function renderNode(
         case "hr": return `<hr${attributes}>`;
         case "spacer": return `<div${attributes} aria-hidden="true"></div>`;
         case "section":
+            if (node.block_type === "data-collection") return renderDataCollection(
+                values,
+                adapterPayloads.get(node.id),
+                node.id,
+                attributes,
+                title,
+                text,
+                childHtml
+            );
+            if (node.block_type === "data-filter") return renderDataFilter(values, attributes, title, childHtml);
             return `<section${attributes}>${title ? `<h2>${escapeHtml(title)}</h2>` : ""}${text ? `<p>${escapeHtml(text)}</p>` : ""}${childHtml}</section>`;
         case "project-poem":
         case "project-path":
@@ -292,13 +313,13 @@ function renderNode(
         case "personal-space":
         case "special-access":
         case "approved-form":
-            return renderAdapter(node, adapterPayloads.get(node.id), attributes, childHtml);
+            return renderAdapter(node, adapterPayloads.get(node.id), attributes, childHtml, values);
         default:
             return `<${node.definition.renderAs}${attributes}>${childHtml}</${node.definition.renderAs}>`;
     }
 }
 
-function renderAdapter(node, payload, attributes, childHtml) {
+function renderAdapter(node, payload, attributes, childHtml, values = new Map()) {
     const rows = Array.isArray(payload) ? payload : [];
     switch (node.block_type) {
         case "project-poem": {
@@ -315,7 +336,7 @@ function renderAdapter(node, payload, attributes, childHtml) {
             return `<article${attributes} data-adapter="poem"><h2>${escapeHtml(rows[0]?.work_title || "Poesia")}</h2>${[...sections.values()].sort((a, b) => a.position - b.position).map((section) => `<section><h3>${escapeHtml(section.title)}</h3>${section.lines.map((line) => `<p id="${escapeHtml(line.line_id)}" data-indent="${Math.max(0, Math.min(12, Number(line.indent_level) || 0))}">${escapeHtml(line.text)}</p>`).join("")}</section>`).join("")}${childHtml}</article>`;
         }
         case "project-path":
-            return `<section${attributes} data-adapter="narrative-steps"><h2>Percorso poetico</h2><ol>${rows.map((step) => `<li><h3>${step.title_url ? `<a href="${escapeHtml(safeHref(step.title_url))}">${escapeHtml(step.title)}</a>` : escapeHtml(step.title)}</h3><blockquote>${escapeHtml(step.verse)}</blockquote><p>${escapeHtml(step.explanation)}</p></li>`).join("")}</ol>${childHtml}</section>`;
+            return `<section${attributes} data-adapter="narrative-steps"><h2>Percorso poetico</h2><ol>${rows.map((step) => `<li><h3>${step.title_url ? `<a href="${escapeHtml(safeHref(step.title_url) || "#")}">${escapeHtml(step.title)}</a>` : escapeHtml(step.title)}</h3><blockquote>${escapeHtml(step.verse)}</blockquote><p>${escapeHtml(step.explanation)}</p></li>`).join("")}</ol>${childHtml}</section>`;
         case "project-map":
             return `<section${attributes} data-adapter="map-layers" data-static-fallback="${node.id === "visual-memorie-map" ? "./memorie.html#memorieMap" : "./progetto.html#map"}"><h2>Mappa</h2><ul>${rows.map((layer) => `<li><strong>${escapeHtml(layer.title)}</strong>${layer.description ? ` — ${escapeHtml(layer.description)}` : ""} <span>(${Math.max(0, Number(layer.feature_count) || 0)})</span></li>`).join("")}</ul><p><a href="${node.id === "visual-memorie-map" ? "./memorie.html#memorieMap" : "./progetto.html#map"}">Apri la mappa interattiva</a></p>${childHtml}</section>`;
         case "project-voices":
@@ -323,13 +344,19 @@ function renderAdapter(node, payload, attributes, childHtml) {
         case "project-places":
             return `<section${attributes} data-adapter="map-entries"><h2>Luoghi</h2><ul>${rows.map((item) => `<li><a href="./luoghi/${encodeURIComponent(item.id)}.html">${escapeHtml(item.name)}</a>${item.description ? `<p>${escapeHtml(item.description)}</p>` : ""}</li>`).join("")}</ul>${childHtml}</section>`;
         case "project-sources":
-            return `<section${attributes} data-adapter="sources"><h2>Fonti</h2><ol>${rows.map((source) => `<li>${source.url ? `<a href="${escapeHtml(safeHref(source.url))}" rel="noreferrer">${escapeHtml(source.title)}</a>` : escapeHtml(source.title)}${source.author ? ` — ${escapeHtml(source.author)}` : ""}</li>`).join("")}</ol>${childHtml}</section>`;
+            return `<section${attributes} data-adapter="sources"><h2>Fonti</h2><ol>${rows.map((source) => `<li>${source.url ? `<a href="${escapeHtml(safeHref(source.url) || "#")}" rel="noreferrer">${escapeHtml(source.title)}</a>` : escapeHtml(source.title)}${source.author ? ` — ${escapeHtml(source.author)}` : ""}</li>`).join("")}</ol>${childHtml}</section>`;
         case "project-memories":
             return `<section${attributes} data-adapter="memories"><h2>Memorie</h2>${rows.map((memory) => `<article><h3>${escapeHtml(memory.title)}</h3><p>${escapeHtml(memory.text)}</p>${memory.author_name ? `<p>Condivisa da ${escapeHtml(memory.author_name)}</p>` : ""}</article>`).join("")}${childHtml}</section>`;
         case "project-archive":
             return `<section${attributes} data-adapter="public-messages"><h2>Archivio</h2><ol>${rows.map((message) => `<li>${escapeHtml(message.text)}</li>`).join("")}</ol>${childHtml}</section>`;
         case "approved-form":
-            return `<section${attributes} data-adapter="memory-form" data-static-fallback="./memorie.html#memoriaFormTitolo"><h2>Condividi una Memoria</h2><p>Il modulo completo permette di scegliere il punto sulla mappa e allegare un contenuto, mantenendo consenso e moderazione.</p><p><a href="./memorie.html#memoriaFormTitolo">Apri il modulo completo</a></p></section>`;
+            return `<section${attributes} data-adapter="memory-form"${behaviorData(values, [
+                ["behavior.form/formType", "data-form-type"],
+                ["behavior.form/consentDocumentId", "data-consent-document"],
+                ["behavior.form/consentMode", "data-consent-mode"],
+                ["behavior.form/externalService", "data-external-service"],
+                ["behavior.form/telemetry", "data-telemetry"]
+            ])} data-static-fallback="./memorie.html#memoriaFormTitolo"><h2>Condividi una Memoria</h2><p>Il modulo completo permette di scegliere il punto sulla mappa e allegare un contenuto, mantenendo consenso e moderazione.</p><p><a href="./memorie.html#memoriaFormTitolo">Apri il modulo completo</a></p></section>`;
         case "personal-notebook":
             return `<section${attributes} data-adapter="local-notebook" data-static-fallback="./taccuino.html"><h2>Taccuino personale</h2><p>I contenuti salvati restano su questo dispositivo.</p><p><a href="./taccuino.html">Apri il taccuino completo</a></p>${childHtml}</section>`;
         case "personal-space":
@@ -339,6 +366,52 @@ function renderAdapter(node, payload, attributes, childHtml) {
         default:
             return `<section${attributes}>${childHtml}</section>`;
     }
+}
+
+function renderButton(values, attributes, label) {
+    const href = safeHref(first(values, "behavior.link/href")) || "#";
+    const openMode = first(values, "behavior.link/openMode") || "same-window";
+    const external = /^https:\/\//iu.test(href);
+    const target = openMode === "new-window" ? ' target="_blank" rel="noopener noreferrer"' : "";
+    const disclosure = external ? ' data-external-link="true"' : "";
+    return `<a${attributes} href="${escapeHtml(href)}"${target}${disclosure}>${escapeHtml(label)}</a>`;
+}
+
+function renderDataCollection(values, payload, nodeId, attributes, title, text, childHtml) {
+    const behavior = behaviorData(values, [
+        ["behavior.collection/source", "data-collection-source"],
+        ["behavior.collection/display", "data-collection-display"],
+        ["behavior.collection/limit", "data-collection-limit"],
+        ["behavior.collection/externalService", "data-external-service"],
+        ["behavior.collection/telemetry", "data-telemetry"]
+    ]);
+    const limit = Math.max(1, Math.min(24, Number(first(values, "behavior.collection/limit")) || 12));
+    const rows = payload?.kind === "data-collection" && Array.isArray(payload.items)
+        ? payload.items.slice(0, limit)
+        : [];
+    const items = rows.map((item) => {
+        const label = escapeHtml(item.title);
+        const href = safeHref(item.href);
+        const heading = href
+            ? `<h3><a href="${escapeHtml(href)}"${/^https:\/\//iu.test(href) ? ' rel="noreferrer"' : ""}>${label}</a></h3>`
+            : `<h3>${label}</h3>`;
+        const searchText = `${item.title || ""} ${item.description || ""}`.trim().toLocaleLowerCase("it");
+        return `<article data-collection-item data-search-text="${escapeHtml(searchText)}">${heading}${item.description ? `<p>${escapeHtml(item.description)}</p>` : ""}</article>`;
+    }).join("");
+    const empty = rows.length ? "" : '<p data-collection-empty>Nessun contenuto pubblicato.</p>';
+    return `<section id="${escapeHtml(nodeId)}"${attributes}${behavior} aria-live="polite">${title ? `<h2>${escapeHtml(title)}</h2>` : ""}${text ? `<p>${escapeHtml(text)}</p>` : ""}<div data-collection-results>${items}${empty}${childHtml}</div></section>`;
+}
+
+function renderDataFilter(values, attributes, title, childHtml) {
+    const target = first(values, "behavior.collection/targetCollection");
+    const behavior = behaviorData(values, [
+        ["behavior.collection/source", "data-filter-source"],
+        ["behavior.collection/filterMode", "data-filter-mode"],
+        ["behavior.collection/targetCollection", "data-filter-target"],
+        ["behavior.collection/externalService", "data-external-service"],
+        ["behavior.collection/telemetry", "data-telemetry"]
+    ]);
+    return `<section${attributes}${behavior}>${title ? `<h2>${escapeHtml(title)}</h2>` : ""}<label>${escapeHtml(title || "Filtra i contenuti")}<input type="search" autocomplete="off" aria-controls="${escapeHtml(target)}"></label><output data-filter-count aria-live="polite"></output>${childHtml}</section>`;
 }
 
 function renderImage(node, values, assetsById, attributes) {
@@ -383,13 +456,6 @@ function presentationAttributes(values) {
             ? ` data-${attribute}="${value}"`
             : "";
     }).join("");
-}
-
-function safeHref(value) {
-    const href = String(value || "").trim();
-    if (!href) return "#";
-    if (/^(?:https:\/\/|mailto:|tel:|\/|\.\/|\.\.\/|#)/iu.test(href)) return href;
-    return "#";
 }
 
 function safeMediaUrl(value) {

@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "compatibleContentSchema": 5,
   "limits": { "maxDepth": 8, "maxChildrenPerNode": 200 },
   "node": {
@@ -22,9 +22,9 @@
     "presentation.layout": { "domain": "presentation", "properties": ["width", "alignment", "gap", "columns", "order"] },
     "presentation.typography": { "domain": "presentation", "properties": ["style", "size", "weight", "lineHeight", "color"] },
     "presentation.responsive": { "domain": "presentation", "properties": ["phone", "tablet", "desktop", "visibility"] },
-    "behavior.link": { "domain": "behavior", "properties": ["targetPageId", "href", "fragment", "openMode"] },
-    "behavior.collection": { "domain": "behavior", "properties": ["source", "filters", "sort", "limit", "pagination"] },
-    "behavior.form": { "domain": "behavior", "properties": ["formType", "successMessage", "consentDocumentId"] },
+    "behavior.link": { "domain": "behavior", "properties": ["targetPageId", "href", "fragment", "anchorId", "openMode"] },
+    "behavior.collection": { "domain": "behavior", "properties": ["source", "filters", "sort", "limit", "pagination", "display", "filterMode", "targetCollection", "externalService", "telemetry"] },
+    "behavior.form": { "domain": "behavior", "properties": ["formType", "successMessage", "consentDocumentId", "consentMode", "externalService", "telemetry"] },
     "technical.binding": { "domain": "technical", "properties": ["table", "recordId", "r2Key", "adapter"] },
     "technical.security": { "domain": "technical", "properties": ["policy", "roles", "rateLimit", "csrf"] }
   },
@@ -42,7 +42,7 @@
   },
   "blockTypes": [
     { "id": "page-root", "category": "root", "propertySets": ["content.copy", "presentation.box", "presentation.layout", "presentation.responsive", "behavior.link"] },
-    { "id": "section", "category": "structure", "propertySets": ["content.copy", "presentation.box", "presentation.layout", "presentation.responsive"] },
+    { "id": "section", "category": "structure", "propertySets": ["content.copy", "presentation.box", "presentation.layout", "presentation.responsive", "behavior.link"] },
     { "id": "container", "category": "structure", "propertySets": ["presentation.box", "presentation.layout", "presentation.responsive"] },
     { "id": "stack", "category": "structure", "propertySets": ["presentation.layout", "presentation.responsive"] },
     { "id": "row", "category": "structure", "propertySets": ["presentation.layout", "presentation.responsive"] },
@@ -50,7 +50,7 @@
     { "id": "grid", "category": "structure", "propertySets": ["presentation.layout", "presentation.responsive"] },
     { "id": "separator", "category": "structure", "propertySets": ["presentation.box", "presentation.responsive"] },
     { "id": "spacer", "category": "structure", "propertySets": ["presentation.box", "presentation.responsive"] },
-    { "id": "heading", "category": "content", "propertySets": ["content.copy", "presentation.box", "presentation.layout", "presentation.typography", "presentation.responsive"] },
+    { "id": "heading", "category": "content", "propertySets": ["content.copy", "presentation.box", "presentation.layout", "presentation.typography", "presentation.responsive", "behavior.link"] },
     { "id": "rich-text", "category": "content", "propertySets": ["content.copy", "presentation.typography", "presentation.responsive"] },
     { "id": "list", "category": "content", "propertySets": ["content.copy", "presentation.typography", "presentation.responsive"] },
     { "id": "quote", "category": "content", "propertySets": ["content.copy", "presentation.box", "presentation.typography", "presentation.responsive"] },

@@ -107,7 +107,7 @@ pagine con stato `published`. Ogni file HTML conserva la copia originaria e la
 usa automaticamente se il Worker non è raggiungibile.
 
 `GET /api/public/visual-pages/:slug` espone in parallelo la resa del nuovo
-albero visuale. Accetta soltanto i tipi e le proprietà del registro v1,
+albero visuale. Accetta soltanto i tipi e le proprietà del registro v2,
 codifica i contenuti come testo, filtra i collegamenti e non rende mai le
 proprietà tecniche. La risposta include metadati SEO coerenti; Accesso, Spazio
 personale e Taccuino restano `noindex`. Questo endpoint non sostituisce ancora
@@ -166,6 +166,16 @@ Gli endpoint `compare` e `publish` mostrano le differenze e applicano o
 ripristinano un tema su tutte le pagine in una transazione, conservando i temi
 precedenti e le revisioni. L'API visuale pubblica restituisce i token del tema
 attivo come dati strutturati, mai come CSS arbitrario.
+
+Il registro dei comportamenti e l'ispettore v2 configurano senza codice
+ancore, pulsanti, elenchi di collegamenti, menu, indici, breadcrumb, raccolte,
+filtri e il modulo Memorie autorizzato. Le raccolte leggono esclusivamente
+sorgenti D1 pubbliche predefinite; i filtri possono riferirsi soltanto a una
+raccolta della stessa pagina e il Worker verifica che le sorgenti coincidano.
+Servizi esterni e telemetria hanno come unico valore consentito rispettivamente
+`none` e `off`; i moduli richiedono informativa pubblicata e consenso esplicito.
+`visual-behaviors.js` filtra localmente gli elementi già resi, senza richieste
+di rete, storage o identificatori.
 
 La stessa inizializzazione importa «Il Gajo tra i Praelli» in `poem_works`,
 `poem_sections` e `poem_lines`: 4 canti, 121 versi e i metadati necessari a
