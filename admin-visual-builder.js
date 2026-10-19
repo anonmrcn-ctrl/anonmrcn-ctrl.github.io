@@ -1198,6 +1198,45 @@
         }
     }
 
+    const VISUAL_MEDIA_COPY = Object.freeze({
+        image: {
+            noun: "immagine", article: "un’immagine", empty: "Nessuna immagine",
+            accept: "image/jpeg,image/png,image/webp", maxBytes: 8 * 1024 * 1024, maxLabel: "8 MB",
+            summary: "Carica una nuova immagine", fileLabel: "File immagine",
+            titleLabel: "Testo alternativo", titleHelp: "Descrivi ciò che è utile capire nell’immagine.",
+            descriptionLabel: "Didascalia (facoltativa)",
+            help: "JPEG, PNG o WebP, massimo 8 MB. Il CMS prepara automaticamente le varianti responsive."
+        },
+        audio: {
+            noun: "audio", article: "un audio", empty: "Nessun audio",
+            accept: "audio/mpeg,audio/ogg,audio/webm,audio/mp4,audio/wav", maxBytes: 16 * 1024 * 1024, maxLabel: "16 MB",
+            summary: "Carica un nuovo audio", fileLabel: "File audio",
+            titleLabel: "Titolo audio", titleHelp: "Usa un titolo breve e riconoscibile. La trascrizione si aggiunge nel blocco.",
+            descriptionLabel: "Descrizione (facoltativa)",
+            help: "MP3, OGG, WebM, M4A o WAV, massimo 16 MB. Nessun autoplay o servizio esterno."
+        },
+        video: {
+            noun: "video", article: "un video", empty: "Nessun video",
+            accept: "video/mp4,video/webm", maxBytes: 48 * 1024 * 1024, maxLabel: "48 MB",
+            summary: "Carica un nuovo video", fileLabel: "File video",
+            titleLabel: "Titolo video", titleHelp: "Usa un titolo breve e riconoscibile. Poster e sottotitoli si collegano nel blocco.",
+            descriptionLabel: "Descrizione (facoltativa)",
+            help: "MP4 o WebM, massimo 48 MB. Nessun autoplay o servizio esterno."
+        },
+        subtitle: {
+            noun: "sottotitoli", article: "i sottotitoli", empty: "Nessun sottotitolo",
+            accept: "text/vtt,.vtt", maxBytes: 512 * 1024, maxLabel: "512 KB",
+            summary: "Carica sottotitoli WebVTT", fileLabel: "File sottotitoli",
+            titleLabel: "Etichetta sottotitoli", titleHelp: "Indica la lingua o il contenuto, per esempio Italiano.",
+            descriptionLabel: "Nota (facoltativa)",
+            help: "WebVTT, massimo 512 KB. Il file deve iniziare con WEBVTT."
+        }
+    });
+
+    function mediaCopy(kind) {
+        return VISUAL_MEDIA_COPY[kind] || VISUAL_MEDIA_COPY.image;
+    }
+
     function mediaIds(value) {
         return String(value || "").split(/\r?\n/u).map((id) => id.trim()).filter(Boolean);
     }
@@ -1217,7 +1256,7 @@
         const button = document.createElement("button");
         button.type = "button";
         button.className = "admin-button-secondary";
-        const mediaName = field.mediaKind === "audio" ? "audio" : "immagine";
+        const mediaName = mediaCopy(field.mediaKind || "image").noun;
         button.textContent = field.format === "lines"
             ? "Scegli e ordina immagini"
             : (input.value ? `Sostituisci ${mediaName}` : `Scegli ${mediaName}`);
@@ -1278,23 +1317,17 @@
                 .some((value) => String(value || "").toLocaleLowerCase("it").includes(query)))
         );
         mediaResults.replaceChildren(...visible.map(mediaResultCard));
-        if (!visible.length) {
-            mediaResults.textContent = kind === "audio"
-                ? "Nessun audio corrisponde alla ricerca."
-                : "Nessuna immagine corrisponde alla ricerca.";
-        }
+        if (!visible.length) mediaResults.textContent = `${mediaCopy(kind).empty} corrisponde alla ricerca.`;
         mediaSelected.replaceChildren(...mediaPicker.ids.map((id, index) =>
             selectedMediaCard(id, index)
         ).filter(Boolean));
-        if (!mediaPicker.ids.length) mediaSelected.textContent = kind === "audio"
-            ? "Nessun audio selezionato."
-            : "Nessuna immagine selezionata.";
+        if (!mediaPicker.ids.length) mediaSelected.textContent = `${mediaCopy(kind).empty} selezionato.`;
         mediaApply.disabled = !mediaPicker.ids.length;
         mediaStatus.textContent = mediaPicker.multiple
             ? `${mediaPicker.ids.length} immagini selezionate. Usa i pulsanti per cambiarne l'ordine.`
             : (mediaPicker.ids.length
-                ? `${kind === "audio" ? "Audio" : "Immagine"} pronto per essere collegato.`
-                : `Scegli ${kind === "audio" ? "un audio" : "un’immagine"}.`);
+                ? `${mediaCopy(kind).noun[0].toUpperCase()}${mediaCopy(kind).noun.slice(1)} pronto per essere collegato.`
+                : `Scegli ${mediaCopy(kind).article}.`);
     }
 
     function mediaResultCard(asset) {
@@ -1309,14 +1342,16 @@
             setProtectedMediaSource(mediaPreview, asset, asset.thumbnailUrl);
         } else {
             mediaPreview.className = "admin-visual-media-card__audio";
-            mediaPreview.textContent = "Audio";
+            mediaPreview.textContent = mediaCopy(asset.kind).noun;
         }
         const title = document.createElement("strong");
         title.textContent = asset.name;
         const metadata = document.createElement("p");
-        metadata.textContent = asset.kind === "audio" ? [
+        metadata.textContent = asset.kind !== "image" ? [
             asset.mediaType,
-            `${(asset.byteSize / 1024 / 1024).toFixed(1)} MB`,
+            asset.byteSize >= 1024 * 1024
+                ? `${(asset.byteSize / 1024 / 1024).toFixed(1)} MB`
+                : `${Math.max(1, Math.round(asset.byteSize / 1024))} KB`,
             asset.caption || "Senza descrizione"
         ].join(" · ") : [
             asset.alt ? `Alt: ${asset.alt}` : "Testo alternativo mancante",
@@ -1344,9 +1379,9 @@
         return card;
     }
 
-    async function setProtectedMediaSource(element, asset, source = asset.publicUrl) {
+    async function setProtectedMediaSource(element, asset, source = asset.publicUrl, attribute = "src") {
         if (!asset.private) {
-            element.src = `${api.baseUrl}${source}`;
+            element[attribute] = `${api.baseUrl}${source}`;
             return;
         }
         element.setAttribute("aria-busy", "true");
@@ -1357,11 +1392,14 @@
             if (!response.ok) throw new Error("Media privato non disponibile.");
             const objectUrl = URL.createObjectURL(await response.blob());
             mediaObjectUrls.add(objectUrl);
-            element.addEventListener(asset.kind === "audio" ? "loadedmetadata" : "load", () => {
+            const readyEvent = element instanceof HTMLImageElement || element instanceof HTMLTrackElement
+                ? "load"
+                : "loadedmetadata";
+            element.addEventListener(readyEvent, () => {
                 URL.revokeObjectURL(objectUrl);
                 mediaObjectUrls.delete(objectUrl);
             }, { once: true });
-            element.src = objectUrl;
+            element[attribute] = objectUrl;
         } catch (_) {
             if (element instanceof HTMLImageElement) element.alt = "Anteprima non disponibile";
         } finally {
@@ -1370,22 +1408,16 @@
     }
 
     function configureMediaUpload(kind) {
-        const audio = kind === "audio";
-        mediaFile.accept = audio
-            ? "audio/mpeg,audio/ogg,audio/webm,audio/mp4,audio/wav"
-            : "image/jpeg,image/png,image/webp";
-        mediaAlt.maxLength = audio ? 200 : 300;
-        mediaCaption.maxLength = audio ? 1000 : 500;
-        mediaUploadSummary.textContent = audio ? "Carica un nuovo audio" : "Carica una nuova immagine";
-        mediaUploadHelp.textContent = audio
-            ? "MP3, OGG, WebM, M4A o WAV, massimo 16 MB. Nessun autoplay o servizio esterno."
-            : "JPEG, PNG o WebP, massimo 8 MB. Il CMS prepara automaticamente le varianti responsive.";
-        mediaFileLabel.textContent = audio ? "File audio" : "File immagine";
-        mediaAltLabel.textContent = audio ? "Titolo audio" : "Testo alternativo";
-        mediaAltHelp.textContent = audio
-            ? "Usa un titolo breve e riconoscibile. La trascrizione si aggiunge nel blocco."
-            : "Descrivi ciò che è utile capire nell’immagine.";
-        mediaCaptionLabel.textContent = audio ? "Descrizione (facoltativa)" : "Didascalia (facoltativa)";
+        const copy = mediaCopy(kind);
+        mediaFile.accept = copy.accept;
+        mediaAlt.maxLength = kind === "image" ? 300 : 200;
+        mediaCaption.maxLength = kind === "image" ? 500 : 1000;
+        mediaUploadSummary.textContent = copy.summary;
+        mediaUploadHelp.textContent = copy.help;
+        mediaFileLabel.textContent = copy.fileLabel;
+        mediaAltLabel.textContent = copy.titleLabel;
+        mediaAltHelp.textContent = copy.titleHelp;
+        mediaCaptionLabel.textContent = copy.descriptionLabel;
     }
 
     function revokeMediaObjectUrls() {
@@ -1483,22 +1515,18 @@
         const file = mediaFile.files?.[0];
         const alt = mediaAlt.value.trim();
         if (!file) {
-            mediaUploadStatus.textContent = kind === "audio"
-                ? "Scegli un file audio da caricare."
-                : "Scegli un’immagine da caricare.";
+            mediaUploadStatus.textContent = `Scegli ${mediaCopy(kind).article} da caricare.`;
             mediaFile.focus();
             return;
         }
         if (!alt) {
-            mediaUploadStatus.textContent = kind === "audio"
-                ? "Aggiungi il titolo audio prima di caricare."
-                : "Aggiungi il testo alternativo prima di caricare.";
+            mediaUploadStatus.textContent = `Aggiungi «${mediaCopy(kind).titleLabel}» prima di caricare.`;
             mediaAlt.focus();
             return;
         }
-        const maxBytes = kind === "audio" ? 16 * 1024 * 1024 : 8 * 1024 * 1024;
+        const maxBytes = mediaCopy(kind).maxBytes;
         if (file.size > maxBytes) {
-            mediaUploadStatus.textContent = `Il file supera il limite di ${kind === "audio" ? 16 : 8} MB.`;
+            mediaUploadStatus.textContent = `Il file supera il limite di ${mediaCopy(kind).maxLabel}.`;
             return;
         }
         const task = { cancelled: false, readers: new Set(), xhr: null };
@@ -1507,20 +1535,20 @@
         mediaUploadCancel.hidden = false;
         mediaUploadProgress.hidden = false;
         mediaUploadProgress.value = 1;
-        mediaUploadStatus.textContent = kind === "audio"
-            ? "Preparazione del file audio…"
-            : "Preparazione delle varianti responsive…";
+        mediaUploadStatus.textContent = kind === "image"
+            ? "Preparazione delle varianti responsive…"
+            : `Preparazione ${kind === "subtitle" ? "dei sottotitoli" : `del file ${mediaCopy(kind).noun}`}…`;
         try {
             const [data, variants] = await Promise.all([
                 readBlobDataUrl(file, task),
-                kind === "audio" ? Promise.resolve([]) : responsiveImageVariants(file, task)
+                kind === "image" ? responsiveImageVariants(file, task) : Promise.resolve([])
             ]);
             if (task.cancelled) return;
             mediaUploadProgress.value = 30;
             mediaUploadStatus.textContent = "Caricamento protetto in R2 e verifica dell’integrità…";
             const result = await sendVisualMedia({
                 kind,
-                ...(kind === "audio"
+                ...(kind !== "image"
                     ? { title: alt, description: mediaCaption.value.trim() }
                     : { alt, caption: mediaCaption.value.trim() }),
                 file: { name: file.name, type: file.type, data, variants }
@@ -1530,7 +1558,7 @@
             if (mediaPicker.multiple) mediaPicker.ids.push(result.asset.id);
             else mediaPicker.ids = [result.asset.id];
             mediaUploadProgress.value = 100;
-            mediaUploadStatus.textContent = `${kind === "audio" ? "Audio" : "Immagine"} verificato e collegato al blocco.`;
+            mediaUploadStatus.textContent = `${mediaCopy(kind).noun[0].toUpperCase()}${mediaCopy(kind).noun.slice(1)} verificato e collegato al blocco.`;
             applyMediaSelection();
         } catch (error) {
             if (error.name !== "AbortError") mediaUploadStatus.textContent = error.message || "Caricamento non riuscito.";
@@ -1590,7 +1618,7 @@
             if (asset && asset.kind === "image") {
                 if (!String(node.values.alt || "").trim()) node.values.alt = asset.alt || "";
                 if (!String(node.values.caption || "").trim()) node.values.caption = asset.caption || "";
-            } else if (asset?.kind === "audio") {
+            } else if (["audio", "video"].includes(asset?.kind)) {
                 if (!String(node.values.title || "").trim()) node.values.title = asset.alt || asset.name || "";
                 if (!String(node.values.text || "").trim()) node.values.text = asset.caption || "";
             }
@@ -1625,11 +1653,17 @@
     }
 
     function hydrateProtectedPreviewMedia() {
-        for (const element of preview.querySelectorAll('img[src^="/api/public/visual-media/"], audio[src^="/api/public/visual-media/"]')) {
+        for (const element of preview.querySelectorAll('img[src^="/api/public/visual-media/"], audio[src^="/api/public/visual-media/"], video[src^="/api/public/visual-media/"], track[src^="/api/public/visual-media/"]')) {
             const path = element.getAttribute("src");
             const assetId = path.split("/").pop()?.split("?")[0] || "";
             const asset = mediaAssets.find((candidate) => candidate.id === assetId);
             if (asset) setProtectedMediaSource(element, asset, path);
+        }
+        for (const element of preview.querySelectorAll('video[poster^="/api/public/visual-media/"]')) {
+            const path = element.getAttribute("poster");
+            const assetId = path.split("/").pop()?.split("?")[0] || "";
+            const asset = mediaAssets.find((candidate) => candidate.id === assetId);
+            if (asset) setProtectedMediaSource(element, asset, path, "poster");
         }
     }
 
@@ -1734,6 +1768,13 @@
             if (!String(values.title || "").trim()) messages.push("Aggiungi il titolo dell’audio.");
             if (!String(values.text || "").trim()) messages.push("Aggiungi una descrizione dell’audio.");
             if (!String(values.transcript || "").trim()) messages.push("Aggiungi la trascrizione accessibile dell’audio.");
+        }
+        if (node.type === "video") {
+            if (!mediaIds(values.videoAssetId).length) messages.push("Scegli un file video dalla libreria.");
+            if (!mediaIds(values.posterAssetId).length) messages.push("Scegli un’immagine poster per il video.");
+            if (!mediaIds(values.subtitleAssetId).length) messages.push("Aggiungi i sottotitoli WebVTT del video.");
+            if (!String(values.title || "").trim()) messages.push("Aggiungi il titolo del video.");
+            if (!String(values.text || "").trim()) messages.push("Aggiungi una descrizione del video.");
         }
         return messages;
     }

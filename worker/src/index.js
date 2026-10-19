@@ -195,7 +195,9 @@ const MAX_CMS_DOCUMENT_BYTES = 8 * 1024 * 1024;
 const MAX_CMS_DOCUMENT_REQUEST_BYTES = 12 * 1024 * 1024;
 const MAX_VISUAL_IMAGE_BYTES = 8 * 1024 * 1024;
 const MAX_VISUAL_AUDIO_BYTES = 16 * 1024 * 1024;
-const MAX_VISUAL_MEDIA_REQUEST_BYTES = 24 * 1024 * 1024;
+const MAX_VISUAL_VIDEO_BYTES = 48 * 1024 * 1024;
+const MAX_VISUAL_SUBTITLE_BYTES = 512 * 1024;
+const MAX_VISUAL_MEDIA_REQUEST_BYTES = 72 * 1024 * 1024;
 const MAX_VISUAL_MEDIA_ITEMS = 250;
 const MAX_VISUAL_MEDIA_TOTAL_BYTES = 256 * 1024 * 1024;
 const MAX_CMS_BACKUP_REQUEST_BYTES = 80 * 1024 * 1024;
@@ -240,6 +242,10 @@ const VISUAL_AUDIO_TYPES = new Set([
     "audio/webm",
     "audio/mp4",
     "audio/wav"
+]);
+const VISUAL_VIDEO_TYPES = new Set([
+    "video/mp4",
+    "video/webm"
 ]);
 const CMS_DOCUMENT_TYPES = new Set([
     "application/pdf",
@@ -2489,6 +2495,19 @@ function memoryMediaSignatureMatches(type, bytes) {
         return ascii(0, "RIFF") && ascii(8, "WAVE");
     }
 
+    if (type === "video/mp4") {
+        return ascii(4, "ftyp");
+    }
+
+    if (type === "video/webm") {
+        return startsWith(0x1a, 0x45, 0xdf, 0xa3);
+    }
+
+    if (type === "text/vtt") {
+        const header = new TextDecoder().decode(bytes.slice(0, 64)).replace(/^\uFEFF/u, "");
+        return /^WEBVTT(?:[ \t]|\r?\n)/u.test(header);
+    }
+
     return false;
 }
 
@@ -2733,6 +2752,9 @@ function memoryMediaExtension(type) {
         "audio/webm": "webm",
         "audio/mp4": "m4a",
         "audio/wav": "wav",
+        "video/mp4": "mp4",
+        "video/webm": "webm",
+        "text/vtt": "vtt",
         "application/pdf": "pdf",
         "text/plain": "txt",
         "text/markdown": "md",
@@ -4437,7 +4459,7 @@ async function ensureVisualAdapterStorages(env, nodes) {
 async function readVisualAssets(env) {
     const result = await env.DB.prepare(`
         SELECT id, owner_type, owner_id, media_name, media_type, byte_size,
-            alt_text, caption, width, height
+            alt_text, caption, width, height, created_at
         FROM media_assets
         WHERE state = 'current' AND variant_key = 'original'
             AND (
@@ -4460,7 +4482,12 @@ async function readVisualAssets(env) {
 }
 
 function visualMediaPayload(asset) {
-    const kind = String(asset.media_type || "").startsWith("audio/") ? "audio" : "image";
+    const mediaType = String(asset.media_type || "");
+    const kind = mediaType.startsWith("audio/")
+        ? "audio"
+        : mediaType.startsWith("video/")
+            ? "video"
+            : mediaType === "text/vtt" ? "subtitle" : "image";
     return {
         id: asset.id,
         kind,
@@ -4468,11 +4495,14 @@ function visualMediaPayload(asset) {
         name: asset.media_name || (asset.source === "voices"
             ? "Immagine di una Voce"
             : asset.source === "places" ? "Immagine di un luogo"
-                : kind === "audio" ? "Audio caricato" : "Immagine caricata"),
+                : kind === "audio" ? "Audio caricato"
+                    : kind === "video" ? "Video caricato"
+                        : kind === "subtitle" ? "Sottotitoli caricati" : "Immagine caricata"),
         mediaType: asset.media_type,
         byteSize: Number(asset.byte_size) || 0,
         width: Number(asset.width) || null,
         height: Number(asset.height) || null,
+        createdAt: Number(asset.created_at) || null,
         alt: asset.alt_text || "",
         caption: asset.caption || "",
         thumbnailUrl: kind === "image" ? `${asset.publicUrl}?variant=small` : null,
@@ -4491,6 +4521,8 @@ async function adminListVisualMedia(request, env) {
         upload: {
             image: { acceptedTypes: [...WIKI_IMAGE_TYPES], maxBytes: MAX_VISUAL_IMAGE_BYTES },
             audio: { acceptedTypes: [...VISUAL_AUDIO_TYPES], maxBytes: MAX_VISUAL_AUDIO_BYTES },
+            video: { acceptedTypes: [...VISUAL_VIDEO_TYPES], maxBytes: MAX_VISUAL_VIDEO_BYTES },
+            subtitle: { acceptedTypes: ["text/vtt"], maxBytes: MAX_VISUAL_SUBTITLE_BYTES },
             maxItems: MAX_VISUAL_MEDIA_ITEMS,
             maxTotalBytes: MAX_VISUAL_MEDIA_TOTAL_BYTES
         }
@@ -4507,7 +4539,13 @@ async function adminCreateVisualMedia(request, env) {
     const kind = String(body?.kind || "image").trim().toLowerCase();
     const input = kind === "audio"
         ? await validateVisualAudioUpload(body)
-        : await validateVisualImageUpload(body);
+        : kind === "video"
+            ? await validateVisualVideoUpload(body)
+            : kind === "subtitle"
+                ? await validateVisualSubtitleUpload(body)
+                : kind === "image"
+                    ? await validateVisualImageUpload(body)
+                    : { error: "Tipo di media non supportato." };
     if (input.error) return json(request, env, { error: input.error }, 400);
     const usage = await env.DB.prepare(`
         SELECT
@@ -4594,6 +4632,78 @@ async function validateVisualAudioUpload(value) {
     };
 }
 
+async function validateVisualVideoUpload(value) {
+    return validateVisualTimedMediaUpload(value, {
+        kind: "video",
+        types: VISUAL_VIDEO_TYPES,
+        maxBytes: MAX_VISUAL_VIDEO_BYTES,
+        formats: "MP4 o WebM"
+    });
+}
+
+async function validateVisualTimedMediaUpload(value, options) {
+    const file = value?.file;
+    const title = String(value?.title || "").trim();
+    const description = String(value?.description || "").trim();
+    if (!file || typeof file !== "object" || Array.isArray(file)) {
+        return { error: `Seleziona un file ${options.kind} da caricare.` };
+    }
+    if (!title || title.length > 200) {
+        return { error: `Il titolo ${options.kind} deve contenere da 1 a 200 caratteri.` };
+    }
+    if (description.length > 1000) {
+        return { error: `La descrizione ${options.kind} non può superare 1000 caratteri.` };
+    }
+    const type = String(file.type || "").trim().toLowerCase();
+    const name = String(file.name || options.kind).trim().slice(0, 500);
+    const data = String(file.data || "").replace(/\s+/gu, "");
+    const maxBase64Length = Math.ceil(options.maxBytes / 3) * 4 + 4;
+    if (!options.types.has(type)) {
+        return { error: `Formato non supportato. Usa ${options.formats}.` };
+    }
+    if (!name || !data || data.length > maxBase64Length || !/^[A-Za-z0-9+/]*={0,2}$/u.test(data)) {
+        return { error: `Il file ${options.kind} è troppo grande o non è valido.` };
+    }
+    let bytes;
+    try { bytes = fromBase64(data); } catch (_) { return { error: `Il file ${options.kind} non è valido.` }; }
+    if (!bytes.length || bytes.length > options.maxBytes || !memoryMediaSignatureMatches(type, bytes)) {
+        return { error: `Il contenuto del file non corrisponde al formato ${options.kind} indicato.` };
+    }
+    return {
+        type, name, data, title, description, variants: [],
+        width: null, height: null, totalByteSize: bytes.byteLength
+    };
+}
+
+async function validateVisualSubtitleUpload(value) {
+    const file = value?.file;
+    const title = String(value?.title || "").trim();
+    if (!file || typeof file !== "object" || Array.isArray(file)) {
+        return { error: "Seleziona un file WebVTT da caricare." };
+    }
+    if (!title || title.length > 200) {
+        return { error: "L’etichetta dei sottotitoli deve contenere da 1 a 200 caratteri." };
+    }
+    const type = String(file.type || "").trim().toLowerCase();
+    const name = String(file.name || "sottotitoli.vtt").trim().slice(0, 500);
+    const data = String(file.data || "").replace(/\s+/gu, "");
+    const maxBase64Length = Math.ceil(MAX_VISUAL_SUBTITLE_BYTES / 3) * 4 + 4;
+    if (type !== "text/vtt" || !name || !data || data.length > maxBase64Length ||
+        !/^[A-Za-z0-9+/]*={0,2}$/u.test(data)) {
+        return { error: "I sottotitoli devono essere un file WebVTT valido entro 512 KB." };
+    }
+    let bytes;
+    try { bytes = fromBase64(data); } catch (_) { return { error: "Il file WebVTT non è valido." }; }
+    if (!bytes.length || bytes.length > MAX_VISUAL_SUBTITLE_BYTES ||
+        !memoryMediaSignatureMatches(type, bytes)) {
+        return { error: "Il contenuto dei sottotitoli non inizia con WEBVTT." };
+    }
+    return {
+        type, name, data, title, description: "Sottotitoli italiani",
+        variants: [], width: null, height: null, totalByteSize: bytes.byteLength
+    };
+}
+
 async function validateVisualImageUpload(value) {
     const file = value?.file;
     const alt = String(value?.alt || "").trim();
@@ -4655,7 +4765,7 @@ async function getVisualMedia(request, env, assetId) {
         ownerId: asset.owner_id,
         cacheControl: published ? "public, max-age=31536000, immutable" : "private, no-store",
         noindex: !published,
-        allowRange: String(asset.media_type || "").startsWith("audio/"),
+        allowRange: /^(?:audio|video)\//u.test(String(asset.media_type || "")),
         fallbackName: `media-${assetId}`
     }) || json(request, env, { error: "Media non disponibile." }, 404);
 }

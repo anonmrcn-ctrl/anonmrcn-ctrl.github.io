@@ -3,7 +3,7 @@
   "title": "Anteprima, media, audio e video nel builder visuale",
   "objective": "Rendere fedele l'anteprima delle modifiche e permettere di scegliere, caricare e configurare immagini, gallerie, audio e video interamente dal CMS a blocchi.",
   "status": "in_progress",
-  "currentUnit": "14.5",
+  "currentUnit": "14.6",
   "allowedStatuses": [
     "pending",
     "in_progress",
@@ -104,11 +104,12 @@
     {
       "id": "14.5",
       "title": "Blocco video accessibile e responsive",
-      "status": "pending",
+      "status": "complete",
       "dependsOn": ["14.4"],
       "deliverables": [
-        "Tipo di blocco video registrato, renderer sicuro e sorgenti catalogate in R2.",
-        "Controlli no-code per poster, titolo, descrizione o trascrizione, sottotitoli, preload, loop e audio."
+        "Tipo di blocco video registrato, renderer sicuro, migrazione D1 conservativa e sorgenti catalogate in R2.",
+        "Controlli no-code per upload o scelta, poster, titolo, descrizione, trascrizione, sottotitoli WebVTT, preload e loop.",
+        "worker/tests/visual-video.test.mjs prova migrazione, privacy, Range, poster, sottotitoli, assenza di autoplay e VideoObject."
       ],
       "acceptance": [
         "Il video è aggiungibile e configurabile senza codice, assetId, chiavi R2 o URL arbitrari.",

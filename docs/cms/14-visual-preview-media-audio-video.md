@@ -63,8 +63,8 @@ devono riprodurre i problemi prima di correggerli.
 | 14.2 | Selettore della libreria media nei blocchi | Completa | 14.1 |
 | 14.3 | Caricamento e gestione media dal builder | Completa | 14.2 |
 | 14.4 | Blocco audio accessibile e responsive | Completa | 14.3 |
-| 14.5 | Blocco video accessibile e responsive | Da fare — prossima | 14.4 |
-| 14.6 | Pubblicazione, diagnostica e audit end-to-end | Da fare | 14.5 |
+| 14.5 | Blocco video accessibile e responsive | Completa | 14.4 |
+| 14.6 | Pubblicazione, diagnostica e audit end-to-end | Da fare — prossima | 14.5 |
 
 I criteri eseguibili e lo stato corrente sono in
 `docs/cms/visual-media-roadmap.json`. Dopo ogni unità si aggiornano insieme il
@@ -150,6 +150,14 @@ supportare richieste HTTP Range e formati esplicitamente ammessi, non usare
 autoplay sonoro e rispettare reduced motion. I dati strutturati `VideoObject`
 sono prodotti soltanto per pagine pubblicate e indicizzabili quando i
 metadati obbligatori sono presenti.
+
+Completata il 19 ottobre 2026. Il catalogo, il renderer e l'ispettore includono
+il blocco `video`; lo stesso flusso protetto consente upload e scelta di MP4 o
+WebM, immagine poster e sottotitoli WebVTT. La resa usa controlli nativi,
+`playsinline`, poster e traccia `captions`, senza autoplay o servizi esterni.
+Range HTTP, privacy prima della pubblicazione, migrazione D1 conservativa e
+`VideoObject` limitato alle pagine indicizzabili sono coperti dai test.
+Dettagli e comandi ripetibili sono in `14-5-video-block.md`.
 
 ### 14.6 — Prova completa
 
