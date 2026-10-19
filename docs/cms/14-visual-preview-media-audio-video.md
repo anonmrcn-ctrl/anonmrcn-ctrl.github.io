@@ -64,7 +64,7 @@ devono riprodurre i problemi prima di correggerli.
 | 14.3 | Caricamento e gestione media dal builder | Completa | 14.2 |
 | 14.4 | Blocco audio accessibile e responsive | Completa | 14.3 |
 | 14.5 | Blocco video accessibile e responsive | Completa | 14.4 |
-| 14.6 | Pubblicazione, diagnostica e audit end-to-end | Da fare — prossima | 14.5 |
+| 14.6 | Pubblicazione, diagnostica e audit end-to-end | Completo | 14.5 |
 
 I criteri eseguibili e lo stato corrente sono in
 `docs/cms/visual-media-roadmap.json`. Dopo ogni unità si aggiornano insieme il
@@ -168,6 +168,14 @@ controllare la pagina autonoma.
 L'audit deve coprire ripristino, riferimenti R2, canonical, sitemap,
 accessibilità, privacy, prestazioni e assenza di bozze o media privati dagli
 indici pubblici.
+
+Completata il 19 ottobre 2026. La diagnostica amministrativa ora ricostruisce
+le bozze, verifica riferimenti e metadati di immagini, gallerie, audio e video
+e applica un controllo vincolante agli snapshot pubblicati. L’audit Playwright
+percorre selezione e anteprima di tutti i media sia a 375 px sia a 1440 px; la
+suite Worker copre upload, D1/R2, Range, pubblicazione atomica, revisioni e
+ripristino. Contratto, matrice delle prove e comandi sono in
+`14-6-visual-media-final-audit.md`.
 
 ## Criterio finale
 

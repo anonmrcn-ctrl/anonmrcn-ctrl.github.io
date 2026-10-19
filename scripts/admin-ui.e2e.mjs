@@ -127,10 +127,10 @@ async function auditViewport(name, viewport) {
     await context.close();
 }
 
-async function auditLivePreview() {
+async function auditLivePreview(name, viewport) {
     const context = await browser.newContext({
         locale: "it-IT",
-        viewport: { width: 1440, height: 1000 }
+        viewport
     });
     const page = await context.newPage();
     let previewPayload = null;
@@ -171,6 +171,20 @@ async function auditLivePreview() {
                 label: "Immagine",
                 root: false,
                 values: { assetId: "", alt: "", caption: "", credit: "", focalPoint: "center" }
+            },
+            {
+                key: "gallery-test", parentKey: "root-test", position: 3,
+                type: "gallery", label: "Galleria", root: false, values: { assetIds: "" }
+            },
+            {
+                key: "audio-test", parentKey: "root-test", position: 4,
+                type: "audio", label: "Audio", root: false,
+                values: { audioAssetId: "", coverAssetId: "", title: "", text: "", transcript: "" }
+            },
+            {
+                key: "video-test", parentKey: "root-test", position: 5,
+                type: "video", label: "Video", root: false,
+                values: { videoAssetId: "", posterAssetId: "", subtitleAssetId: "", title: "", text: "" }
             }
         ]
     };
@@ -183,7 +197,9 @@ async function auditLivePreview() {
             contentType: "application/json",
             body: JSON.stringify({
                 pages: [visualPage],
-                palette: [{ type: "heading", label: "Titolo", category: "content" }],
+                palette: ["heading", "image", "gallery", "audio", "video"].map((type) => ({
+                    type, label: type, category: "content"
+                })),
                 inspectorSchemas: {
                     heading: [{
                         key: "title",
@@ -205,6 +221,33 @@ async function auditLivePreview() {
                             propertyName: "alt", maxLength: 300, required: true,
                             defaultValue: ""
                         }
+                    ],
+                    gallery: [{
+                        key: "assetIds", label: "Immagini della galleria", control: "media-picker",
+                        propertyName: "assetId", maxLength: 8192, required: true,
+                        defaultValue: "", format: "lines", mediaKind: "image"
+                    }],
+                    audio: [{
+                        key: "audioAssetId", label: "File audio", control: "media-picker",
+                        propertyName: "audioAssetId", maxLength: 128, required: true,
+                        defaultValue: "", format: "single", mediaKind: "audio"
+                    }],
+                    video: [
+                        {
+                            key: "videoAssetId", label: "File video", control: "media-picker",
+                            propertyName: "videoAssetId", maxLength: 128, required: true,
+                            defaultValue: "", format: "single", mediaKind: "video"
+                        },
+                        {
+                            key: "posterAssetId", label: "Immagine poster", control: "media-picker",
+                            propertyName: "posterAssetId", maxLength: 128, required: true,
+                            defaultValue: "", format: "single", mediaKind: "image"
+                        },
+                        {
+                            key: "subtitleAssetId", label: "Sottotitoli italiani", control: "media-picker",
+                            propertyName: "subtitleAssetId", maxLength: 128, required: true,
+                            defaultValue: "", format: "single", mediaKind: "subtitle"
+                        }
                     ]
                 }
             })
@@ -223,21 +266,33 @@ async function auditLivePreview() {
         route.fulfill({
             contentType: "application/json",
             body: JSON.stringify({
-                assets: [{
-                    id: "asset-browser-test",
-                    kind: "image",
-                    source: "voices",
-                    name: "Immagine del test browser",
-                    mediaType: "image/webp",
-                    byteSize: 120,
-                    width: 640,
-                    height: 480,
-                    alt: "Paesaggio di prova",
-                    caption: "Didascalia di prova",
-                    thumbnailUrl: "/api/public/wiki-images/test?variant=small",
-                    publicUrl: "/api/public/wiki-images/test",
-                    accessible: true
-                }]
+                assets: [
+                    {
+                        id: "asset-browser-test", kind: "image", source: "voices",
+                        name: "Immagine del test browser", mediaType: "image/webp", byteSize: 120,
+                        width: 640, height: 480, alt: "Paesaggio di prova",
+                        caption: "Didascalia di prova", thumbnailUrl: "/api/public/wiki-images/test?variant=small",
+                        publicUrl: "/api/public/wiki-images/test", accessible: true, private: false
+                    },
+                    {
+                        id: "audio-browser-test", kind: "audio", source: "visual-builder",
+                        name: "Racconto audio", mediaType: "audio/mpeg", byteSize: 2048,
+                        caption: "Descrizione audio", publicUrl: "/api/public/visual-media/audio-browser-test",
+                        accessible: true, private: false
+                    },
+                    {
+                        id: "video-browser-test", kind: "video", source: "visual-builder",
+                        name: "Passeggiata video", mediaType: "video/mp4", byteSize: 4096,
+                        caption: "Descrizione video", publicUrl: "/api/public/visual-media/video-browser-test",
+                        accessible: true, private: false
+                    },
+                    {
+                        id: "subtitle-browser-test", kind: "subtitle", source: "visual-builder",
+                        name: "Sottotitoli italiani", mediaType: "text/vtt", byteSize: 120,
+                        caption: "Italiano", publicUrl: "/api/public/visual-media/subtitle-browser-test",
+                        accessible: true, private: false
+                    }
+                ]
             })
         })
     );
@@ -314,14 +369,53 @@ async function auditLivePreview() {
     await page.locator("#adminVisualMediaApply").click();
     assert.equal(await page.locator("#adminVisualField-assetId").inputValue(), "asset-browser-test");
     assert.equal(await page.locator("#adminVisualField-alt").inputValue(), "Paesaggio di prova");
+
+    await page.locator('[data-visual-select="gallery-test"]').click();
+    await page.getByRole("button", { name: "Scegli e ordina immagini" }).click();
+    await page.locator("#adminVisualMediaResults").getByRole("button", { name: "Seleziona" }).click();
+    await page.locator("#adminVisualMediaApply").click();
+    assert.equal(await page.locator("#adminVisualField-assetIds").inputValue(), "asset-browser-test");
+
+    await page.locator('[data-visual-select="audio-test"]').click();
+    await page.getByRole("button", { name: "Scegli audio" }).click();
+    await page.locator("#adminVisualMediaResults").getByRole("button", { name: "Seleziona" }).click();
+    await page.locator("#adminVisualMediaApply").click();
+    assert.equal(await page.locator("#adminVisualField-audioAssetId").inputValue(), "audio-browser-test");
+
+    await page.locator('[data-visual-select="video-test"]').click();
+    await page.getByRole("button", { name: "Scegli video" }).click();
+    await page.locator("#adminVisualMediaResults").getByRole("button", { name: "Seleziona" }).click();
+    await page.locator("#adminVisualMediaApply").click();
+    await page.getByRole("button", { name: "Scegli immagine" }).click();
+    await page.locator("#adminVisualMediaResults").getByRole("button", { name: "Seleziona" }).click();
+    await page.locator("#adminVisualMediaApply").click();
+    await page.getByRole("button", { name: "Scegli sottotitoli" }).click();
+    await page.locator("#adminVisualMediaResults").getByRole("button", { name: "Seleziona" }).click();
+    await page.locator("#adminVisualMediaApply").click();
+    assert.equal(await page.locator("#adminVisualField-videoAssetId").inputValue(), "video-browser-test");
+    assert.equal(await page.locator("#adminVisualField-posterAssetId").inputValue(), "asset-browser-test");
+    assert.equal(await page.locator("#adminVisualField-subtitleAssetId").inputValue(), "subtitle-browser-test");
+
+    await previewButton.click();
+    await page.locator("#adminVisualPreview[data-preview-source='server']").waitFor();
+    const payloadNodes = new Map(previewPayload.nodes.map((node) => [node.key, node]));
+    assert.equal(payloadNodes.get("gallery-test").values.assetIds, "asset-browser-test");
+    assert.equal(payloadNodes.get("audio-test").values.audioAssetId, "audio-browser-test");
+    assert.equal(payloadNodes.get("video-test").values.videoAssetId, "video-browser-test");
+    assert.equal(payloadNodes.get("video-test").values.posterAssetId, "asset-browser-test");
+    assert.equal(payloadNodes.get("video-test").values.subtitleAssetId, "subtitle-browser-test");
+    await page.locator("#adminVisualPreview").screenshot({
+        path: new URL(`admin-visual-media-${name}.png`, outputDirectory).pathname
+    });
     await context.close();
 }
 
 try {
     await auditViewport("mobile", { width: 375, height: 812 });
     await auditViewport("desktop", { width: 1440, height: 1000 });
-    await auditLivePreview();
-    console.log("Audit pannello superato: mobile, desktop, guida, tastiera, etichette, feedback e anteprima fedele.");
+    await auditLivePreview("mobile", { width: 375, height: 812 });
+    await auditLivePreview("desktop", { width: 1440, height: 1000 });
+    console.log("Audit pannello superato: mobile, desktop, guida, tastiera, etichette, feedback, anteprima e media visuali.");
 } finally {
     await browser.close();
 }

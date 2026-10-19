@@ -1,3 +1,5 @@
+import { captureVisualSnapshot } from "./visual-publication.js";
+
 const SITE_ORIGIN = "https://anonmrcn-ctrl.github.io";
 const WORKER_ORIGIN = "https://nnmrcn-rete.anonmrcn.workers.dev";
 const MAX_PUBLIC_PAGES = 40;
@@ -26,7 +28,7 @@ export async function runCmsDiagnostics(env, fetchImpl = fetch, now = Date.now()
     );
 
     const mediaResult = await env.DB.prepare(`
-        SELECT object_key, byte_size
+        SELECT id, object_key, media_type, alt_text, state, byte_size
         FROM media_assets
         ORDER BY object_key
     `).all();
@@ -78,6 +80,51 @@ export async function runCmsDiagnostics(env, fetchImpl = fetch, now = Date.now()
         missingTrees.length || missingPublications.length || invalidSnapshots.length
             ? `${missingTrees.length} pagine senza albero, ${missingPublications.length} pubblicazioni mancanti e ${invalidSnapshots.length} snapshot non validi.`
             : `${visualRows.length} pagine gestite a blocchi; ogni pagina pubblicata ha uno snapshot autonomo.`
+    );
+
+    const mediaById = new Map(mediaRows.map((row) => [row.id, row]));
+    const mediaBlocks = { image: 0, gallery: 0, audio: 0, video: 0 };
+    let draftMediaIssues = 0;
+    let publicationMediaIssues = 0;
+    let previewFailures = 0;
+    for (const row of visualRows.filter((entry) => entry.tree_id)) {
+        try {
+            const draft = await captureVisualSnapshot(env, row.id);
+            const summary = summarizeVisualMedia(draft, mediaById);
+            draftMediaIssues += summary.issues;
+            for (const type of Object.keys(mediaBlocks)) mediaBlocks[type] += summary.blocks[type];
+        } catch (_) {
+            previewFailures += 1;
+        }
+        if (row.status === "published" && row.snapshot_json) {
+            try {
+                publicationMediaIssues += summarizeVisualMedia(
+                    JSON.parse(row.snapshot_json),
+                    mediaById
+                ).issues;
+            } catch (_) {
+                publicationMediaIssues += 1;
+            }
+        }
+    }
+    const blockDetail = Object.entries(mediaBlocks)
+        .map(([type, count]) => `${type} ${count}`)
+        .join(", ");
+    add(
+        "visual-media-drafts",
+        "Anteprima e media nel builder",
+        previewFailures ? "fail" : draftMediaIssues ? "warn" : "pass",
+        previewFailures
+            ? `${previewFailures} bozze non possono essere ricostruite per l’anteprima.`
+            : `${blockDetail}; ${draftMediaIssues} campi o riferimenti da completare nelle bozze.`
+    );
+    add(
+        "visual-media-publication",
+        "Media nelle pagine pubblicate",
+        publicationMediaIssues ? "fail" : "pass",
+        publicationMediaIssues
+            ? `${publicationMediaIssues} riferimenti, formati o metadati obbligatori non validi.`
+            : "Immagini, gallerie, audio e video pubblicati hanno riferimenti e metadati coerenti."
     );
 
     const [healthResponse, manifestResponse, sitemapResponse, robotsResponse] =
@@ -314,6 +361,59 @@ function diagnosticReport(checks, now, manifestResponse, manifest) {
         },
         checks
     };
+}
+
+function summarizeVisualMedia(snapshot, mediaById) {
+    const blocks = { image: 0, gallery: 0, audio: 0, video: 0 };
+    let issues = 0;
+    const properties = new Map();
+    for (const property of snapshot?.properties || []) {
+        if (!properties.has(property.node_id)) properties.set(property.node_id, []);
+        properties.get(property.node_id).push(property);
+    }
+    const values = (nodeId, name) => (properties.get(nodeId) || [])
+        .filter((property) => property.property_name === name)
+        .map((property) => property.asset_id || property.text_value || "")
+        .filter(Boolean);
+    const asset = (id, prefix, exact = null) => {
+        const row = mediaById.get(id);
+        return Boolean(row && row.state === "current" && (
+            exact ? row.media_type === exact : String(row.media_type || "").startsWith(prefix)
+        ));
+    };
+    for (const node of snapshot?.nodes || []) {
+        const type = node.block_type || node.type;
+        if (!(type in blocks)) continue;
+        blocks[type] += 1;
+        if (type === "image") {
+            const source = values(node.id || node.key, "assetId")[0];
+            if (source && (!asset(source, "image/") || !values(node.id || node.key, "alt")[0])) {
+                issues += 1;
+            }
+        } else if (type === "gallery") {
+            const sources = values(node.id || node.key, "assetId");
+            if (sources.some((id) => !asset(id, "image/") ||
+                !String(mediaById.get(id)?.alt_text || "").trim())) issues += 1;
+        } else if (type === "audio") {
+            const id = node.id || node.key;
+            const source = values(id, "audioAssetId")[0];
+            const cover = values(id, "coverAssetId")[0];
+            if (!source || !asset(source, "audio/") ||
+                (cover && !asset(cover, "image/")) ||
+                !values(id, "title")[0] || !values(id, "text")[0] ||
+                !values(id, "transcript")[0]) issues += 1;
+        } else if (type === "video") {
+            const id = node.id || node.key;
+            const source = values(id, "videoAssetId")[0];
+            const poster = values(id, "posterAssetId")[0];
+            const subtitles = values(id, "subtitleAssetId")[0];
+            if (!source || !asset(source, "video/") ||
+                !poster || !asset(poster, "image/") ||
+                !subtitles || !asset(subtitles, "", "text/vtt") ||
+                !values(id, "title")[0] || !values(id, "text")[0]) issues += 1;
+        }
+    }
+    return { blocks, issues };
 }
 
 function parseSitemapUrls(xml) {
