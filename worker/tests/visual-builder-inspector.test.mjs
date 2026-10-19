@@ -212,5 +212,5 @@ test("l'anteprima genera i campi dallo schema e mostra breakpoint e avvisi", asy
     assert.match(css, /data-visual-background="dark"/u);
     assert.match(css, /data-visual-phone="hidden"/u);
     assert.match(css, /width:\s*min\(360px, 100%\)/u);
-    assert.match(html, /admin-visual-builder\.css\?v=20261019-audio1/u);
+    assert.match(html, /admin-visual-builder\.css\?v=20261019-video1/u);
 });

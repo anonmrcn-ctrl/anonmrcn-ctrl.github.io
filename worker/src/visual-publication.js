@@ -411,6 +411,18 @@ export async function auditVisualSnapshot(env, snapshot) {
             if (!String(description || "").trim()) add("error", "seo", "L’audio richiede una descrizione.", node.id);
             if (!String(transcript || "").trim()) add("error", "accessibility", "L’audio richiede una trascrizione.", node.id);
         }
+        if (node.block_type === "video") {
+            const source = propertyValue(properties, "content.media", "videoAssetId");
+            const poster = propertyValue(properties, "content.media", "posterAssetId");
+            const subtitles = propertyValue(properties, "content.media", "subtitleAssetId");
+            const title = propertyValue(properties, "content.copy", "title");
+            const description = propertyValue(properties, "content.copy", "text");
+            if (!source) add("error", "media", "Scegli un file video dalla libreria.", node.id);
+            if (!poster) add("error", "media", "Scegli un’immagine poster per il video.", node.id);
+            if (!subtitles) add("error", "accessibility", "Aggiungi i sottotitoli WebVTT del video.", node.id);
+            if (!String(title || "").trim()) add("error", "accessibility", "Il video richiede un titolo.", node.id);
+            if (!String(description || "").trim()) add("error", "seo", "Il video richiede una descrizione.", node.id);
+        }
         for (const property of properties) {
             if (property.property_set === "behavior.link" && property.property_name === "href" &&
                 property.text_value && !safeHref(property.text_value) && node.block_type !== "link-list") {
@@ -476,6 +488,17 @@ async function auditReferences(env, snapshot, add) {
             if (property.property_name === "coverAssetId" &&
                 !String(asset.media_type || "").startsWith("image/")) {
                 add("error", "media", "La copertina dell’audio deve essere un’immagine.", property.node_id);
+            }
+            if (property.property_name === "videoAssetId" &&
+                !String(asset.media_type || "").startsWith("video/")) {
+                add("error", "media", "Il blocco video contiene un file di tipo errato.", property.node_id);
+            }
+            if (property.property_name === "posterAssetId" &&
+                !String(asset.media_type || "").startsWith("image/")) {
+                add("error", "media", "Il poster del video deve essere un’immagine.", property.node_id);
+            }
+            if (property.property_name === "subtitleAssetId" && asset.media_type !== "text/vtt") {
+                add("error", "accessibility", "I sottotitoli del video devono essere WebVTT.", property.node_id);
             }
         }
     }

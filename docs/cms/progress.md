@@ -13,8 +13,8 @@ L'estensione 13 per l'autonomia visuale no-code è completa dal 18 ottobre 2026:
 tutte le unità 13.0–13.12 sono chiuse. Nella stessa data è stato aperto il
 punto 14 per correggere l'anteprima delle modifiche e rendere immagini,
 gallerie, audio e video realmente aggiungibili dal builder. Anteprima fedele e
-selettore, upload di immagini e blocco audio sul catalogo D1/R2 sono completi;
-la prima unità eseguibile è la 14.5.
+selettore, upload di immagini e blocchi audio/video sul catalogo D1/R2 sono
+completi; la prima unità eseguibile è la 14.6.
 L'esportazione dei primi dati
 Search Console dal 9 novembre e i rapporti trimestrali successivi appartengono
 alla manutenzione ordinaria e non riaprono le unità concluse.
@@ -36,7 +36,7 @@ alla manutenzione ordinaria e non riaprono le unità concluse.
 | 11 | Amministrazione più user friendly | Completo | Navigazione per attività, feedback comprensibili, protezione delle modifiche e audit Chrome a 375/1440 px sono documentati in `11-admin-usability.md`; i run SEO `38154750211` e prestazioni/UX `38154750212` sono riusciti |
 | 12 | Rafforzamento della privacy | Completo | Inventario, retention, telemetria opt-in, librerie locali, informativa v2, esportazione e cancellazione self-service sono verificati localmente, in CI e sui servizi pubblicati; PR #26 e prove ripetibili sono registrate nell'unità 12.4 |
 | 13 | Autonomia visuale no-code | Completo | Le unità 13.0–13.12 forniscono builder a blocchi, ispettore responsive, gestione completa delle pagine, libreria, studio grafico, comportamenti dichiarativi, pubblicazione atomica, migrazione visual-first con ripiego statico e generazione automatica di HTML/canonical/sitemap. Tour guidato, manuale e diagnostica completano il flusso senza codice. `13-12-final-migration-independence-audit.md` registra 184 test, build Worker e verifiche smartphone/desktop eseguite dalla CI |
-| 14 | Anteprima, media, audio e video nel builder visuale | In corso — prossima 14.5 | Le unità 14.1–14.4 coprono anteprima non salvata, selezione e upload di immagini/gallerie e audio accessibile dal catalogo D1/R2. Segue il blocco video |
+| 14 | Anteprima, media, audio e video nel builder visuale | In corso — prossima 14.6 | Le unità 14.1–14.5 coprono anteprima non salvata, immagini/gallerie, audio e video accessibili nel catalogo D1/R2. Segue l'audit end-to-end |
 
 ## Traguardi SEO trasversali
 
@@ -84,8 +84,8 @@ alla manutenzione ordinaria e non riaprono le unità concluse.
 | 14.2 | Selettore della libreria media nei blocchi | Completo | `14-2-media-picker.md` registra endpoint autenticato e minimizzato, ricerca/filtro/miniature, sostituzione, selezione multipla, riordino e rimozione; test API prova asset D1 tipizzati, ordine e rifiuto di versioni non selezionabili |
 | 14.3 | Caricamento e gestione media dal builder | Completo | `14-3-media-upload.md` registra upload e collegamento nello stesso ispettore, varianti responsive, avanzamento e annullamento; il Worker prova firma, dimensioni, SHA-256, quota, compensazione R2/D1, anteprima privata `no-store`/`noindex` e accesso pubblico soltanto dopo uno snapshot pubblicato |
 | 14.4 | Blocco audio accessibile e responsive | Completo | `14-4-audio-block.md` registra blocco no-code, upload nello stesso catalogo D1/R2, copertina, trascrizione, controlli nativi senza autoplay, Range, privacy e `AudioObject`; `visual-audio.test.mjs` prova anche la migrazione conservativa |
-| 14.5 | Blocco video accessibile e responsive | Da fare — prossima | Video, poster, sottotitoli e metadati devono essere configurabili a blocchi, con Range, privacy e prestazioni verificate |
-| 14.6 | Pubblicazione, diagnostica e audit end-to-end | Da fare | Smartphone e desktop devono provare anteprima, media, audio, video, pubblicazione, ripristino e integrità D1/R2 |
+| 14.5 | Blocco video accessibile e responsive | Completo | `14-5-video-block.md` registra blocco no-code, MP4/WebM, poster, sottotitoli WebVTT, controlli senza autoplay, Range, privacy e `VideoObject`; `visual-video.test.mjs` prova anche la migrazione conservativa da schema audio |
+| 14.6 | Pubblicazione, diagnostica e audit end-to-end | Da fare — prossima | Smartphone e desktop devono provare anteprima, media, audio, video, pubblicazione, ripristino e integrità D1/R2 |
 
 ## Punto 2 — ordine vincolante
 

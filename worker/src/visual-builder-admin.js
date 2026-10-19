@@ -31,6 +31,7 @@ const TYPE_LABELS = Object.freeze({
     image: "Immagine",
     gallery: "Galleria",
     audio: "Audio",
+    video: "Video",
     button: "Pulsante",
     "link-list": "Elenco di collegamenti",
     menu: "Menu",
@@ -730,10 +731,16 @@ function normalizePreviewPage(value, page) {
 }
 
 async function validateVisualMediaSelection(env, type, values) {
-    if (!['image', 'gallery', 'audio'].includes(type)) return;
+    if (!['image', 'gallery', 'audio', 'video'].includes(type)) return;
     if (type === 'audio') {
         await validateVisualAsset(env, values.audioAssetId, 'audio', true);
         if (values.coverAssetId) await validateVisualAsset(env, values.coverAssetId, 'image', false);
+        return;
+    }
+    if (type === 'video') {
+        await validateVisualAsset(env, values.videoAssetId, 'video', true);
+        await validateVisualAsset(env, values.posterAssetId, 'image', true);
+        await validateVisualAsset(env, values.subtitleAssetId, 'text/vtt', true);
         return;
     }
     const raw = type === 'gallery' ? values.assetIds : values.assetId;
@@ -772,10 +779,17 @@ async function validateVisualAsset(env, id, kind, required) {
             )
         LIMIT 1
     `).bind(id).first() : null;
-    if (!asset || !String(asset.media_type || '').startsWith(`${kind}/`)) {
+    const matches = kind.includes('/')
+        ? String(asset?.media_type || '') === kind
+        : String(asset?.media_type || '').startsWith(`${kind}/`);
+    if (!asset || !matches) {
         throw new VisualCanvasError(
             kind === 'audio'
                 ? "Scegli un file audio disponibile nella libreria."
+                : kind === 'video'
+                    ? "Scegli un file video disponibile nella libreria."
+                    : kind === 'text/vtt'
+                        ? "Scegli sottotitoli WebVTT disponibili nella libreria."
                 : "Il media scelto non è un’immagine disponibile nella libreria."
         );
     }

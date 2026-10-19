@@ -145,19 +145,24 @@ scrivere in D1 né pubblicarlo. Entrambe le risposte sono autenticate,
 proprietà tecniche non modificabili dal browser.
 
 `GET /api/admin/cms/visual-media` alimenta il selettore del builder con gli
-originali immagine e audio correnti e pubblicabili del catalogo D1/R2. La risposta
+originali immagine, audio, video e sottotitoli correnti e pubblicabili del
+catalogo D1/R2. La risposta
 include miniature e metadati editoriali, ma non chiavi R2, oggetti trattenuti,
 documenti o varianti tecniche. L'ispettore salva i riferimenti nella colonna
 `asset_id`; il Worker ricontrolla tipo, stato, variante e testo alternativo
 delle gallerie prima di modificare la bozza.
 
-`POST /api/admin/cms/visual-media` carica un'immagine o un audio dal builder
-nello stesso catalogo D1/R2, verifica firma, dimensioni, varianti, checksum e quota e
+`POST /api/admin/cms/visual-media` carica immagini, audio, video e sottotitoli
+WebVTT dal builder nello stesso catalogo D1/R2, verifica firma, dimensioni,
+varianti, checksum e quota e
 restituisce il riferimento selezionabile. `GET
 /api/public/visual-media/:assetId` resta autenticato, `no-store` e `noindex`
 finché lo snapshot pubblicato di una pagina non contiene quel riferimento. Il
 blocco audio richiede titolo, descrizione e trascrizione, non offre autoplay e
-usa richieste HTTP Range per riproduzione e avanzamento efficienti.
+usa richieste HTTP Range per riproduzione e avanzamento efficienti. Il blocco
+video richiede anche un poster e sottotitoli, usa controlli nativi con
+`playsinline`, non offre autoplay e genera `VideoObject` soltanto quando la
+pagina pubblica indicizzabile ha metadati completi.
 
 `POST /api/admin/cms/visual-pages` crea una pagina in bozza da vuoto o
 duplicando un albero esistente. `PATCH

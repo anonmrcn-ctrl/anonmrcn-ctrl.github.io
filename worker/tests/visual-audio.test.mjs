@@ -227,7 +227,7 @@ test("il pannello configura audio e trascrizione senza URL o autoplay", async ()
     ]);
     assert.match(html, /id="adminVisualMediaUploadSummary"/u);
     assert.match(source, /audio\/mpeg,audio\/ogg,audio\/webm,audio\/mp4,audio\/wav/u);
-    assert.match(source, /field\.mediaKind === "audio"/u);
+    assert.match(source, /audio: \{/u);
     assert.match(source, /Aggiungi la trascrizione accessibile dell’audio/u);
     assert.doesNotMatch(source, /\.autoplay\s*=|setAttribute\(["']autoplay/iu);
 });

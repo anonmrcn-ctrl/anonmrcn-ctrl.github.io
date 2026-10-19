@@ -4963,7 +4963,8 @@ html.poesia-mappa-mini .percorso-narrativo-scheda > p:not(.percorso-narrativo-ve
 }
 
 .visual-block--audio img,
-.visual-block--audio audio {
+.visual-block--audio audio,
+.visual-block--video video {
     display: block;
     width: 100%;
     max-width: 100%;
@@ -4974,7 +4975,9 @@ html.poesia-mappa-mini .percorso-narrativo-scheda > p:not(.percorso-narrativo-ve
 }
 
 .visual-block--audio figcaption,
-.visual-block--audio details {
+.visual-block--audio details,
+.visual-block--video figcaption,
+.visual-block--video details {
     margin-block: .75rem;
 }
 

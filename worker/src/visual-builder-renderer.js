@@ -32,6 +32,7 @@ export const VISUAL_BLOCK_REGISTRY = Object.freeze({
     "image": entry("content", ["content.media", "presentation.box", "presentation.layout", "presentation.responsive", "behavior.link", "technical.binding"], "image"),
     "gallery": entry("content", ["content.media", "presentation.layout", "presentation.responsive", "technical.binding"], "gallery"),
     "audio": entry("content", ["content.copy", "content.media", "presentation.box", "presentation.layout", "presentation.responsive", "technical.binding"], "audio"),
+    "video": entry("content", ["content.copy", "content.media", "presentation.box", "presentation.layout", "presentation.responsive", "technical.binding"], "video"),
     "button": entry("content", ["content.copy", "presentation.box", "presentation.typography", "behavior.link"], "button"),
     "link-list": entry("navigation", ["content.copy", "presentation.layout", "behavior.link"], "link-list"),
     "menu": entry("navigation", ["content.copy", "presentation.layout", "presentation.responsive", "behavior.collection", "technical.binding"], "nav"),
@@ -126,6 +127,10 @@ export function renderVisualPage({
     const audioData = indexable
         ? audioStructuredData(nodes, valuesByNode, assetsById, publicOrigin)
         : [];
+    const videoData = indexable
+        ? videoStructuredData(nodes, valuesByNode, assetsById, publicOrigin)
+        : [];
+    const mediaData = [...audioData, ...videoData];
     return {
         registryVersion: VISUAL_BLOCK_REGISTRY_VERSION,
         behaviorVersion: VISUAL_BEHAVIOR_VERSION,
@@ -137,8 +142,8 @@ export function renderVisualPage({
             canonical,
             robots: indexable ? "index,follow" : "noindex,nofollow",
             structuredData: indexable
-                ? audioData.length
-                    ? { "@context": "https://schema.org", "@graph": [webPageData, ...audioData] }
+                ? mediaData.length
+                    ? { "@context": "https://schema.org", "@graph": [webPageData, ...mediaData] }
                     : { "@context": "https://schema.org", ...webPageData }
                 : null
         }
@@ -285,6 +290,8 @@ function renderNode(
             return renderGallery(values, assetsById, attributes, childHtml);
         case "audio":
             return renderAudio(values, assetsById, attributes);
+        case "video":
+            return renderVideo(values, assetsById, attributes);
         case "button":
             return renderButton(values, attributes, title || text);
         case "link-list": {
@@ -490,6 +497,65 @@ function audioStructuredData(nodes, valuesByNode, assetsById, publicOrigin) {
             name,
             description,
             transcript,
+            contentUrl: new URL(safeMediaUrl(asset.publicUrl), publicOrigin).href,
+            encodingFormat: asset.media_type,
+            inLanguage: "it"
+        }];
+    });
+}
+
+function renderVideo(values, assetsById, attributes) {
+    const reference = first(values, "content.media/videoAssetId");
+    const asset = reference?.type === "asset" ? assetsById.get(reference.id) : null;
+    const posterReference = first(values, "content.media/posterAssetId");
+    const poster = posterReference?.type === "asset" ? assetsById.get(posterReference.id) : null;
+    const subtitleReference = first(values, "content.media/subtitleAssetId");
+    const subtitle = subtitleReference?.type === "asset" ? assetsById.get(subtitleReference.id) : null;
+    const title = first(values, "content.copy/title");
+    const description = first(values, "content.copy/text");
+    const transcript = first(values, "content.media/transcript");
+    const preload = ["none", "metadata"].includes(first(values, "content.media/preload"))
+        ? first(values, "content.media/preload")
+        : "metadata";
+    const loop = first(values, "content.media/loop") === "yes" ? " loop" : "";
+    if (!asset?.publicUrl || !String(asset.media_type || "").startsWith("video/")) {
+        return `<figure${attributes} data-media-fallback="true"><figcaption>Video non disponibile</figcaption></figure>`;
+    }
+    const posterUrl = poster?.publicUrl && String(poster.media_type || "").startsWith("image/")
+        ? ` poster="${escapeHtml(safeMediaUrl(poster.publicUrl))}"`
+        : "";
+    const track = subtitle?.publicUrl && subtitle.media_type === "text/vtt"
+        ? `<track kind="captions" src="${escapeHtml(safeMediaUrl(subtitle.publicUrl))}" srclang="it" label="Italiano" default>`
+        : "";
+    const transcriptHtml = transcript
+        ? `<details><summary>Trascrizione</summary><p>${escapeHtml(transcript)}</p></details>`
+        : "";
+    return `<figure${attributes}><video controls playsinline preload="${preload}"${loop}${posterUrl} src="${escapeHtml(safeMediaUrl(asset.publicUrl))}">${track}Il browser non supporta il video. <a href="${escapeHtml(safeMediaUrl(asset.publicUrl))}">Scarica il file video</a>.</video><figcaption>${title ? `<strong>${escapeHtml(title)}</strong>` : ""}${description ? `<p>${escapeHtml(description)}</p>` : ""}</figcaption>${transcriptHtml}</figure>`;
+}
+
+function videoStructuredData(nodes, valuesByNode, assetsById, publicOrigin) {
+    return (nodes || []).flatMap((node) => {
+        if (node.block_type !== "video") return [];
+        const values = valuesByNode.get(node.id) || new Map();
+        const reference = first(values, "content.media/videoAssetId");
+        const asset = reference?.type === "asset" ? assetsById.get(reference.id) : null;
+        const posterReference = first(values, "content.media/posterAssetId");
+        const poster = posterReference?.type === "asset" ? assetsById.get(posterReference.id) : null;
+        const subtitleReference = first(values, "content.media/subtitleAssetId");
+        const subtitle = subtitleReference?.type === "asset" ? assetsById.get(subtitleReference.id) : null;
+        const name = first(values, "content.copy/title");
+        const description = first(values, "content.copy/text");
+        const createdAt = Number(asset?.created_at);
+        if (!asset?.publicUrl || !poster?.publicUrl || subtitle?.media_type !== "text/vtt" ||
+            !name || !description || !Number.isFinite(createdAt) || createdAt < 1 ||
+            !String(asset.media_type || "").startsWith("video/") ||
+            !String(poster.media_type || "").startsWith("image/")) return [];
+        return [{
+            "@type": "VideoObject",
+            name,
+            description,
+            thumbnailUrl: new URL(safeMediaUrl(poster.publicUrl), publicOrigin).href,
+            uploadDate: new Date(createdAt).toISOString(),
             contentUrl: new URL(safeMediaUrl(asset.publicUrl), publicOrigin).href,
             encodingFormat: asset.media_type,
             inLanguage: "it"

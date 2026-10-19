@@ -1,7 +1,7 @@
 export const VISUAL_BLOCK_TYPES = Object.freeze([
     "page-root", "section", "container", "stack", "row", "columns", "grid",
     "separator", "spacer", "heading", "rich-text", "list", "quote", "image",
-    "gallery", "audio", "button", "link-list", "menu", "table-of-contents", "breadcrumb",
+    "gallery", "audio", "video", "button", "link-list", "menu", "table-of-contents", "breadcrumb",
     "global-header", "global-footer", "global-notice", "project-poem", "project-path",
     "project-map", "project-voices", "project-places", "project-sources",
     "project-memories", "project-archive", "personal-notebook", "personal-space",
@@ -217,26 +217,26 @@ export async function ensureVisualNodeBlockTypes(env) {
         SELECT sql FROM sqlite_master
         WHERE type = 'table' AND name = 'visual_nodes' LIMIT 1
     `).first();
-    if (!current?.sql || /'audio'/u.test(current.sql)) return;
+    if (!current?.sql || ["audio", "video"].every((type) => current.sql.includes(`'${type}'`))) return;
     const table = (name) => VISUAL_BUILDER_STORAGE_STATEMENTS.find((statement) =>
         statement.includes(`CREATE TABLE IF NOT EXISTS ${name} (`)
     );
     const nodeTable = table("visual_nodes")
-        .replace("CREATE TABLE IF NOT EXISTS visual_nodes (", "CREATE TABLE visual_nodes_audio_upgrade (")
-        .replace("REFERENCES visual_nodes(tree_id, id)", "REFERENCES visual_nodes_audio_upgrade(tree_id, id)");
+        .replace("CREATE TABLE IF NOT EXISTS visual_nodes (", "CREATE TABLE visual_nodes_block_upgrade (")
+        .replace("REFERENCES visual_nodes(tree_id, id)", "REFERENCES visual_nodes_block_upgrade(tree_id, id)");
     const propertyTable = table("visual_node_properties")
-        .replace("CREATE TABLE IF NOT EXISTS visual_node_properties (", "CREATE TABLE visual_node_properties_audio_upgrade (")
-        .replace("REFERENCES visual_nodes(id)", "REFERENCES visual_nodes_audio_upgrade(id)");
+        .replace("CREATE TABLE IF NOT EXISTS visual_node_properties (", "CREATE TABLE visual_node_properties_block_upgrade (")
+        .replace("REFERENCES visual_nodes(id)", "REFERENCES visual_nodes_block_upgrade(id)");
     const instanceTable = table("visual_reusable_instances")
-        .replace("CREATE TABLE IF NOT EXISTS visual_reusable_instances (", "CREATE TABLE visual_reusable_instances_audio_upgrade (")
-        .replace("REFERENCES visual_nodes(id)", "REFERENCES visual_nodes_audio_upgrade(id)");
+        .replace("CREATE TABLE IF NOT EXISTS visual_reusable_instances (", "CREATE TABLE visual_reusable_instances_block_upgrade (")
+        .replace("REFERENCES visual_nodes(id)", "REFERENCES visual_nodes_block_upgrade(id)");
     await env.DB.prepare("PRAGMA defer_foreign_keys = ON").run();
     await env.DB.batch([
         env.DB.prepare(nodeTable),
         env.DB.prepare(propertyTable),
         env.DB.prepare(instanceTable),
         env.DB.prepare(`
-            INSERT INTO visual_nodes_audio_upgrade (
+            INSERT INTO visual_nodes_block_upgrade (
                 id, tree_id, parent_id, position, block_type, label,
                 created_at, updated_at
             )
@@ -245,7 +245,7 @@ export async function ensureVisualNodeBlockTypes(env) {
             FROM visual_nodes
         `),
         env.DB.prepare(`
-            INSERT INTO visual_node_properties_audio_upgrade (
+            INSERT INTO visual_node_properties_block_upgrade (
                 node_id, domain, property_set, property_name, breakpoint,
                 item_position, value_kind, text_value, number_value,
                 boolean_value, asset_id, page_reference_id, collection_key,
@@ -258,7 +258,7 @@ export async function ensureVisualNodeBlockTypes(env) {
             FROM visual_node_properties
         `),
         env.DB.prepare(`
-            INSERT INTO visual_reusable_instances_audio_upgrade (
+            INSERT INTO visual_reusable_instances_block_upgrade (
                 id, section_id, page_id, node_id, created_at, updated_at
             )
             SELECT id, section_id, page_id, node_id, created_at, updated_at
@@ -267,9 +267,9 @@ export async function ensureVisualNodeBlockTypes(env) {
         env.DB.prepare("DROP TABLE visual_node_properties"),
         env.DB.prepare("DROP TABLE visual_reusable_instances"),
         env.DB.prepare("DROP TABLE visual_nodes"),
-        env.DB.prepare("ALTER TABLE visual_nodes_audio_upgrade RENAME TO visual_nodes"),
-        env.DB.prepare("ALTER TABLE visual_node_properties_audio_upgrade RENAME TO visual_node_properties"),
-        env.DB.prepare("ALTER TABLE visual_reusable_instances_audio_upgrade RENAME TO visual_reusable_instances"),
+        env.DB.prepare("ALTER TABLE visual_nodes_block_upgrade RENAME TO visual_nodes"),
+        env.DB.prepare("ALTER TABLE visual_node_properties_block_upgrade RENAME TO visual_node_properties"),
+        env.DB.prepare("ALTER TABLE visual_reusable_instances_block_upgrade RENAME TO visual_reusable_instances"),
         env.DB.prepare(`CREATE UNIQUE INDEX IF NOT EXISTS idx_visual_nodes_position
             ON visual_nodes(tree_id, ifnull(parent_id, ''), position)`),
         env.DB.prepare(`CREATE UNIQUE INDEX IF NOT EXISTS idx_visual_nodes_single_root
