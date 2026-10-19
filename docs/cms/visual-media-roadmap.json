@@ -2,8 +2,8 @@
   "version": 1,
   "title": "Anteprima, media, audio e video nel builder visuale",
   "objective": "Rendere fedele l'anteprima delle modifiche e permettere di scegliere, caricare e configurare immagini, gallerie, audio e video interamente dal CMS a blocchi.",
-  "status": "in_progress",
-  "currentUnit": "14.6",
+  "status": "complete",
+  "currentUnit": null,
   "allowedStatuses": [
     "pending",
     "in_progress",
@@ -120,11 +120,12 @@
     {
       "id": "14.6",
       "title": "Pubblicazione, diagnostica e audit end-to-end",
-      "status": "pending",
+      "status": "complete",
       "dependsOn": ["14.5"],
       "deliverables": [
-        "Diagnostica amministrativa per anteprima, riferimenti media, varianti audio/video e metadati mancanti.",
-        "Audit completo su smartphone e desktop dal caricamento alla pagina pubblicata e al ripristino."
+        "La diagnostica amministrativa aggrega anteprima, riferimenti media, tipi audio/video e metadati mancanti senza esporre identificativi.",
+        "scripts/admin-ui.e2e.mjs prova anteprima, immagini, galleria, audio, video, poster e sottotitoli su smartphone e desktop.",
+        "docs/cms/14-6-visual-media-final-audit.md collega le prove Worker, browser, SEO, pubblicazione e ripristino."
       ],
       "acceptance": [
         "Anteprima, immagini, galleria, audio e video sono verificati nel flusso reale senza modificare codice o identificativi tecnici.",

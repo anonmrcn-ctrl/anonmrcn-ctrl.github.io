@@ -408,6 +408,8 @@ test("la diagnostica confronta D1, R2, sitemap, canonical e immagini", async () 
             ["d1-foreign-keys", "pass"],
             ["r2-catalog", "pass"],
             ["visual-builder", "pass"],
+            ["visual-media-drafts", "pass"],
+            ["visual-media-publication", "pass"],
             ["worker-health", "pass"],
             ["static-manifest", "pass"],
             ["visual-static-sync", "pass"],
@@ -416,6 +418,29 @@ test("la diagnostica confronta D1, R2, sitemap, canonical e immagini", async () 
             ["internal-links", "pass"],
             ["images", "pass"]
         ]
+    );
+
+    const publication = env.DB.database.prepare(`
+        SELECT tree_id, snapshot_json FROM visual_tree_publications LIMIT 1
+    `).get();
+    const brokenSnapshot = JSON.parse(publication.snapshot_json);
+    const root = brokenSnapshot.nodes.find((node) => node.parent_id === null);
+    brokenSnapshot.nodes.push({
+        id: "audio-diagnostic-test",
+        tree_id: root.tree_id,
+        parent_id: root.id,
+        position: 99,
+        block_type: "audio",
+        label: "Audio incompleto"
+    });
+    env.DB.database.prepare(`
+        UPDATE visual_tree_publications SET snapshot_json = ? WHERE tree_id = ?
+    `).run(JSON.stringify(brokenSnapshot), publication.tree_id);
+    const blocked = await runCmsDiagnostics(env, fakeFetch, Date.UTC(2026, 9, 11));
+    assert.equal(blocked.ok, false);
+    assert.equal(
+        blocked.checks.find((check) => check.code === "visual-media-publication").status,
+        "fail"
     );
 });
 
