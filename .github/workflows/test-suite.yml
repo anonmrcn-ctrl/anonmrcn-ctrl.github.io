@@ -1,0 +1,58 @@
+name: Suite completa frontend e Worker
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: full-test-suite-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Test e controlli statici
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Scarica il repository
+        uses: actions/checkout@v6
+
+      - name: Configura Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+
+      - name: Controlla la sintassi JavaScript
+        shell: bash
+        run: |
+          set -euo pipefail
+          while IFS= read -r -d '' file; do
+            node --check "$file"
+          done < <(find . -path './.git' -prune -o -type f \( -name '*.js' -o -name '*.mjs' \) -print0)
+
+      - name: Esegui i controlli statici
+        run: |
+          node scripts/check-seo.mjs
+          node scripts/check-editorial-program.mjs
+          node scripts/check-organic-report.mjs
+          node scripts/check-privacy.mjs
+          node scripts/check-no-code-roadmap.mjs
+          node scripts/check-no-code-independence.mjs
+          node scripts/check-visual-media-roadmap.mjs
+          node scripts/check-content-boundary.mjs
+          node scripts/check-visual-inventory.mjs
+          node scripts/check-performance.mjs
+
+      - name: Esegui tutti i test frontend e Worker
+        run: node --test scripts/*.test.mjs worker/tests/*.test.mjs
+
+      - name: Verifica la compilazione del Worker
+        working-directory: worker
+        run: npx --yes wrangler@4 deploy --dry-run --outdir /tmp/nnmrcn-worker-dry-run
