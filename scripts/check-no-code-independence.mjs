@@ -32,7 +32,7 @@ export async function checkNoCodeIndependence() {
         if (!/page-content\.js\?v=20261018-visual1/u.test(html)) {
             errors.push(`caricatore visuale non aggiornato: ${page.slug}`);
         }
-        if (!/style\.css\?v=20261018-visual1/u.test(html)) {
+        if (!/style\.css\?v=20261019-video1/u.test(html)) {
             errors.push(`stili visuali non aggiornati: ${page.slug}`);
         }
     }
